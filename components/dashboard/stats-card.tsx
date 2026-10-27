@@ -7,7 +7,7 @@ interface StatsCardProps {
   value: string | number;
   /** Plain-text comparison, e.g. "12% above your recent pace". Never a pill, never coloured. */
   note?: string;
-  /** Volume context, e.g. "20 closed in 7 days". Rendered after the note. */
+  /** Volume context, e.g. "20 completed in 7 days". Rendered after the note. */
   meta?: string;
   icon?: LucideIcon;
   /** 7–12 numeric points rendered as the inline sparkline. */

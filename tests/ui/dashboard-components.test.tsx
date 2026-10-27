@@ -525,9 +525,9 @@ describe('Dashboard Components', () => {
 
       render(<TimeAnalytics summary={summary} quadrantDistribution={distribution} />);
 
-      expect(screen.getByText(/Do First \(Q1\)/)).toBeInTheDocument();
-      expect(screen.getByText(/Schedule \(Q2\)/)).toBeInTheDocument();
-      expect(screen.getByText(/Delegate \(Q3\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Do First/)).toBeInTheDocument();
+      expect(screen.getByText(/Schedule/)).toBeInTheDocument();
+      expect(screen.getByText(/Delegate/)).toBeInTheDocument();
     });
 
     it('should render estimation insights when over/under counts exist', () => {

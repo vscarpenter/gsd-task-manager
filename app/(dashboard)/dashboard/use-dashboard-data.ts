@@ -54,10 +54,10 @@ export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90):
   })();
 
   const completedInsight = metrics.completedToday === 0
-    ? "Ready to start today"
+    ? "None completed yet today"
     : completedTrend > 10 ? "Above your recent pace"
     : completedTrend < -10 ? "Below your recent pace"
-    : "Holding steady";
+    : "About the same as recently";
 
   const plannedActiveShare = metrics.activeTasks > 0
     ? Math.round(((metrics.activeTasks - metrics.noDueDateCount) / metrics.activeTasks) * 100)
@@ -65,13 +65,13 @@ export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90):
 
   const activeInsight = metrics.overdueCount > 0
     ? `${metrics.overdueCount} overdue`
-    : metrics.noDueDateCount > 0 ? `${metrics.noDueDateCount} unscheduled`
-    : "Well scoped";
+    : metrics.noDueDateCount > 0 ? `${metrics.noDueDateCount} without a due date`
+    : "All have due dates";
 
   const completionInsight = metrics.completionRate >= 80
-    ? "Strong follow-through"
-    : metrics.completionRate >= 60 ? "Healthy momentum"
-    : "Room to tighten execution";
+    ? "80% or more completed"
+    : metrics.completionRate >= 60 ? "60% or more completed"
+    : "Under 60% completed";
 
   return {
     metrics, trendData, streakData, timeTrackingSummary, timeByQuadrant,

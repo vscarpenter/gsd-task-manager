@@ -60,7 +60,7 @@ describe("useDashboardData", () => {
     expect(result.current.completedTrend).toBe(200);
     expect(result.current.completedInsight).toBe("Above your recent pace");
     expect(result.current.activeInsight).toBe("1 overdue");
-    expect(result.current.completionInsight).toBe("Healthy momentum");
+    expect(result.current.completionInsight).toBe("60% or more completed");
     expect(result.current.plannedActiveShare).toBe(67);
   });
 
@@ -76,9 +76,9 @@ describe("useDashboardData", () => {
     expect(result.current.completionRateSeries).toEqual([0, 0, 0, 0, 0, 0, 0]);
     expect(result.current.previousSixAverage).toBe(0);
     expect(result.current.completedTrend).toBe(0);
-    expect(result.current.completedInsight).toBe("Ready to start today");
-    expect(result.current.activeInsight).toBe("2 unscheduled");
-    expect(result.current.completionInsight).toBe("Room to tighten execution");
+    expect(result.current.completedInsight).toBe("None completed yet today");
+    expect(result.current.activeInsight).toBe("2 without a due date");
+    expect(result.current.completionInsight).toBe("Under 60% completed");
     expect(result.current.plannedActiveShare).toBe(0);
   });
 });

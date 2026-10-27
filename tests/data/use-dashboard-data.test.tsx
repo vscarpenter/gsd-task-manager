@@ -76,8 +76,8 @@ describe("useDashboardData", () => {
     expect(result.current.previousSixAverage).toBe(1);
     expect(result.current.completedInsight).toBe("Above your recent pace");
     expect(result.current.plannedActiveShare).toBe(67);
-    expect(result.current.activeInsight).toBe("1 unscheduled");
-    expect(result.current.completionInsight).toBe("Healthy momentum");
+    expect(result.current.activeInsight).toBe("1 without a due date");
+    expect(result.current.completionInsight).toBe("60% or more completed");
   });
 
   it("prioritizes zero-today and overdue insights over trend and unscheduled copy", () => {
@@ -91,10 +91,10 @@ describe("useDashboardData", () => {
     const { result } = renderHook(() => useDashboardData(tasks, 7));
 
     expect(result.current.metrics.completedToday).toBe(0);
-    expect(result.current.completedInsight).toBe("Ready to start today");
+    expect(result.current.completedInsight).toBe("None completed yet today");
     expect(result.current.activeInsight).toBe("1 overdue");
     expect(result.current.plannedActiveShare).toBe(33);
-    expect(result.current.completionInsight).toBe("Room to tighten execution");
+    expect(result.current.completionInsight).toBe("Under 60% completed");
   });
 
   it("uses holding-steady copy when today's completions match recent pace", () => {
@@ -106,7 +106,7 @@ describe("useDashboardData", () => {
     const { result } = renderHook(() => useDashboardData(tasks, 7));
 
     expect(result.current.completedTrend).toBe(0);
-    expect(result.current.completedInsight).toBe("Holding steady");
+    expect(result.current.completedInsight).toBe("About the same as recently");
   });
 
   it("uses below-pace copy when today's completions lag the recent average", () => {
@@ -132,8 +132,8 @@ describe("useDashboardData", () => {
 
     expect(result.current.trendData).toHaveLength(30);
     expect(result.current.metrics.completionRate).toBe(80);
-    expect(result.current.completionInsight).toBe("Strong follow-through");
-    expect(result.current.activeInsight).toBe("Well scoped");
+    expect(result.current.completionInsight).toBe("80% or more completed");
+    expect(result.current.activeInsight).toBe("All have due dates");
     expect(result.current.plannedActiveShare).toBe(100);
   });
 });

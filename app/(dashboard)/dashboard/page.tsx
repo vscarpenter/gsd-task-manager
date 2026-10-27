@@ -188,29 +188,29 @@ function StatRail({ data }: { data: ReturnType<typeof useDashboardData> }): Reac
     <div className="mt-8 grid gap-6 *:min-w-0 border-t border-border/70 pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/70">
       <StatsCard
         className="sm:pr-6"
-        title="Closed today"
+        title="Completed today"
         value={metrics.completedToday}
         icon={CheckCircle2Icon}
         note={paceNote}
-        meta={`${metrics.completedThisWeek} closed in 7 days`}
+        meta={`${metrics.completedThisWeek} completed in 7 days`}
         series={completedSeries}
       />
       <StatsCard
         className="sm:px-6"
-        title="Active commitments"
+        title="Active tasks"
         value={metrics.activeTasks}
         icon={ListTodoIcon}
         note={activeInsight}
-        meta={`${plannedActiveShare}% scheduled`}
+        meta={`${plannedActiveShare}% have a due date`}
         series={createdSeries}
       />
       <StatsCard
         className="sm:pl-6"
-        title="Follow-through"
+        title="Completion rate"
         value={`${metrics.completionRate}%`}
         icon={TrendingUpIcon}
         note={completionInsight}
-        meta={`${metrics.completedTasks} closed overall`}
+        meta={`${metrics.completedTasks} completed overall`}
         series={completionRateSeries}
       />
     </div>
@@ -223,7 +223,7 @@ function DashboardEmpty({ onOpenMatrix }: { onOpenMatrix: () => void }): React.R
       <ListTodoIcon className="mx-auto h-10 w-10 text-foreground-muted" aria-hidden />
       <h2 className="mt-4 text-h3 font-semibold text-foreground">Nothing to review yet</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-foreground-muted">
-        Your review will take shape as work moves through the matrix. Start with one commitment that deserves your attention.
+        Your review will take shape as work moves through the matrix. Start with one task that matters to you.
       </p>
       <Button className="touch-target mt-6" onClick={onOpenMatrix}>
         Open matrix
