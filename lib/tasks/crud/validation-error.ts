@@ -30,7 +30,9 @@ function toIssue(issue: z.ZodError["issues"][number]): TaskValidationIssue {
 
 type LimitCopy = (maximum: number) => string;
 
-const STRING_LIMITS: Record<string, LimitCopy> = {
+export type LimitedField = "title" | "description" | "tags" | "subtasks";
+
+const STRING_LIMITS: Record<LimitedField, LimitCopy> = {
   title: (max) => `Titles can be up to ${max} characters.`,
   description: (max) => `Descriptions can be up to ${max} characters.`,
   tags: (max) => `Tags can be up to ${max} characters.`,
@@ -43,6 +45,11 @@ const LIST_LIMITS: Record<string, LimitCopy> = {
   dependencies: (max) => `A task can depend on up to ${max} other tasks.`,
 };
 
+/** The sentence a failed save uses, for a field that has reached its limit. */
+export function stringLimitMessage(field: LimitedField, maximum: number): string {
+  return STRING_LIMITS[field](maximum);
+}
+
 /**
  * A sentence a person can act on, or null when the error is not a limit we can
  * name. "Failed to save task" left people guessing which field to shorten.
@@ -51,7 +58,7 @@ export function taskValidationMessage(error: unknown): string | null {
   if (!(error instanceof TaskValidationError)) return null;
   for (const issue of error.issues) {
     if (issue.code !== "too_big" || issue.maximum === undefined) continue;
-    const limits = issue.origin === "array" ? LIST_LIMITS : STRING_LIMITS;
+    const limits: Record<string, LimitCopy> = issue.origin === "array" ? LIST_LIMITS : STRING_LIMITS;
     const copy = limits[String(issue.path[0])];
     if (copy) return copy(issue.maximum);
   }

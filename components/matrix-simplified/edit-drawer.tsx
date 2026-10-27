@@ -17,6 +17,7 @@ import { useEditDraftState } from "./use-edit-draft-state";
 import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
 import { ReminderField } from "./edit-drawer-reminder-field";
 import { DependenciesField } from "./edit-drawer-dependencies";
+import { LengthLimitNote } from "./limit-note";
 import type { EditDraft } from "./edit-draft";
 export type { EditDraft } from "./edit-draft";
 
@@ -349,6 +350,7 @@ function TitleAndDescriptionFields({
           className="w-full rounded-lg border border-border bg-background px-3 py-3 text-h3 normal-case text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
         />
       </Field>
+      <LengthLimitNote field="title" length={draft.title.length} max={SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH} />
 
       <Field label="Description">
         <textarea
@@ -362,6 +364,7 @@ function TitleAndDescriptionFields({
           className="pointer-coarse:text-base w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-small leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
         />
       </Field>
+      <LengthLimitNote field="description" length={draft.description.length} max={SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH} />
     </>
   );
 }

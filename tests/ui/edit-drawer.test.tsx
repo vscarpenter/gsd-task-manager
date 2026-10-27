@@ -77,6 +77,24 @@ describe("<EditDrawer>", () => {
     expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 
+  // maxLength cut pasted text off with no word, so the limit is now said.
+  it("says the title limit once the title reaches it", () => {
+    render(<EditDrawer open onClose={vi.fn()} onSubmit={vi.fn()} />);
+    const title = screen.getByLabelText(/title/i);
+
+    fireEvent.change(title, { target: { value: "x".repeat(79) } });
+    expect(screen.queryByText("Titles can be up to 80 characters.")).not.toBeInTheDocument();
+
+    fireEvent.change(title, { target: { value: "x".repeat(80) } });
+    expect(screen.getByText("Titles can be up to 80 characters.")).toBeInTheDocument();
+  });
+
+  it("says the description limit once the description reaches it", () => {
+    render(<EditDrawer open onClose={vi.fn()} onSubmit={vi.fn()} />);
+    fireEvent.change(screen.getByTestId("edit-description"), { target: { value: "x".repeat(600) } });
+    expect(screen.getByText("Descriptions can be up to 600 characters.")).toBeInTheDocument();
+  });
+
   it("Esc closes the drawer", async () => {
     const onClose = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={onClose} onSubmit={vi.fn()} />);

@@ -9,6 +9,7 @@ import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import type { RecurrenceType, Subtask } from "@/lib/types";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { TagChip } from "./edit-drawer-tag-chip";
+import { LengthLimitNote } from "./limit-note";
 
 /** The line shown in place of an add control that has hit its cap. */
 export function LimitNote({ children }: { children: React.ReactNode }): React.ReactElement {
@@ -99,9 +100,18 @@ const chipDateFormatter = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, {
   day: "numeric",
 });
 
+const chipDateWithYearFormatter = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+/** Adds the year only when it differs, so a mistyped year shows in the chip. */
 function formatChipDate(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
-  return chipDateFormatter.format(date);
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  return (sameYear ? chipDateFormatter : chipDateWithYearFormatter).format(date);
 }
 
 interface DueDateFieldProps {
@@ -241,6 +251,7 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
         />
       </div>
       {atLimit ? <LimitNote>A task can have up to {SCHEMA_LIMITS.MAX_TAGS} tags.</LimitNote> : null}
+      <LengthLimitNote field="tags" length={tagInput.length} max={SCHEMA_LIMITS.TAG_MAX_LENGTH} />
     </Field>
   );
 }
@@ -337,6 +348,7 @@ export function SubtasksField({
       ) : null}
       <SubtaskEntry value={entry} onChange={setEntry} onCommit={commit} disabled={atLimit} />
       {atLimit ? <LimitNote>A task can have up to {SCHEMA_LIMITS.MAX_SUBTASKS} subtasks.</LimitNote> : null}
+      <LengthLimitNote field="subtasks" length={entry.length} max={SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH} />
     </Field>
   );
 }
