@@ -8,7 +8,7 @@ import { TaskValidationError } from "@/lib/tasks/crud/validation-error";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { createMockTask } from "@/tests/fixtures";
 import { logError } from "@/lib/error-logger";
-import { handleCapture, handleSnooze, handleSaveForLater } from "@/components/matrix-simplified/task-actions";
+import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater } from "@/components/matrix-simplified/task-actions";
 
 vi.mock("@/lib/tasks/saved", () => ({ saveTaskForLater: vi.fn(), returnSavedTask: vi.fn() }));
 
@@ -120,5 +120,27 @@ describe("handleCapture", () => {
 
     expect(result).toBeNull();
     expect(toast.error).toHaveBeenCalledWith("Titles can be up to 80 characters.", expect.any(Object));
+  });
+});
+
+describe("captureAndReveal", () => {
+  beforeEach(() => {
+    vi.mocked(createTask).mockReset();
+  });
+
+  it("reveals the new task and reports success", async () => {
+    vi.mocked(createTask).mockResolvedValue(createMockTask({ id: "new-2" }));
+    const reveal = vi.fn();
+
+    await expect(captureAndReveal({ title: "Pay rent", urgent: true, important: true, tags: [] }, reveal)).resolves.toBe(true);
+    expect(reveal).toHaveBeenCalledWith("new-2");
+  });
+
+  it("reveals nothing and keeps the draft when the save fails", async () => {
+    vi.mocked(createTask).mockRejectedValue(new Error("disk full"));
+    const reveal = vi.fn();
+
+    await expect(captureAndReveal({ title: "Pay rent", urgent: true, important: true, tags: [] }, reveal)).resolves.toBe(false);
+    expect(reveal).not.toHaveBeenCalled();
   });
 });

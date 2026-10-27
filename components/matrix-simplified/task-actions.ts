@@ -52,6 +52,19 @@ export async function handleCapture({ title, urgent, important, tags }: CaptureP
 }
 
 /**
+ * Capture, then show the new card where it landed. The caller decides how to
+ * reveal it; the matrix scrolls to it without pulling focus out of the bar.
+ */
+export async function captureAndReveal(
+  payload: CapturePayload,
+  reveal: (taskId: string) => void
+): Promise<boolean> {
+  const task = await handleCapture(payload);
+  if (task) reveal(task.id);
+  return task !== null;
+}
+
+/**
  * Toggle completion, offering an Undo on the completing direction only.
  *
  * Completion is the most frequent action in the app and its checkbox sits

@@ -18,7 +18,7 @@ import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
-import { handleCapture, handleSnooze, handleToggle, reportTaskMutationError } from "./task-actions";
+import { captureAndReveal, handleSnooze, handleToggle, reportTaskMutationError } from "./task-actions";
 import { neighborFocusId, scheduleCardFocus } from "./focus-after-removal";
 import { DragLayer } from "./drag-layer";
 import { FilteredEmpty } from "./filtered-empty";
@@ -272,14 +272,6 @@ export function MatrixSimplified() {
     focusQuadrant,
   });
 
-  // Show the new card where it landed, without pulling focus out of the bar.
-  const handleCaptureSubmit = async (payload: CapturePayload): Promise<boolean> => {
-    const task = await handleCapture(payload);
-    if (!task) return false;
-    highlightTaskById(task.id, { focus: false });
-    return true;
-  };
-
   const handleCreateClose = () => dispatchOverlay({ type: "closeCreate" });
 
   const handleEditSubmit = async (draft: EditDraft, taskId?: string, changed?: Partial<EditDraft>) => {
@@ -361,7 +353,7 @@ export function MatrixSimplified() {
           data-testid="mobile-capture-dock"
           className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-20 bg-topbar py-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:relative md:bottom-auto md:left-auto md:right-auto md:-mx-9 md:mb-4 md:px-9 md:py-4"
         >
-          <CaptureBar onSubmit={handleCaptureSubmit} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
+          <CaptureBar onSubmit={(payload) => captureAndReveal(payload, (id) => highlightTaskById(id, { focus: false }))} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
         </div>
         {smartViewsEnabled ? (
           <div className="mb-4">
@@ -417,8 +409,7 @@ export function MatrixSimplified() {
         task={viewingTask}
         allTasks={taskContext(stored, all)}
         onClose={handleInspectClose}
-        onEdit={handleEditOpen}
-        onToggleComplete={(task, completedNext) => void handleToggle(task, completedNext, handleSuccess)}
+        onEdit={handleEditOpen} onToggleComplete={(task, completedNext) => void handleToggle(task, completedNext, handleSuccess)}
       />
 
       <EditDrawer
