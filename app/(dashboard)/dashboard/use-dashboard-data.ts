@@ -68,10 +68,11 @@ export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90):
     : metrics.noDueDateCount > 0 ? `${metrics.noDueDateCount} without a due date`
     : "All have due dates";
 
-  const completionInsight = metrics.completionRate >= 80
-    ? "80% or more completed"
-    : metrics.completionRate >= 60 ? "60% or more completed"
-    : "Under 60% completed";
+  // Plain halves, not a 60% bar the page never explains.
+  const completionInsight = metrics.completionRate === 0 ? "None completed yet"
+    : metrics.completionRate >= 80 ? "Most are done"
+    : metrics.completionRate >= 50 ? "Over half are done"
+    : "Under half are done";
 
   return {
     metrics, trendData, streakData, timeTrackingSummary, timeByQuadrant,

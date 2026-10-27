@@ -67,7 +67,7 @@ const SCREENS: Screen[] = [
   {
     key: "capture",
     title: "Type a task, add a marker.",
-    body: "A marker in the text picks the quadrant: !! for Do First, * for Schedule, ! for Delegate. With no marker, a task goes to Eliminate. Add #tags to label it. The quadrant pill at the end of the bar updates as you type.",
+    body: "A marker in the text picks the quadrant: !! for Do First, * for Schedule, ! for Delegate. With no marker, a task goes to Eliminate. Add #tags to label it. The quadrant button at the end of the bar shows where the task will go.",
     visual: (
       <div className="flex w-full max-w-[260px] items-center gap-2 rounded-full border border-border bg-background px-3 py-2" aria-hidden>
         <ZapIcon className="h-4 w-4" style={{ color: "var(--q1-ink)" }} />

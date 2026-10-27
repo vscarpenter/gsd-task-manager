@@ -37,11 +37,11 @@ describe("HelpDrawer", () => {
     expect(help).toHaveTextContent("An exclamation mark means your session expired. Click the icon to sign in again.");
   });
 
-  it("documents native Tab order for the capture destination control", () => {
+  it("documents native Tab order for the quadrant button", () => {
     render(<HelpDrawer open onClose={vi.fn()} />);
 
     expect(screen.getByTestId("help-drawer-scroll")).toHaveTextContent(
-      "press Tab to reach the destination control, then use Enter or Space to cycle it manually"
+      "press Tab to reach the quadrant button, then press Enter or Space to change it"
     );
     expect(screen.getByTestId("help-drawer-scroll")).not.toHaveTextContent(
       "press Tab to cycle the destination manually"
@@ -138,12 +138,12 @@ describe("HelpDrawer plain wording", () => {
     expect(help).not.toHaveTextContent(/PocketBase|self-hosted/i);
   });
 
-  it("describes the capture bar and the quadrant pill by where they are", () => {
+  it("describes the Add a task bar and the quadrant button by where they are", () => {
     render(<HelpDrawer open onClose={vi.fn()} />);
     const help = screen.getByTestId("help-drawer-scroll");
 
     expect(help).toHaveTextContent("Every task starts in the Add a task bar.");
-    expect(help).toHaveTextContent("quadrant pill at the right end of the bar");
+    expect(help).toHaveTextContent("quadrant button at the right end of the bar");
     expect(help).not.toHaveTextContent(/checkbox|reclassify|spawn|hijack|activation distance/i);
   });
 

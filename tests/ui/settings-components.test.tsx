@@ -184,7 +184,7 @@ describe('Settings Components', () => {
 
     it('renders privacy statement', () => {
       render(<AboutSection />);
-      expect(screen.getByText(/All data is stored locally/)).toBeInTheDocument();
+      expect(screen.getByText(/Your tasks stay in this browser unless you turn on cloud sync/)).toBeInTheDocument();
     });
 
     it('renders GitHub link with correct href', () => {

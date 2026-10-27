@@ -18,13 +18,13 @@ const quadrants = [
   {
     label: "Q3",
     name: "Delegate",
-    description: "Urgent, not important. Give these to someone else if you can.",
+    description: "Urgent, not important. Give these to others.",
     className: "border-q3/40 bg-q3/12",
   },
   {
     label: "Q4",
     name: "Eliminate",
-    description: "Not urgent, not important. Drop or defer these.",
+    description: "Not urgent, not important. Remove these.",
     className: "border-q4/40 bg-q4/12",
   },
 ] as const;

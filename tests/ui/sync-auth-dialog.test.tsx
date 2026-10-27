@@ -292,8 +292,9 @@ describe('SyncAuthDialog', () => {
         expect(screen.getByText('Cloud sync')).toBeInTheDocument();
       });
       const text = document.body.textContent ?? '';
-      expect(text).toMatch(/creates a sync account with the provider you pick/i);
-      expect(text).toMatch(/uploads the tasks already in this browser/i);
+      expect(text).toMatch(/creates a GSD sync account on a server run by GSD.s developer/i);
+      expect(text).toMatch(/shares your account ID and email address/i);
+      expect(text).toMatch(/tasks already in this browser are then uploaded/i);
       expect(text).toMatch(/delete the account in Settings/i);
     });
 
@@ -303,7 +304,7 @@ describe('SyncAuthDialog', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/stores them on a server run by GSD's developer/i)
+          screen.getByText(/on a server run by GSD's developer/i)
         ).toBeInTheDocument();
       });
       expect(screen.queryByText(/your self-hosted/i)).not.toBeInTheDocument();

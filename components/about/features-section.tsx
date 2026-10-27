@@ -46,7 +46,7 @@ const features: Feature[] = [
     icon: Bot,
     title: "MCP Server",
     description:
-      "Let Claude find, add, and complete your tasks in plain English. Needs cloud sync.",
+      "Let Claude read and change your tasks in plain English. Needs cloud sync.",
   },
   {
     icon: BarChart3,

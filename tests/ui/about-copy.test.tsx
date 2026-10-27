@@ -75,7 +75,7 @@ describe("about-page sync and server claims", () => {
   it("should_say_the_mcp_server_needs_sync_and_can_change_tasks", () => {
     const { container } = render(<McpSection />);
     expect(container.textContent).toMatch(/turn on sync/i);
-    expect(container.textContent).toMatch(/complete your tasks/i);
+    expect(container.textContent).toMatch(/change, complete, and delete your tasks/i);
   });
 
   it("should_describe_smart_views_as_an_option_turned_on_in_settings", () => {

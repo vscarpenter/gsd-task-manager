@@ -21,7 +21,7 @@ const claudeDesktopConfig = `{
 }`;
 
 const intro =
-  "GSD ships with an MCP server. Install it once, and your AI assistant can find, add, and complete your tasks in plain English. It works on the copy of your tasks that cloud sync stores, so turn on sync first.";
+  "GSD ships with an MCP server. Install it once, and your AI assistant can find, add, change, complete, and delete your tasks in plain English. It works on the copy of your tasks that cloud sync stores, so turn on sync first. Task text it reads goes to your AI assistant's provider.";
 
 const setupHint = (
   <>

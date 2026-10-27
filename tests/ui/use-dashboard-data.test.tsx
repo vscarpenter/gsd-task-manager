@@ -60,7 +60,7 @@ describe("useDashboardData", () => {
     expect(result.current.completedTrend).toBe(200);
     expect(result.current.completedInsight).toBe("Above your recent pace");
     expect(result.current.activeInsight).toBe("1 overdue");
-    expect(result.current.completionInsight).toBe("60% or more completed");
+    expect(result.current.completionInsight).toBe("Over half are done");
     expect(result.current.plannedActiveShare).toBe(67);
   });
 
@@ -78,7 +78,7 @@ describe("useDashboardData", () => {
     expect(result.current.completedTrend).toBe(0);
     expect(result.current.completedInsight).toBe("None completed yet today");
     expect(result.current.activeInsight).toBe("2 without a due date");
-    expect(result.current.completionInsight).toBe("Under 60% completed");
+    expect(result.current.completionInsight).toBe("None completed yet");
     expect(result.current.plannedActiveShare).toBe(0);
   });
 });

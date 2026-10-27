@@ -30,8 +30,8 @@ export function AboutSection() {
 					<div>
 						<p className="text-sm font-medium text-foreground">Privacy First</p>
 						<p className="text-xs text-foreground-muted mt-1 leading-relaxed">
-							All data is stored locally in your browser. Nothing is sent to any
-							server unless you enable cloud sync.
+							Your tasks stay in this browser unless you turn on cloud sync.
+							Feedback you choose to send contains none of your tasks.
 						</p>
 					</div>
 				</div>

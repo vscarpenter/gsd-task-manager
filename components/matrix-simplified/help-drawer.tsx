@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
+import { quadrantByRdKey } from "@/lib/quadrants";
 import { ROUTES } from "@/lib/routes";
 import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -67,31 +68,30 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           className="pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pt-[1.375rem]"
           style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 28 }}
         >
-          <Section label="One board, one capture bar">
+          <Section label="The board and the Add a task bar">
             <Concept title="The matrix">
-              The classic 2×2 Eisenhower board is your home view. Drag a task onto another quadrant to move it. The
-              quadrant under the task lights up as the place it will land.
+              The matrix sorts your tasks into four quadrants by urgency and importance. On a phone the quadrants
+              stack in one column. Drag a task onto another quadrant to move it; the quadrant under it lights up.
             </Concept>
-            <Concept title="The capture bar">
+            <Concept title="Adding a task">
               Every task starts in the Add a task bar. It is at the top on a computer and at the bottom on a phone. Type
               your task and press <kbd>Enter</kbd>. Markers in the text pick the quadrant (see below). To pick it
-              yourself, click or tap the quadrant pill at the right end of the bar. Keyboard tip: press{" "}
-              <kbd>Tab</kbd> to reach the destination control, then use <kbd>Enter</kbd> or <kbd>Space</kbd> to cycle it
-              manually.
+              yourself, click or tap the quadrant button at the right end of the bar. Keyboard tip: press{" "}
+              <kbd>Tab</kbd> to reach the quadrant button, then press <kbd>Enter</kbd> or <kbd>Space</kbd> to change
+              it.
             </Concept>
           </Section>
 
           <Section label="The four quadrants">
-            <QuadrantLine rdKey="q1" title="Do First" hint="Urgent and important. Do these now." />
-            <QuadrantLine rdKey="q2" title="Schedule" hint="Important, not urgent. Plan a time for these." />
-            <QuadrantLine rdKey="q3" title="Delegate" hint="Urgent, not important. Give these to someone else if you can." />
-            <QuadrantLine rdKey="q4" title="Eliminate" hint="Not urgent, not important. Drop or defer these." />
+            {(["q1", "q2", "q3", "q4"] as const).map((rdKey) => (
+              <QuadrantLine key={rdKey} rdKey={rdKey} title={quadrantByRdKey(rdKey).title} hint={quadrantByRdKey(rdKey).rdHint} />
+            ))}
           </Section>
 
           <Section label="Markers in the Add a task bar">
             <p style={bodyStyle}>
-              Add markers to your text. The quadrant pill at the right end of the bar shows where the task will go, and
-              you can click or tap it to change that.
+              Add markers to your text. The quadrant button at the right end of the bar shows where the task will go.
+              Click or tap it to change that.
             </p>
             <SyntaxRow symbol="!!" meaning="Urgent and important (Do First)" />
             <SyntaxRow symbol="*" meaning="Important (Schedule)" />
@@ -99,21 +99,21 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <SyntaxRow symbol="none" meaning="No marker: the task goes to Eliminate" />
             <SyntaxRow symbol="#tag" meaning="Adds a tag" />
             <p style={{ ...bodyStyle, color: "var(--gray-500)" }}>
-              Example: <code style={codeStyle}>!! send the deck #work #client</code> creates an urgent and important task
-              (Do First) tagged <code style={codeStyle}>#work</code> and <code style={codeStyle}>#client</code>.
+              Example: <code style={codeStyle}>call the bank !! #money #home</code> creates an urgent and important task
+              (Do First) tagged <code style={codeStyle}>#money</code> and <code style={codeStyle}>#home</code>.
             </p>
           </Section>
 
           <Section label="Keyboard tips">
-            <ShortcutRow keys={["n"]} action="Jump to the capture bar" />
+            <ShortcutRow keys={["n"]} action="Jump to the Add a task bar" />
             <ShortcutRow keys={["⌘", "K"]} action="Open the command palette" />
-            <ShortcutRow keys={["Shift", "N"]} action="Open the full composer" />
+            <ShortcutRow keys={["Shift", "N"]} action="Open the full New task form" />
             <ShortcutRow keys={["/"]} action="Focus the search field" />
-            <ShortcutRow keys={["⌥", "/"]} action="Open universal search" />
-            <ShortcutRow keys={["⌥", "N"]} action="Focus Quick Capture from anywhere" />
+            <ShortcutRow keys={["⌥", "/"]} action="Search tasks from any page" />
+            <ShortcutRow keys={["⌥", "N"]} action="Jump to the Add a task bar from any page" />
             <ShortcutRow keys={["⌥", "R"]} action="Open Review" />
             <ShortcutRow keys={["⌥", "1–4"]} action="Focus a matrix quadrant" />
-            <ShortcutRow keys={["Enter"]} action="Submit the task (in the capture bar)" />
+            <ShortcutRow keys={["Enter"]} action="Add the task (in the Add a task bar)" />
             <ShortcutRow keys={["?"]} action="Open this help drawer" />
             <ShortcutRow keys={["Esc"]} action="Close any open drawer" />
             <p style={{ ...bodyStyle, color: "var(--gray-500)", fontSize: "var(--t-caption)" }}>
@@ -131,7 +131,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               1 hour or delete it.
             </p>
             <p style={bodyStyle}>
-              <strong>Edit</strong>: hover a task card and click the pencil to open the composer pre-filled with that
+              <strong>Edit</strong>: hover a task card and click the pencil to open the edit form with that
               task&rsquo;s details. On a phone the pencil is always visible. Save to update, close without saving to cancel.
             </p>
             <p style={bodyStyle}>
@@ -143,7 +143,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <p style={bodyStyle}>
               The cloud icon at the top is your sync control. Click it to sign in with Google, Apple, or GitHub. Signing
               in creates a sync account and uploads the tasks already in this browser to a server run by GSD&rsquo;s
-              developer. After that, your devices stay in step.
+              developer. After that, your devices show the same tasks.
             </p>
             <p style={{ ...bodyStyle, color: "var(--gray-500)" }}>
               A number on the icon counts changes waiting to sync. An exclamation mark means your session expired. Click
@@ -176,7 +176,9 @@ function PrivacySection({ onClose }: { onClose: () => void }) {
   return (
     <Section label="Privacy">
       <p style={bodyStyle}>
-        Tasks live in your browser&rsquo;s IndexedDB. Nothing is sent to a server unless you turn on sync with the cloud icon at the top. The app works fully offline.
+        Your tasks are stored in this browser and work offline. They are never sent to a server unless you turn on
+        sync with the cloud icon at the top. Feedback you choose to send goes to GSD&rsquo;s server and contains none
+        of your tasks.
         Sync settings are in{" "}
         <Link href={ROUTES.SETTINGS} style={linkStyle} onClick={onClose}>
           Settings
@@ -184,16 +186,16 @@ function PrivacySection({ onClose }: { onClose: () => void }) {
         once you are signed in.
       </p>
       <p style={bodyStyle}>
-        Something rough or missing?{" "}
+        Found a problem, or want something added?{" "}
         <Link href="/settings#feedback" style={linkStyle} onClick={onClose}>
           Send feedback
         </Link>
         . It has no account or device identifier, and you can read exactly what is sent before it goes.
       </p>
       <p style={bodyStyle}>
-        Want the full story?{" "}
+        More about GSD:{" "}
         <Link href={"/about" as const} style={linkStyle} onClick={onClose}>
-          Read the About page →
+          read the About page →
         </Link>
       </p>
     </Section>

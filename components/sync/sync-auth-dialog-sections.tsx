@@ -142,10 +142,11 @@ export function UnauthenticatedSection({
       <div className="mb-6 rounded-lg bg-background-muted p-4 text-sm text-foreground-muted">
         <p className="mb-2 font-medium text-foreground">Cloud sync</p>
         <p>
-          Signing in creates a sync account with the provider you pick. It
-          uploads the tasks already in this browser and stores them on a server
-          run by GSD&apos;s developer. You can delete the account in Settings
-          once you are signed in.
+          Signing in with Google, Apple, or GitHub creates a GSD sync account
+          on a server run by GSD&apos;s developer. The provider shares your
+          account ID and email address, and sometimes your name. The tasks
+          already in this browser are then uploaded to that account. You can
+          delete the account in Settings once you are signed in.
         </p>
         <a
           href="https://gsdtaskmanager.com/privacy/"

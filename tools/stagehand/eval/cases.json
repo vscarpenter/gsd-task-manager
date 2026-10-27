@@ -21,7 +21,7 @@
     "goal": "The briefing shows a button reading 'Schedule · 1 task'",
     "why": "rendered: Schedule · 1 task" },
   { "id": "matrix-q4-empty", "tags": ["matrix", "false", "near-miss"], "seed": "matrix", "path": "/", "acts": [], "expected": false,
-    "goal": "The Eliminate quadrant is empty and shows its empty-state message 'Nothing to drop.'",
+    "goal": "The Eliminate quadrant is empty and shows its empty-state message 'Nothing to remove.'",
     "why": "Eliminate holds 'Q4 — eliminate'; empty copy only renders on a fresh board" },
 
   { "id": "empty-all-zero", "tags": ["empty-matrix", "true", "new"], "seed": "none", "path": "/", "acts": [], "expected": true,

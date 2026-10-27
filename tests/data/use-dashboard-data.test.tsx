@@ -77,7 +77,7 @@ describe("useDashboardData", () => {
     expect(result.current.completedInsight).toBe("Above your recent pace");
     expect(result.current.plannedActiveShare).toBe(67);
     expect(result.current.activeInsight).toBe("1 without a due date");
-    expect(result.current.completionInsight).toBe("60% or more completed");
+    expect(result.current.completionInsight).toBe("Over half are done");
   });
 
   it("prioritizes zero-today and overdue insights over trend and unscheduled copy", () => {
@@ -94,7 +94,7 @@ describe("useDashboardData", () => {
     expect(result.current.completedInsight).toBe("None completed yet today");
     expect(result.current.activeInsight).toBe("1 overdue");
     expect(result.current.plannedActiveShare).toBe(33);
-    expect(result.current.completionInsight).toBe("Under 60% completed");
+    expect(result.current.completionInsight).toBe("Under half are done");
   });
 
   it("uses holding-steady copy when today's completions match recent pace", () => {
@@ -132,7 +132,7 @@ describe("useDashboardData", () => {
 
     expect(result.current.trendData).toHaveLength(30);
     expect(result.current.metrics.completionRate).toBe(80);
-    expect(result.current.completionInsight).toBe("80% or more completed");
+    expect(result.current.completionInsight).toBe("Most are done");
     expect(result.current.activeInsight).toBe("All have due dates");
     expect(result.current.plannedActiveShare).toBe(100);
   });
