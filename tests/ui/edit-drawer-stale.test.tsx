@@ -46,4 +46,13 @@ describe("saving from a drawer that may be stale (second tab)", () => {
     expect("estimatedMinutes" in changed).toBe(true);
     expect(changed).not.toHaveProperty("title");
   });
+
+  // The quadrant control sets both flags at once. Sending only the flag that
+  // changed let a stale drawer inherit the other from the store, so a task
+  // picked for Delegate could land in Eliminate.
+  it("sends urgent and important together when the quadrant changed", () => {
+    const start = { title: "a", urgent: true, important: true } as never;
+    const now = { title: "a", urgent: true, important: false } as never;
+    expect(changedDraftFields(start, now)).toEqual({ urgent: true, important: false });
+  });
 });

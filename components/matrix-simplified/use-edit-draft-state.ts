@@ -192,6 +192,12 @@ export function changedDraftFields(start: EditDraft, current: EditDraft): Partia
       Object.assign(changed, { [key]: current[key] });
     }
   }
+  // The two flags name one quadrant. Sent alone, one would merge with the other
+  // stored flag and put the task in a quadrant nobody picked.
+  if ("urgent" in changed || "important" in changed) {
+    changed.urgent = current.urgent;
+    changed.important = current.important;
+  }
   return changed;
 }
 
