@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { importFromJson } from "@/lib/tasks";
+import { checkImportFile } from "@/lib/tasks/import-check";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("IMPORT");
@@ -201,7 +202,7 @@ function MergeCard({ disabled, onClick }: OptionCardProps) {
         <div className="flex-1">
           <h3 className="font-semibold text-foreground">Merge Tasks</h3>
           <p className="mt-1 text-sm text-foreground-muted">
-            Keep your existing tasks and add the imported ones, archive included. Duplicate IDs are regenerated to avoid conflicts, and your settings stay as they are.
+            Keep your existing tasks and add the imported ones, archive included. Tasks already on this device are added again as copies, so restoring your own backup doubles them. Your settings stay as they are.
           </p>
           <p className="mt-2 text-xs font-medium text-olive-d">
             ✓ Safe - No data loss
@@ -282,6 +283,25 @@ function ReplaceConfirm({ liveDeletes, disabled, onBack, onConfirm }: ReplaceCon
   );
 }
 
+/** Shown in place of the Merge and Replace choice when the file can't be imported. */
+function InvalidFileBody({ message, onClose }: { message: string; onClose: () => void }) {
+  return (
+    <div className="space-y-4 py-4">
+      <div
+        role="alert"
+        className="flex items-start gap-2 rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-sm text-foreground"
+      >
+        <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-rust-d" aria-hidden />
+        <p>{message}</p>
+      </div>
+      <p className="text-sm text-foreground-muted">Nothing was changed. Choose a different file to try again.</p>
+      <Button variant="subtle" onClick={onClose} className="w-full">
+        Close
+      </Button>
+    </div>
+  );
+}
+
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -315,6 +335,9 @@ export function ImportDialog({
   const impact = parseImportImpact(fileContents);
   const liveDeletes = liveDeleteCount(existingTaskIds, existingTaskCount, impact.taskIds);
   const cloudDeletes = syncEnabled && liveDeletes !== 0;
+  // Reject an unusable file here, before Merge or Replace is offered, so the
+  // person reads the real reason instead of a generic failure after choosing.
+  const check = fileContents ? checkImportFile(fileContents) : null;
 
   const handleImport = async (mode: "replace" | "merge") => {
     if (!fileContents) return;
@@ -353,10 +376,15 @@ export function ImportDialog({
         <DialogHeader>
           <DialogTitle>Import Tasks</DialogTitle>
           <DialogDescription>
-            Choose how to import {importTaskCount ?? "these"} task{importTaskCount !== 1 ? "s" : ""} into your task manager.
+            {check && !check.ok
+              ? "This file can't be imported."
+              : `Choose how to import ${importTaskCount ?? "these"} task${importTaskCount !== 1 ? "s" : ""} into your task manager.`}
           </DialogDescription>
         </DialogHeader>
 
+        {check && !check.ok ? (
+          <InvalidFileBody message={check.message} onClose={() => close(false)} />
+        ) : (
         <div className="space-y-4 py-4">
           <ImportCounts existingTaskCount={existingTaskCount} importTaskCount={importTaskCount} />
 
@@ -388,6 +416,7 @@ export function ImportDialog({
             Cancel
           </Button>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

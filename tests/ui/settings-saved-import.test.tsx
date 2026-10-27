@@ -19,6 +19,7 @@ vi.mock("@/components/settings-page/use-active-section", () => ({
   useActiveSection: () => ({ activeSection: "data", visibleSectionIds: ["data"], selectSection: vi.fn() }),
 }));
 vi.mock("@/lib/tasks", () => ({ importFromJson: importTasks }));
+vi.mock("@/lib/tasks/import-check", () => ({ checkImportFile: () => ({ ok: true }) }));
 
 describe("Saved records in Settings", () => {
   it("counts Saved-only storage and asks before a synced import deletes it", async () => {

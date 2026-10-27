@@ -456,7 +456,7 @@ async function applyTasks(
  * carries archived and deleted tasks too, and the guard exists to bound total
  * records written.
  */
-function assertWithinImportCap(parsed: {
+export function assertWithinImportCap(parsed: {
   tasks: unknown[];
   archivedTasks?: unknown[];
   deletedTasks?: unknown[];
@@ -533,14 +533,19 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
   }
 }
 
-/**
- * Import tasks from JSON string with merge or replace mode
- */
-export async function importFromJson(raw: string, mode: "replace" | "merge" = "replace"): Promise<void> {
+/** Reject a raw file over the size cap before it is parsed. */
+export function assertWithinImportSize(raw: string): void {
   const importSizeBytes = getUtf8ByteLength(raw);
   if (importSizeBytes > MAX_IMPORT_SIZE_BYTES) {
     throw new Error(`Import file is too large (${(importSizeBytes / 1024 / 1024).toFixed(1)} MB). Maximum allowed size is ${MAX_IMPORT_SIZE_BYTES / 1024 / 1024} MB.`);
   }
+}
+
+/**
+ * Import tasks from JSON string with merge or replace mode
+ */
+export async function importFromJson(raw: string, mode: "replace" | "merge" = "replace"): Promise<void> {
+  assertWithinImportSize(raw);
 
   try {
     const payload = JSON.parse(raw);
