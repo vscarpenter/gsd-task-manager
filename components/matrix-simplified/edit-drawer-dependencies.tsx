@@ -220,6 +220,36 @@ function isCandidate(
   return true;
 }
 
+/**
+ * Titles matching the search that were left out only because picking them
+ * would close a loop. Lets the empty state say why instead of "No matching tasks."
+ */
+function cycleExcludedMatches(
+  query: string,
+  taskId: string | undefined,
+  dependencies: string[],
+  allTasks: TaskRecord[]
+): TaskRecord[] {
+  const trimmed = query.trim().toLowerCase();
+  if (!taskId || !trimmed) return [];
+  return allTasks.filter(
+    (t) =>
+      t.id !== taskId &&
+      !t.completed &&
+      !dependencies.includes(t.id) &&
+      t.title.toLowerCase().includes(trimmed) &&
+      wouldCreateCircularDependency(taskId, t.id, allTasks)
+  );
+}
+
+/** What the popup says when no task can be picked. */
+function emptyMessage(blocked: TaskRecord[]): string {
+  if (blocked.length === 0) return "No matching tasks.";
+  const first = `"${blocked[0].title}"`;
+  const subject = blocked.length > 1 ? `${first} and ${blocked.length - 1} more` : first;
+  return `${subject} already depends on this task, so it can't also be a dependency.`;
+}
+
 /** The suggestion list, shared by the popup and the keyboard handler. */
 function matchingCandidates(
   query: string,
@@ -327,7 +357,9 @@ function Suggestions({
           </button>
         ))
       ) : (
-        <p className="px-3 py-2 text-small text-foreground-muted">No matching tasks.</p>
+        <p className="px-3 py-2 text-small text-foreground-muted">
+          {emptyMessage(cycleExcludedMatches(query, taskId, dependencies, allTasks))}
+        </p>
       )}
     </div>,
     document.body
