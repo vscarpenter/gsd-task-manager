@@ -417,6 +417,7 @@ export function MatrixSimplified() {
         allTasks={taskContext(stored, all)}
         onClose={handleInspectClose}
         onEdit={handleEditOpen}
+        onToggleComplete={(task, completedNext) => void handleToggle(task, completedNext, handleSuccess)}
       />
 
       <EditDrawer

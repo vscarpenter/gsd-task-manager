@@ -207,4 +207,22 @@ describe("TaskDetailSheet", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("offers a completion action that reflects the task state", async () => {
+    const user = userEvent.setup();
+    const onToggleComplete = vi.fn();
+    const { rerender } = render(
+      <TaskDetailSheet open task={task} onClose={vi.fn()} onEdit={vi.fn()} onToggleComplete={onToggleComplete} />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Mark done" }));
+    expect(onToggleComplete).toHaveBeenCalledWith(task, true);
+
+    const done = { ...task, completed: true };
+    rerender(
+      <TaskDetailSheet open task={done} onClose={vi.fn()} onEdit={vi.fn()} onToggleComplete={onToggleComplete} />
+    );
+    await user.click(screen.getByRole("button", { name: "Mark not done" }));
+    expect(onToggleComplete).toHaveBeenLastCalledWith(done, false);
+  });
 });
