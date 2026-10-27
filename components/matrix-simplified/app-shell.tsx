@@ -124,7 +124,7 @@ export function AppShell({
         Skip to main content
       </a>
       <DesktopIconRail onHelp={() => setHelpOpen(true)} />
-      <div className={cn("flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0", fillViewport && FILL_VIEWPORT_COLUMN)}>
+      <div className={cn("flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0 max-md:has-[[data-testid=mobile-capture-dock]]:pb-[calc(10.25rem+env(safe-area-inset-bottom))]", fillViewport && FILL_VIEWPORT_COLUMN)}>
         <SimplifiedTopbar
           title={title} titleAsLabel={titleAsLabel} caption={caption}
           searchQuery={searchQuery} onSearchChange={onSearchChange} searchInputRef={searchInputRef}
