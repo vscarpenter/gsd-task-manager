@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatDueDate, isRepeatClick } from "@/lib/utils";
+import { useBackToClose } from "./use-back-to-close";
 import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import { quadrantForTask, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
 import type { RecurrenceType, TaskRecord } from "@/lib/types";
@@ -54,6 +55,7 @@ export function TaskDetailSheet({
   onToggleComplete,
 }: TaskDetailSheetProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  useBackToClose(open && task !== null, onClose);
 
   return (
     <Dialog

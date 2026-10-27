@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
@@ -11,10 +11,12 @@ import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
 import { useDiscardGuard } from "./use-discard-guard";
-import { changedDraftFields, useEditDraftState } from "./use-edit-draft-state";
+import { useBackToClose } from "./use-back-to-close";
+import { useDrawerSave } from "./use-drawer-save";
+import { useEditDraftState } from "./use-edit-draft-state";
 import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
 import { ReminderField } from "./edit-drawer-reminder-field";
-import { DependenciesField, findDependencyCycleError } from "./edit-drawer-dependencies";
+import { DependenciesField } from "./edit-drawer-dependencies";
 import type { EditDraft } from "./edit-draft";
 export type { EditDraft } from "./edit-draft";
 
@@ -84,10 +86,14 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   if (baselineRef.current === null) baselineRef.current = draft.toDraft();
   const dirty = JSON.stringify(draft.toDraft()) !== JSON.stringify(baselineRef.current) || draft.tagInput.trim() !== "";
   const [dependencyError, setDependencyError] = useState<string | null>(null);
-  // The drawer stays open until the save resolves, so a double-click or quick
-  // Enters used to create the same task several times.
-  const savingRef = useRef(false);
-  const [saving, setSaving] = useState(false);
+  const { saving, submit } = useDrawerSave({
+    task,
+    draft,
+    baseline: baselineRef.current,
+    allTasks,
+    onSubmit,
+    setDependencyError,
+  });
   const { confirmingDiscard, keepEditingRef, requestClose } = useDiscardGuard(dirty, onClose, drawerRef, titleRef);
 
   const modalSurface = useModalSurface(requestClose);
@@ -99,31 +105,11 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   };
 
   useEscapeToClose(requestClose);
+  // Back runs the same guard Escape does, so unsaved edits are never dropped silently.
+  useBackToClose(true, requestClose);
 
   const isCreateMode = !task;
   const { activeQuadrant, accent, quadrantInk } = quadrantChrome(draft.urgent, draft.important);
-
-  const submit = async (e?: FormEvent): Promise<void> => {
-    e?.preventDefault();
-    if (!hasVisibleText(draft.title) || savingRef.current) return;
-    const cycleError = task
-      ? findDependencyCycleError(task.id, draft.dependencies, allTasks)
-      : null;
-    if (cycleError) {
-      setDependencyError(cycleError);
-      return;
-    }
-    savingRef.current = true;
-    setSaving(true);
-    try {
-      const current = draft.toDraft();
-      if (task) await onSubmit(current, task.id, changedDraftFields(baselineRef.current ?? current, current));
-      else await onSubmit(current, undefined);
-    } finally {
-      savingRef.current = false;
-      setSaving(false);
-    }
-  };
 
   const heading = isCreateMode ? "New task" : "Edit task";
 
