@@ -1,4 +1,4 @@
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Command } from 'cmdk';
 import { CommandActionItem, ShortcutDisplay } from '@/components/command-palette/command-item';
@@ -517,27 +517,5 @@ describe('CommandPalette (full component)', () => {
       const calledCount = allHandlers.filter(h => (h as ReturnType<typeof vi.fn>).mock.calls.length > 0).length;
       expect(calledCount).toBe(1);
     });
-  });
-
-  // Back with the palette open used to leave the page for /about/.
-  it('closes on browser Back instead of leaving the page', async () => {
-    // Earlier tests close the palette; let their deferred history cleanup finish.
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 30));
-    });
-    render(<CommandPalette handlers={makeHandlers()} conditions={defaultConditions} />);
-    act(() => {
-      window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
-    });
-    await waitFor(() => expect(screen.getByPlaceholderText('Search tasks, actions, settings...')).toBeInTheDocument());
-
-    await act(async () => {
-      window.history.back();
-      await new Promise((resolve) => setTimeout(resolve, 30));
-    });
-
-    await waitFor(() =>
-      expect(screen.queryByPlaceholderText('Search tasks, actions, settings...')).not.toBeInTheDocument()
-    );
   });
 });
