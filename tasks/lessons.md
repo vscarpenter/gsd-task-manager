@@ -412,3 +412,14 @@ A touch pointer starts implicitly captured by the element under the finger. When
 ## A new synced field needs a one-time backfill (2026-10-27)
 
 Adding a wire column is not enough. A client that pulled a record before the column existed stored the row at the server's own `client_updated_at`, and its cursor sits past it. Neither an incremental pull nor a cursor reset brings the field across, because an equal stamp is a no-op on every client. `SYNC_CONFIG.PULL_CURSOR_VERSION` is the fix: bump it with the iOS `SyncCursor.contractVersion` in the same change, and the next sync pulls everything once with `mergeSameVersion` (ADR 0019). The test that would have caught it pulls with a local row already present at the remote's version; the suites only had cold-cursor cases.
+
+## Launch QA with five personas (2026-10-27)
+
+- **Visible before hydration means usable before hydration.** Taking the landing hero out of `ScrollReveal` showed Open App about 27 s sooner on slow 3G, and a phone could then reach the matrix while its capture bar was still static HTML. A form with only an `onSubmit` handler does the browser's own GET submit there (`/?`), reloading the page and losing the task. Ship submit buttons `disabled` until `useIsHydrated()` flips; a disabled default button also blocks the implicit Enter submit.
+- **A `key` that replays an animation remounts the element and drops focus.** The capture pill lost focus on every click, so the next Enter did nothing. `preventDefault` on mousedown keeps a pointer click's focus in the field, and a callback ref returns keyboard focus to the new node.
+- **A submit latch must outlive the save, not just the promise.** Releasing it in `finally` let a second Enter reach a render that still held the old text. Hold it until the cleared value renders, and release it at once on failure.
+- **Back-to-close only for overlays that never navigate on close.** Releasing the overlay's history entry with `history.back()` raced `router.push` from the palette's own selection and undid it. The edit drawer, details sheet, and import dialogs keep the behavior; the palette does not.
+- **`beforeEach(() => mock.mockReset())` is a teardown hook.** The expression body returns the mock, Vitest calls it after the test, and a rejected mock throws. Use a block body.
+- **The code-shape ratchet skips comment lines.** Folding a comment onto a statement buys nothing; extract a component or hook instead.
+- **Persona QA artifacts to discount.** Headless Chromium logs `[PWA] Periodic sync registration failed`, which headed Chrome does not. Repeat local builds bump the footer's build stamp past `package.json`. The local export server sends `no-store`, so slow-3G reload times run longer than production, where hashed chunks are `immutable`.
+- **Worktree agents start on `main`.** All three fix agents had to fast-forward or reset to the feature branch before working. Say so in the brief, and cherry-pick their commits back.
