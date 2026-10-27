@@ -310,7 +310,7 @@ describe('Dashboard Components', () => {
     it('should render empty state when no tags', () => {
       render(<TagAnalytics tagStats={[]} />);
 
-      expect(screen.getByText(/tag a task to see how each tag is tracking/i)).toBeInTheDocument();
+      expect(screen.getByText(/add tags to your tasks to see progress for each tag/i)).toBeInTheDocument();
     });
 
     it('should render tag statistics with completion info', () => {
@@ -854,7 +854,7 @@ describe('Dashboard Components', () => {
     it('should offer a next step from the tags empty region', () => {
       render(<TagAnalytics tagStats={[]} />);
 
-      expect(screen.getByText(/tag a task to see how each tag is tracking/i)).toBeInTheDocument();
+      expect(screen.getByText(/add tags to your tasks to see progress for each tag/i)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Open matrix' })).toHaveAttribute('href', '/');
     });
 

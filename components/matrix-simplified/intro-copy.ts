@@ -74,7 +74,7 @@ export function introMessage(stats: IntroStats): string {
     return "Plain tasks go to Eliminate. Add !! for Do First or * for Schedule.";
   }
   if (stats.activeTotal >= 3 && stats.doFirstCount * 2 > stats.activeTotal) {
-    return "Today leans urgent: most of the list sits in Do First.";
+    return "Most of your open tasks are in Do First.";
   }
-  return "Nothing overdue. Everything on the board is there by choice.";
+  return "Nothing is overdue.";
 }

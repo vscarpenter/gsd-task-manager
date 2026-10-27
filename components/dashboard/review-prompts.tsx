@@ -53,7 +53,7 @@ export function ReviewPrompts({ distribution }: ReviewPromptsProps): React.React
             id="review-prompts-title"
             className="text-h3 text-foreground"
           >
-            Look at the shape of active work.
+            See where your open tasks are.
           </h3>
         </div>
         <p className="max-w-md text-sm leading-relaxed text-foreground-muted sm:text-right">

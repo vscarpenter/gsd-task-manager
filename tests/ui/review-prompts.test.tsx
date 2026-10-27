@@ -13,7 +13,7 @@ describe("ReviewPrompts", () => {
   it("lets the section heading speak without an eyebrow above it", () => {
     render(<ReviewPrompts distribution={distribution} />);
 
-    expect(screen.getByRole("heading", { name: "Look at the shape of active work." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "See where your open tasks are." })).toBeInTheDocument();
     expect(screen.queryByText("Reflection prompts")).toBeNull();
   });
 

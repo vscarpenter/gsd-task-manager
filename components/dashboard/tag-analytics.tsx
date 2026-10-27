@@ -23,7 +23,7 @@ export function TagAnalytics({ tagStats, maxTags = 10 }: TagAnalyticsProps) {
     return (
       <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
         <h3 className="mb-4 text-h3 font-semibold text-foreground">Top tags</h3>
-        <EmptyRegion className="py-6" line="Tag a task to see how each tag is tracking." />
+        <EmptyRegion className="py-6" line="Add tags to your tasks to see progress for each tag." />
       </div>
     );
   }

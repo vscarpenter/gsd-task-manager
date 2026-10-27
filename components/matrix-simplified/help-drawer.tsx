@@ -58,7 +58,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
               <h2 style={{ margin: 0 }}>How to use GSD</h2>
             </DialogTitle>
             <DialogDescription className="sr-only">
-              Overview of the Eisenhower matrix, capture bar syntax, keyboard shortcuts, and sync guidance.
+              How the matrix works, the markers for the Add a task bar, keyboard tips, and sync.
             </DialogDescription>
           </div>
         </header>
@@ -108,14 +108,14 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <ShortcutRow keys={["n"]} action="Jump to the Add a task bar" />
             <ShortcutRow keys={["⌘", "K"]} action="Open the command palette" />
             <ShortcutRow keys={["Shift", "N"]} action="Open the full New task form" />
-            <ShortcutRow keys={["/"]} action="Focus the search field" />
+            <ShortcutRow keys={["/"]} action="Go to the search field" />
             <ShortcutRow keys={["⌥", "/"]} action="Search tasks from any page" />
             <ShortcutRow keys={["⌥", "N"]} action="Jump to the Add a task bar from any page" />
             <ShortcutRow keys={["⌥", "R"]} action="Open Review" />
-            <ShortcutRow keys={["⌥", "1–4"]} action="Focus a matrix quadrant" />
+            <ShortcutRow keys={["⌥", "1–4"]} action="Go to a quadrant" />
             <ShortcutRow keys={["Enter"]} action="Add the task (in the Add a task bar)" />
-            <ShortcutRow keys={["?"]} action="Open this help drawer" />
-            <ShortcutRow keys={["Esc"]} action="Close any open drawer" />
+            <ShortcutRow keys={["?"]} action="Open this help panel" />
+            <ShortcutRow keys={["Esc"]} action="Close any open panel" />
             <p style={{ ...bodyStyle, color: "var(--gray-500)", fontSize: "var(--t-caption)" }}>
               Option shortcuts use the key&rsquo;s position on the keyboard. They are off while you type in a text field
               or have a dialog open.

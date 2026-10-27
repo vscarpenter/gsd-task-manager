@@ -168,21 +168,21 @@ describe("introMessage", () => {
   it("names the urgency lean when Do First holds the majority", () => {
     const stats = makeStats({ activeTotal: 5, doFirstCount: 3 });
     expect(introMessage(stats)).toBe(
-      "Today leans urgent: most of the list sits in Do First."
+      "Most of your open tasks are in Do First."
     );
   });
 
   it("does not call an exact half a majority", () => {
     const stats = makeStats({ activeTotal: 4, doFirstCount: 2 });
     expect(introMessage(stats)).toBe(
-      "Nothing overdue. Everything on the board is there by choice."
+      "Nothing is overdue."
     );
   });
 
   it("skips the urgency lean on boards smaller than three tasks", () => {
     const stats = makeStats({ activeTotal: 2, doFirstCount: 2 });
     expect(introMessage(stats)).toBe(
-      "Nothing overdue. Everything on the board is there by choice."
+      "Nothing is overdue."
     );
   });
 
@@ -201,7 +201,7 @@ describe("introMessage", () => {
   it("falls back to the calm all-clear reading", () => {
     const stats = makeStats({ activeTotal: 3, doFirstCount: 1 });
     expect(introMessage(stats)).toBe(
-      "Nothing overdue. Everything on the board is there by choice."
+      "Nothing is overdue."
     );
   });
 });
