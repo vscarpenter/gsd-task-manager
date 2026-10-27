@@ -172,7 +172,7 @@ interface MobileActionsProps {
 
 function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze, onSave }: MobileActionsProps) {
   return (
-    <div className="task-card-mobile-actions flex sm:hidden items-center gap-0.5">
+    <div className="task-card-mobile-actions flex sm:hidden items-center gap-2">
       <button
         data-testid="edit-task-mobile"
         type="button"

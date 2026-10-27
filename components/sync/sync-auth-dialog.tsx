@@ -129,7 +129,7 @@ function DialogHeader({ syncStatus, sessionExpired, onClose }: DialogHeaderProps
         type="button"
         onClick={onClose}
         data-dialog-initial-focus
-        className="rounded-md p-1 text-foreground-muted hover:bg-background-muted hover:text-foreground"
+        className="touch-target inline-flex items-center justify-center rounded-md p-1 text-foreground-muted hover:bg-background-muted hover:text-foreground"
         aria-label="Close"
       >
         <XIcon className="h-5 w-5" aria-hidden="true" />

@@ -750,6 +750,14 @@ main {
   }
 }
 
+/* Toast action buttons (Undo) are 24px tall by default. */
+@media (pointer: coarse) {
+  [data-sonner-toast] [data-button] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* =====================================================================
    Toasts — sonner's rich colors on Inkwell's status tokens.
    Sonner ships its own palette, and its light success pair measured
