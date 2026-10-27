@@ -55,6 +55,27 @@ describe("<EditDrawer>", () => {
     );
   });
 
+  // A double-click on "Create task" made two tasks, and five quick Enters made
+  // five, because the drawer stays open until the save resolves.
+  it("ignores repeat submits while a save is still in flight", async () => {
+    let finishSave: () => void = () => {};
+    const onSubmit = vi.fn(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+    render(<EditDrawer open onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText(/title/i), "Book flights");
+    const create = screen.getByRole("button", { name: /create task/i });
+    fireEvent.click(create);
+    fireEvent.click(create);
+    fireEvent.submit(create.closest("form") as HTMLFormElement);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    finishSave();
+    await waitFor(() => expect(create).not.toHaveAttribute("aria-busy", "true"));
+    fireEvent.click(create);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
   it("Esc closes the drawer", async () => {
     const onClose = vi.fn();
     render(<EditDrawer open task={mockTask} onClose={onClose} onSubmit={vi.fn()} />);

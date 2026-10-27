@@ -78,6 +78,10 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   if (baselineRef.current === null) baselineRef.current = JSON.stringify(draft.toDraft());
   const dirty = JSON.stringify(draft.toDraft()) !== baselineRef.current || draft.tagInput.trim() !== "";
   const [dependencyError, setDependencyError] = useState<string | null>(null);
+  // The drawer stays open until the save resolves, so a double-click or quick
+  // Enters used to create the same task several times.
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
   const { confirmingDiscard, keepEditingRef, requestClose } = useDiscardGuard(dirty, onClose, drawerRef, titleRef);
 
   const modalSurface = useModalSurface(requestClose);
@@ -93,9 +97,9 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   const isCreateMode = !task;
   const { activeQuadrant, accent, quadrantInk } = quadrantChrome(draft.urgent, draft.important);
 
-  const submit = (e?: FormEvent): void => {
+  const submit = async (e?: FormEvent): Promise<void> => {
     e?.preventDefault();
-    if (!draft.title.trim()) return;
+    if (!draft.title.trim() || savingRef.current) return;
     const cycleError = task
       ? findDependencyCycleError(task.id, draft.dependencies, allTasks)
       : null;
@@ -103,7 +107,14 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
       setDependencyError(cycleError);
       return;
     }
-    void onSubmit(draft.toDraft(), task?.id);
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await onSubmit(draft.toDraft(), task?.id);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   };
 
   const heading = isCreateMode ? "New task" : "Edit task";
@@ -157,6 +168,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
             confirmingDiscard={confirmingDiscard}
             keepEditingRef={keepEditingRef}
             canSave={Boolean(draft.title.trim())}
+            saving={saving}
             isCreateMode={isCreateMode}
           />
         </form>
@@ -200,6 +212,7 @@ interface DrawerFooterProps {
   confirmingDiscard: boolean;
   keepEditingRef: React.RefObject<HTMLButtonElement | null>;
   canSave: boolean;
+  saving: boolean;
   isCreateMode: boolean;
 }
 
@@ -210,6 +223,7 @@ function DrawerFooter({
   confirmingDiscard,
   keepEditingRef,
   canSave,
+  saving,
   isCreateMode,
 }: DrawerFooterProps) {
   if (confirmingDiscard) {
@@ -226,7 +240,13 @@ function DrawerFooter({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button data-testid="save-task" type="submit" disabled={!canSave} className="whitespace-nowrap">
+          <Button
+            data-testid="save-task"
+            type="submit"
+            disabled={!canSave}
+            aria-busy={saving || undefined}
+            className="whitespace-nowrap"
+          >
             <CheckIcon className="h-3.5 w-3.5" />
             {isCreateMode ? "Create task" : "Save changes"}
           </Button>
