@@ -210,8 +210,9 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     const draftText = text;
     const draftOverride = override;
     submittingRef.current = true;
+    let saved: void | boolean = false;
     try {
-      const saved = await onSubmit({
+      saved = await onSubmit({
         title: parsed.title,
         urgent: flags.urgent,
         important: flags.important,
@@ -225,10 +226,17 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       setJustCaptured(true);
     } catch {
       // The caller reports the failure. The sentence stays so it can be retried.
+      saved = false;
     } finally {
-      submittingRef.current = false;
+      // After a save the latch holds until the cleared text renders (see the
+      // effect below); a second Enter before then would save the old text.
+      if (saved === false) submittingRef.current = false;
     }
   };
+
+  useEffect(() => {
+    submittingRef.current = false;
+  }, [text]);
 
   const onInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {

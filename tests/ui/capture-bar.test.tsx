@@ -59,6 +59,24 @@ describe("<CaptureBar>", () => {
     expect(screen.getByTestId("submit-task")).not.toBeDisabled();
   });
 
+  // The latch opened as soon as the save resolved, but the cleared text only
+  // lands on the next render, so a second Enter in between saved it again.
+  it("does not save the same text twice when Enter repeats before the field clears", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(true);
+    render(<CaptureBar onSubmit={onSubmit} />);
+    await userEvent.type(screen.getByLabelText("Add a task"), "Call the dentist");
+    const form = screen.getByTestId("capture-bar");
+
+    await act(async () => {
+      fireEvent.submit(form);
+      await Promise.resolve();
+      await Promise.resolve();
+      fireEvent.submit(form);
+    });
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
   it("clears input after successful submit", async () => {
     const onSubmit = vi.fn();
     render(<CaptureBar onSubmit={onSubmit} />);
