@@ -22,8 +22,11 @@ export interface PBSyncConfig {
   lastSyncAt: string | null;
   /** Provenance-safe client_updated_at cursor introduced after the server-cursor rollback. */
   lastClientUpdatedAt?: string | null;
-  /** Version 2 means lastClientUpdatedAt is authoritative, including a null full-pull cursor. */
-  pullCursorVersion?: 2;
+  /**
+   * The pull contract the cursor was written under (SYNC_CONFIG.PULL_CURSOR_VERSION).
+   * Anything older forces one full pull that merges same-version records.
+   */
+  pullCursorVersion?: number;
   /**
    * Deprecated server timestamp cursor. Retained only so migration can detect
    * and clear it; it must never be reused as a client_updated_at cursor.

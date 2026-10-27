@@ -788,3 +788,61 @@ describe('pullRemoteChanges after teardown', () => {
     expect(outcome).toBeInstanceOf(StaleSyncSessionError);
   });
 });
+
+describe('pullRemoteChanges same-version backfill', () => {
+  // The stamp both copies carry: the server record and the row a build that
+  // did not know saved_at wrote from it.
+  const stamp = '2026-10-26T23:29:40.274Z';
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const db = getDb();
+    await db.tasks.clear();
+    await db.syncQueue.clear();
+    fetchRemoteTaskIndexMock.mockResolvedValue({
+      index: new Map([['t-saved', { pbRecordId: 'rec-t-saved', clientUpdatedAt: stamp }]]),
+      fetchSucceeded: true,
+    });
+    await db.tasks.add({
+      ...makeTask('t-saved', stamp),
+      snoozedUntil: '2026-10-27T09:00:00.000Z',
+      notificationSent: true,
+    });
+  });
+
+  function pullSavedRecord(clientUpdatedAt: string, options?: { mergeSameVersion: boolean }) {
+    const record = { ...pbRecord('t-saved', clientUpdatedAt), saved_at: stamp } as RecordModel;
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ getList: vi.fn(async () => [record]) }),
+    });
+    return pullRemoteChanges(null, options);
+  }
+
+  it('merges a same-version remote while backfilling and keeps device-local state', async () => {
+    const { pulledCount } = await pullSavedRecord(stamp, { mergeSameVersion: true });
+
+    expect(pulledCount).toBe(1);
+    await expect(getDb().tasks.get('t-saved')).resolves.toMatchObject({
+      savedAt: stamp,
+      updatedAt: stamp,
+      snoozedUntil: '2026-10-27T09:00:00.000Z',
+      notificationSent: true,
+    });
+  });
+
+  it('still keeps a strictly newer local task while backfilling', async () => {
+    const { pulledCount } = await pullSavedRecord('2026-10-26T23:29:40.273Z', { mergeSameVersion: true });
+
+    expect(pulledCount).toBe(0);
+    const local = await getDb().tasks.get('t-saved');
+    expect(local?.savedAt).toBeUndefined();
+  });
+
+  it('skips a same-version remote on an ordinary pull', async () => {
+    const { pulledCount } = await pullSavedRecord(stamp);
+
+    expect(pulledCount).toBe(0);
+    const local = await getDb().tasks.get('t-saved');
+    expect(local?.savedAt).toBeUndefined();
+  });
+});

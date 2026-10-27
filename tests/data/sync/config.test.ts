@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import {
   getSyncConfig,
   updateSyncConfig,
@@ -217,7 +218,7 @@ describe('Sync Config', () => {
       expect(config?.provider).toBeNull();
       expect(config?.lastSyncAt).toBeNull();
       expect(config?.lastClientUpdatedAt).toBeNull();
-      expect(config?.pullCursorVersion).toBe(2);
+      expect(config?.pullCursorVersion).toBe(SYNC_CONFIG.PULL_CURSOR_VERSION);
       expect(config?.lastServerUpdatedAt).toBeNull();
       expect(config?.consecutiveFailures).toBe(0);
       expect(config?.lastFailureAt).toBeNull();

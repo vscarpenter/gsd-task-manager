@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { getDb } from '@/lib/db';
 import type { PBSyncConfig } from '@/lib/sync/types';
 
@@ -50,7 +51,7 @@ const SIGNED_IN_AFTER_FAILURES: PBSyncConfig = {
   provider: 'google',
   lastSyncAt: null,
   lastClientUpdatedAt: null,
-  pullCursorVersion: 2,
+  pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
   lastServerUpdatedAt: null,
   lastSuccessfulSyncAt: null,
   consecutiveFailures: 2,
@@ -78,5 +79,82 @@ describe('fullSync with the real outcome writers', () => {
     expect(result.status).toBe('success');
     await expect(db.syncHistory.count()).resolves.toBe(1);
     expect(config?.consecutiveFailures).toBe(0);
+  });
+});
+
+describe('fullSync pull contract upgrade', () => {
+  const stamp = '2026-10-26T23:29:40.274Z';
+  // The server copy, saved on another device while this client ran a build
+  // that did not read saved_at.
+  const savedOnServer = {
+    id: 'rec-saved',
+    collectionId: 'tasks',
+    collectionName: 'tasks',
+    created: '2026-10-26 23:29:42.288Z',
+    updated: '2026-10-26 23:29:42.288Z',
+    task_id: 't-saved',
+    title: 'Read later',
+    description: '',
+    urgent: false,
+    important: true,
+    quadrant: 'not-urgent-important',
+    completed: false,
+    saved_at: stamp,
+    client_updated_at: stamp,
+    client_created_at: stamp,
+    device_id: 'other-device',
+    owner: 'user-1',
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockGetList.mockReset();
+    mockGetList.mockResolvedValue([savedOnServer]);
+    const db = getDb();
+    await Promise.all(db.tables.map((table) => table.clear()));
+    // What the old build stored: the same version, without the field.
+    await db.tasks.add({
+      id: 't-saved',
+      title: 'Read later',
+      description: '',
+      urgent: false,
+      important: true,
+      quadrant: 'not-urgent-important',
+      completed: false,
+      createdAt: stamp,
+      updatedAt: stamp,
+      recurrence: 'none',
+      tags: [],
+      subtasks: [],
+      dependencies: [],
+      notificationEnabled: false,
+      notificationSent: false,
+      timeSpent: 0,
+      timeEntries: [],
+    });
+    // Its cursor already sits past the record, under the previous contract.
+    await db.syncMetadata.put({
+      ...SIGNED_IN_AFTER_FAILURES,
+      lastClientUpdatedAt: '2026-10-27T00:00:00.000Z',
+      pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION - 1,
+    });
+  });
+
+  it('pulls everything once and merges same-version rows when the config predates the contract', async () => {
+    const result = await fullSync('auto');
+
+    expect(result.status).toBe('success');
+    expect(mockGetList.mock.calls[0][2].filter).toBe('owner = "user-1"');
+    await expect(getDb().tasks.get('t-saved')).resolves.toMatchObject({ savedAt: stamp });
+    await expect(getDb().syncMetadata.get('sync_config')).resolves.toMatchObject({ pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION });
+  });
+
+  it('returns to incremental pulls once the contract is stamped', async () => {
+    await fullSync('auto');
+    mockGetList.mockClear();
+
+    await fullSync('auto');
+
+    expect(mockGetList.mock.calls[0][2].filter).toContain('client_updated_at >= "');
   });
 });

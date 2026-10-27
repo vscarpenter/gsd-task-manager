@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 
 // Hoisted mocks
 const {
@@ -235,7 +236,7 @@ describe('reset-everything', () => {
           provider: null,
           lastSyncAt: null,
           lastClientUpdatedAt: null,
-          pullCursorVersion: 2,
+          pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
           lastServerUpdatedAt: null,
           lastSuccessfulSyncAt: null,
           consecutiveFailures: 0,

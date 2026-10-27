@@ -21,6 +21,15 @@ const logger = createLogger('SYNC_ENGINE');
 /** Overlap window subtracted from the persisted cursor to avoid boundary misses. */
 const CURSOR_OVERLAP_MS = 30 * 1000;
 
+export interface PullOptions {
+  /**
+   * Also merge records at the same version as the local row: the one full
+   * pull after a pull contract bump, when a local row may lack a field an
+   * older build never read (SYNC_CONFIG.PULL_CURSOR_VERSION).
+   */
+  mergeSameVersion?: boolean;
+}
+
 interface PreparedRemoteRecord {
   record: RecordModel;
   remoteTask: TaskRecord;
@@ -49,9 +58,21 @@ function findMaxAppliedClientUpdated(records: PreparedRemoteRecord[], nowMs: num
   return Number.isFinite(maxTime) ? new Date(maxTime).toISOString() : null;
 }
 
+/**
+ * LWW: a strictly newer remote wins. A same-version remote is the version this
+ * client already holds, so it is accepted only while backfilling, when the
+ * local copy may lack a field an older build never read.
+ */
+function acceptsRemoteVersion(remoteUpdatedAt: string, localUpdatedAt: string, mergeSameVersion: boolean): boolean {
+  const remote = new Date(remoteUpdatedAt).getTime();
+  const local = new Date(localUpdatedAt).getTime();
+  return remote > local || (mergeSameVersion && remote === local);
+}
+
 async function applyPreparedRecord(
   db: ReturnType<typeof getDb>,
-  prepared: PreparedRemoteRecord
+  prepared: PreparedRemoteRecord,
+  mergeSameVersion: boolean,
 ): Promise<number> {
   const { record, remoteTask } = prepared;
   const rawUpdatedAt = readClientUpdatedAt(record);
@@ -63,8 +84,7 @@ async function applyPreparedRecord(
   const localTask = await db.tasks.get(remoteTask.id);
   const merged = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
   if (!merged) return 0;
-  const remoteWins = !localTask ||
-    new Date(merged.updatedAt).getTime() > new Date(localTask.updatedAt).getTime();
+  const remoteWins = !localTask || acceptsRemoteVersion(merged.updatedAt, localTask.updatedAt, mergeSameVersion);
   if (!remoteWins) return 0;
   if (archived) await db.archivedTasks.delete(remoteTask.id);
   if (deleted) await db.deletedTasks.delete(remoteTask.id);
@@ -78,7 +98,7 @@ async function applyPreparedRecord(
  * The fetch may have outlived a sign-out, so nothing is written unless
  * `ownerId` still owns the sync session inside the transaction.
  */
-async function applyRemoteRecords(records: RecordModel[], ownerId: string): Promise<{
+async function applyRemoteRecords(records: RecordModel[], ownerId: string, mergeSameVersion: boolean): Promise<{
   pulledCount: number;
   skippedCount: number;
   appliedRecords: PreparedRemoteRecord[];
@@ -91,7 +111,7 @@ async function applyRemoteRecords(records: RecordModel[], ownerId: string): Prom
     await assertSyncSessionCurrent(ownerId);
     for (const prepared of acceptedRecords) {
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- one atomic Dexie transaction preserves tombstone/live invariants
-      const applied = await applyPreparedRecord(db, prepared);
+      const applied = await applyPreparedRecord(db, prepared, mergeSameVersion);
       pulledCount += applied;
       if (applied > 0) appliedRecords.push(prepared);
     }
@@ -106,10 +126,14 @@ async function applyRemoteRecords(records: RecordModel[], ownerId: string): Prom
 /**
  * Pull remote changes from PocketBase into local IndexedDB.
  * Fetches tasks whose client-stamped `client_updated_at` is at or past the cursor.
- * LWW: remote wins if remote client_updated_at > local updatedAt.
+ * LWW: remote wins if remote client_updated_at > local updatedAt, or is equal
+ * while `mergeSameVersion` backfills a newly synced field.
  * Throws StaleSyncSessionError when the user's session ends before a write.
  */
-export async function pullRemoteChanges(lastClientUpdatedAt: string | null): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
+export async function pullRemoteChanges(
+  lastClientUpdatedAt: string | null,
+  options: PullOptions = {},
+): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
   const ownerId = getCurrentUserId();
 
   if (!ownerId) {
@@ -132,7 +156,7 @@ export async function pullRemoteChanges(lastClientUpdatedAt: string | null): Pro
     sort: 'client_updated_at,task_id,id',
   });
 
-  const { pulledCount, skippedCount, appliedRecords } = await applyRemoteRecords(records, ownerId);
+  const { pulledCount, skippedCount, appliedRecords } = await applyRemoteRecords(records, ownerId, options.mergeSameVersion ?? false);
   if (skippedCount > 0) {
     logger.warn('Skipped invalid remote records during pull', { skippedCount });
   }

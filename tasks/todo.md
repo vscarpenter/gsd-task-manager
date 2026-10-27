@@ -1289,3 +1289,26 @@ can't collide with the modernization session state above.
   No version trio bump, since nothing in the web bundle or the MCP package changed.
 - Finding, not fixed: the upgrade system test depends on PocketBase's dev mode
   (lessons.md). Passing `--dev` in the test would make it location-independent.
+
+# Synced-field backfill (2026-10-27)
+
+Tier: Standard on the web (bounded sync change, no new public surface), paired with
+the iOS branch of the same name. Branch `fix/synced-field-backfill` from `d17cfb3`.
+Decision: `docs/adr/0019-pull-contract-version-backfill.md`.
+
+- [x] Failing tests: same-version merge during a backfill pull (`pb-pull.test.ts`),
+      contract upgrade forces one full pull then stamps the version
+      (`full-sync-real-writers.test.ts`).
+- [x] `SYNC_CONFIG.PULL_CURSOR_VERSION` = 3; `resolvePullCursor` returns a plan;
+      `pullRemoteChanges` takes `mergeSameVersion`; config writers use the constant.
+- [x] Full vitest suite, typecheck, lint, code shape, knip.
+- [ ] Build, bundle budget, commit. Push and PR wait for the owner.
+
+## Resuming From Here
+
+- Done: the fix, its tests, ADR 0019, the sync rule note, version 14.2.1.
+- Next: owner's push and PR for both repos.
+- Blockers: none locally. The preflight found a leftover `autostash` on main from
+  2026-10-26 (package.json and bun.lock); it was left alone.
+- Assumptions: bumping the contract now, so every web client does one full pull
+  after this release, is preferable to shipping a dormant mechanism.

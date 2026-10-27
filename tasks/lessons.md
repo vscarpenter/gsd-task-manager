@@ -408,3 +408,7 @@ A touch pointer starts implicitly captured by the element under the finger. When
 ## Builds rewrite AGENTS.md and next-env.d.ts (2026-10-22)
 
 `bun run build` and `next dev` (including the Playwright dev server) rewrite the Next-managed `nextjs-agent-rules` block in `AGENTS.md` (the installed 16.4.1 template uses `##` where the committed copy has `#`) and touch `next-env.d.ts`. Restore both with `git checkout --` after a local build or e2e run unless you mean to refresh them, and never sweep them into a feature commit.
+
+## A new synced field needs a one-time backfill (2026-10-27)
+
+Adding a wire column is not enough. A client that pulled a record before the column existed stored the row at the server's own `client_updated_at`, and its cursor sits past it. Neither an incremental pull nor a cursor reset brings the field across, because an equal stamp is a no-op on every client. `SYNC_CONFIG.PULL_CURSOR_VERSION` is the fix: bump it with the iOS `SyncCursor.contractVersion` in the same change, and the next sync pulls everything once with `mergeSameVersion` (ADR 0019). The test that would have caught it pulls with a local row already present at the remote's version; the suites only had cold-cursor cases.

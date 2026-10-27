@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 
 // Mock dependencies before importing the module
 vi.mock('@/lib/sync/pocketbase-client', () => ({
@@ -533,7 +534,7 @@ describe('pb-sync-engine', () => {
       const putCall = putCalls[0][0];
       // Cursor is persisted with a 30s overlap subtracted; see pb-pull.ts.
       expect(putCall.lastClientUpdatedAt).toBe('2024-06-15T11:59:30.000Z');
-      expect(putCall.pullCursorVersion).toBe(2);
+      expect(putCall.pullCursorVersion).toBe(SYNC_CONFIG.PULL_CURSOR_VERSION);
       expect(putCall.lastServerUpdatedAt).toBeNull();
       // The legacy client-stamped cursor is left untouched (only read once,
       // for migration).
@@ -570,10 +571,10 @@ describe('pb-sync-engine', () => {
       const putCall = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(putCall.lastServerUpdatedAt).toBeNull();
       expect(putCall.lastClientUpdatedAt).toBeNull();
-      expect(putCall.pullCursorVersion).toBe(2);
+      expect(putCall.pullCursorVersion).toBe(SYNC_CONFIG.PULL_CURSOR_VERSION);
     });
 
-    it('should migrate a legacy client-stamped cursor by rewinding 24 hours', async () => {
+    it('should perform a full pull for a legacy client-stamped cursor', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
@@ -586,9 +587,8 @@ describe('pb-sync-engine', () => {
       mockQueue.getPending.mockResolvedValue([]);
 
       const db = getDb();
-      // Old-build config: only the client-stamped cursor exists. It may carry
-      // up to ±5min of client clock skew, so the first cursor-based pull
-      // rewinds a full day; re-pulled records are LWW no-ops.
+      // Old-build config: only the client-stamped cursor exists. It predates
+      // every pull contract, so the first sync pulls everything once.
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
         key: 'sync_config',
         enabled: true,
@@ -601,7 +601,7 @@ describe('pb-sync-engine', () => {
       await fullSync('auto');
 
       const pullOptions = mockCollection.getList.mock.calls[0][2];
-      expect(pullOptions.filter).toContain('client_updated_at >= "2024-06-14T12:00:00.000Z"');
+      expect(pullOptions.filter).toBe('owner = "user-123"');
     });
 
     it('should not call recordSuccess on partial failure', async () => {
@@ -667,7 +667,7 @@ describe('pb-sync-engine', () => {
         deviceId: 'device-1',
         lastSyncAt: null,
         lastClientUpdatedAt: existingCursor,
-        pullCursorVersion: 2 as const,
+        pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
         lastServerUpdatedAt: null,
       };
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue(config);
