@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CalendarIcon, XIcon } from "lucide-react";
+import { DATE_CONFIG } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib/quadrants";
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
@@ -85,7 +86,7 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
 
 // ─── DueDateField ───────────────────────────────────────────────────────────
 
-const chipDateFormatter = new Intl.DateTimeFormat(undefined, {
+const chipDateFormatter = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, {
   weekday: "short",
   month: "short",
   day: "numeric",

@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { differenceInCalendarDays } from "date-fns";
 import { extendTailwindMerge } from "tailwind-merge";
 import { TIME_MS, DATE_CONFIG } from "@/lib/constants";
 
@@ -23,7 +24,7 @@ export function cn(...classNames: Array<string | undefined | false | null>): str
   return twMerge(clsx(classNames));
 }
 
-const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+const relativeTimeFormatter = new Intl.RelativeTimeFormat(DATE_CONFIG.LOCALE, { numeric: "auto" });
 
 /**
  * Extract a human-readable message from an unknown caught error.
@@ -43,8 +44,8 @@ export function formatDueDate(value?: string): string {
   }
 
   const date = new Date(value);
-  const dayOfWeek = date.toLocaleDateString(undefined, { weekday: "long" });
-  const dateStr = date.toLocaleDateString(undefined, {
+  const dayOfWeek = date.toLocaleDateString(DATE_CONFIG.LOCALE, { weekday: "long" });
+  const dateStr = date.toLocaleDateString(DATE_CONFIG.LOCALE, {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -57,10 +58,9 @@ export function formatRelative(value?: string): string {
     return "";
   }
 
-  const date = new Date(value);
-  const now = new Date();
-  const diff = date.getTime() - now.getTime();
-  const dayDelta = Math.round(diff / TIME_MS.DAY);
+  // Due dates are stored as local midnight. Rounding the milliseconds from now
+  // called Friday "the day after tomorrow" on a Tuesday evening.
+  const dayDelta = differenceInCalendarDays(new Date(value), new Date());
 
   if (Math.abs(dayDelta) > DATE_CONFIG.RELATIVE_DATE_THRESHOLD_DAYS) {
     return formatDueDate(value);

@@ -157,6 +157,13 @@ describe("TaskCard anatomy — four-pigment language", () => {
     expect(chip.className).toContain("text-status-overdue-ink");
   });
 
+  // A mistyped year (1900 for 2026) read as "46319d overdue · Jan 1", which
+  // hid the one detail that would explain the number.
+  it("adds the year to the overdue date when it is not this year", () => {
+    renderCard({ dueDate: new Date(1900, 0, 1).toISOString(), completed: false });
+    expect(screen.getByTestId("task-card-overdue-chip")).toHaveTextContent(/· Jan 1, 1900$/);
+  });
+
   it("no longer reserves right padding for a corner overdue badge", () => {
     const yesterday = new Date(Date.now() - 86_400_000).toISOString();
     renderCard({ dueDate: yesterday, completed: false });

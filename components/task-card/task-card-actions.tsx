@@ -2,7 +2,7 @@
 
 import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon } from "lucide-react";
 import { cn, formatRelative } from "@/lib/utils";
-import { SWIPE_CONFIG, TIME_MS } from "@/lib/constants";
+import { DATE_CONFIG, SWIPE_CONFIG, TIME_MS } from "@/lib/constants";
 import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,7 +16,15 @@ function isWithinDay(iso: string): boolean {
   return diff > 0 && diff < TIME_MS.DAY;
 }
 
-const SHORT_DATE = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+const SHORT_DATE = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, { month: "short", day: "numeric" });
+const DATE_WITH_YEAR = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, { month: "short", day: "numeric", year: "numeric" });
+
+/** Adds the year only when it differs, so a mistyped year shows on the card. */
+function formatOverdueDate(iso: string): string {
+  const date = new Date(iso);
+  const formatter = date.getFullYear() === new Date().getFullYear() ? SHORT_DATE : DATE_WITH_YEAR;
+  return formatter.format(date);
+}
 
 /**
  * "2d overdue · Aug 20". The date half is the point of moving this into the
@@ -25,7 +33,7 @@ const SHORT_DATE = new Intl.DateTimeFormat(undefined, { month: "short", day: "nu
  */
 function overdueLabel(days: number, dueDate?: string): string {
   const age = `${days}d overdue`;
-  return dueDate ? `${age} · ${SHORT_DATE.format(new Date(dueDate))}` : age;
+  return dueDate ? `${age} · ${formatOverdueDate(dueDate)}` : age;
 }
 
 export interface TaskCardActionsProps {

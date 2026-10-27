@@ -43,6 +43,7 @@ describe("CompletionChart dates", () => {
       />
     );
 
-    expect(captured.data.map((point) => point.date)).toEqual(["1/1", "1/2"]);
+    // Month names, not "1/2": a d/m reader takes 10/11 for 10 November.
+    expect(captured.data.map((point) => point.date)).toEqual(["Jan 1", "Jan 2"]);
   });
 });

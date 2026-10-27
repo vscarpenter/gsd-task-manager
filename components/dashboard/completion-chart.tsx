@@ -12,10 +12,11 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { parseISO } from "date-fns";
+import { DATE_CONFIG } from "@/lib/constants";
 import type { TrendDataPoint } from "@/lib/analytics";
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "numeric",
+const DATE_FORMATTER = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, {
+  month: "short",
   day: "numeric",
 });
 
