@@ -5,7 +5,7 @@ import { MatrixIntro } from "@/components/matrix-simplified/matrix-intro";
 
 /**
  * The briefing is one row, not a two-column section: on a 13" laptop the old
- * display-size date plus the Protect Q2 card cost ~190px before the first
+ * display-size date plus the Schedule card cost ~190px before the first
  * task, which pushed the bottom two quadrant headers below the fold. These
  * assert the compact contract — the props themselves are unchanged.
  */
@@ -38,26 +38,50 @@ describe("MatrixIntro — compact one-row briefing", () => {
     expect(screen.getByRole("heading", { level: 1, name: /today.s matrix/i })).toBeInTheDocument();
   });
 
-  it("collapses the Protect Q2 card into one accent button carrying the count", () => {
+  it("names the Schedule quadrant and its count in plain words", () => {
     renderIntro({ scheduleCount: 4 });
-    const button = screen.getByRole("button", { name: /protect q2/i });
-
-    expect(button).toHaveTextContent("Protect Q2 · 4 to schedule");
-    expect(button.className).toContain("bg-accent");
-    expect(button.className).toContain("text-on-accent");
-    expect(screen.getByText("⌥2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent("Schedule · 4 tasks");
   });
 
-  it("reads 'clear' rather than '0 to schedule' when Q2 is empty", () => {
+  it("uses the singular for one task", () => {
+    renderIntro({ scheduleCount: 1 });
+    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent("Schedule · 1 task");
+  });
+
+  it("says 'Schedule is empty' rather than a bare zero", () => {
     renderIntro({ scheduleCount: 0 });
-    expect(screen.getByRole("button", { name: /protect q2/i })).toHaveTextContent(
-      "Protect Q2 · clear"
+    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent("Schedule is empty");
+  });
+
+  // The old solid accent fill made this look like the page's primary action,
+  // but it only moves focus to the Schedule quadrant. Add stays the primary.
+  it("is a secondary control: bordered accent ink, no solid fill", () => {
+    renderIntro();
+    const button = screen.getByRole("button", { name: /^schedule/i });
+
+    expect(button.className).toContain("border-accent");
+    expect(button.className).toContain("text-accent");
+    expect(button.className).not.toContain("bg-accent ");
+    expect(button.className).not.toContain("text-on-accent");
+  });
+
+  it("explains what it does and names the shortcut in its tooltip", () => {
+    renderIntro();
+    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveAttribute(
+      "title",
+      "Move focus to the Schedule quadrant (keyboard shortcut: Option 2)"
     );
+  });
+
+  it("hides the Option 2 key hint on touch screens", () => {
+    renderIntro();
+    const hint = screen.getByText("⌥2");
+    expect(hint.className).toContain("pointer-coarse:hidden");
   });
 
   it("waits for the count before enabling, and guards Firefox state restore", () => {
     renderIntro({ scheduleCount: null });
-    const button = screen.getByRole("button", { name: /protect q2/i });
+    const button = screen.getByRole("button", { name: /^schedule/i });
 
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("autocomplete", "off");
@@ -67,7 +91,7 @@ describe("MatrixIntro — compact one-row briefing", () => {
     const user = userEvent.setup();
     const { onFocusSchedule } = renderIntro();
 
-    await user.click(screen.getByRole("button", { name: /protect q2/i }));
+    await user.click(screen.getByRole("button", { name: /^schedule/i }));
     expect(onFocusSchedule).toHaveBeenCalledTimes(1);
   });
 

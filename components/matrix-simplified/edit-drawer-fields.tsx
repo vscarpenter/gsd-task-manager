@@ -2,10 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CalendarIcon, XIcon } from "lucide-react";
+import { DATE_CONFIG } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib/quadrants";
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import type { RecurrenceType, Subtask } from "@/lib/types";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { TagChip } from "./edit-drawer-tag-chip";
+import { LengthLimitNote } from "./limit-note";
+
+/** The line shown in place of an add control that has hit its cap. */
+export function LimitNote({ children }: { children: React.ReactNode }): React.ReactElement {
+  return <p className="text-caption text-foreground-muted">{children}</p>;
+}
 
 // ─── Shared ────────────────────────────────────────────────────────────────
 
@@ -85,15 +94,24 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
 
 // ─── DueDateField ───────────────────────────────────────────────────────────
 
-const chipDateFormatter = new Intl.DateTimeFormat(undefined, {
+const chipDateFormatter = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, {
   weekday: "short",
   month: "short",
   day: "numeric",
 });
 
+const chipDateWithYearFormatter = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+/** Adds the year only when it differs, so a mistyped year shows in the chip. */
 function formatChipDate(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
-  return chipDateFormatter.format(date);
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  return (sameYear ? chipDateFormatter : chipDateWithYearFormatter).format(date);
 }
 
 interface DueDateFieldProps {
@@ -211,29 +229,12 @@ interface TagsFieldProps {
 }
 
 export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemoveTag, onTagKeyDown }: TagsFieldProps): React.ReactElement {
+  const atLimit = tags.length >= SCHEMA_LIMITS.MAX_TAGS;
   return (
     <Field label="Tags" as="group">
       <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-background p-2">
         {tags.map((t) => (
-          <span
-            key={t}
-            className="inline-flex items-center gap-1 rounded bg-background-muted px-2 py-0.5 text-caption font-medium text-foreground-muted"
-          >
-            <span className="opacity-60">#</span>
-            {t}
-            {/* Removes a chip from an unsaved draft — nothing is persisted until
-                Save, and re-adding is one keystroke. A confirmation dialog on a
-                tag chip would be worse UX than the risk it guards. */}
-            {/* ui-craft-detect-ignore-next-line */}
-            <button
-              type="button"
-              onClick={() => onRemoveTag(t)}
-              aria-label={`Remove ${t}`}
-              className="rounded-xs hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <XIcon className="h-3 w-3" />
-            </button>
-          </span>
+          <TagChip key={t} tag={t} onRemove={onRemoveTag} />
         ))}
         <input
           value={tagInput}
@@ -242,11 +243,15 @@ export function TagsField({ tags, tagInput, onTagInputChange, onAddTag, onRemove
           onBlur={onAddTag}
           placeholder={tags.length ? "" : "Add a tag…"}
           aria-label="Add a tag"
+          maxLength={SCHEMA_LIMITS.TAG_MAX_LENGTH}
+          disabled={atLimit}
           // Inset ring: this input is borderless inside a bordered chip box, so
           // an offset ring would draw outside the field it belongs to.
           className="pointer-coarse:text-base min-w-[80px] flex-1 rounded-xs border-0 bg-transparent text-small text-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         />
       </div>
+      {atLimit ? <LimitNote>A task can have up to {SCHEMA_LIMITS.MAX_TAGS} tags.</LimitNote> : null}
+      <LengthLimitNote field="tags" length={tagInput.length} max={SCHEMA_LIMITS.TAG_MAX_LENGTH} />
     </Field>
   );
 }
@@ -320,6 +325,7 @@ export function SubtasksField({
 }): React.ReactElement {
   const [entry, setEntry] = useState("");
   const done = subtasks.filter((s) => s.completed).length;
+  const atLimit = subtasks.length >= SCHEMA_LIMITS.MAX_SUBTASKS;
 
   const commit = (): void => {
     onAdd(entry);
@@ -340,7 +346,9 @@ export function SubtasksField({
           ))}
         </ul>
       ) : null}
-      <SubtaskEntry value={entry} onChange={setEntry} onCommit={commit} />
+      <SubtaskEntry value={entry} onChange={setEntry} onCommit={commit} disabled={atLimit} />
+      {atLimit ? <LimitNote>A task can have up to {SCHEMA_LIMITS.MAX_SUBTASKS} subtasks.</LimitNote> : null}
+      <LengthLimitNote field="subtasks" length={entry.length} max={SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH} />
     </Field>
   );
 }
@@ -390,10 +398,12 @@ function SubtaskEntry({
   value,
   onChange,
   onCommit,
+  disabled,
 }: {
   value: string;
   onChange: (value: string) => void;
   onCommit: () => void;
+  disabled: boolean;
 }): React.ReactElement {
   return (
     <input
@@ -407,6 +417,8 @@ function SubtaskEntry({
       }}
       placeholder="Add a subtask…"
       aria-label="Add a subtask"
+      maxLength={SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH}
+      disabled={disabled}
       className="pointer-coarse:text-base w-full rounded-lg border border-border bg-background px-3 py-2 text-small text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
     />
   );

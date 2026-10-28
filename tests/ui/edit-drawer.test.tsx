@@ -51,8 +51,63 @@ describe("<EditDrawer>", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Updated title" }),
-      "t1"
+      "t1",
+      expect.anything()
     );
+  });
+
+  // A double-click on "Create task" made two tasks, and five quick Enters made
+  // five, because the drawer stays open until the save resolves.
+  it("ignores repeat submits while a save is still in flight", async () => {
+    let finishSave: () => void = () => {};
+    const onSubmit = vi.fn(() => new Promise<void>((resolve) => { finishSave = resolve; }));
+    render(<EditDrawer open onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    await user.type(screen.getByLabelText(/title/i), "Book flights");
+    const create = screen.getByRole("button", { name: /create task/i });
+    fireEvent.click(create);
+    fireEvent.click(create);
+    fireEvent.submit(create.closest("form") as HTMLFormElement);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    finishSave();
+    await waitFor(() => expect(create).not.toHaveAttribute("aria-busy", "true"));
+    fireEvent.click(create);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  // maxLength cut pasted text off with no word, so the limit is now said.
+  it("says the title limit once the title reaches it", () => {
+    render(<EditDrawer open onClose={vi.fn()} onSubmit={vi.fn()} />);
+    const title = screen.getByLabelText(/title/i);
+
+    fireEvent.change(title, { target: { value: "x".repeat(79) } });
+    expect(screen.queryByText("Titles can be up to 80 characters.")).not.toBeInTheDocument();
+
+    fireEvent.change(title, { target: { value: "x".repeat(80) } });
+    expect(screen.getByText("Titles can be up to 80 characters.")).toBeInTheDocument();
+  });
+
+  // A pasted link longer than 80 characters moves to the description on save.
+  // maxLength cut it off first, so the task saved a broken link.
+  it("keeps a long pasted link in the title whole and counts only the words", async () => {
+    const onSubmit = vi.fn();
+    render(<EditDrawer open onClose={vi.fn()} onSubmit={onSubmit} />);
+    const link = `https://example.com/${"a".repeat(100)}`;
+    const title = screen.getByLabelText(/title/i) as HTMLInputElement;
+
+    await user.click(title);
+    await user.paste(`Read ${link}`);
+
+    expect(title.value).toBe(`Read ${link}`);
+    expect(screen.queryByText("Titles can be up to 80 characters.")).not.toBeInTheDocument();
+  });
+
+  it("says the description limit once the description reaches it", () => {
+    render(<EditDrawer open onClose={vi.fn()} onSubmit={vi.fn()} />);
+    fireEvent.change(screen.getByTestId("edit-description"), { target: { value: "x".repeat(600) } });
+    expect(screen.getByText("Descriptions can be up to 600 characters.")).toBeInTheDocument();
   });
 
   it("Esc closes the drawer", async () => {
@@ -115,7 +170,8 @@ describe("<EditDrawer>", () => {
     await user.click(screen.getByRole("button", { name: /save changes/i }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ urgent: false, important: true }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -334,7 +390,8 @@ describe("<EditDrawer>", () => {
       await user.click(screen.getByRole("button", { name: /save changes/i }));
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ dependencies: ["t2"] }),
-        "t1"
+        "t1",
+        expect.anything()
       );
     });
 
@@ -348,7 +405,8 @@ describe("<EditDrawer>", () => {
       await user.click(screen.getByRole("button", { name: /save changes/i }));
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ dependencies: [] }),
-        "t1"
+        "t1",
+        expect.anything()
       );
     });
 

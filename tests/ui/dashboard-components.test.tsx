@@ -310,7 +310,7 @@ describe('Dashboard Components', () => {
     it('should render empty state when no tags', () => {
       render(<TagAnalytics tagStats={[]} />);
 
-      expect(screen.getByText(/tag a task to see how each tag is tracking/i)).toBeInTheDocument();
+      expect(screen.getByText(/add tags to your tasks to see progress for each tag/i)).toBeInTheDocument();
     });
 
     it('should render tag statistics with completion info', () => {
@@ -525,9 +525,9 @@ describe('Dashboard Components', () => {
 
       render(<TimeAnalytics summary={summary} quadrantDistribution={distribution} />);
 
-      expect(screen.getByText(/Do First \(Q1\)/)).toBeInTheDocument();
-      expect(screen.getByText(/Schedule \(Q2\)/)).toBeInTheDocument();
-      expect(screen.getByText(/Delegate \(Q3\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Do First/)).toBeInTheDocument();
+      expect(screen.getByText(/Schedule/)).toBeInTheDocument();
+      expect(screen.getByText(/Delegate/)).toBeInTheDocument();
     });
 
     it('should render estimation insights when over/under counts exist', () => {
@@ -854,7 +854,7 @@ describe('Dashboard Components', () => {
     it('should offer a next step from the tags empty region', () => {
       render(<TagAnalytics tagStats={[]} />);
 
-      expect(screen.getByText(/tag a task to see how each tag is tracking/i)).toBeInTheDocument();
+      expect(screen.getByText(/add tags to your tasks to see progress for each tag/i)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Open matrix' })).toHaveAttribute('href', '/');
     });
 

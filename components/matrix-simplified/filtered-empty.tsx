@@ -10,6 +10,12 @@ interface FilteredEmptyProps {
   onClear: () => void;
 }
 
+const MAX_QUERY_CHARS = 60;
+
+function clip(text: string): string {
+  return text.length > MAX_QUERY_CHARS ? `${text.slice(0, MAX_QUERY_CHARS)}…` : text;
+}
+
 /**
  * Shown when a filter matched nothing.
  *
@@ -19,16 +25,16 @@ interface FilteredEmptyProps {
  * board, a filtered board read as a board that had vanished.
  */
 export function FilteredEmpty({ query, viewName, onClear }: FilteredEmptyProps) {
-  const label = query.trim() ? `“${query.trim()}”` : viewName;
+  const label = query.trim() ? `“${clip(query.trim())}”` : viewName;
 
   return (
     <div
       data-testid="filtered-empty"
-      className="col-span-full flex flex-col items-center justify-center gap-3 rounded-xl border border-pane-border bg-card/60 px-6 py-16 text-center"
+      className="col-span-full flex flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-pane-border bg-card/60 px-6 py-16 text-center"
     >
       <SearchXIcon className="h-6 w-6 text-foreground-muted" aria-hidden="true" />
       <div className="space-y-1">
-        <p className="text-h3 text-foreground">No tasks match {label}</p>
+        <p className="break-words text-h3 text-foreground">No tasks match {label}</p>
         <p className="text-sm text-foreground-muted">
           Your tasks are still here — this view is just narrowed.
         </p>

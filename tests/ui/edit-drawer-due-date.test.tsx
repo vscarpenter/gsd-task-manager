@@ -97,6 +97,12 @@ describe("<EditDrawer> due date round trip", () => {
     expect(screen.getByRole("button", { name: /^this week$/i })).toHaveAttribute("aria-pressed", "false");
   });
 
+  // "Mon, Jan 1" hid a mistyped 1900, the one detail that explains it.
+  it("adds the year to a picked date outside this year", () => {
+    openTask(new Date(1900, 0, 1, 12).toISOString());
+    expect(screen.getByText(/Jan 1, 1900/)).toBeInTheDocument();
+  });
+
   it("selects This week for a date on this Friday", () => {
     openTask(localIso(5, 1));
 

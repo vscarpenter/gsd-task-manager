@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { differenceInCalendarDays } from "date-fns";
 import { extendTailwindMerge } from "tailwind-merge";
 import { TIME_MS, DATE_CONFIG } from "@/lib/constants";
 
@@ -23,7 +24,7 @@ export function cn(...classNames: Array<string | undefined | false | null>): str
   return twMerge(clsx(classNames));
 }
 
-const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+const relativeTimeFormatter = new Intl.RelativeTimeFormat(DATE_CONFIG.LOCALE, { numeric: "auto" });
 
 /**
  * Extract a human-readable message from an unknown caught error.
@@ -31,6 +32,23 @@ const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, { numeric: 
  */
 export function formatErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
+}
+
+/**
+ * True for the second click of a double-click. A row action that removes its
+ * row ignores it: by then the next row has slid under the pointer.
+ */
+export function isRepeatClick(event: { detail: number }): boolean {
+  return event.detail > 1;
+}
+
+// Whitespace plus the zero-width characters (ZWSP, ZWNJ, ZWJ, word joiner, BOM)
+// that paste into a field and look empty while still counting as text.
+const INVISIBLE_CHARS = /[\s\u200B-\u200D\u2060\uFEFF]/g;
+
+/** True when the text holds at least one character a person can see. */
+export function hasVisibleText(value: string): boolean {
+  return value.replace(INVISIBLE_CHARS, "").length > 0;
 }
 
 export function isoNow(): string {
@@ -43,8 +61,8 @@ export function formatDueDate(value?: string): string {
   }
 
   const date = new Date(value);
-  const dayOfWeek = date.toLocaleDateString(undefined, { weekday: "long" });
-  const dateStr = date.toLocaleDateString(undefined, {
+  const dayOfWeek = date.toLocaleDateString(DATE_CONFIG.LOCALE, { weekday: "long" });
+  const dateStr = date.toLocaleDateString(DATE_CONFIG.LOCALE, {
     month: "short",
     day: "numeric",
     year: "numeric"
@@ -57,10 +75,9 @@ export function formatRelative(value?: string): string {
     return "";
   }
 
-  const date = new Date(value);
-  const now = new Date();
-  const diff = date.getTime() - now.getTime();
-  const dayDelta = Math.round(diff / TIME_MS.DAY);
+  // Due dates are stored as local midnight. Rounding the milliseconds from now
+  // called Friday "the day after tomorrow" on a Tuesday evening.
+  const dayDelta = differenceInCalendarDays(new Date(value), new Date());
 
   if (Math.abs(dayDelta) > DATE_CONFIG.RELATIVE_DATE_THRESHOLD_DAYS) {
     return formatDueDate(value);

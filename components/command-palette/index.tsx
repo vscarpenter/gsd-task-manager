@@ -1,6 +1,7 @@
 "use client";
 
 import { Command } from "cmdk";
+import { XIcon } from "lucide-react";
 import { useCommandPalette } from "@/lib/use-command-palette";
 import { buildCommandActions, type CommandActionHandlers } from "@/lib/command-actions";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -91,7 +92,7 @@ export function CommandPalette({
         <DialogDescription className="sr-only">
           Search for tasks, actions, and settings. Use arrow keys to navigate and Enter to select.
         </DialogDescription>
-        <SearchInput search={search} onSearchChange={setSearch} />
+        <SearchInput search={search} onSearchChange={setSearch} onClose={() => setOpen(false)} />
 
         <Command.List className="max-h-[400px] overflow-y-auto p-2">
           <Command.Empty className="py-6 text-center text-sm text-foreground-muted">
@@ -144,9 +145,10 @@ export function CommandPalette({
 interface SearchInputProps {
   search: string;
   onSearchChange: (value: string) => void;
+  onClose: () => void;
 }
 
-function SearchInput({ search, onSearchChange }: SearchInputProps) {
+function SearchInput({ search, onSearchChange, onClose }: SearchInputProps) {
   return (
     <div className="flex items-center border-b border-border px-4">
       <svg
@@ -168,9 +170,18 @@ function SearchInput({ search, onSearchChange }: SearchInputProps) {
         placeholder="Search tasks, actions, settings..."
         className="pointer-coarse:text-base flex h-12 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-foreground-muted disabled:cursor-not-allowed disabled:opacity-50"
       />
-      <kbd className="hidden sm:inline-flex min-h-5 shrink-0 items-center gap-1 rounded border border-border bg-background px-1.5 text-foreground-muted ml-2">
+      <kbd className="hidden sm:inline-flex pointer-coarse:hidden min-h-5 shrink-0 items-center gap-1 rounded border border-border bg-background px-1.5 text-foreground-muted ml-2">
         <span>ESC</span>
       </kbd>
+      {/* Touch screens have no Esc key and the dim area is easy to miss. */}
+      <button
+        type="button"
+        aria-label="Close command palette"
+        onClick={onClose}
+        className="touch-target -mr-2 ml-1 hidden h-9 w-9 shrink-0 items-center justify-center rounded-icon text-foreground-muted hover:bg-background-muted hover:text-foreground pointer-coarse:inline-flex"
+      >
+        <XIcon className="h-4 w-4" aria-hidden />
+      </button>
     </div>
   );
 }
@@ -181,7 +192,7 @@ interface FooterProps {
 
 function Footer({ isOpen }: FooterProps) {
   return (
-    <div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs text-foreground-muted">
+    <div className="flex items-center justify-between border-t border-border px-4 py-2 text-xs pointer-coarse:hidden text-foreground-muted">
       <div className="flex items-center gap-4">
         <span>↑↓ Navigate</span>
         <span>↵ Select</span>

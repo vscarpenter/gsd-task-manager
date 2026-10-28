@@ -1,3 +1,20 @@
+# Session state, 2026-10-27: launch QA with five personas (`fix/launch-qa-first-run`)
+
+## Resuming From Here
+
+Non-trivial by size; the owner's "fix it all in one pass, then rerun" stood in for the spec gate. Branched from main at `310e363`, 50 commits, 129 files. Nothing pushed, no PR, no version bump yet.
+
+- [x] Five personas (impatient, skeptic, 375px slow-3G mobile, literal pt-BR reader, breaker) drove headless Chromium against the production export. Baseline: impatient quit when its first task saved off-screen; 34 ranked findings, 2 dropped as artifacts.
+- [x] Fix pass: my commits plus three worktree agents (copy and sync story, mobile and touch, breaker robustness), cherry-picked and reviewed.
+- [x] Rerun, then a confirmation pass: all five reach first success (impatient in 4 actions, no quit). Every rerun finding is fixed, except the ones listed below as left alone on purpose.
+- [x] Gates on the final build: typecheck, lint, quality:shape, knip, bundle budget (baseline refreshed in `b25dc6e`), CSP smoke, unit 3709 passed at 90.3% statements, e2e export chromium 142 / firefox 134 / webkit 134.
+- [ ] Owner: review and decide the open questions, then push and open the PR (needs approval). Bump the version at PR time: package.json + README:7, past prod sw.js CACHE_VERSION.
+- [ ] Owner: delete the three agent worktree branches (`worktree-agent-*`) once the PR merges.
+
+Left alone on purpose (owner decisions): Terms of Service; privacy policy and FAQ text (marketing repo); capture parser odd-URL split (cross-platform contract); merge-import duplicates (copy only); unknown URLs render the matrix; phone keyboard handling (needs a real device); at-rest encryption disclosure; Eliminate's trash icon; the bundle baseline refresh; Back with the command palette open (reverted, raced navigation); pasted-batch undo; machine-speed double Enter in the full form.
+
+Known flake seen once in seven full runs, not reproduced in six isolated repeats: `saved-tasks.spec.ts` "keeps saved notes available after an offline reload".
+
 # Session state, 2026-10-23: undici and fast-uri advisories (`fix/undici-advisory`)
 
 ## Resuming From Here

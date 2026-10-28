@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowRightIcon, ArrowUpRightIcon, ZapIcon } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { ArrowRightIcon, ArrowUpRightIcon, ChevronsUpDownIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
 import {
   quadrantByRdKey,
@@ -10,7 +10,9 @@ import {
   QUADRANT_INK,
   type RedesignQuadrantKey,
 } from "@/lib/quadrants";
-import { cn } from "@/lib/utils";
+import { cn, hasVisibleText } from "@/lib/utils";
+import { useIsHydrated } from "@/lib/use-is-hydrated";
+import { useCapturePaste } from "./use-capture-paste";
 import { hasOpenModal, isEditableShortcutTarget } from "@/lib/use-app-shortcuts";
 
 export interface CapturePayload {
@@ -38,6 +40,98 @@ function deriveAutoKey(urgent: boolean, important: boolean): RedesignQuadrantKey
   return "q4";
 }
 
+/**
+ * The key replays the pill's pop-in by remounting the button, which drops focus.
+ * A pointer click keeps focus in the field, so Enter still adds the task; a
+ * keyboard press puts focus back on the new pill so cycling can go on.
+ */
+function usePillFocus(onCycle: () => void) {
+  const refocusRef = useRef(false);
+  return {
+    ref: (node: HTMLButtonElement | null) => {
+      if (node && refocusRef.current) {
+        refocusRef.current = false;
+        node.focus();
+      }
+    },
+    onMouseDown: (event: React.MouseEvent) => event.preventDefault(),
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => {
+      refocusRef.current = event.currentTarget === document.activeElement;
+      onCycle();
+    },
+  };
+}
+
+/**
+ * React keeps what was typed into the static field before hydration, but the
+ * text state starts empty, so the next render wrote "" over it. Adopt the
+ * typed value right after the hydration commit, before anything re-renders.
+ */
+function useAdoptTypedText(inputRef: React.RefObject<HTMLInputElement | null>, setText: (text: string) => void) {
+  useLayoutEffect(() => {
+    const typed = inputRef.current?.value;
+    if (typed) setText(typed);
+  }, [inputRef, setText]);
+}
+
+function AddButton({ hasTitle }: { hasTitle: boolean }) {
+  // Before hydration the form has no handler, and a native submit reloads the
+  // page and loses the task. A disabled default button also blocks Enter.
+  const hydrated = useIsHydrated();
+  return (
+    <button
+      data-testid="submit-task"
+      type="submit"
+      disabled={!hydrated}
+      aria-disabled={!hasTitle}
+      className={cn(
+        "touch-target col-start-3 row-start-1 inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-body font-semibold transition-[background-color,color,transform] duration-[120ms] sm:col-auto sm:row-auto sm:h-9 sm:px-4",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+        hasTitle
+          ? "bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.97]"
+          : "bg-accent/15 text-accent hover:bg-accent/20"
+      )}
+    >
+      Add
+      <ArrowRightIcon className="h-4 w-4" />
+    </button>
+  );
+}
+
+/** The quadrant a capture will land in. Clicking cycles through the others. */
+function QuadrantPill({
+  quadrantKey,
+  chosen,
+  onCycle,
+}: {
+  quadrantKey: RedesignQuadrantKey;
+  chosen: boolean;
+  onCycle: () => void;
+}) {
+  const focusProps = usePillFocus(onCycle);
+  return (
+    <button
+      data-testid="quadrant-toggle"
+      key={quadrantKey}
+      {...focusProps}
+      type="button"
+      title="Change where this task goes"
+      className="touch-target col-start-2 row-start-2 inline-flex items-center gap-1.5 justify-self-start rounded-full px-2.5 py-0.5 text-caption font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 sm:col-auto sm:row-auto"
+      style={{
+        backgroundColor: QUADRANT_HEADER[quadrantKey],
+        color: QUADRANT_INK[quadrantKey],
+      }}
+    >
+      <span className="h-[5px] w-[5px] rounded-full bg-current" aria-hidden />
+      {quadrantByRdKey(quadrantKey).title}
+      {/* "·fixed" read as "repaired". This says the person picked it. */}
+      {chosen ? <span className="font-normal normal-case">· chosen</span> : null}
+      {/* The pill read as a label; the chevrons say it can be changed. */}
+      <ChevronsUpDownIcon className="h-3 w-3 opacity-70" aria-hidden />
+    </button>
+  );
+}
+
 export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: CaptureBarProps) {
   const [text, setText] = useState("");
   const [override, setOverride] = useState<RedesignQuadrantKey | null>(null);
@@ -45,6 +139,10 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   const [justCaptured, setJustCaptured] = useState(false);
   const internalRef = useRef<HTMLInputElement | null>(null);
   const submittingRef = useRef(false);
+  // Set after a save until the cleared text renders: a second Enter in that gap
+  // still sees the old text and would save it again.
+  const awaitingClearRef = useRef(false);
+  useAdoptTypedText(internalRef, setText);
 
   // Stable refs so the global keydown handler does not re-register on every keystroke.
   const textRef = useRef(text);
@@ -92,7 +190,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
           important: flags.important,
           tags: currentParsed.tags,
         });
-        if (textRef.current.trim()) {
+        if (hasVisibleText(textRef.current)) {
           setText("");
           setOverride(null);
         }
@@ -102,12 +200,12 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  const { pasteNote, onPaste, clearPasteNote } = useCapturePaste(onSubmit, () => setJustCaptured(true));
   const parsed = parseCapture(text);
+  const hasTitle = hasVisibleText(parsed.title);
   const autoKey = deriveAutoKey(parsed.urgent, parsed.important);
   const effectiveKey = override ?? autoKey;
-  const meta = quadrantByRdKey(effectiveKey);
   const accent = QUADRANT_ACCENT[effectiveKey];
-  const ink = QUADRANT_INK[effectiveKey];
 
   const cycleQuadrant = () => {
     const idx = CYCLE.indexOf(override);
@@ -116,15 +214,21 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
 
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (!parsed.title || submittingRef.current) return;
+    if (submittingRef.current || awaitingClearRef.current) return;
+    if (!hasTitle) {
+      // An empty Add looked enabled and did nothing. Point at the field instead.
+      internalRef.current?.focus();
+      return;
+    }
     const flags = override
       ? { urgent: quadrantByRdKey(override).urgent, important: quadrantByRdKey(override).important }
       : { urgent: parsed.urgent, important: parsed.important };
     const draftText = text;
     const draftOverride = override;
     submittingRef.current = true;
+    let saved: void | boolean = false;
     try {
-      const saved = await onSubmit({
+      saved = await onSubmit({
         title: parsed.title,
         urgent: flags.urgent,
         important: flags.important,
@@ -138,10 +242,17 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       setJustCaptured(true);
     } catch {
       // The caller reports the failure. The sentence stays so it can be retried.
+      saved = false;
     } finally {
       submittingRef.current = false;
+      // Only a field still holding the saved draft is about to clear.
+      awaitingClearRef.current = saved !== false && textRef.current === draftText;
     }
   };
+
+  useEffect(() => {
+    awaitingClearRef.current = false;
+  }, [text]);
 
   const onInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
@@ -150,6 +261,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   };
 
   return (
+    <>
     <form
       data-testid="capture-bar"
       onSubmit={submit}
@@ -167,43 +279,29 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         aria-hidden
         onAnimationEnd={() => setJustCaptured(false)}
         className={cn("col-start-1 row-start-1 h-4 w-4 shrink-0 transition-colors", justCaptured && "animate-capture-pop")}
-        style={{ color: text.trim() ? accent : "color-mix(in srgb, var(--gray-500) 70%, transparent)" }}
+        style={{ color: hasVisibleText(text) ? accent : "color-mix(in srgb, var(--gray-500) 70%, transparent)" }}
       />
       <input
         data-testid="capture-input"
         ref={setInputRef}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value);
+          clearPasteNote();
+        }}
+        onPaste={onPaste}
         onKeyDown={onInputKey}
-        placeholder="Capture a task…"
-        aria-label="Capture a task"
+        placeholder="Add a task…"
+        aria-label="Add a task"
         // The focus indicator lives on the parent <form> (focus-within:ring-2
         // ring-accent), which is the visible affordance for this borderless
         // input. The rule matches per element and cannot see the parent.
         // ui-craft-detect-ignore-next-line
         className="touch-target col-start-2 row-start-1 min-w-0 flex-1 border-0 bg-transparent text-base text-foreground outline-none placeholder:text-foreground-muted sm:text-body"
       />
-      {text.trim() ? (
+      {hasVisibleText(text) ? (
         <>
-          <button
-            data-testid="quadrant-toggle"
-            key={effectiveKey}
-            type="button"
-            onClick={cycleQuadrant}
-            title="Choose task destination"
-            className="touch-target col-start-2 row-start-2 inline-flex items-center gap-1.5 justify-self-start rounded-full px-2.5 py-0.5 text-caption font-medium animate-quadrant-pill-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 sm:col-auto sm:row-auto"
-            style={{
-              backgroundColor: QUADRANT_HEADER[effectiveKey],
-              color: ink,
-            }}
-          >
-            <span
-              className="h-[5px] w-[5px] rounded-full bg-current"
-              aria-hidden
-            />
-            {meta.title}
-            {override ? <span className="ml-1 font-normal normal-case">·fixed</span> : null}
-          </button>
+          <QuadrantPill quadrantKey={effectiveKey} chosen={override !== null} onCycle={cycleQuadrant} />
           {onMoreOptions ? (
             <button
               data-testid="more-options"
@@ -229,25 +327,20 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
           ) : null}
         </>
       ) : (
-        <kbd className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-caption text-foreground-muted sm:inline-flex">
+        <kbd
+          title="Press n to jump here"
+          className="hidden rounded border border-border px-1.5 py-0.5 font-mono text-caption text-foreground-muted sm:inline-flex"
+        >
           n
         </kbd>
       )}
-      <button
-        data-testid="submit-task"
-        type="submit"
-        aria-disabled={!parsed.title}
-        className={cn(
-          "touch-target col-start-3 row-start-1 inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-body font-semibold transition-[background-color,color,transform] duration-[120ms] sm:col-auto sm:row-auto sm:h-9 sm:px-4",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
-          parsed.title
-            ? "bg-accent text-on-accent hover:bg-accent-hover active:scale-[0.97]"
-            : "bg-accent/15 text-accent hover:bg-accent/20"
-        )}
-      >
-        Add
-        <ArrowRightIcon className="h-4 w-4" />
-      </button>
+      <AddButton hasTitle={hasTitle} />
     </form>
+    {pasteNote ? (
+      <output className="block px-1 pt-1.5 text-caption text-foreground-muted">
+        {pasteNote}
+      </output>
+    ) : null}
+    </>
   );
 }

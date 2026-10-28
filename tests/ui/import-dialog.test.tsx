@@ -10,6 +10,9 @@ vi.mock("@/lib/tasks", () => ({
   importFromJson: (raw: string, mode: "replace" | "merge") => mockImportFromJson(raw, mode)
 }));
 
+// These tests use minimal task rows. Validation has its own suite (import-check.test.ts).
+vi.mock("@/lib/tasks/import-check", () => ({ checkImportFile: () => ({ ok: true }) }));
+
 const mockToastError = vi.fn();
 
 vi.mock("sonner", () => ({

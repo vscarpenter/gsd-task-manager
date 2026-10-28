@@ -10,21 +10,21 @@ interface ReviewPromptsProps {
 const PROMPTS = [
   {
     quadrant: "urgent-important" as const,
-    label: "Q1 · Do First",
+    label: "Do First",
     question: "What still needs an answer?",
     rdKey: "q1" as const,
     destination: "Do First",
   },
   {
     quadrant: "not-urgent-important" as const,
-    label: "Q2 · Schedule",
-    question: "What received protected time?",
+    label: "Schedule",
+    question: "What have you planned a time for?",
     rdKey: "q2" as const,
     destination: "Schedule",
   },
   {
     quadrant: "not-urgent-not-important" as const,
-    label: "Q4 · Eliminate",
+    label: "Eliminate",
     question: "What can leave the list?",
     rdKey: "q4" as const,
     destination: "Eliminate",
@@ -32,7 +32,7 @@ const PROMPTS = [
 ] as const;
 
 function activeCount(count: number, destination: string): string {
-  return `${count} active commitment${count === 1 ? "" : "s"} in ${destination}.`;
+  return `${count} active task${count === 1 ? "" : "s"} in ${destination}.`;
 }
 
 /**
@@ -53,7 +53,7 @@ export function ReviewPrompts({ distribution }: ReviewPromptsProps): React.React
             id="review-prompts-title"
             className="text-h3 text-foreground"
           >
-            Look at the shape of active work.
+            See where your open tasks are.
           </h3>
         </div>
         <p className="max-w-md text-sm leading-relaxed text-foreground-muted sm:text-right">

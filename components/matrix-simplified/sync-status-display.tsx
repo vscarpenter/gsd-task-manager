@@ -64,13 +64,13 @@ export function SyncStatusDisplay({
           <TooltipTrigger asChild>
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-foreground-muted">
               <ShieldCheckIcon className="h-3.5 w-3.5" />
-              <span>Saved locally</span>
+              <span>On this device</span>
             </div>
           </TooltipTrigger>
           <TooltipContent>
             <p>
-              All data stored privately in your browser. Click the cloud icon
-              to enable sync.
+              Your tasks are stored in this browser only. Click the cloud icon
+              to turn on sync.
             </p>
           </TooltipContent>
         </Tooltip>

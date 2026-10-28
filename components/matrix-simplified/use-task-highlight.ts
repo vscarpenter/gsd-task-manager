@@ -10,10 +10,21 @@ import type { TaskRecord } from "@/lib/types";
 /** How long a task stays visually highlighted after being targeted. */
 const HIGHLIGHT_DURATION_MS = 3500;
 
+function revealTask(node: HTMLElement, focus: boolean): void {
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  node.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+  if (focus) node.focus({ preventScroll: true });
+}
+
 export interface TaskHighlight {
   highlightedTaskId: string | null;
   handleTaskRef: (taskId: string, element: HTMLElement | null) => void;
-  highlightTaskById: (taskId: string) => void;
+  highlightTaskById: (taskId: string, options?: HighlightOptions) => void;
+}
+
+export interface HighlightOptions {
+  /** False keeps focus where it is, such as in the capture bar after a capture. */
+  focus?: boolean;
 }
 
 /**
@@ -29,6 +40,7 @@ export function useTaskHighlight(
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const taskRefsRef = useRef<Map<string, HTMLElement> | null>(null);
   const clearHighlightTimerRef = useRef<number | null>(null);
+  const focusOnArrivalRef = useRef(true);
 
   // Lazily initialize the ref map so a fresh Map isn't allocated on every render.
   // (Plain if-assignment rather than `??=`, which the React Compiler can't lower.)
@@ -48,8 +60,9 @@ export function useTaskHighlight(
     }
   };
 
-  const highlightTaskById = (taskId: string) => {
+  const highlightTaskById = (taskId: string, { focus = true }: HighlightOptions = {}) => {
     if (!taskId) return;
+    focusOnArrivalRef.current = focus;
 
     clearSearch();
     setHighlightedTaskId(taskId);
@@ -95,12 +108,7 @@ export function useTaskHighlight(
         return;
       }
 
-      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      node.scrollIntoView({
-        block: "center",
-        behavior: reduceMotion ? "auto" : "smooth",
-      });
-      node.focus({ preventScroll: true });
+      revealTask(node, focusOnArrivalRef.current);
     };
     frame = window.requestAnimationFrame(tryFocus);
     return () => window.cancelAnimationFrame(frame);

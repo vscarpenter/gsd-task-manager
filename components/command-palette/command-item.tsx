@@ -42,7 +42,7 @@ interface ShortcutDisplayProps {
  */
 export function ShortcutDisplay({ keys }: ShortcutDisplayProps) {
   return (
-    <div className="ml-auto flex items-center gap-1">
+    <div className="ml-auto flex items-center gap-1 pointer-coarse:hidden">
       {keys.map((key) => (
         <kbd
           key={key}

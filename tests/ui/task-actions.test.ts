@@ -3,11 +3,12 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { snoozeTask } from "@/lib/tasks";
+import { createTask, snoozeTask } from "@/lib/tasks";
+import { TaskValidationError } from "@/lib/tasks/crud/validation-error";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { createMockTask } from "@/tests/fixtures";
 import { logError } from "@/lib/error-logger";
-import { handleSnooze, handleSaveForLater } from "@/components/matrix-simplified/task-actions";
+import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater } from "@/components/matrix-simplified/task-actions";
 
 vi.mock("@/lib/tasks/saved", () => ({ saveTaskForLater: vi.fn(), returnSavedTask: vi.fn() }));
 
@@ -89,5 +90,57 @@ describe("handleSaveForLater", () => {
     await expect(handleSaveForLater(task, offerUndo)).resolves.toBe(false);
     expect(offerUndo).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith("Stop the timer before moving this task to Saved", expect.anything());
+  });
+});
+
+describe("handleCapture", () => {
+  beforeEach(() => {
+    vi.mocked(createTask).mockReset();
+    vi.mocked(toast.success).mockClear();
+    vi.mocked(toast.error).mockClear();
+  });
+
+  // "Task added" while the card landed off-screen left people hunting for it.
+  it("returns the new task and names the quadrant it landed in", async () => {
+    const created = createMockTask({ id: "new-1", urgent: false, important: false });
+    vi.mocked(createTask).mockResolvedValue(created);
+
+    const result = await handleCapture({ title: "Call the dentist", urgent: false, important: false, tags: [] });
+
+    expect(result).toBe(created);
+    expect(toast.success).toHaveBeenCalledWith("Added to Eliminate", expect.any(Object));
+  });
+
+  it("says which limit a capture broke instead of a bare failure", async () => {
+    vi.mocked(createTask).mockRejectedValue(
+      new TaskValidationError([{ path: ["title"], code: "too_big", origin: "string", maximum: 80 }], "title (too_big)")
+    );
+
+    const result = await handleCapture({ title: "x".repeat(81), urgent: false, important: false, tags: [] });
+
+    expect(result).toBeNull();
+    expect(toast.error).toHaveBeenCalledWith("Titles can be up to 80 characters.", expect.any(Object));
+  });
+});
+
+describe("captureAndReveal", () => {
+  beforeEach(() => {
+    vi.mocked(createTask).mockReset();
+  });
+
+  it("reveals the new task and reports success", async () => {
+    vi.mocked(createTask).mockResolvedValue(createMockTask({ id: "new-2" }));
+    const reveal = vi.fn();
+
+    await expect(captureAndReveal({ title: "Pay rent", urgent: true, important: true, tags: [] }, reveal)).resolves.toBe(true);
+    expect(reveal).toHaveBeenCalledWith("new-2");
+  });
+
+  it("reveals nothing and keeps the draft when the save fails", async () => {
+    vi.mocked(createTask).mockRejectedValue(new Error("disk full"));
+    const reveal = vi.fn();
+
+    await expect(captureAndReveal({ title: "Pay rent", urgent: true, important: true, tags: [] }, reveal)).resolves.toBe(false);
+    expect(reveal).not.toHaveBeenCalled();
   });
 });

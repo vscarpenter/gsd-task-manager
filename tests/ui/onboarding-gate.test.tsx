@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act, waitFor } from "@testing-library/react";
+import { OPEN_SYNC_EVENT } from "@/components/sync/open-sync-event";
 import userEvent from "@testing-library/user-event";
 import { OnboardingGate, REPLAY_ONBOARDING_EVENT, ONBOARDING_SEEN_KEY } from "@/components/onboarding/onboarding-gate";
 
@@ -96,5 +97,22 @@ describe("OnboardingGate", () => {
     await user.click(screen.getByRole("button", { name: /skip/i }));
 
     await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it("opens the sync sign-in dialog instead of navigating when Sign in to sync is pressed", async () => {
+    const user = userEvent.setup();
+    const opened = vi.fn();
+    window.addEventListener(OPEN_SYNC_EVENT, opened);
+    render(<OnboardingGate />);
+
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByRole("button", { name: /next/i }));
+    }
+    await user.click(screen.getByRole("button", { name: /sign in to sync/i }));
+
+    window.removeEventListener(OPEN_SYNC_EVENT, opened);
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

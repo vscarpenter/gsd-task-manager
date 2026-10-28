@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { toast } from 'sonner';
 
 // --- Mocks ---
@@ -65,6 +65,7 @@ vi.mock('@/lib/constants/sync', () => ({
 // --- Import ---
 
 import { SyncButton } from '@/components/sync/sync-button';
+import { OPEN_SYNC_EVENT } from '@/components/sync/open-sync-event';
 
 // --- Tests ---
 
@@ -96,11 +97,20 @@ describe('SyncButton', () => {
     expect(screen.getByRole('button', { name: /sync disabled/i })).toBeInTheDocument();
   });
 
-  it('shows offline indicator dot when sync is disabled', () => {
+  it('shows no indicator dot when sync is disabled', () => {
     render(<SyncButton />);
-    // Offline is neutral status, not a hard-coded framework gray.
+    // The crossed-out cloud already says sync is off; a dot reads as a notification.
     const button = screen.getByRole('button', { name: /sync disabled/i });
-    expect(button.querySelector('.bg-status-blocking')).toBeInTheDocument();
+    expect(button.querySelector('.bg-status-blocking')).not.toBeInTheDocument();
+  });
+
+  it('opens the sign-in dialog when the open-sync event fires', () => {
+    render(<SyncButton />);
+    expect(screen.queryByTestId('sync-auth-dialog')).not.toBeInTheDocument();
+    act(() => {
+      window.dispatchEvent(new Event(OPEN_SYNC_EVENT));
+    });
+    expect(screen.getByTestId('sync-auth-dialog')).toBeInTheDocument();
   });
 
   it('renders enabled idle state', () => {

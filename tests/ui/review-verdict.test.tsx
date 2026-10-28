@@ -4,7 +4,7 @@ import { ReviewVerdict, buildReviewVerdict } from "@/components/dashboard/review
 import type { ProductivityMetrics } from "@/lib/analytics";
 
 /**
- * The verdict is the dashboard's hero: one factual sentence about what closed,
+ * The verdict is the dashboard's hero: one factual sentence about what was completed,
  * followed by the single most notable true fact about what remains. Every branch
  * must be provable from ProductivityMetrics alone — the analytics model does not
  * record the quadrant of completed work, so the verdict never claims it.
@@ -36,20 +36,20 @@ function metrics(overrides: Partial<ProductivityMetrics> = {}): ProductivityMetr
 }
 
 describe("buildReviewVerdict", () => {
-  describe("lead — what closed this week", () => {
+  describe("lead: what was completed this week", () => {
     it("names an empty week without judgement", () => {
-      expect(buildReviewVerdict(metrics()).lead).toBe("Nothing closed this week.");
+      expect(buildReviewVerdict(metrics()).lead).toBe("Nothing completed this week.");
     });
 
     it("uses the singular noun for a single completion", () => {
       expect(buildReviewVerdict(metrics({ completedThisWeek: 1 })).lead).toBe(
-        "You closed 1 commitment this week."
+        "You completed 1 task this week."
       );
     });
 
     it("uses the plural noun beyond one", () => {
       expect(buildReviewVerdict(metrics({ completedThisWeek: 23 })).lead).toBe(
-        "You closed 23 commitments this week."
+        "You completed 23 tasks this week."
       );
     });
   });
@@ -64,27 +64,27 @@ describe("buildReviewVerdict", () => {
       const verdict = buildReviewVerdict(
         metrics({ activeTasks: 10, overdueCount: 3, noDueDateCount: 6 })
       );
-      expect(verdict.observation).toBe("3 commitments slipped past their due date.");
+      expect(verdict.observation).toBe("3 tasks are past their due date.");
     });
 
-    it("uses singular agreement for a single overdue commitment", () => {
+    it("uses singular agreement for a single overdue task", () => {
       const verdict = buildReviewVerdict(metrics({ activeTasks: 4, overdueCount: 1 }));
-      expect(verdict.observation).toBe("1 commitment slipped past its due date.");
+      expect(verdict.observation).toBe("1 task is past its due date.");
     });
 
     it("falls through to undated work when nothing is overdue", () => {
       const verdict = buildReviewVerdict(metrics({ activeTasks: 41, noDueDateCount: 14 }));
-      expect(verdict.observation).toBe("14 of 41 commitments still open have no date yet.");
+      expect(verdict.observation).toBe("14 of 41 tasks still open have no due date.");
     });
 
-    it("uses singular agreement for a single undated commitment", () => {
+    it("uses singular agreement for a single undated task", () => {
       const verdict = buildReviewVerdict(metrics({ activeTasks: 5, noDueDateCount: 1 }));
-      expect(verdict.observation).toBe("1 of 5 commitments still open has no date yet.");
+      expect(verdict.observation).toBe("1 of 5 tasks still open has no due date.");
     });
 
-    it("confirms full coverage when every open commitment carries a date", () => {
+    it("confirms full coverage when every open task carries a due date", () => {
       const verdict = buildReviewVerdict(metrics({ activeTasks: 7 }));
-      expect(verdict.observation).toBe("7 commitments still open, each with a date.");
+      expect(verdict.observation).toBe("7 tasks still open, each with a due date.");
     });
   });
 
@@ -111,8 +111,8 @@ describe("ReviewVerdict", () => {
     render(<ReviewVerdict metrics={metrics({ completedThisWeek: 23, activeTasks: 41, noDueDateCount: 14 })} />);
 
     expect(
-      screen.getByRole("heading", { name: "You closed 23 commitments this week." })
+      screen.getByRole("heading", { name: "You completed 23 tasks this week." })
     ).toBeInTheDocument();
-    expect(screen.getByText("14 of 41 commitments still open have no date yet.")).toBeInTheDocument();
+    expect(screen.getByText("14 of 41 tasks still open have no due date.")).toBeInTheDocument();
   });
 });

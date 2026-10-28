@@ -22,11 +22,11 @@ test.describe("Sync & Auth UI States", () => {
     await expect(syncButton).toBeVisible({ timeout: 5000 });
   });
 
-  test("'Saved locally' indicator appears when sync is disabled", async ({ page }) => {
+  test("'On this device' indicator appears when sync is disabled", async ({ page }) => {
     await waitForAppLoad(page);
 
-    // The status display shows "Saved locally"
-    const savedLocally = page.locator("text=Saved locally");
+    // The status display shows "On this device"
+    const savedLocally = page.locator("text=On this device");
     await expect(savedLocally).toBeVisible({ timeout: 5000 });
   });
 
@@ -37,9 +37,9 @@ test.describe("Sync & Auth UI States", () => {
     const syncButton = page.locator("button[aria-label='Sync not enabled']");
     await syncButton.click();
 
-    // The auth overlay contains sign-in text
-    const signInText = page.locator("text=/sign in|sync your tasks/i");
-    await expect(signInText.first()).toBeVisible({ timeout: 5000 });
+    // The auth overlay opens as a named dialog
+    const dialog = page.getByRole("dialog", { name: /sync settings/i });
+    await expect(dialog).toBeVisible({ timeout: 5000 });
   });
 
   test("auth overlay shows OAuth provider options", async ({ page }) => {
@@ -62,15 +62,15 @@ test.describe("Sync & Auth UI States", () => {
     await syncButton.click();
 
     // Find and verify the overlay opened
-    const signInText = page.locator("text=/sign in|sync your tasks/i");
-    await expect(signInText.first()).toBeVisible({ timeout: 5000 });
+    const dialog = page.getByRole("dialog", { name: /sync settings/i });
+    await expect(dialog).toBeVisible({ timeout: 5000 });
 
     // Close via the close button
     const closeButton = page.locator("button[aria-label='Close']");
     await closeButton.click();
 
     // Overlay should be gone
-    await expect(signInText.first()).not.toBeVisible();
+    await expect(dialog).not.toBeVisible();
   });
 
   test("settings page loads from matrix", async ({ page }) => {

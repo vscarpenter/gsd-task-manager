@@ -23,7 +23,7 @@ export function AppFooter() {
           Vinny&nbsp;Carpenter
         </a>
         <span aria-hidden="true">{" · "}</span>
-        <span className="text-foreground-muted">
+        <span className="whitespace-nowrap text-foreground-muted">
           v{buildNumber} · {buildDate}
         </span>
         <span aria-hidden="true">{" · "}</span>

@@ -23,7 +23,7 @@ export function StatRailSkeleton() {
       className="mt-8 grid gap-6 border-t border-border/70 pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/70"
       aria-hidden="true"
     >
-      {["closed", "active", "follow-through"].map((key, i) => (
+      {["completed", "active", "completion-rate"].map((key, i) => (
         <div key={key} className={i === 0 ? "sm:pr-6" : i === 1 ? "sm:px-6" : "sm:pl-6"}>
           <Skeleton className="h-3 w-24" />
           <Skeleton className="mt-3 h-10 w-16" />

@@ -53,7 +53,8 @@ describe("<EditDrawer> recurrence", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ recurrence: "weekly" }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 

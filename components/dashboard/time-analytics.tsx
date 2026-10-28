@@ -14,10 +14,10 @@ interface TimeAnalyticsProps {
 }
 
 const QUADRANT_LABELS: Record<string, { name: string }> = {
-  "urgent-important": { name: "Do First (Q1)" },
-  "not-urgent-important": { name: "Schedule (Q2)" },
-  "urgent-not-important": { name: "Delegate (Q3)" },
-  "not-urgent-not-important": { name: "Eliminate (Q4)" },
+  "urgent-important": { name: "Do First" },
+  "not-urgent-important": { name: "Schedule" },
+  "urgent-not-important": { name: "Delegate" },
+  "not-urgent-not-important": { name: "Eliminate" },
 };
 
 /** Empty state when no time tracking data exists */

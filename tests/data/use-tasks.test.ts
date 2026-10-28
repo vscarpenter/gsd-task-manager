@@ -48,7 +48,7 @@ function buildTask(overrides?: Partial<TaskRecord>): TaskRecord {
 }
 
 describe('useTasks loading state', () => {
-  // The matrix renders four empty states ("Nothing on fire.") while IndexedDB is
+  // The matrix renders four empty states ("Nothing urgent right now.") while IndexedDB is
   // still being read. That is a false statement about the user's data, so the
   // hook must be able to say "not yet" — it cannot if it supplies a default.
   it('reports isLoading while the live query has not resolved', () => {

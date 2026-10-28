@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IconRail } from "@/components/matrix-simplified/icon-rail";
 import { RAIL_COLLAPSED_KEY } from "@/lib/preferences/icon-rail";
@@ -8,10 +8,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
+const transition = vi.hoisted(() => ({ isPending: false }));
+
 vi.mock("@/lib/use-view-transition", () => ({
   useViewTransition: () => ({
     navigateWithTransition: vi.fn(),
-    isPending: false,
+    isPending: transition.isPending,
   }),
 }));
 
@@ -116,5 +118,21 @@ describe("IconRail", () => {
     for (const label of ["Matrix", "Saved", "Review", "Settings", "About", "Help"]) {
       expect(mobileNav.querySelector(`button[aria-label="${label}"] span`)).toHaveTextContent(label);
     }
+  });
+
+  describe("mobile tab bar during a route change", () => {
+    it("marks the tapped tab current immediately and leaves the bar enabled", async () => {
+      const user = userEvent.setup();
+      transition.isPending = true;
+      render(<IconRail onHelp={vi.fn()} />);
+      const bar = within(screen.getByRole("navigation", { name: "Primary navigation (mobile)" }));
+
+      await user.click(bar.getByRole("button", { name: "Settings" }));
+
+      expect(bar.getByRole("button", { name: "Settings" })).toHaveAttribute("aria-current", "page");
+      expect(bar.getByRole("button", { name: "Matrix" })).not.toHaveAttribute("aria-current");
+      for (const button of bar.getAllByRole("button")) expect(button).toBeEnabled();
+      transition.isPending = false;
+    });
   });
 });

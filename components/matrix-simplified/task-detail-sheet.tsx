@@ -20,7 +20,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDueDate } from "@/lib/utils";
+import { formatDueDate, isRepeatClick } from "@/lib/utils";
+import { useBackToClose } from "./use-back-to-close";
 import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import { quadrantForTask, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
 import type { RecurrenceType, TaskRecord } from "@/lib/types";
@@ -38,6 +39,7 @@ export interface TaskDetailSheetProps {
   allTasks?: TaskRecord[];
   onClose: () => void;
   onEdit: (task: TaskRecord) => void;
+  onToggleComplete?: (task: TaskRecord, completedNext: boolean) => void;
 }
 
 /**
@@ -50,8 +52,10 @@ export function TaskDetailSheet({
   allTasks = [],
   onClose,
   onEdit,
+  onToggleComplete,
 }: TaskDetailSheetProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  useBackToClose(open && task !== null, onClose);
 
   return (
     <Dialog
@@ -67,6 +71,7 @@ export function TaskDetailSheet({
           closeButtonRef={closeButtonRef}
           onClose={onClose}
           onEdit={onEdit}
+          onToggleComplete={onToggleComplete}
         />
       ) : null}
     </Dialog>
@@ -79,6 +84,7 @@ interface TaskDetailContentProps {
   closeButtonRef: React.RefObject<HTMLButtonElement | null>;
   onClose: () => void;
   onEdit: (task: TaskRecord) => void;
+  onToggleComplete?: (task: TaskRecord, completedNext: boolean) => void;
 }
 
 function TaskDetailContent({
@@ -87,6 +93,7 @@ function TaskDetailContent({
   closeButtonRef,
   onClose,
   onEdit,
+  onToggleComplete,
 }: TaskDetailContentProps) {
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const pendingEditRef = useRef<TaskRecord | null>(null);
@@ -250,8 +257,50 @@ function TaskDetailContent({
 
       <footer
         data-testid="task-detail-actions"
-        className="flex shrink-0 items-center justify-end gap-2 border-t border-border/60 bg-background pb-[max(var(--sp-4),env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-3 sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
+        className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-background pb-[max(var(--sp-4),env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pt-3 sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))]"
       >
+        <DetailActions task={task} onClose={onClose} onEdit={editTask} onToggleComplete={onToggleComplete} />
+      </footer>
+    </DialogContent>
+  );
+}
+
+function ToggleDoneButton({
+  task,
+  onToggle,
+}: {
+  task: TaskRecord;
+  onToggle: (task: TaskRecord, completedNext: boolean) => void;
+}) {
+  const Icon = task.completed ? CircleIcon : CheckIcon;
+  return (
+    <button
+      type="button"
+      onClick={(event) => { if (!isRepeatClick(event)) onToggle(task, !task.completed); }}
+      className="touch-target inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-control-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      {task.completed ? "Mark not done" : "Mark done"}
+    </button>
+  );
+}
+
+function DetailActions({
+  task,
+  onClose,
+  onEdit,
+  onToggleComplete,
+}: {
+  task: TaskRecord;
+  onClose: () => void;
+  onEdit: () => void;
+  onToggleComplete?: (task: TaskRecord, completedNext: boolean) => void;
+}) {
+  return (
+    <>
+      {onToggleComplete ? (
+        <ToggleDoneButton task={task} onToggle={(done, next) => { onToggleComplete(done, next); onClose(); }} />
+      ) : null}
         <button
           type="button"
           onClick={onClose}
@@ -261,14 +310,13 @@ function TaskDetailContent({
         </button>
         <button
           type="button"
-          onClick={editTask}
+          onClick={onEdit}
           className="touch-target inline-flex min-h-11 items-center justify-center gap-2 rounded-sm bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           <PencilIcon className="h-4 w-4" aria-hidden="true" />
           Edit task
         </button>
-      </footer>
-    </DialogContent>
+    </>
   );
 }
 

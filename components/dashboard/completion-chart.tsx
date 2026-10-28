@@ -12,10 +12,11 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { parseISO } from "date-fns";
+import { DATE_CONFIG } from "@/lib/constants";
 import type { TrendDataPoint } from "@/lib/analytics";
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "numeric",
+const DATE_FORMATTER = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, {
+  month: "short",
   day: "numeric",
 });
 
@@ -112,7 +113,7 @@ function ChartHeader({ control }: { control?: React.ReactNode }) {
       <div>
         <h3 className="text-h3 font-semibold text-foreground">Completion trend</h3>
         <p className="mt-1 text-sm text-foreground-muted">
-          Recent throughput across completed and newly created tasks.
+          Tasks completed and tasks created in recent days.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">

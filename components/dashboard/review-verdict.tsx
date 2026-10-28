@@ -1,15 +1,15 @@
 import type { ProductivityMetrics } from "@/lib/analytics";
 
 export interface ReviewVerdictText {
-  /** Factual lead — what closed in the last seven days. */
+  /** Factual lead: what was completed in the last seven days. */
   lead: string;
   /** The single most notable true fact about what is still open. */
   observation: string;
 }
 
-/** "1 commitment" / "23 commitments". Numerals throughout, so the count carries the weight. */
-function commitments(count: number): string {
-  return `${count} commitment${count === 1 ? "" : "s"}`;
+/** "1 task" / "23 tasks". Numerals throughout, so the count carries the weight. */
+function tasks(count: number): string {
+  return `${count} task${count === 1 ? "" : "s"}`;
 }
 
 /**
@@ -20,13 +20,13 @@ function commitments(count: number): string {
 function observe(active: number, overdue: number, undated: number): string {
   if (active === 0) return "Nothing is still open.";
   if (overdue > 0) {
-    return `${commitments(overdue)} slipped past ${overdue === 1 ? "its" : "their"} due date.`;
+    return `${tasks(overdue)} ${overdue === 1 ? "is" : "are"} past ${overdue === 1 ? "its" : "their"} due date.`;
   }
   if (undated > 0) {
     const agreement = undated === 1 ? "has" : "have";
-    return `${undated} of ${commitments(active)} still open ${agreement} no date yet.`;
+    return `${undated} of ${tasks(active)} still open ${agreement} no due date.`;
   }
-  return `${commitments(active)} still open, each with a date.`;
+  return `${tasks(active)} still open, each with a due date.`;
 }
 
 /**
@@ -41,8 +41,8 @@ export function buildReviewVerdict(metrics: ProductivityMetrics): ReviewVerdictT
 
   const lead =
     completedThisWeek === 0
-      ? "Nothing closed this week."
-      : `You closed ${commitments(completedThisWeek)} this week.`;
+      ? "Nothing completed this week."
+      : `You completed ${tasks(completedThisWeek)} this week.`;
 
   return { lead, observation: observe(activeTasks, overdueCount, noDueDateCount) };
 }

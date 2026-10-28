@@ -87,6 +87,9 @@ test.describe("Layout overlap", () => {
   });
 
   test("the mobile capture bar does not cover the last task card", async ({ page }) => {
+    // Each capture smooth-scrolls to its new card. Reduced motion makes that
+    // scroll instant, so it can't still be moving when the boxes are measured.
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 390, height: 844 });
     await waitForAppLoad(page);
 
@@ -94,7 +97,7 @@ test.describe("Layout overlap", () => {
       await createTaskViaCaptureBar(page, `Mobile task ${i} !!`);
     }
 
-    const captureBar = page.getByLabel("Capture a task");
+    const captureBar = page.getByLabel("Add a task");
     const lastCard = page.locator("[data-testid='task-card']").last();
 
     // Scroll by moving to the element rather than sleeping after a wheel event.

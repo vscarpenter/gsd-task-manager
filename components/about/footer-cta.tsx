@@ -34,7 +34,7 @@ export function FooterCta({ version }: FooterCtaProps) {
               href="https://gsdtaskmanager.com/privacy/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent transition-colors hover:text-accent-hover"
+              className="inline-flex min-h-11 items-center text-accent transition-colors hover:text-accent-hover"
             >
               Privacy Policy
             </a>

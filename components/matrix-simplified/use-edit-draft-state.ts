@@ -6,6 +6,8 @@ import type { RecurrenceType, Subtask, TaskRecord } from "@/lib/types";
 import { DUE_PRESETS, localDayOf, resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
 import { useDefaultReminder } from "@/lib/notifications/use-default-reminder";
 import { UI_TIMING } from "@/lib/constants/ui";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { hasVisibleText } from "@/lib/utils";
 import { generateId } from "@/lib/id-generator";
 import type { EditDraft } from "./edit-draft";
 
@@ -88,7 +90,7 @@ function parseEstimate(raw: string): number | undefined {
 /** Append a subtask, ignoring blank input. Ids are generated locally until save. */
 function appendSubtask(subtasks: Subtask[], rawTitle: string): Subtask[] {
   const title = rawTitle.trim();
-  if (!title) return subtasks;
+  if (!hasVisibleText(title) || subtasks.length >= SCHEMA_LIMITS.MAX_SUBTASKS) return subtasks;
   return [...subtasks, { id: generateId(), title, completed: false }];
 }
 
@@ -176,6 +178,29 @@ function useReminderDraft(
   };
 }
 
+/**
+ * The fields whose value differs between the drawer's starting draft and the
+ * current one. A cleared field stays in the result as `undefined`.
+ *
+ * Saving only these keeps a drawer that sat open in a stale tab from writing
+ * its old title, tags, or flags over a newer save from somewhere else.
+ */
+export function changedDraftFields(start: EditDraft, current: EditDraft): Partial<EditDraft> {
+  const changed: Partial<EditDraft> = {};
+  for (const key of Object.keys(current) as Array<keyof EditDraft>) {
+    if (JSON.stringify(start[key]) !== JSON.stringify(current[key])) {
+      Object.assign(changed, { [key]: current[key] });
+    }
+  }
+  // The two flags name one quadrant. Sent alone, one would merge with the other
+  // stored flag and put the task in a quadrant nobody picked.
+  if ("urgent" in changed || "important" in changed) {
+    changed.urgent = current.urgent;
+    changed.important = current.important;
+  }
+  return changed;
+}
+
 /** Tags come from the task in edit mode and the seeded draft in create mode. */
 function seedTags(
   task: TaskRecord | null | undefined,
@@ -187,7 +212,9 @@ function seedTags(
 /** Normalise and append a tag, ignoring blanks and duplicates. */
 function appendTag(tags: string[], raw: string): string[] {
   const value = raw.trim().toLowerCase().replace(/^#/, "");
-  if (!value || tags.includes(value)) return tags;
+  if (!hasVisibleText(value) || tags.includes(value) || tags.length >= SCHEMA_LIMITS.MAX_TAGS) {
+    return tags;
+  }
   return [...tags, value];
 }
 

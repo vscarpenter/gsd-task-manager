@@ -64,7 +64,7 @@ export interface QuadrantMeta {
   rdKey: RedesignQuadrantKey;
   rdShort: string; // "Do", "Plan", "Hand", "Drop"
   rdTag: string; // "Urgent & important"
-  rdHint: string; // "Crises, deadlines. Handle now."
+  rdHint: string; // "Urgent and important. Do these now."
   rdIcon: RedesignIconKey;
   rdEmpty: string;
   /** Editorial serif headline shown in the empty quadrant pane. */
@@ -92,11 +92,11 @@ export const quadrants: QuadrantMeta[] = [
     rdKey: "q1",
     rdShort: "Do",
     rdTag: "Urgent & important",
-    rdHint: "Crises, deadlines. Handle now.",
+    rdHint: "Urgent and important. Do these now.",
     rdIcon: "flame",
     rdEmpty: "Clear. Nothing urgent demanding you right now.",
-    rdEmptyHeadline: "Nothing on fire.",
-    rdEmptySupporting: "Stay sharp.",
+    rdEmptyHeadline: "Nothing urgent right now.",
+    rdEmptySupporting: "Tasks that are urgent and important will appear here.",
     urgent: true,
     important: true,
   },
@@ -116,11 +116,11 @@ export const quadrants: QuadrantMeta[] = [
     rdKey: "q2",
     rdShort: "Plan",
     rdTag: "Important, not urgent",
-    rdHint: "Strategy, growth. Protect time.",
+    rdHint: "Important, not urgent. Plan a time for these.",
     rdIcon: "calendar",
     rdEmpty: "Plan something meaningful. This is where growth lives.",
-    rdEmptyHeadline: "Plan the week.",
-    rdEmptySupporting: "What's important but not on fire? Block time before it becomes urgent.",
+    rdEmptyHeadline: "Nothing planned yet.",
+    rdEmptySupporting: "Important tasks that are not urgent go here. Plan a time before they become urgent.",
     urgent: false,
     important: true,
   },
@@ -140,11 +140,11 @@ export const quadrants: QuadrantMeta[] = [
     rdKey: "q3",
     rdShort: "Hand",
     rdTag: "Urgent, not important",
-    rdHint: "Interruptions. Hand these off.",
+    rdHint: "Urgent, not important. Give these to others.",
     rdIcon: "users",
-    rdEmpty: "Nothing to hand off.",
-    rdEmptyHeadline: "Hand it off.",
-    rdEmptySupporting: "Save your attention for the matrix. Route interruptions elsewhere.",
+    rdEmpty: "Nothing to give to others.",
+    rdEmptyHeadline: "Nothing to give to others.",
+    rdEmptySupporting: "Urgent tasks that someone else could do will appear here.",
     urgent: true,
     important: false,
   },
@@ -164,11 +164,11 @@ export const quadrants: QuadrantMeta[] = [
     rdKey: "q4",
     rdShort: "Drop",
     rdTag: "Neither",
-    rdHint: "Noise. Stop doing these.",
+    rdHint: "Not urgent, not important. Remove these.",
     rdIcon: "trash",
-    rdEmpty: "No noise to clear. Good.",
-    rdEmptyHeadline: "No noise to clear.",
-    rdEmptySupporting: "Good.",
+    rdEmpty: "Nothing to remove.",
+    rdEmptyHeadline: "Nothing to remove.",
+    rdEmptySupporting: "Tasks that are neither urgent nor important will appear here.",
     urgent: false,
     important: false,
   }

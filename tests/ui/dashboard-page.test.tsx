@@ -129,7 +129,7 @@ function dashboardData() {
     previousSixAverage: 1,
     completedInsight: "Above your recent pace",
     activeInsight: "1 overdue",
-    completionInsight: "Healthy momentum",
+    completionInsight: "60% or more completed",
     plannedActiveShare: 60,
   };
 }
@@ -139,11 +139,11 @@ describe("ReviewPrompts", () => {
     render(<ReviewPrompts distribution={quadrantDistribution} />);
 
     expect(screen.getByRole("heading", { name: "What still needs an answer?" })).toBeInTheDocument();
-    expect(screen.getByText("2 active commitments in Do First.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "What received protected time?" })).toBeInTheDocument();
-    expect(screen.getByText("3 active commitments in Schedule.")).toBeInTheDocument();
+    expect(screen.getByText("2 active tasks in Do First.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What have you planned a time for?" })).toBeInTheDocument();
+    expect(screen.getByText("3 active tasks in Schedule.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "What can leave the list?" })).toBeInTheDocument();
-    expect(screen.getByText("1 active commitment in Eliminate.")).toBeInTheDocument();
+    expect(screen.getByText("1 active task in Eliminate.")).toBeInTheDocument();
     expect(screen.queryByText(/Delegate/)).not.toBeInTheDocument();
   });
 });
@@ -165,9 +165,9 @@ describe("DashboardPage review framing", () => {
     expect(screen.getByTestId("app-shell")).toHaveAttribute("data-has-search", "false");
     expect(screen.getByText("Weekly review")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: "You closed 7 commitments this week." })
+      screen.getByRole("heading", { level: 2, name: "You completed 7 tasks this week." })
     ).toBeInTheDocument();
-    expect(screen.getByText("1 commitment slipped past its due date.")).toBeInTheDocument();
+    expect(screen.getByText("1 task is past its due date.")).toBeInTheDocument();
     expect(screen.getByTestId("completion-chart")).toBeInTheDocument();
     expect(screen.getByTestId("quadrant-distribution")).toBeInTheDocument();
     expect(screen.getByTestId("time-analytics")).toBeInTheDocument();

@@ -138,6 +138,11 @@ export const TIME_UTILS = {
 export const DATE_CONFIG = {
   /** Days threshold beyond which relative dates switch to absolute format */
   RELATIVE_DATE_THRESHOLD_DAYS: 6,
+  /**
+   * The interface is English, so dates read in English too. Following the
+   * browser's language put "Due today" beside "depois de amanhã" on one board.
+   */
+  LOCALE: "en-US",
 } as const;
 
 /**

@@ -30,8 +30,8 @@ export function AboutSection() {
 					<div>
 						<p className="text-sm font-medium text-foreground">Privacy First</p>
 						<p className="text-xs text-foreground-muted mt-1 leading-relaxed">
-							All data is stored locally in your browser. Nothing is sent to any
-							server unless you enable cloud sync.
+							Your tasks stay in this browser unless you turn on cloud sync.
+							Feedback you choose to send contains none of your tasks.
 						</p>
 					</div>
 				</div>
@@ -80,7 +80,7 @@ export function AboutSection() {
 				className="w-full flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px]
 				           text-left hover:bg-background-muted/50 transition-colors"
 			>
-				<span className="text-sm font-medium text-accent">Codebase Analysis Report</span>
+				<span className="text-sm font-medium text-accent">Codebase Analysis Report (20 Sep 2026 snapshot)</span>
 				<ExternalLinkIcon className="w-4 h-4 text-foreground-muted/50" />
 			</a>
 		</>

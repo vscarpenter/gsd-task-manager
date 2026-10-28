@@ -40,13 +40,13 @@ const features: Feature[] = [
     icon: Lock,
     title: "Privacy First",
     description:
-      "Your tasks never leave your browser. No account, no server, no tracking.",
+      "Your tasks stay in your browser unless you turn on sync. No account needed, no tracking.",
   },
   {
     icon: Bot,
     title: "MCP Server",
     description:
-      "Let Claude query your tasks with natural language. AI meets your to-do list.",
+      "Let Claude read and change your tasks in plain English. Needs cloud sync, and what it reads goes to your AI assistant's provider.",
   },
   {
     icon: BarChart3,
@@ -70,7 +70,7 @@ const features: Feature[] = [
     icon: Tags,
     title: "Tags and Filters",
     description:
-      "Label tasks with custom tags. Smart views filter in one click.",
+      "Label tasks with custom tags. Smart views, which you turn on in Settings, save filters you reuse.",
   },
   {
     icon: CheckSquare,
@@ -88,7 +88,7 @@ const features: Feature[] = [
     icon: Cloud,
     title: "Optional Cloud Sync",
     description:
-      "Optional sync to a server you control — protected in transit by TLS and owner-scoped access.",
+      "Optional sync across your devices, on a server run by GSD's developer. Sent over TLS, and other accounts can't see your tasks.",
   },
 ];
 

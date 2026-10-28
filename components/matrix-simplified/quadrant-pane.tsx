@@ -10,6 +10,7 @@ import type { TaskRecord } from "@/lib/types";
 import type { QuadrantMeta, RedesignQuadrantKey, RedesignIconKey } from "@/lib/quadrants";
 import { QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK, QUADRANT_WASH } from "@/lib/quadrants";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { usePaneOverflow } from "./use-pane-overflow";
 
 const RD_ICON: Record<RedesignIconKey, LucideIcon> = {
@@ -39,6 +40,24 @@ export const ACTIVE_RENDER_CAP = 50;
  */
 const COUNT_PILL =
   "ml-auto shrink-0 rounded-full bg-card px-2 py-0.5 text-caption font-semibold tabular-nums";
+
+function AddToQuadrantButton({ title, onClick }: { title: string; onClick: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={`Add to ${title}`}
+          className="touch-target inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-icon text-foreground-muted hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          <PlusIcon className="h-3.5 w-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{`Add to ${title}`}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 interface QuadrantPaneProps {
   meta: QuadrantMeta;
@@ -139,20 +158,13 @@ export function QuadrantPane({
         >
           {meta.title}
         </h2>
-        <span data-testid="quadrant-hint" className="min-w-0 truncate text-caption" style={{ color: ink }}>
+        <span data-testid="quadrant-hint" className="min-w-0 text-caption leading-tight" style={{ color: ink }}>
           {meta.rdHint}
         </span>
         <span data-testid="quadrant-count" className={COUNT_PILL} style={{ color: ink }}>
           {activeTaskCount}
         </span>
-        <button
-          type="button"
-          onClick={() => onAddInQuadrant(meta.rdKey)}
-          aria-label={`Add to ${meta.title}`}
-          className="touch-target inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-icon text-foreground-muted hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-        >
-          <PlusIcon className="h-3.5 w-3.5" />
-        </button>
+        <AddToQuadrantButton title={meta.title} onClick={() => onAddInQuadrant(meta.rdKey)} />
       </header>
 
       <SortableContext id={meta.id} items={taskIds} strategy={verticalListSortingStrategy}>

@@ -13,10 +13,12 @@ interface MatrixIntroProps {
 
 /** The button's own label carries the count, so it has to fit on one line. */
 function scheduleLabel(count: number | null): string {
-  if (count === null) return "Protect Q2";
-  if (count === 0) return "Protect Q2 · clear";
-  return `Protect Q2 · ${count} to schedule`;
+  if (count === null) return "Schedule";
+  if (count === 0) return "Schedule is empty";
+  return `Schedule · ${count} ${count === 1 ? "task" : "tasks"}`;
 }
+
+const SCHEDULE_TOOLTIP = "Move focus to the Schedule quadrant (keyboard shortcut: Option 2)";
 
 // Firefox can restore a button's dynamic disabled state across reloads. React's
 // button typings omit Firefox's supported autocomplete escape hatch, so spread
@@ -26,7 +28,7 @@ const preventPersistedDisabledState = { autoComplete: "off" } as const;
 export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule }: MatrixIntroProps) {
   return (
     // One row, not two columns. The display-size date and the three-line
-    // Protect Q2 card together cost ~190px before the first task, which on a
+    // Schedule card together cost ~190px before the first task, which on a
     // 13" laptop pushed the bottom two quadrant headers below the fold — the
     // matrix cannot make its argument if half of it is a scroll away.
     //
@@ -56,11 +58,14 @@ export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule
         {...preventPersistedDisabledState}
         onClick={onFocusSchedule}
         disabled={scheduleCount === null}
-        className="touch-target inline-flex shrink-0 items-center gap-2 rounded-sm bg-accent px-3 py-2 text-small font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50"
+        title={SCHEDULE_TOOLTIP}
+        // A secondary control: it only moves focus, so it must not out-shout
+        // the capture bar's Add button with a solid fill.
+        className="touch-target inline-flex shrink-0 items-center gap-2 rounded-sm border border-accent px-3 py-2 text-small font-semibold text-accent transition-colors hover:bg-accent-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-50"
       >
         <CalendarRangeIcon className="h-[15px] w-[15px] shrink-0" aria-hidden />
         {scheduleLabel(scheduleCount)}
-        <kbd className="rounded-xs border border-on-accent/40 px-1.5 py-px" aria-label="Option 2">
+        <kbd className="rounded-xs border border-accent/40 px-1.5 py-px pointer-coarse:hidden" aria-label="Option 2">
           ⌥2
         </kbd>
       </button>

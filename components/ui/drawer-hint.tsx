@@ -19,7 +19,7 @@ export function DrawerHint({
   className,
 }: DrawerHintProps) {
   return (
-    <span className={cn("text-caption text-foreground-muted", className)}>
+    <span className={cn("text-caption text-foreground-muted pointer-coarse:hidden", className)}>
       <kbd className="rounded border border-border-muted bg-background-muted px-1 py-0.5">
         {shortcut}
       </kbd>

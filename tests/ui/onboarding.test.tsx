@@ -79,3 +79,23 @@ describe("Onboarding", () => {
   });
 
 });
+
+describe("Onboarding capture step", () => {
+  async function goToCaptureStep() {
+    const user = userEvent.setup();
+    renderOnboarding();
+    await user.click(screen.getByRole("button", { name: /next/i }));
+    await user.click(screen.getByRole("button", { name: /next/i }));
+  }
+
+  // `!!` means urgent AND important; the old copy called it "urgent" and never
+  // mentioned `!`, so a new user could not predict where a task would land.
+  it("states the real marker to quadrant mapping", async () => {
+    await goToCaptureStep();
+    const body = screen.getByRole("dialog").textContent ?? "";
+    expect(body).toContain("!! for Do First");
+    expect(body).toContain("* for Schedule");
+    expect(body).toContain("! for Delegate");
+    expect(body).toMatch(/no marker, a task goes to Eliminate/i);
+  });
+});

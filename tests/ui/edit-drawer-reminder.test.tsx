@@ -62,7 +62,8 @@ describe("<EditDrawer> reminder", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ notifyBefore: 120, notificationEnabled: true }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -82,7 +83,8 @@ describe("<EditDrawer> reminder", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ notificationEnabled: false }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -132,7 +134,8 @@ describe("<EditDrawer> reminder", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ notifyBefore: 5, notificationEnabled: true }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 
@@ -195,7 +198,8 @@ describe("<EditDrawer> reminder", () => {
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ notifyBefore: 30, notificationEnabled: false }),
-      "t1"
+      "t1",
+      expect.anything()
     );
   });
 

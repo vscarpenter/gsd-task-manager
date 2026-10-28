@@ -6,6 +6,7 @@ import { taskDraftSchema } from "@/lib/schema";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./helpers";
+import { TaskValidationError } from "./validation-error";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -53,7 +54,7 @@ function validateUpdatedDraft(
   const result = taskDraftSchema.safeParse(nextDraft);
   if (!result.success) {
     const fields = result.error.issues.map((issue) => issue.path.join(".")).join(", ");
-    throw new Error(`Task validation failed: invalid fields — ${fields}`);
+    throw TaskValidationError.fromZod(result.error, `invalid fields — ${fields}`);
   }
   return result.data;
 }

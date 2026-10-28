@@ -129,7 +129,7 @@ describe("<DependenciesField>", () => {
     render(<DependenciesField taskId="c" dependencies={[]} allTasks={tasks} onChange={vi.fn()} />);
     await user.type(screen.getByLabelText(/search tasks/i), "alpha");
     expect(screen.queryAllByTestId("dep-suggestion")).toHaveLength(0);
-    expect(screen.getByText(/no matching tasks/i)).toBeInTheDocument();
+    expect(screen.getByText(/"Alpha" already depends on this task/i)).toBeInTheDocument();
   });
 
   it("should_remove_only_targeted_id_and_preserve_ghost_ids_on_remove", async () => {
@@ -332,5 +332,28 @@ describe("findDependencyCycleError", () => {
       expect(input).toHaveAttribute("aria-expanded", "true");
       expect(await screen.findByRole("listbox")).toBeInTheDocument();
     });
+  });
+});
+
+describe("<DependenciesField> cycle exclusion", () => {
+  it("explains why a matching task is left out when it already depends on this one", async () => {
+    const user = userEvent.setup();
+    const tasks = [
+      makeTask({ id: "z", title: "Ship it" }),
+      makeTask({ id: "a", title: "Write spec", dependencies: ["z"] }),
+    ];
+    render(<DependenciesField taskId="z" dependencies={[]} allTasks={tasks} onChange={vi.fn()} />);
+    await user.type(screen.getByTestId("dep-search"), "spec");
+
+    expect(screen.queryByText("No matching tasks.")).toBeNull();
+    expect(screen.getByText(/"Write spec" already depends on this task/i)).toBeInTheDocument();
+  });
+
+  it("still says no match when nothing matches the search", async () => {
+    const user = userEvent.setup();
+    const tasks = [makeTask({ id: "z", title: "Ship it" })];
+    render(<DependenciesField taskId="z" dependencies={[]} allTasks={tasks} onChange={vi.fn()} />);
+    await user.type(screen.getByTestId("dep-search"), "nothing");
+    expect(screen.getByText("No matching tasks.")).toBeInTheDocument();
   });
 });

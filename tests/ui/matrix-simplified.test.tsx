@@ -215,7 +215,7 @@ describe("<MatrixSimplified>", () => {
     expect(useNotificationChecker).not.toHaveBeenCalled();
   });
 
-  // The empty states make a specific claim ("Nothing on fire.") that must not be
+  // The empty states make a specific claim ("Nothing urgent right now.") that must not be
   // shown before IndexedDB has been read — a user with urgent tasks would see the
   // app assert the opposite of the truth for the duration of the load.
   describe("loading state", () => {
@@ -392,7 +392,7 @@ describe("<MatrixSimplified>", () => {
   it("submitting capture bar calls createTask with parsed payload", async () => {
     render(<MatrixSimplified />);
     await userEvent.type(
-      screen.getByLabelText("Capture a task"),
+      screen.getByLabelText("Add a task"),
       "ship release !! #ops{Enter}"
     );
     await waitFor(() =>
@@ -407,13 +407,28 @@ describe("<MatrixSimplified>", () => {
     );
   });
 
+  // A plain first task lands in Eliminate, often below the fold. The new card
+  // is scrolled to and highlighted, and focus stays in the bar for the next one.
+  it("highlights the captured task and keeps focus in the capture bar", async () => {
+    const created = makeTask({ id: "captured", title: "Call the dentist" });
+    tasksFixture.current = [created];
+    vi.mocked(createTask).mockResolvedValueOnce(created);
+    render(<MatrixSimplified />);
+
+    const input = screen.getByLabelText("Add a task");
+    await userEvent.type(input, "Call the dentist{Enter}");
+
+    await waitFor(() => expect(screen.getByTestId("task-card")).toHaveClass("ring-4"));
+    expect(input).toHaveFocus();
+  });
+
   it("keeps every composer field when creating a task", async () => {
     // The create branch hand-picked seven fields while the composer renders more than
     // that, so Repeat, Subtasks, Estimate and Reminder were silently dropped on any task
     // created through it. Edit kept them, which made the loss look like a save bug.
     render(<MatrixSimplified />);
 
-    await userEvent.type(screen.getByLabelText("Capture a task"), "quarterly report");
+    await userEvent.type(screen.getByLabelText("Add a task"), "quarterly report");
     await userEvent.click(screen.getByTestId("more-options"));
 
     await screen.findByRole("heading", { name: /new task/i });
@@ -440,7 +455,7 @@ describe("<MatrixSimplified>", () => {
     vi.mocked(createTask).mockRejectedValueOnce(failure);
     render(<MatrixSimplified />);
 
-    await userEvent.type(screen.getByLabelText("Capture a task"), "private title{Enter}");
+    await userEvent.type(screen.getByLabelText("Add a task"), "private title{Enter}");
 
     await waitFor(() =>
       expect(logErrorSpy).toHaveBeenCalledWith(
@@ -486,13 +501,13 @@ describe("<MatrixSimplified>", () => {
     const snapshot = document.createElement("div");
     snapshot.innerHTML = html;
     const showSchedule = Array.from(snapshot.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Protect Q2")
+      button.textContent?.startsWith("Schedule")
     );
 
     expect(html).toContain("GSD Matrix");
     expect(html).toContain("Today’s matrix —");
     expect(html).not.toContain(introDateLabel(new Date()));
-    expect(html).toContain("Capture a task");
+    expect(html).toContain("Add a task");
     expect(showSchedule).toBeDisabled();
     expect(showSchedule).toHaveAttribute("autocomplete", "off");
   });
@@ -512,7 +527,7 @@ describe("<MatrixSimplified>", () => {
     tasksFixture.loading = true;
     render(<MatrixSimplified />);
 
-    expect(screen.queryByText(/the board is clear/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Add !! for Do First/i)).not.toBeInTheDocument();
   });
 
   it("reports active Schedule work from the full task set", () => {
@@ -525,8 +540,8 @@ describe("<MatrixSimplified>", () => {
 
     render(<MatrixSimplified />);
 
-    expect(screen.getByRole("button", { name: /protect q2/i })).toHaveTextContent(
-      "Protect Q2 · 2 to schedule"
+    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent(
+      "Schedule · 2 tasks"
     );
   });
 
@@ -534,9 +549,9 @@ describe("<MatrixSimplified>", () => {
     tasksFixture.loading = true;
     render(<MatrixSimplified />);
 
-    const scheduleButton = screen.getByRole("button", { name: /protect q2/i });
-    expect(scheduleButton).toHaveTextContent("Protect Q2");
-    expect(scheduleButton).not.toHaveTextContent(/to schedule|clear/);
+    const scheduleButton = screen.getByRole("button", { name: /^schedule/i });
+    expect(scheduleButton).toHaveTextContent("Schedule");
+    expect(scheduleButton).not.toHaveTextContent(/\d+ tasks?|empty/);
     expect(scheduleButton).toBeDisabled();
   });
 
@@ -549,8 +564,8 @@ describe("<MatrixSimplified>", () => {
 
     await userEvent.type(screen.getByLabelText("Shell search"), "production");
 
-    expect(screen.getByRole("button", { name: /protect q2/i })).toHaveTextContent(
-      "Protect Q2 · 1 to schedule"
+    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent(
+      "Schedule · 1 task"
     );
     expect(screen.queryByText("Write the strategy")).not.toBeInTheDocument();
   });
@@ -560,7 +575,7 @@ describe("<MatrixSimplified>", () => {
     Element.prototype.scrollIntoView = scrollIntoView;
     render(<MatrixSimplified />);
 
-    await userEvent.click(screen.getByRole("button", { name: /protect q2/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^schedule/i }));
 
     expect(screen.getByTestId("quadrant-q2")).toHaveFocus();
     expect(screen.getByTestId("quadrant-q2")).toHaveClass(
@@ -628,7 +643,7 @@ describe("<MatrixSimplified>", () => {
 
       expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument();
       expect(createTask).not.toHaveBeenCalled();
-      expect(screen.getByLabelText("Capture a task")).toHaveFocus();
+      expect(screen.getByLabelText("Add a task")).toHaveFocus();
     });
 
     it("creates exactly one task after explicit confirmation", async () => {
@@ -646,7 +661,7 @@ describe("<MatrixSimplified>", () => {
       await waitFor(() =>
         expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument()
       );
-      expect(screen.getByLabelText("Capture a task")).toHaveFocus();
+      expect(screen.getByLabelText("Add a task")).toHaveFocus();
       expect(createTask).toHaveBeenCalledWith(
         expect.objectContaining({
           title: "Review roadmap",
@@ -695,12 +710,8 @@ describe("<MatrixSimplified>", () => {
     await screen.findByRole("heading", { name: /edit task/i });
     await user.click(screen.getByRole("button", { name: /save changes/i }));
 
-    await waitFor(() =>
-      expect(updateTask).toHaveBeenCalledWith(
-        "e1",
-        expect.objectContaining({ dependencies: ["dep-ghost"] })
-      )
-    );
+    // An untouched field is left out of the update, so the stored ids stay as they are.
+    await waitFor(() => expect(updateTask).toHaveBeenCalledWith("e1", {}));
   });
 
   it("logs edit failures with the task id and update action", async () => {
@@ -921,7 +932,8 @@ describe("<MatrixSimplified>", () => {
       expect(screen.queryByRole("heading", { name: /new task/i })).not.toBeInTheDocument();
 
       // Target the visible-text empty-state pill (not the icon-only header "+").
-      await user.click(screen.getByText("Add to Do First"));
+      // The header "+" tooltip also carries this text; the empty-state pill comes last.
+      await user.click(screen.getAllByText("Add to Do First").at(-1)!);
 
       const heading = await screen.findByRole("heading", { name: /new task/i });
       expect(heading).toBeInTheDocument();
@@ -977,14 +989,14 @@ describe("<MatrixSimplified>", () => {
 
       await userEvent.type(screen.getByLabelText("Shell search"), "zzz-no-match");
 
-      // Previously each quadrant kept its default copy ("Nothing on fire.")
+      // Previously each quadrant kept its default copy ("Nothing urgent right now.")
       // while the header still read "2 active", so the board looked as if it
       // had vanished rather than been filtered.
       await waitFor(() =>
         expect(screen.getByTestId("filtered-empty")).toBeInTheDocument()
       );
       expect(screen.getByTestId("filtered-empty")).toHaveTextContent("zzz-no-match");
-      expect(screen.queryByText("Nothing on fire.")).not.toBeInTheDocument();
+      expect(screen.queryByText("Nothing urgent right now.")).not.toBeInTheDocument();
     });
 
     it("offers a way back to the full board", async () => {

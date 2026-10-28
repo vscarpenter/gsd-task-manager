@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState, type FormEvent } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { XIcon, CheckIcon } from "lucide-react";
 import type { TaskRecord } from "@/lib/types";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_INK } from "@/lib/quadrants";
 import { Button } from "@/components/ui/button";
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { hasVisibleText } from "@/lib/utils";
 import { DrawerHint } from "@/components/ui/drawer-hint";
 import { useModalSurface } from "./use-modal-surface";
 import { useDialogFocus } from "./use-dialog-focus";
 import { useDiscardGuard } from "./use-discard-guard";
+import { useBackToClose } from "./use-back-to-close";
+import { useDrawerSave } from "./use-drawer-save";
 import { useEditDraftState } from "./use-edit-draft-state";
 import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
 import { ReminderField } from "./edit-drawer-reminder-field";
-import { DependenciesField, findDependencyCycleError } from "./edit-drawer-dependencies";
+import { DependenciesField } from "./edit-drawer-dependencies";
+import { LengthLimitNote } from "./limit-note";
+import { extractUrlsFromTitle } from "@/lib/capture-parser";
 import type { EditDraft } from "./edit-draft";
 export type { EditDraft } from "./edit-draft";
 
@@ -24,7 +30,11 @@ interface EditDrawerProps {
   /** Full live task list — candidate pool for the dependency picker. */
   allTasks?: TaskRecord[];
   onClose: () => void;
-  onSubmit: (draft: EditDraft, taskId?: string) => void | Promise<void>;
+  /**
+   * `changed` (edit mode only) holds just the fields this drawer altered, so the
+   * save can leave every other field at its stored value.
+   */
+  onSubmit: (draft: EditDraft, taskId?: string, changed?: Partial<EditDraft>) => void | Promise<void>;
 }
 
 type EditDrawerFormProps = Omit<EditDrawerProps, "open">;
@@ -74,10 +84,18 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   const titleRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const draft = useEditDraftState(task, initialDraft, titleRef);
-  const baselineRef = useRef<string | null>(null);
-  if (baselineRef.current === null) baselineRef.current = JSON.stringify(draft.toDraft());
-  const dirty = JSON.stringify(draft.toDraft()) !== baselineRef.current || draft.tagInput.trim() !== "";
+  const baselineRef = useRef<EditDraft | null>(null);
+  if (baselineRef.current === null) baselineRef.current = draft.toDraft();
+  const dirty = JSON.stringify(draft.toDraft()) !== JSON.stringify(baselineRef.current) || draft.tagInput.trim() !== "";
   const [dependencyError, setDependencyError] = useState<string | null>(null);
+  const { saving, submit } = useDrawerSave({
+    task,
+    draft,
+    baseline: baselineRef.current,
+    allTasks,
+    onSubmit,
+    setDependencyError,
+  });
   const { confirmingDiscard, keepEditingRef, requestClose } = useDiscardGuard(dirty, onClose, drawerRef, titleRef);
 
   const modalSurface = useModalSurface(requestClose);
@@ -89,22 +107,11 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   };
 
   useEscapeToClose(requestClose);
+  // Back runs the same guard Escape does, so unsaved edits are never dropped silently.
+  useBackToClose(true, requestClose);
 
   const isCreateMode = !task;
   const { activeQuadrant, accent, quadrantInk } = quadrantChrome(draft.urgent, draft.important);
-
-  const submit = (e?: FormEvent): void => {
-    e?.preventDefault();
-    if (!draft.title.trim()) return;
-    const cycleError = task
-      ? findDependencyCycleError(task.id, draft.dependencies, allTasks)
-      : null;
-    if (cycleError) {
-      setDependencyError(cycleError);
-      return;
-    }
-    void onSubmit(draft.toDraft(), task?.id);
-  };
 
   const heading = isCreateMode ? "New task" : "Edit task";
 
@@ -156,7 +163,8 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
             onDiscard={onClose}
             confirmingDiscard={confirmingDiscard}
             keepEditingRef={keepEditingRef}
-            canSave={Boolean(draft.title.trim())}
+            canSave={hasVisibleText(draft.title)}
+            saving={saving}
             isCreateMode={isCreateMode}
           />
         </form>
@@ -200,6 +208,7 @@ interface DrawerFooterProps {
   confirmingDiscard: boolean;
   keepEditingRef: React.RefObject<HTMLButtonElement | null>;
   canSave: boolean;
+  saving: boolean;
   isCreateMode: boolean;
 }
 
@@ -210,6 +219,7 @@ function DrawerFooter({
   confirmingDiscard,
   keepEditingRef,
   canSave,
+  saving,
   isCreateMode,
 }: DrawerFooterProps) {
   if (confirmingDiscard) {
@@ -226,7 +236,13 @@ function DrawerFooter({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button data-testid="save-task" type="submit" disabled={!canSave} className="whitespace-nowrap">
+          <Button
+            data-testid="save-task"
+            type="submit"
+            disabled={!canSave}
+            aria-busy={saving || undefined}
+            className="whitespace-nowrap"
+          >
             <CheckIcon className="h-3.5 w-3.5" />
             {isCreateMode ? "Create task" : "Save changes"}
           </Button>
@@ -324,15 +340,18 @@ function TitleAndDescriptionFields({
 }) {
   return (
     <>
-      <input
-        data-testid="edit-title"
-        ref={titleRef}
-        value={draft.title}
-        onChange={(e) => draft.setTitle(e.target.value)}
-        placeholder="What needs doing?"
-        className="w-full rounded-lg border border-border bg-background px-3 py-3 text-h3 text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
-        aria-label="Title"
-      />
+      <Field label="Title">
+        <input
+          data-testid="edit-title"
+          ref={titleRef}
+          value={draft.title}
+          onChange={(e) => draft.setTitle(e.target.value)}
+          placeholder="What needs doing?"
+          className="w-full rounded-lg border border-border bg-background px-3 py-3 text-h3 normal-case text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 placeholder:font-normal"
+        />
+      </Field>
+      {/* No maxLength: a pasted link moves to the description on save, so only the words count. */}
+      <LengthLimitNote field="title" length={extractUrlsFromTitle(draft.title).cleanTitle.length} max={SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH} />
 
       <Field label="Description">
         <textarea
@@ -340,11 +359,13 @@ function TitleAndDescriptionFields({
           value={draft.description}
           onChange={(e) => draft.setDescription(e.target.value)}
           rows={4}
+          maxLength={SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH}
           placeholder="Optional details, links, context"
           aria-label="Description"
           className="pointer-coarse:text-base w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-small leading-relaxed text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
         />
       </Field>
+      <LengthLimitNote field="description" length={draft.description.length} max={SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH} />
     </>
   );
 }

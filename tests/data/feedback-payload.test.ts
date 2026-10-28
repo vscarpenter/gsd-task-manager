@@ -143,6 +143,10 @@ describe("isDraftEmpty", () => {
     expect(isDraftEmpty({ ...emptyDraft(), message: "   \n  " })).toBe(true);
   });
 
+  it("treats a message of only zero-width characters as empty", () => {
+    expect(isDraftEmpty({ ...emptyDraft(), message: "\u200B\u200C\u200D\uFEFF" })).toBe(true);
+  });
+
   it("is non-empty once any single signal is set", () => {
     expect(isDraftEmpty({ ...emptyDraft(), sentiment: "down" })).toBe(false);
     expect(isDraftEmpty({ ...emptyDraft(), category: "bug" })).toBe(false);

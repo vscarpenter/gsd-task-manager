@@ -7,6 +7,7 @@ import { taskDraftSchema } from "@/lib/schema";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./helpers";
+import { TaskValidationError } from "./validation-error";
 
 const logger = createLogger("TASK_CRUD");
 
@@ -35,7 +36,7 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
       .map(issue => `${issue.path.join(".") || "(root)"} (${issue.code})`)
       .join(", ");
     logger.error("Task validation failed", undefined, { validationErrors: fieldErrors });
-    throw new Error(`Task validation failed: ${fieldErrors}`);
+    throw TaskValidationError.fromZod(result.error, fieldErrors);
   }
 
   try {

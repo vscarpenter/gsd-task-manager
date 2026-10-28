@@ -32,6 +32,7 @@ function makeStats(overrides: Partial<IntroStats> = {}): IntroStats {
   return {
     activeTotal: 0,
     doFirstCount: 0,
+    eliminateCount: 0,
     overdueTotal: 0,
     overdueQuadrants: [],
     ...overrides,
@@ -71,6 +72,18 @@ describe("deriveIntroStats", () => {
     expect(stats.doFirstCount).toBe(1);
   });
 
+  it("counts Eliminate membership among active tasks", () => {
+    const stats = deriveIntroStats(
+      [
+        makeTask({ urgent: false, important: false }),
+        makeTask({ urgent: false, important: false, completed: true }),
+        makeTask({ urgent: false, important: true }),
+      ],
+      TODAY
+    );
+    expect(stats.eliminateCount).toBe(1);
+  });
+
   it("counts overdue as incomplete tasks due strictly before today", () => {
     const stats = deriveIntroStats(
       [
@@ -98,9 +111,9 @@ describe("deriveIntroStats", () => {
 });
 
 describe("introMessage", () => {
-  it("invites capture when the board has no active tasks", () => {
+  it("teaches the capture markers when the board has no active tasks", () => {
     expect(introMessage(makeStats())).toBe(
-      "The board is clear. Capture the first thing on your mind below."
+      "Type a task below. Add !! for Do First or * for Schedule. A plain task goes to Eliminate."
     );
   });
 
@@ -131,14 +144,14 @@ describe("introMessage", () => {
     expect(introMessage(stats)).toBe("All 3 overdue tasks sit in Do First.");
   });
 
-  it("asks for a fresh decision when overdue tasks are scattered", () => {
+  it("asks for a decision on each when overdue tasks are scattered", () => {
     const stats = makeStats({
       activeTotal: 6,
       overdueTotal: 2,
       overdueQuadrants: ["Do First", "Eliminate"],
     });
     expect(introMessage(stats)).toBe(
-      "2 tasks are past their dates — give them a fresh decision."
+      "2 tasks are past their due dates. Decide what to do with each."
     );
   });
 
@@ -155,28 +168,40 @@ describe("introMessage", () => {
   it("names the urgency lean when Do First holds the majority", () => {
     const stats = makeStats({ activeTotal: 5, doFirstCount: 3 });
     expect(introMessage(stats)).toBe(
-      "Today leans urgent: most of the list sits in Do First."
+      "Most of your open tasks are in Do First."
     );
   });
 
   it("does not call an exact half a majority", () => {
     const stats = makeStats({ activeTotal: 4, doFirstCount: 2 });
     expect(introMessage(stats)).toBe(
-      "Nothing overdue. Everything on the board is there by choice."
+      "Nothing is overdue."
     );
   });
 
   it("skips the urgency lean on boards smaller than three tasks", () => {
     const stats = makeStats({ activeTotal: 2, doFirstCount: 2 });
     expect(introMessage(stats)).toBe(
-      "Nothing overdue. Everything on the board is there by choice."
+      "Nothing is overdue."
     );
+  });
+
+  // A first plain task lands in Eliminate by default. Calling that "there by
+  // choice" contradicted what just happened, and the marker hint vanished.
+  it("keeps teaching the markers while every active task sits in Eliminate", () => {
+    const stats = makeStats({ activeTotal: 2, eliminateCount: 2 });
+    expect(introMessage(stats)).toBe("Plain tasks go to Eliminate. Add !! for Do First or * for Schedule.");
+  });
+
+  it("puts overdue work ahead of the marker hint", () => {
+    const stats = makeStats({ activeTotal: 1, eliminateCount: 1, overdueTotal: 1, overdueQuadrants: ["Eliminate"] });
+    expect(introMessage(stats)).toBe("The overdue task sits in Eliminate.");
   });
 
   it("falls back to the calm all-clear reading", () => {
     const stats = makeStats({ activeTotal: 3, doFirstCount: 1 });
     expect(introMessage(stats)).toBe(
-      "Nothing overdue. Everything on the board is there by choice."
+      "Nothing is overdue."
     );
   });
 });

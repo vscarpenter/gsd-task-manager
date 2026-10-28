@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   cn,
   isoNow,
@@ -93,6 +93,18 @@ describe("utils", () => {
       const result = formatRelative(tomorrow.toISOString());
 
       expect(result.toLowerCase()).toContain("tomorrow");
+    });
+
+    it("counts calendar days, not 24-hour spans, in the evening", () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date(2026, 9, 27, 18, 5));
+        // Due dates are stored as local midnight.
+        expect(formatRelative(new Date(2026, 9, 30).toISOString())).toBe("in 3 days");
+        expect(formatRelative(new Date(2026, 9, 28).toISOString())).toBe("tomorrow");
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("returns full date for dates beyond 6 days", () => {

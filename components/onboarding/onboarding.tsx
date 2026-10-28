@@ -66,12 +66,12 @@ const SCREENS: Screen[] = [
   },
   {
     key: "capture",
-    title: "Capture at the speed of thought.",
-    body: "Type a task and add !! for urgent, * for important, and #tags. The quadrant chip updates live as you type.",
+    title: "Type a task, add a marker.",
+    body: "A marker in the text picks the quadrant: !! for Do First, * for Schedule, ! for Delegate. With no marker, a task goes to Eliminate. Add #tags to label it. The quadrant button in the bar shows where the task will go.",
     visual: (
       <div className="flex w-full max-w-[260px] items-center gap-2 rounded-full border border-border bg-background px-3 py-2" aria-hidden>
         <ZapIcon className="h-4 w-4" style={{ color: "var(--q1-ink)" }} />
-        <span className="text-sm text-foreground-muted">Ship the deploy </span>
+        <span className="text-sm text-foreground-muted">Pay the invoice </span>
         <span className="text-sm font-semibold" style={{ color: "var(--q1-ink)" }}>!!</span>
         <span
           className="ml-auto rounded-full px-2 py-0.5 text-caption font-medium"
@@ -85,7 +85,7 @@ const SCREENS: Screen[] = [
   {
     key: "privacy",
     title: "Your data stays yours.",
-    body: "Everything lives in this browser, fully offline. Turn on optional sync only if you want your tasks on more than one device.",
+    body: "Your tasks are saved in this browser and work offline. Sync is optional. If you turn it on, your tasks are uploaded to a server run by GSD's developer.",
     visual: (
       <div
         className="flex h-16 w-16 items-center justify-center rounded-2xl"

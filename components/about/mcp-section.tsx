@@ -5,6 +5,7 @@ const exampleQueries = [
   '"What are my urgent tasks this week?"',
   '"Show me everything tagged #work."',
   '"Which quadrant has the most overdue items?"',
+  '"Mark the budget review as done."',
 ];
 
 const claudeDesktopConfig = `{
@@ -18,6 +19,9 @@ const claudeDesktopConfig = `{
     }
   }
 }`;
+
+const intro =
+  "GSD ships with an MCP server. Install it once, and your AI assistant can find, add, change, complete, and delete your tasks in plain English. It works on the copy of your tasks that cloud sync stores, so turn on sync first. Everything it reads about a task, including descriptions, tags, subtasks, and due dates, goes to your AI assistant's provider.";
 
 const setupHint = (
   <>
@@ -41,9 +45,7 @@ export function McpSection() {
               Let Claude manage your tasks.
             </h2>
             <p className="max-w-[55ch] text-foreground-muted leading-relaxed mb-6">
-              GSD ships with an MCP server. Install it once, and your AI
-              assistant can query, search, and analyze your tasks using plain
-              English. {setupHint}
+              {intro} {setupHint}
             </p>
             <ul className="text-sm text-foreground-muted/80 italic space-y-2 mb-6">
               {exampleQueries.map((query) => (
@@ -54,7 +56,7 @@ export function McpSection() {
               href="https://www.npmjs.com/package/gsd-mcp-server"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-accent hover:text-accent-hover transition-colors"
+              className="inline-flex min-h-11 items-center text-sm text-accent hover:text-accent-hover transition-colors"
             >
               &rarr; View on npm: gsd-mcp-server
             </a>

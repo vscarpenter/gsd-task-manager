@@ -9,6 +9,19 @@ interface DiscardGuard {
   requestClose: () => void;
 }
 
+/** Reload and tab close skip the in-app prompt, so the browser's own stands in. */
+function useWarnBeforeUnload(dirty: boolean): void {
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent): void => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+}
+
 /**
  * The drawer's "Discard unsaved changes?" flow. Keep editing takes focus when
  * the prompt opens, and focus returns to the field in use when it closes.
@@ -38,6 +51,8 @@ export function useDiscardGuard(
     }
     onClose();
   };
+
+  useWarnBeforeUnload(dirty);
 
   useEffect(() => {
     if (confirmingDiscard) {

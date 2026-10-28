@@ -13,14 +13,14 @@ describe("ReviewPrompts", () => {
   it("lets the section heading speak without an eyebrow above it", () => {
     render(<ReviewPrompts distribution={distribution} />);
 
-    expect(screen.getByRole("heading", { name: "Look at the shape of active work." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "See where your open tasks are." })).toBeInTheDocument();
     expect(screen.queryByText("Reflection prompts")).toBeNull();
   });
 
   it("names each prompt's quadrant as a caption, not another tracked eyebrow", () => {
     render(<ReviewPrompts distribution={distribution} />);
 
-    const label = screen.getByText("Q1 · Do First");
+    const label = screen.getByText("Do First");
     expect(label.className).toContain("text-caption");
     expect(label.className).not.toContain("text-eyebrow");
     expect(label.className).not.toContain("uppercase");

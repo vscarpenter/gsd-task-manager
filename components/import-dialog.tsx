@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { importFromJson } from "@/lib/tasks";
+import { checkImportFile } from "@/lib/tasks/import-check";
+import { useBackToClose } from "@/components/matrix-simplified/use-back-to-close";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("IMPORT");
@@ -201,7 +203,7 @@ function MergeCard({ disabled, onClick }: OptionCardProps) {
         <div className="flex-1">
           <h3 className="font-semibold text-foreground">Merge Tasks</h3>
           <p className="mt-1 text-sm text-foreground-muted">
-            Keep your existing tasks and add the imported ones, archive included. Duplicate IDs are regenerated to avoid conflicts, and your settings stay as they are.
+            Keep your existing tasks and add the imported ones, archive included. Tasks already on this device are added again as copies, so restoring your own backup doubles them. Your settings stay as they are.
           </p>
           <p className="mt-2 text-xs font-medium text-olive-d">
             ✓ Safe - No data loss
@@ -282,6 +284,42 @@ function ReplaceConfirm({ liveDeletes, disabled, onBack, onConfirm }: ReplaceCon
   );
 }
 
+/** Shown in place of the Merge and Replace choice when the file can't be imported. */
+function InvalidFileDialog({
+  open,
+  message,
+  onOpenChange,
+}: {
+  open: boolean;
+  message: string;
+  onOpenChange: (open: boolean) => void;
+}) {
+  useBackToClose(open, () => onOpenChange(false));
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Import Tasks</DialogTitle>
+          <DialogDescription>This file can&apos;t be imported.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border-2 border-rust-tint-border bg-rust-tint p-4 text-sm text-foreground"
+          >
+            <AlertTriangleIcon className="mt-0.5 h-4 w-4 shrink-0 text-rust-d" aria-hidden />
+            <p>{message}</p>
+          </div>
+          <p className="text-sm text-foreground-muted">Nothing was changed. Close this, then import a different file.</p>
+          <Button variant="subtle" onClick={() => onOpenChange(false)} className="w-full">
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface ImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -295,7 +333,7 @@ interface ImportDialogProps {
   onImportComplete: () => void;
 }
 
-export function ImportDialog({
+function ImportChoiceDialog({
   open,
   onOpenChange,
   fileContents,
@@ -335,17 +373,15 @@ export function ImportDialog({
   };
 
   const requestReplace = () => {
-    if (cloudDeletes) {
-      setConfirmingReplace(true);
-      return;
-    }
-    void handleImport("replace");
+    if (cloudDeletes) setConfirmingReplace(true);
+    else void handleImport("replace");
   };
 
   const close = (next: boolean) => {
     if (!next) setConfirmingReplace(false);
     onOpenChange(next);
   };
+  useBackToClose(open, () => close(false));
 
   return (
     <Dialog open={open} onOpenChange={close}>
@@ -391,4 +427,16 @@ export function ImportDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * Rejects an unusable file before Merge or Replace is offered, so the person
+ * reads the real reason instead of a generic failure after choosing.
+ */
+export function ImportDialog(props: ImportDialogProps) {
+  const check = props.fileContents ? checkImportFile(props.fileContents) : null;
+  if (check && !check.ok) {
+    return <InvalidFileDialog open={props.open} message={check.message} onOpenChange={props.onOpenChange} />;
+  }
+  return <ImportChoiceDialog {...props} />;
 }

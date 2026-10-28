@@ -99,6 +99,21 @@ describe('ThemeToggle', () => {
     expect(screen.getByText(/switch to dark mode/i)).toBeInTheDocument();
   });
 
+  it('uses the resolved theme when the setting is system', () => {
+    vi.mocked(useTheme).mockReturnValue({
+      theme: 'system',
+      setTheme: mockSetTheme,
+      resolvedTheme: 'light',
+      themes: ['light', 'dark', 'system'],
+      systemTheme: 'light',
+      forcedTheme: undefined,
+    });
+    render(<ThemeToggle />);
+    expect(screen.getByText(/switch to dark mode/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));
+    expect(mockSetTheme).toHaveBeenCalledWith('dark');
+  });
+
   it('calls setTheme when clicked', () => {
     render(<ThemeToggle />);
     fireEvent.click(screen.getByRole('button', { name: /toggle theme/i }));

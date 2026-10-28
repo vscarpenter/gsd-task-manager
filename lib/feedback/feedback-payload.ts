@@ -1,5 +1,6 @@
 import { z } from "@/lib/zod";
 import { isRoadmapSlug, ROADMAP_ITEMS } from "./roadmap-items";
+import { hasVisibleText } from "@/lib/utils";
 
 /**
  * The single place that decides what leaves the device.
@@ -73,7 +74,7 @@ export function isDraftEmpty(draft: FeedbackDraft): boolean {
   return (
     draft.sentiment === null &&
     draft.category === null &&
-    draft.message.trim().length === 0 &&
+    !hasVisibleText(draft.message) &&
     draft.votes.length === 0
   );
 }
