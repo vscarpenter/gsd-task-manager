@@ -343,10 +343,8 @@ async function applyTrashedTasks(
   const liveIds = new Set((await db.tasks.toCollection().primaryKeys()) as string[]);
   const archivedIds = new Set((await db.archivedTasks.toCollection().primaryKeys()) as string[]);
   // A merge adds what is missing; a local Trash row keeps its edits and its retention clock.
-  const existingTrashIds =
-    mode === "merge"
-      ? new Set((await db.deletedTasks.toCollection().primaryKeys()) as string[])
-      : new Set<string>();
+  const existingTrashIds = new Set<string>(
+    mode === "merge" ? ((await db.deletedTasks.toCollection().primaryKeys()) as string[]) : []);
 
   for (const task of deletedTasks) {
     if (liveIds.has(task.id) || archivedIds.has(task.id) || existingTrashIds.has(task.id)) continue;
