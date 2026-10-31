@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
 import { TaskDetailSheet } from "@/components/matrix-simplified/task-detail-sheet";
@@ -26,11 +26,32 @@ const task = {
 const ownsEntry = (): boolean =>
   (window.history.state as { gsdOverlay?: boolean } | null)?.gsdOverlay === true;
 
+const nextTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+/** Resolves on the next popstate. jsdom traverses history asynchronously, so a fixed sleep races under load. */
+const nextPopState = () =>
+  new Promise<void>((resolve) => window.addEventListener("popstate", () => resolve(), { once: true }));
+
 async function goBack(): Promise<void> {
   await act(async () => {
+    const popped = nextPopState();
     window.history.back();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await popped;
+    await nextTask();
   });
+}
+
+/**
+ * Unmount, run the hook's deferred release, and wait for its history.back() to
+ * land. The hook keeps module-level state (ignoreNextPop), so a test must not
+ * start while the previous one's popstate is still in flight.
+ */
+async function settleHistory(): Promise<void> {
+  cleanup();
+  await act(async () => {
+    await nextTask();
+  });
+  await waitFor(() => expect(ownsEntry()).toBe(false));
 }
 
 async function renderDrawer(onClose = vi.fn()) {
@@ -39,12 +60,7 @@ async function renderDrawer(onClose = vi.fn()) {
   return { ...view, onClose };
 }
 
-afterEach(async () => {
-  // Let any deferred history cleanup finish before the next test.
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  });
-});
+afterEach(settleHistory);
 
 describe("browser Back with an overlay open", () => {
   it("holds one history entry while the drawer is open", async () => {
@@ -114,16 +130,18 @@ describe("browser Forward after an overlay closed", () => {
   // Forward after Back used to land on the overlay's old entry with nothing
   // open, so the next Back went nowhere.
   it("steps past a stale overlay entry that Forward lands on", async () => {
-    const { unmount } = await renderDrawer();
-    unmount();
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    });
+    await renderDrawer();
+    await settleHistory();
     expect(ownsEntry()).toBe(false);
 
     await act(async () => {
+      const landed = nextPopState();
       window.history.forward();
-      await new Promise((resolve) => setTimeout(resolve, 40));
+      await landed;
+      // Forward really did land on the stale overlay entry; without this the
+      // final assertion would also pass when nothing happened at all.
+      expect(ownsEntry()).toBe(true);
+      await nextPopState();
     });
 
     expect(ownsEntry()).toBe(false);

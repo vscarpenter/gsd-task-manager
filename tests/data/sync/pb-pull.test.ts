@@ -113,6 +113,7 @@ describe('pullRemoteChanges cursor clamping', () => {
     const before = Date.now();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('t1', '3000-01-01T00:00:00.000Z')]),
       }),
     });
@@ -127,6 +128,7 @@ describe('pullRemoteChanges cursor clamping', () => {
     const twoMinutesAhead = new Date(before + 2 * 60 * 1000).toISOString();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('t1', twoMinutesAhead)]),
       }),
     });
@@ -143,6 +145,7 @@ describe('pullRemoteChanges cursor clamping', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
       }),
     });
@@ -152,6 +155,20 @@ describe('pullRemoteChanges cursor clamping', () => {
     // is persisted with a 30s overlap subtracted so the next pull's `>=` filter
     // can re-catch boundary records reliably across clock drift.
     expect(maxObservedTimestamp).toBe('2026-05-17T23:59:30.000Z');
+  });
+
+  it('reports how many fetched records it could not apply', async () => {
+    const badRecord = pbRecord('t1', '2026-05-18T00:00:00.000Z');
+    delete (badRecord as Record<string, unknown>).title;
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
+      }),
+    });
+
+    const result = await pullRemoteChanges(null);
+
+    expect(result.skippedCount).toBe(1);
   });
 
   it('uses client_updated_at for filtering and sorting', async () => {
@@ -199,6 +216,7 @@ describe('pullRemoteChanges cursor clamping', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('t-equal', timestamp)]),
       }),
     });
@@ -281,6 +299,7 @@ describe('pullRemoteChanges archive guard', () => {
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('future-archive', '3000-01-01T00:00:00.000Z')]),
       }),
     });
@@ -301,6 +320,7 @@ describe('pullRemoteChanges archive guard', () => {
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('future-trash', '3000-01-01T00:00:00.000Z')]),
       }),
     });
@@ -325,6 +345,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('archived-task', '2026-05-20T00:00:00.000Z')]),
       }),
     });
@@ -345,6 +366,7 @@ describe('pullRemoteChanges archive guard', () => {
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('deleted-task', '2026-05-20T00:00:00.000Z')]),
       }),
     });
@@ -364,6 +386,7 @@ describe('pullRemoteChanges archive guard', () => {
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('edited-after-delete', '2026-05-20T00:00:00.000Z')]),
       }),
     });
@@ -390,6 +413,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [
           pbRecord('archived-task', '2026-05-20T00:00:00.000Z'),
           pbRecord('live-task', '2026-05-20T00:00:00.000Z'),
@@ -422,6 +446,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [
           pbRecord('edited-after-archive', '2026-05-20T00:00:00.000Z'),
         ]),
@@ -451,6 +476,7 @@ describe('pullRemoteChanges archive guard', () => {
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [
           pbRecord('atomic-restore', '2026-05-20T00:00:00.000Z'),
         ]),
@@ -475,6 +501,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('stale-remote', '2026-05-18T00:00:00.000Z')]),
       }),
     });
@@ -491,6 +518,7 @@ describe('pullRemoteChanges archive guard', () => {
 
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('restored-task', '2026-05-20T00:00:00.000Z')]),
       }),
     });
@@ -509,8 +537,13 @@ describe('pullRemoteChanges archive guard', () => {
 });
 
 describe('pullRemoteChanges deletion reconciliation', () => {
+  // auth-refresh is the only call a rejected token fails: the task listing
+  // answers 200 with zero items for it, exactly like an account with no tasks.
+  const authRefreshMock = vi.fn();
+
   beforeEach(async () => {
     vi.clearAllMocks();
+    authRefreshMock.mockResolvedValue({ record: { id: 'user-1' } });
     const db = getDb();
     await db.tasks.clear();
     await db.syncQueue.clear();
@@ -520,9 +553,64 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
         getList: vi.fn(async () => []),
+        authRefresh: authRefreshMock,
       }),
     });
     fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
+  });
+
+  it('deletes nothing when auth-refresh rejects the session, even though the listing is empty', async () => {
+    const db = getDb();
+    await db.tasks.bulkAdd([makeTask('kept-1'), makeTask('kept-2')]);
+    authRefreshMock.mockRejectedValue(Object.assign(new Error('401'), { status: 401 }));
+
+    const failure = await settle(pullRemoteChanges(null));
+
+    expect(failure).toBeInstanceOf(Error);
+    await expect(db.tasks.count()).resolves.toBe(2);
+  });
+
+  it('deletes nothing when the refreshed session belongs to another account', async () => {
+    const db = getDb();
+    await db.tasks.add(makeTask('kept-1'));
+    authRefreshMock.mockResolvedValue({ record: { id: 'someone-else' } });
+
+    const failure = await settle(pullRemoteChanges(null));
+
+    expect(failure).toBeInstanceOf(Error);
+    await expect(db.tasks.count()).resolves.toBe(1);
+  });
+
+  it('deletes nothing when auth-refresh cannot be reached', async () => {
+    const db = getDb();
+    await db.tasks.add(makeTask('kept-1'));
+    authRefreshMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    const failure = await settle(pullRemoteChanges(null));
+
+    expect(failure).toBeInstanceOf(Error);
+    await expect(db.tasks.count()).resolves.toBe(1);
+  });
+
+  it('asks auth-refresh nothing when no task would be deleted', async () => {
+    const db = getDb();
+    await db.tasks.add(makeTask('pending-edit'));
+    await getSyncQueue().enqueue('update', 'pending-edit', makeTask('pending-edit'));
+
+    await pullRemoteChanges(null);
+
+    expect(authRefreshMock).not.toHaveBeenCalled();
+    await expect(db.tasks.count()).resolves.toBe(1);
+  });
+
+  it('still deletes the absent task once the session is confirmed', async () => {
+    const db = getDb();
+    await db.tasks.add(makeTask('server-deleted'));
+
+    await pullRemoteChanges(null);
+
+    expect(authRefreshMock).toHaveBeenCalledTimes(1);
+    await expect(db.tasks.get('server-deleted')).resolves.toBeUndefined();
   });
 
   it('deletes a local task that is absent from the remote index', async () => {
@@ -667,8 +755,12 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     const readStarted = new Promise<void>((resolve) => { markReadStarted = resolve; });
     const readRelease = new Promise<void>((resolve) => { releaseRead = resolve; });
     const originalToArray = db.tasks.toArray.bind(db.tasks);
-    const toArraySpy = vi.spyOn(db.tasks, 'toArray').mockImplementationOnce(async () => {
+    // The first read is the pre-delete plan, made outside any transaction. The
+    // second is the one inside the reconcile transaction, which must serialize.
+    let reads = 0;
+    const toArraySpy = vi.spyOn(db.tasks, 'toArray').mockImplementation(async () => {
       const snapshot = await originalToArray();
+      if (++reads !== 2) return snapshot;
       markReadStarted();
       await Dexie.waitFor(readRelease);
       return snapshot;
@@ -725,6 +817,7 @@ describe('pullRemoteChanges after teardown', () => {
     let release: ((records: RecordModel[]) => void) | undefined;
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(() => new Promise<RecordModel[]>((resolve) => { release = resolve; })),
       }),
     });
@@ -757,7 +850,7 @@ describe('pullRemoteChanges after teardown', () => {
     const db = getDb();
     await db.tasks.add(makeTask('kept-after-sign-out'));
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
-      collection: () => ({ getList: vi.fn(async () => []) }),
+      collection: () => ({ getList: vi.fn(async () => []), authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })), }),
     });
     let releaseIndex: ((value: { index: Map<string, never>; fetchSucceeded: boolean }) => void) | undefined;
     fetchRemoteTaskIndexMock.mockImplementationOnce(
