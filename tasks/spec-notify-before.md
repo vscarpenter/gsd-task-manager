@@ -1,7 +1,7 @@
 # Contract note: `notify_before` is always a number
 
-**Status:** draft, 2026-10-31. Sprint 2 builds it. Not implemented on any client.
-**Decision:** D-10, option 1 (`sprint/OWNER-DECISIONS.md` item 9). Evidence: `sprint/findings/D-10.md`.
+**Status:** decided, 2026-10-31. Sprint 2 builds it. Not implemented on any client.
+**Decision:** D-10, option 1 (`sprint/OWNER-DECISIONS.md` items 9 and 17). Evidence: `sprint/findings/D-10.md`.
 **No new field, no pull contract bump, no backup envelope change, no server change, no corpus.** The rule is one fallback expression, so each client's tests pin it (section 7).
 **Evidence:** code paths come from reading web, iOS, and Android `main` on 2026-10-31. The server behavior is S-AND's finding, run on PocketBase 0.40.4. Nothing here has run on a client.
 
@@ -98,10 +98,10 @@ The names stay the same on each client, so they can be compared. Android's `None
 
 The existing web test `tests/data/sync/task-mapper.test.ts:146`, which expects `notify_before` to be null, flips.
 
-## 8. Decisions for Vinny
+## 8. Decided
 
-These are my readings, and none of them changes the rule.
+Vinny said yes to all three on 2026-10-31 (`sprint/OWNER-DECISIONS.md` item 17).
 
-1. **MCP create with no offset writes 15, where today it writes `0`.** That moves an agent-created task's reminder from the due time to 15 minutes before. It matches a task created anywhere else. The alternative is to leave `0`, which keeps agent-created tasks different.
-2. **Android gains a real None (section 5).** Today nothing on Android turns off one task's reminder. This is new behavior, not only a label, and the alternative is no None row at all.
-3. **"For new tasks" under Default reminder.** It tells people a changed default won't move existing tasks. The wording is a first draft.
+1. **MCP create with no offset writes 15, where today it writes `0`.** That moves an agent-created task's reminder from the due time to 15 minutes before, and it matches a task created anywhere else.
+2. **Android gains a real None (section 5).** Today nothing on Android turns off one task's reminder, so this is new behavior, not only a label.
+3. **"For new tasks" goes under Default reminder.** It tells people a changed default won't move existing tasks.
