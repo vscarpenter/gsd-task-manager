@@ -143,7 +143,8 @@ Saved showed that a same-version merge alone isn't enough (`S-AND-01`, `OWNER-DE
 - A fresh install has no rows, so the backfill changes nothing there.
 
 **C4-2. While a backfill is due, no push runs before the pull completes.** If the pull fails, nothing pushes and nothing stamps.
-- *Web:* `fullSync` pushes first (`lib/sync/pb-sync-engine.ts:187-189`). When `mergeSameVersion` is true it must pull, then push. Ordinary syncs keep today's order.
+- *Web:* `fullSync` pushes first (`lib/sync/pb-sync-engine.ts:187-189`). When `mergeSameVersion` is true it must pull, then push. Ordinary syncs keep today's order. A pull that comes back unauthenticated returns rather than throws (`pb-pull.ts`), so the reorder must skip the push in that case too.
+- *Web, reconcile moves too:* `reconcileDeletedTasks` runs inside `pullRemoteChanges` (`pb-pull.ts:172`), so on that one sync it runs before the push and sees tasks whose create hasn't gone out. That's safe by reading: a pending queue row protects a task from reconcile (`classifyRemoteDeletion`, `lib/sync/queue.ts:65-67`), and `pushLocalChanges` only sends pending rows, so a failed-only row gets the same verdict in either order. The named test below proves the create case.
 - *iOS:* `pushNow` drains with no pull (`SyncEngine.swift:281`, called from `SyncCoordinator.swift:249`). While a backfill is due it must run `sync()` instead. `sync()` itself pulls first, and the seed only enqueues.
 - *Android:* `runSync` already pulls first and skips push when pull throws, and it has no push-only path. Add the test anyway, so it stays that way.
 
@@ -155,7 +156,8 @@ Saved showed that a same-version merge alone isn't enough (`S-AND-01`, `OWNER-DE
 - Keep `updatedAt` and every other field. Queue nothing. Don't count a conflict. Run this after the tombstone check, so archived and trashed rows stay untouched.
 - *Why the version gate matters:* a null field means "this build never heard of it" only on a build older than the field. On a contract 3 device, a null `savedAt` on a newer row is a real Return that may not have pushed yet. Android's current `backfill && lacksNewerPlacement` (`SyncEngine.kt`, `feat/saved-parity`) is right at contract 3, and at contract 4 it would un-return that task. Contract 4 replaces it with this gate.
 - *What this doesn't fix:* a contract 3 web or iOS device can't repair `saved_at` this way. That's item 7, and it needs its own change.
-- *Accepted edge:* a pick and an un-pick on this device before the first sync finishes can come back as picked if another client has a pick for that task. Nothing is lost, and the user can remove it.
+- *Accepted edge, early un-pick:* a pick and an un-pick on this device before the first sync finishes can come back as picked if another client has a pick for that task. Nothing is lost, and the user can remove it.
+- *Accepted edge, no stored version:* a missing version reads as older than every field, so `savedAt` is copied too. Two shipped paths give a build that knew Saved a missing or low version. A contract 3 iOS build forgets the version on sign-out (`SyncCursor.clear()`). Web's literal `pullCursorVersion: 2` (`use-sync-auth-dialog.ts:214`) stands on a shipped build until its first completed pull stamps the real value. So on those paths a Return that hasn't pushed, then an upgrade, comes back Saved. On iOS that also takes a sign-out and sign-in first. The copy still runs, because a missing version usually does mean an older build, and skipping it would clear `saved_at` for everyone. Nothing is lost, and the user can return the task again. C4-1's changes close both paths for later contracts.
 
 **C4-5. A same-version row takes the remote through the existing merge.** No change. It isn't a conflict, and device-local fields survive through the mapper.
 
@@ -180,6 +182,7 @@ Each client writes the test where it fits its suite. The name stays the same, so
 | `sign-out on the current build doesn't trigger a backfill` | C4-1 | yes | yes | n/a: sign-out keeps the cursor |
 | `sign-in keeps the stored contract` | C4-1 | yes | n/a: no such write | n/a: no such write |
 | `backfill pulls before it pushes` | C4-2 | yes | yes | yes |
+| `a pending create survives a pull-first backfill` | C4-2 | yes | n/a: order unchanged | n/a: order unchanged |
 | `a push-only drain runs a full sync while a backfill is due` | C4-2 | n/a: no such path | yes | n/a: no such path |
 | `a failed backfill pull pushes nothing and stamps nothing` | C4-2, C4-3 | yes | yes | yes |
 | `a locally newer row gets the server pick through the backfill` | C4-4 | yes | yes | yes |
@@ -333,7 +336,7 @@ A mixed fleet is fine. An older build ignores picks and can't clear them. The su
 - All 123 corpus cases pass on web, iOS, and Android, from byte-identical copies, and MCP runs the cases that apply to it.
 - Every section 6 named test passes, and the real-server run shows the failure and the fix on a hookless PocketBase 0.40.4.
 - No upgrade path clears a pick on the server: queued payload, locally newer row, same-version row, sign-out and sign-in, or push-only drain.
-- A real Return made before an upgrade survives that upgrade's contract 4 backfill.
+- A real Return made before an upgrade survives that upgrade's contract 4 backfill, apart from the no-stored-version edge accepted in C4-4.
 - Opening the app at midnight, or on a new day, writes nothing and pushes nothing.
 - A widget never shows a pick dated other than the local today.
 - With no picks, the matrix looks as it does today, apart from the one line in section 4.
@@ -342,7 +345,7 @@ A mixed fleet is fine. An older build ignores picks and can't clear them. The su
 
 ## 15. Decisions for Vinny
 
-The Lead accepted these as working defaults and they're written into the corpus. Changing one changes the corpus, so answer before it freezes.
+These are working defaults, written into the corpus. The Lead has read them and finds them reasonable, and they're all Vinny's to decide. Changing one changes the corpus, which doesn't freeze until he answers.
 
 1. **Carry-over.** D-13 names it without defining it. This spec makes it an offer, never a write, showing the latest earlier date within seven days. If you want automatic roll-forward, section 3.4 explains the conflicts it brings.
 2. **A completed pick frees its slot.** The alternative keeps it in the list, crossed off, holding the slot for the day. That's a real product difference: freeing lets someone keep adding, and holding keeps "three" meaning three.
