@@ -471,6 +471,20 @@ describe('pb-sync-engine', () => {
       expect(result.skippedCount).toBe(2);
     });
 
+    it('carries the skipped-record count on a partial sync too', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+      vi.mocked(pushLocalChanges).mockResolvedValueOnce({
+        pushedCount: 0, failedCount: 1, lastError: 'Network error', authenticated: true,
+      });
+      vi.mocked(pullRemoteChanges).mockResolvedValueOnce({ ...mockPullResult, skippedCount: 3 });
+
+      const result = await fullSync();
+
+      expect(result.status).toBe('partial');
+      expect(result.skippedCount).toBe(3);
+    });
+
     it('should return partial when push has failures', async () => {
       const { pushLocalChanges } = await import('@/lib/sync/pb-push');
       vi.mocked(pushLocalChanges).mockResolvedValueOnce({
