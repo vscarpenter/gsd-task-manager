@@ -8,7 +8,7 @@
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
 import { classifyRemoteDeletion } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
@@ -240,6 +240,14 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
 
   const db = getDb();
   const remoteTaskIds = new Set(remoteIndex.keys());
+
+  // An empty listing is also what a rejected token gets, so before anything is
+  // deleted the session is confirmed. Nothing to delete means no extra request.
+  // Any failure here propagates: the sync reports an error and deletes nothing.
+  const [candidates, candidateQueueRows] = await Promise.all([db.tasks.toArray(), db.syncQueue.toArray()]);
+  if (planRemoteAbsence(candidates, remoteTaskIds, candidateQueueRows).deleteIds.length === 0) return;
+  await confirmSessionIdentity(ownerId);
+
   await db.transaction('rw', [db.tasks, db.deletedTasks, db.syncQueue, db.syncMetadata], async () => {
     // The index fetch may have outlived a sign-out; delete nothing for a past session.
     await assertSyncSessionCurrent(ownerId);
