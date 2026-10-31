@@ -761,6 +761,51 @@ describe("NotificationChecker", () => {
 			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
 		});
 
+		it("fires when a long snooze ends, after the day's window has closed", async () => {
+			const snoozedUntil = new Date(2026, 9, 1, 9, 30).toISOString();
+			await runAt(new Date(2026, 9, 1, 9, 30), createTask({ dueDate: allDayDue, notifyBefore: 15, snoozedUntil }));
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+		});
+
+		it("fires a timed task's snooze that ends after the due time's grace period", async () => {
+			const due = new Date(2026, 8, 24, 10, 0).toISOString();
+			const snoozedUntil = new Date(2026, 8, 24, 12, 45).toISOString();
+			await runAt(new Date(2026, 8, 24, 12, 45), createTask({ dueDate: due, notifyBefore: 15, snoozedUntil }));
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+		});
+
+		it("holds a snooze that ends in quiet hours until the window ends", async () => {
+			vi.mocked(notifications.getNotificationSettings).mockResolvedValue(
+				createSettings({ quietHoursStart: "22:00", quietHoursEnd: "07:00" }),
+			);
+			const snoozedUntil = new Date(2026, 9, 1, 23, 0).toISOString();
+			await runAt(new Date(2026, 9, 2, 7, 0), createTask({ dueDate: allDayDue, notifyBefore: 15, snoozedUntil }));
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+		});
+
+		it("does not repeat a snoozed reminder once it has shown", async () => {
+			const snoozedUntil = new Date(2026, 9, 1, 9, 30).toISOString();
+			await runAt(
+				new Date(2026, 9, 1, 9, 35),
+				createTask({ dueDate: allDayDue, notifyBefore: 15, snoozedUntil, notificationSent: true }),
+			);
+			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+		});
+
+		it("drops a snoozed reminder an hour after the snooze ended", async () => {
+			const snoozedUntil = new Date(2026, 9, 1, 9, 30).toISOString();
+			await runAt(new Date(2026, 9, 1, 10, 31), createTask({ dueDate: allDayDue, notifyBefore: 15, snoozedUntil }));
+			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+		});
+
+		it("does not mark a reminder sent when a new snooze landed while it was showing", async () => {
+			const task = createTask({ dueDate: allDayDue, notifyBefore: 15 });
+			mockDb.tasks.get.mockResolvedValue({ ...task, snoozedUntil: new Date(2026, 8, 24, 12, 0).toISOString() });
+			await runAt(new Date(2026, 8, 24, 9, 0), task);
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+			expect(mockDb.tasks.update).not.toHaveBeenCalled();
+		});
+
 		it("keeps a timed task at due minus the offset", async () => {
 			const due = new Date(2026, 8, 24, 15, 30).toISOString();
 			await runAt(new Date(2026, 8, 24, 15, 15), createTask({ dueDate: due, notifyBefore: 15 }));

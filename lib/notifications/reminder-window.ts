@@ -68,6 +68,29 @@ function deferPastQuietHours(fire: Date, quiet: QuietHours): Date {
 }
 
 /**
+ * Whether a reminder should show right now. A future snooze holds it. A snooze
+ * that has ended asks for the reminder again, for an hour, even after the first
+ * window closed. `snoozeTask` clears `notificationSent` for this, as the native
+ * clients re-fire at the snooze end (Android `ReminderPlanner.fireTime`).
+ */
+export function isReminderDue(args: {
+  dueIso: string;
+  notifyBefore: number;
+  now: Date;
+  snoozedUntil?: string;
+  quiet?: QuietHours;
+}): boolean {
+  const { now, quiet = {} } = args;
+  const snoozed = args.snoozedUntil ? new Date(args.snoozedUntil) : undefined;
+  if (snoozed && snoozed > now) return false;
+  const within = ({ fire, expires }: ReminderWindow) => now >= fire && now < expires;
+  if (within(reminderWindow(args.dueIso, args.notifyBefore, quiet))) return true;
+  if (!snoozed) return false;
+  const fire = deferPastQuietHours(snoozed, quiet);
+  return within({ fire, expires: new Date(fire.getTime() + GRACE_MS) });
+}
+
+/**
  * When a reminder will fire, or null when it won't: a future snooze is the fire
  * time, and a fire time that has passed fires nothing. Quiet hours defer either.
  * Mirrors Android `ReminderPlanner.fireTime` for the shared due-time corpus.

@@ -501,6 +501,33 @@ describe("Notifications module", () => {
 			);
 		});
 
+		it("alerts again when a snoozed reminder replaces one still on screen", async () => {
+			mockNotificationConstructor.permission = "granted";
+			mockDb.notificationSettings.get.mockResolvedValue({
+				id: "settings",
+				enabled: true,
+				defaultReminder: 15,
+				soundEnabled: true,
+				permissionAsked: true,
+				updatedAt: new Date().toISOString(),
+			});
+			const mockShowNotification = vi.fn().mockResolvedValue(undefined);
+			Object.defineProperty(global.navigator, 'serviceWorker', {
+				value: {
+					ready: Promise.resolve({ showNotification: mockShowNotification }),
+				},
+				writable: true,
+				configurable: true,
+			});
+
+			await showTaskNotification(createTask({ title: "Important Task" }), 15);
+
+			expect(mockShowNotification).toHaveBeenCalledWith(
+				expect.any(String),
+				expect.objectContaining({ tag: "task-task-1", renotify: true }),
+			);
+		});
+
 		it("should show notification via Notification constructor as fallback", async () => {
 			mockNotificationConstructor.permission = "granted";
 			mockDb.notificationSettings.get.mockResolvedValue({

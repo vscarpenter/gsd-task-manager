@@ -9,11 +9,12 @@ const logger = createLogger("TASK_CRUD");
 
 /** Build a snoozed copy of a task record */
 function buildSnoozedRecord(existing: TaskRecord, minutes: number): TaskRecord {
-  const snoozedUntil = minutes > 0
-    ? new Date(Date.now() + minutes * TIME_TRACKING.MS_PER_MINUTE).toISOString()
-    : undefined;
-
-  return { ...existing, snoozedUntil, updatedAt: isoNow() };
+  if (minutes === 0) {
+    return { ...existing, snoozedUntil: undefined, updatedAt: isoNow() };
+  }
+  const snoozedUntil = new Date(Date.now() + minutes * TIME_TRACKING.MS_PER_MINUTE).toISOString();
+  // A snooze asks for the reminder again when it ends, even if one has already shown.
+  return { ...existing, snoozedUntil, notificationSent: false, updatedAt: isoNow() };
 }
 
 /**
