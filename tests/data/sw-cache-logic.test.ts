@@ -9,6 +9,8 @@ import {
 	getSafeLegacyCaptureUrl,
 	getSafePageUrl,
 	isCapturePayloadUrl,
+	getShareCaptureUrl,
+	isShareTargetPost,
 } from "@/lib/sw-cache-logic";
 
 describe("classifyRequest", () => {
@@ -315,5 +317,46 @@ describe("source sync check", () => {
 		expect(js.isCapturePayloadUrl("https://gsd.test/#action=capture&title=x")).toBe(
 			isCapturePayloadUrl("https://gsd.test/#action=capture&title=x"),
 		);
+	});
+});
+
+describe("isShareTargetPost", () => {
+	it("matches a same-origin POST to the share route", () => {
+		expect(isShareTargetPost("/share-target/", "POST", true)).toBe(true);
+	});
+
+	it("rejects a GET, another path, and a cross-origin request", () => {
+		expect(isShareTargetPost("/share-target/", "GET", true)).toBe(false);
+		expect(isShareTargetPost("/settings/", "POST", true)).toBe(false);
+		expect(isShareTargetPost("/share-target/", "POST", false)).toBe(false);
+	});
+});
+
+describe("getShareCaptureUrl", () => {
+	const origin = "https://gsd.test";
+	const parse = (value: string) => new URLSearchParams(new URL(value).hash.slice(1));
+
+	it("puts the shared title and url in the fragment, never the query", () => {
+		const target = getShareCaptureUrl(origin, { title: "Read later", text: "", url: "https://example.com/a" });
+		expect(new URL(target).search).toBe("");
+		expect(parse(target).get("action")).toBe("capture");
+		expect(parse(target).get("title")).toBe("Read later");
+		expect(parse(target).get("url")).toBe("https://example.com/a");
+	});
+
+	it("finds the url in the text when an app shares only text, as Android apps often do", () => {
+		const target = getShareCaptureUrl(origin, { title: "", text: "Worth a read https://example.com/a?x=1", url: "" });
+		expect(parse(target).get("url")).toBe("https://example.com/a?x=1");
+		expect(parse(target).get("title")).toBe("Worth a read");
+	});
+
+	it("uses the text as the title when there is no title", () => {
+		const target = getShareCaptureUrl(origin, { title: "", text: "Call the dentist", url: "" });
+		expect(parse(target).get("title")).toBe("Call the dentist");
+		expect(parse(target).has("url")).toBe(false);
+	});
+
+	it("opens the matrix with no capture when nothing usable was shared", () => {
+		expect(getShareCaptureUrl(origin, { title: " ", text: "", url: "" })).toBe("https://gsd.test/");
 	});
 });

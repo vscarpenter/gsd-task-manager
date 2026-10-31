@@ -183,4 +183,48 @@ describe("service worker capture privacy", () => {
 			legacyFragmentRequest.url,
 		]);
 	});
+
+	it("turns a share-target POST into a capture fragment without touching the network or cache", async () => {
+		const harness = createWorkerHarness();
+		const body = new FormData();
+		body.set("title", "PRIVATE_SHARE_SENTINEL");
+		body.set("text", "see https://internal.test/plan");
+		const request = new Request("https://gsd.test/share-target/", { method: "POST", body });
+		let responsePromise: Promise<Response> | undefined;
+
+		harness.listeners.get("fetch")?.({
+			request,
+			respondWith: (promise: Promise<Response>) => {
+				responsePromise = promise;
+			},
+		});
+
+		const response = await responsePromise;
+		expect(response?.status).toBe(303);
+		const location = new URL(response?.headers.get("location") ?? "");
+		expect(location.search).toBe("");
+		const fragment = new URLSearchParams(location.hash.slice(1));
+		expect(fragment.get("action")).toBe("capture");
+		expect(fragment.get("title")).toBe("PRIVATE_SHARE_SENTINEL");
+		expect(fragment.get("url")).toBe("https://internal.test/plan");
+		expect(harness.fetchMock).not.toHaveBeenCalled();
+		expect(harness.cache.put).not.toHaveBeenCalled();
+	});
+
+	it("sends an unreadable share-target body to the matrix instead of failing", async () => {
+		const harness = createWorkerHarness();
+		const request = new Request("https://gsd.test/share-target/", { method: "POST", body: "not multipart" });
+		let responsePromise: Promise<Response> | undefined;
+
+		harness.listeners.get("fetch")?.({
+			request,
+			respondWith: (promise: Promise<Response>) => {
+				responsePromise = promise;
+			},
+		});
+
+		const response = await responsePromise;
+		expect(response?.status).toBe(303);
+		expect(response?.headers.get("location")).toBe("https://gsd.test/");
+	});
 });
