@@ -82,6 +82,21 @@ self.addEventListener("message", (event) => {
 	}
 });
 
+async function handleShareTarget(request) {
+	const fields = { title: "", text: "", url: "" };
+	try {
+		const form = await request.formData();
+		for (const key of Object.keys(fields)) {
+			const value = form.get(key);
+			if (typeof value === "string") fields[key] = value;
+		}
+	} catch (error) {
+		// An unreadable share opens the matrix empty. Never log the content.
+		console.warn("[SW] share target body unreadable", error && error.name);
+	}
+	return Response.redirect(getShareCaptureUrl(self.location.origin, fields), 303);
+}
+
 self.addEventListener("fetch", (event) => {
 	const { request } = event;
 
@@ -92,6 +107,14 @@ self.addEventListener("fetch", (event) => {
 
 	const requestUrl = new URL(request.url);
 	const isSameOrigin = requestUrl.origin === self.location.origin;
+
+	// A share into the installed app (manifest share_target). Answered here so the
+	// shared text does not become a network request, a log line, or a cache key.
+	// Without an active worker the POST reaches the host, which cannot handle it.
+	if (isShareTargetPost(requestUrl.pathname, request.method, isSameOrigin)) {
+		event.respondWith(handleShareTarget(request));
+		return;
+	}
 	const legacyCaptureRedirectUrl =
 		isSameOrigin && request.method === "GET" && request.mode === "navigate"
 			? getSafeLegacyCaptureUrl(request.url)

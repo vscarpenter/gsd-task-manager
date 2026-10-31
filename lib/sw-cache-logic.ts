@@ -134,6 +134,41 @@ export function getSafePageUrl(value: string): string | null {
 	}
 }
 
+const SHARE_TARGET_PATH = "/share-target/";
+const URL_IN_TEXT = /https?:\/\/\S+/i;
+
+export interface ShareFields {
+	title: string;
+	text: string;
+	url: string;
+}
+
+/** The manifest's share_target posts here. The service worker answers it; the network never sees it. */
+export function isShareTargetPost(
+	pathname: string,
+	method: string,
+	isSameOrigin: boolean,
+): boolean {
+	return isSameOrigin && method === "POST" && pathname === SHARE_TARGET_PATH;
+}
+
+/**
+ * The capture URL for something shared into the app. The content goes in the
+ * fragment, which never reaches a request, a log, or a cache key. Many apps
+ * share a link inside `text` with no `url`, so a link in the text is used.
+ */
+export function getShareCaptureUrl(origin: string, fields: ShareFields): string {
+	const found = fields.url.trim() || (fields.text.match(URL_IN_TEXT)?.[0] ?? "");
+	const rest = found ? fields.text.replace(found, "") : fields.text;
+	const heading = fields.title.trim() || rest.replace(/\s+/g, " ").trim();
+	if (!heading && !found) return `${origin}/`;
+
+	const params = new URLSearchParams({ action: "capture" });
+	if (heading) params.set("title", heading);
+	if (found) params.set("url", found);
+	return `${origin}/#${params.toString()}`;
+}
+
 export function getEvictionCandidates<T>(keys: T[], maxEntries: number): T[] {
 	if (keys.length <= maxEntries) {
 		return [];
