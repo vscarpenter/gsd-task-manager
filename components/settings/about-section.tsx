@@ -3,12 +3,13 @@
 import { ChevronRightIcon, ExternalLinkIcon, ShieldCheckIcon } from "lucide-react";
 import { SettingsRow } from "./shared-components";
 import { REPLAY_ONBOARDING_EVENT } from "@/components/onboarding/onboarding-gate";
+import packageJson from "@/package.json";
 
 /**
  * iOS-style about section
  */
 export function AboutSection() {
-	const version = process.env.NEXT_PUBLIC_BUILD_NUMBER || "6.1.1";
+	const version = process.env.NEXT_PUBLIC_BUILD_NUMBER || packageJson.version;
 	const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE || "dev build";
 
 	return (
