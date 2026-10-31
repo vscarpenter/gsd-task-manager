@@ -1,0 +1,31 @@
+/// <reference path="../pb_data/types.d.ts" />
+// DRAFT. NOT WIRED IN. Spec: tasks/spec-top-three.md section 10.
+//
+// This file does nothing where it sits: the .draft suffix and this folder keep it out of the
+// Docker image and every migration set. Sprint 2 moves it to docker/pb_migrations/ as a .js file
+// with a then-current timestamp, for self-hosted Docker installs only.
+//
+// The hosted service at api.vinny.io doesn't run this directory (ADR 0016). Vinny applies the same
+// two fields there by hand, using the steps in the spec. Never point the hosted binary at
+// docker/pb_migrations: it also holds the encryption backfill.
+//
+// Additive: older clients omit both keys, and PocketBase keeps a stored value when a key is omitted.
+// Nothing here depends on a hook.
+migrate((app) => {
+  const table = new DynamicModel({ count: 0 });
+  app.db().newQuery("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name = 'tasks'").one(table);
+  if (table.count === 0) return;
+  const collection = app.findCollectionByNameOrId("tasks");
+  if (!collection.fields.getByName("focus_date")) {
+    collection.fields.add(new TextField({ name: "focus_date", max: 10, pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }));
+  }
+  if (!collection.fields.getByName("focus_rank")) {
+    collection.fields.add(new NumberField({ name: "focus_rank", min: 0, max: 3, onlyInt: true }));
+  }
+  app.save(collection);
+}, (app) => {
+  const collection = app.findCollectionByNameOrId("tasks");
+  collection.fields.removeByName("focus_date");
+  collection.fields.removeByName("focus_rank");
+  app.save(collection);
+});
