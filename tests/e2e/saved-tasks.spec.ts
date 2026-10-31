@@ -84,7 +84,12 @@ test("Settings counts Saved-only storage in a replace-import warning", async ({ 
     buffer: Buffer.from(JSON.stringify({ tasks: [], exportedAt: "2026-10-27T12:00:00.000Z", version: "2.1.0" })),
   });
   await expect(page.getByText(/warning\. deletes 1 task on this device/i)).toBeVisible();
+  // Closing the dialog pops its history entry, and a page.goto during that pop aborts.
+  const entryPopped = page.evaluate(
+    () => new Promise<void>((resolve) => window.addEventListener("popstate", () => resolve(), { once: true }))
+  );
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await entryPopped;
   await page.goto("/saved");
   await expect(page.getByTestId("saved-item")).toContainText("Keep this reading bookmark");
 });
