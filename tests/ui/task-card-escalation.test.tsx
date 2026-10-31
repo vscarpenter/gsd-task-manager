@@ -65,6 +65,16 @@ describe("TaskCard escalation", () => {
     expect(tag.style.color).toBe("var(--q1-ink)");
   });
 
+  it("keeps the spec's accessible name for a task with a due time", () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
+    date.setHours(15, 30, 0, 0);
+    renderCard(makeTask({ dueDate: date.toISOString() }));
+    expect(screen.getByTestId("task-card-escalating-tag")).toHaveAccessibleName(
+      "Escalating: due tomorrow, not marked urgent."
+    );
+  });
+
   it("uses the Delegate ink for an Eliminate task", () => {
     renderCard(makeTask({ important: false, quadrant: "not-urgent-not-important" }));
     expect(screen.getByTestId("task-card-escalating-tag").style.color).toBe("var(--q3-ink)");
