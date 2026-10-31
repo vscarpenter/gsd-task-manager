@@ -188,7 +188,9 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     const pull = resolvePullCursor(config);
     const pullResult = await pullRemoteChanges(pull.cursor, { mergeSameVersion: pull.mergeSameVersion });
 
-    if (!pushResult.authenticated && !pullResult.authenticated) {
+    // A pull that ran without a session fetched nothing, so reporting success
+    // would claim a full sync that never happened.
+    if (!pullResult.authenticated) {
       return await reportAuthFailure(ctx);
     }
 
@@ -220,9 +222,14 @@ async function writeSyncOutcome(ownerId: string, write: () => Promise<void>): Pr
   });
 }
 
+/** Carry the skipped-record count into the result only when there is one to report. */
+function skippedField(pullResult: { skippedCount?: number }): { skippedCount?: number } {
+  return pullResult.skippedCount ? { skippedCount: pullResult.skippedCount } : {};
+}
+
 async function reportSuccess(
   pushResult: { pushedCount: number },
-  pullResult: { pulledCount: number },
+  pullResult: { pulledCount: number; skippedCount?: number },
   ctx: SyncOutcomeContext,
 ): Promise<PBSyncResult> {
   const { pushedCount } = pushResult;
@@ -235,7 +242,7 @@ async function reportSuccess(
   if (pushedCount > 0 || pulledCount > 0) {
     notifySyncSuccess(pushedCount, pulledCount);
   }
-  return { status: 'success', pushedCount, pulledCount };
+  return { status: 'success', pushedCount, pulledCount, ...skippedField(pullResult) };
 }
 
 async function reportAuthFailure(ctx: SyncOutcomeContext): Promise<PBSyncResult> {
@@ -274,7 +281,7 @@ async function updateSyncCursor(ownerId: string, maxTimestamp: string | null, pu
 
 async function reportPartialFailure(
   pushResult: { pushedCount: number; failedCount: number; lastError: string | null; retryAfterMs?: number | null },
-  pullResult: { pulledCount: number },
+  pullResult: { pulledCount: number; skippedCount?: number },
   ctx: SyncOutcomeContext,
 ): Promise<PBSyncResult> {
   const errorMsg = `${pushResult.failedCount} item(s) failed to sync: ${pushResult.lastError}`;
@@ -296,6 +303,7 @@ async function reportPartialFailure(
     pushedCount: pushResult.pushedCount,
     pulledCount: pullResult.pulledCount,
     failedCount: pushResult.failedCount,
+    ...skippedField(pullResult),
     error: errorMsg,
   };
 }

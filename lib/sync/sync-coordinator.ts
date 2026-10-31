@@ -33,8 +33,16 @@ interface QueuedSyncRequest {
 
 type PulledListener = () => void | Promise<void>;
 
-/** A sync whose pull ran to completion. `partial` means only some pushes failed. */
+/**
+ * A sync whose pull ran to completion and applied every record it fetched.
+ * `partial` means only some pushes failed. A pull that skipped records left
+ * local data possibly behind the server, which is what the post-pull archive
+ * sweep must not act on. The gate holds for that pull only: the cursor moves
+ * past applied records, so a skipped record is not re-fetched and the next pull
+ * reports a clean count.
+ */
 function pullCompleted(result: PBSyncResult): boolean {
+  if (result.skippedCount) return false;
   return result.status === 'success' || result.status === 'partial';
 }
 

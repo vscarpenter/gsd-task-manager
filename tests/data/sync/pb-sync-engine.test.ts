@@ -114,7 +114,7 @@ vi.mock('@/lib/db', () => ({
 
 // Mock push/pull
 const mockPushResult = { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
-const mockPullResult = { pulledCount: 0, authenticated: true, maxObservedTimestamp: null };
+const mockPullResult = { pulledCount: 0, skippedCount: 0, authenticated: true, maxObservedTimestamp: null };
 vi.mock('@/lib/sync/pb-push', () => ({
   pushLocalChanges: vi.fn(() => Promise.resolve({ ...mockPushResult })),
 }));
@@ -449,6 +449,40 @@ describe('pb-sync-engine', () => {
 
       expect(result.status).toBe('error');
       expect(result.error).toContain('not authenticated');
+    });
+
+    it('treats an unauthenticated pull as an error even when the push saw a session', async () => {
+      const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+      vi.mocked(pullRemoteChanges).mockResolvedValueOnce({ ...mockPullResult, authenticated: false });
+
+      const result = await fullSync();
+
+      expect(result.status).toBe('error');
+      expect(result.error).toContain('not authenticated');
+    });
+
+    it('reports the pull\'s skipped-record count on a successful sync', async () => {
+      const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+      vi.mocked(pullRemoteChanges).mockResolvedValueOnce({ ...mockPullResult, skippedCount: 2 });
+
+      const result = await fullSync();
+
+      expect(result.status).toBe('success');
+      expect(result.skippedCount).toBe(2);
+    });
+
+    it('carries the skipped-record count on a partial sync too', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+      vi.mocked(pushLocalChanges).mockResolvedValueOnce({
+        pushedCount: 0, failedCount: 1, lastError: 'Network error', authenticated: true,
+      });
+      vi.mocked(pullRemoteChanges).mockResolvedValueOnce({ ...mockPullResult, skippedCount: 3 });
+
+      const result = await fullSync();
+
+      expect(result.status).toBe('partial');
+      expect(result.skippedCount).toBe(3);
     });
 
     it('should return partial when push has failures', async () => {

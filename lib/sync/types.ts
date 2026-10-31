@@ -120,6 +120,8 @@ export interface PBSyncResult {
   pushedCount?: number;
   pulledCount?: number;
   failedCount?: number;
+  /** Fetched remote records the pull could not apply. Absent or 0 means the pull was whole. */
+  skippedCount?: number;
   error?: string;
 }
 

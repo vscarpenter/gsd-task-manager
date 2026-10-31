@@ -129,16 +129,18 @@ async function applyRemoteRecords(records: RecordModel[], ownerId: string, merge
  * LWW: remote wins if remote client_updated_at > local updatedAt, or is equal
  * while `mergeSameVersion` backfills a newly synced field.
  * Throws StaleSyncSessionError when the user's session ends before a write.
+ * `skippedCount` is how many fetched records could not be applied; a pull that
+ * skipped any is not a whole pull, and work that needs one must not run on it.
  */
 export async function pullRemoteChanges(
   lastClientUpdatedAt: string | null,
   options: PullOptions = {},
-): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
+): Promise<{ pulledCount: number; skippedCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
   const ownerId = getCurrentUserId();
 
   if (!ownerId) {
     logger.warn('Pull skipped: not authenticated');
-    return { pulledCount: 0, authenticated: false, maxObservedTimestamp: null };
+    return { pulledCount: 0, skippedCount: 0, authenticated: false, maxObservedTimestamp: null };
   }
 
   assertSafeRecordId(ownerId, 'ownerId');
@@ -172,7 +174,7 @@ export async function pullRemoteChanges(
   await reconcileDeletedTasks(ownerId);
 
   logger.debug('Pull completed', { pulledCount, fetched: records.length });
-  return { pulledCount, authenticated: true, maxObservedTimestamp };
+  return { pulledCount, skippedCount, authenticated: true, maxObservedTimestamp };
 }
 
 /**

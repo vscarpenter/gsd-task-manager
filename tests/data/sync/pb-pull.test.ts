@@ -154,6 +154,20 @@ describe('pullRemoteChanges cursor clamping', () => {
     expect(maxObservedTimestamp).toBe('2026-05-17T23:59:30.000Z');
   });
 
+  it('reports how many fetched records it could not apply', async () => {
+    const badRecord = pbRecord('t1', '2026-05-18T00:00:00.000Z');
+    delete (badRecord as Record<string, unknown>).title;
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
+      }),
+    });
+
+    const result = await pullRemoteChanges(null);
+
+    expect(result.skippedCount).toBe(1);
+  });
+
   it('uses client_updated_at for filtering and sorting', async () => {
     const getList = vi.fn(async () => []);
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({

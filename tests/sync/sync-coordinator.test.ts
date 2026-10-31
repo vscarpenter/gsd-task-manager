@@ -455,6 +455,17 @@ describe('SyncCoordinator', () => {
       await vi.waitFor(() => expect(listener).toHaveBeenCalledTimes(1));
     });
 
+    it('does not notify when the pull skipped records, so the sweep waits for a whole pull', async () => {
+      mockFullSync.mockResolvedValueOnce({ status: 'success', pushedCount: 0, pulledCount: 1, skippedCount: 1 });
+      const listener = vi.fn();
+      coordinator.onPulled(listener);
+
+      await coordinator.requestSync('user');
+      await Promise.resolve();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
     it('does not notify after a failed or cancelled sync', async () => {
       const listener = vi.fn();
       coordinator.onPulled(listener);
