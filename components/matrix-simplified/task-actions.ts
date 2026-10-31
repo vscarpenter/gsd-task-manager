@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 
-import { createTask, toggleCompleted, deleteTask, snoozeTask } from "@/lib/tasks";
+import { createTask, toggleCompleted, deleteTask, snoozeTask, updateTask } from "@/lib/tasks";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
@@ -136,5 +136,22 @@ export async function handleSaveForLater(
   } catch (error) {
     reportTaskMutationError(error, "save_task", error instanceof Error ? error.message : "Failed to move to Saved", task.id);
     return false;
+  }
+}
+
+/**
+ * Mark urgent on an escalating card: an ordinary edit through updateTask, so the
+ * card moves with the usual animation. Undo clears the flag again.
+ */
+export async function handleMarkUrgent(
+  task: TaskRecord,
+  offerUndo: (message: string, undo: () => Promise<void>) => void
+): Promise<void> {
+  try {
+    const moved = await updateTask(task.id, { urgent: true });
+    const destination = quadrantForTask(moved.urgent, moved.important).title;
+    offerUndo(`Moved to ${destination}`, () => updateTask(task.id, { urgent: false }).then(() => {}));
+  } catch (error) {
+    reportTaskMutationError(error, ErrorActions.UPDATE_TASK, "Failed to mark task urgent", task.id);
   }
 }

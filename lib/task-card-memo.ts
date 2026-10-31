@@ -15,6 +15,8 @@ export interface TaskCardProps {
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onSave?: (task: TaskRecord) => Promise<void> | void;
+  /** Sets the urgent flag on an escalating task; the owner offers Undo. */
+  onMarkUrgent?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onStartTimer?: (taskId: string) => Promise<void>;
   onStopTimer?: (taskId: string) => Promise<void>;

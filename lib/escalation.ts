@@ -6,7 +6,7 @@ import type { QuadrantId, TaskRecord } from "@/lib/types";
  * against tests/fixtures/cross-platform/escalation-corpus.json.
  */
 
-type EscalationTarget = Extract<QuadrantId, "urgent-important" | "urgent-not-important">;
+export type EscalationTarget = Extract<QuadrantId, "urgent-important" | "urgent-not-important">;
 
 export interface EscalationResult {
   escalating: boolean;
@@ -32,7 +32,7 @@ function calendarDayNumber(instant: Date, timeZone: string): number {
 }
 
 /** Local calendar days from `now` to `dueDate` in `timeZone`; negative once past, null with no due date. */
-function daysUntilDue(dueDate: string | undefined, now: Date, timeZone: string): number | null {
+export function daysUntilDue(dueDate: string | undefined, now: Date, timeZone: string): number | null {
   if (!dueDate) return null;
   return calendarDayNumber(new Date(dueDate), timeZone) - calendarDayNumber(now, timeZone);
 }
@@ -56,4 +56,15 @@ export function evaluateEscalation(
     reason: days < 0 ? "overdue" : "due-soon",
     target: task.important ? "urgent-important" : "urgent-not-important",
   };
+}
+
+function duePhrase(days: number): string {
+  if (days < 0) return `${-days} ${-days === 1 ? "day" : "days"} overdue`;
+  if (days === 0) return "due today";
+  return days === 1 ? "due tomorrow" : `due in ${days} days`;
+}
+
+/** The tag's accessible name, built from the due chip's own phrases. */
+export function escalationLabel(days: number): string {
+  return `Escalating: ${duePhrase(days)}, not marked urgent.`;
 }

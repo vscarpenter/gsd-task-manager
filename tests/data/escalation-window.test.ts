@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_ESCALATION_WINDOW_DAYS,
+  ESCALATION_WINDOW_EVENT,
   ESCALATION_WINDOW_KEY,
   readEscalationWindow,
   writeEscalationWindow,
@@ -33,4 +34,14 @@ describe("escalation window preference", () => {
       expect(readEscalationWindow()).toBe(2);
     }
   );
+
+  it("announces a change so open cards re-evaluate", () => {
+    const heard: number[] = [];
+    const listener = () => heard.push(readEscalationWindow() ?? -1);
+    window.addEventListener(ESCALATION_WINDOW_EVENT, listener);
+    writeEscalationWindow(7);
+    writeEscalationWindow(null);
+    window.removeEventListener(ESCALATION_WINDOW_EVENT, listener);
+    expect(heard).toEqual([7, -1]);
+  });
 });
