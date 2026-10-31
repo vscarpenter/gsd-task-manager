@@ -109,7 +109,8 @@ self.addEventListener("fetch", (event) => {
 	const isSameOrigin = requestUrl.origin === self.location.origin;
 
 	// A share into the installed app (manifest share_target). Answered here so the
-	// shared text never becomes a network request, a log line, or a cache key.
+	// shared text does not become a network request, a log line, or a cache key.
+	// Without an active worker the POST reaches the host, which cannot handle it.
 	if (isShareTargetPost(requestUrl.pathname, request.method, isSameOrigin)) {
 		event.respondWith(handleShareTarget(request));
 		return;

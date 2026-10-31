@@ -53,9 +53,14 @@ GSD Task Manager is a privacy-first application where all data is stored locally
      cache write and deletes legacy capture cache entries during activation
 
    - Sharing into the installed PWA (the manifest's `share_target`) uses a POST
-     to `/share-target/` that the service worker answers itself. It redirects
-     to the same fragment form, so shared text never becomes a network request,
-     a log line, or a cache key
+     to `/share-target/`. While the service worker is active it answers the POST
+     itself and redirects to the same fragment form, so shared text does not
+     become a network request, a log line, or a cache key. If site storage is
+     cleared while the PWA stays installed, the worker is gone and the POST
+     reaches the static host. CloudFront does not log request bodies, but the
+     host has no handler for a POST, so nothing is captured and the person gets
+     no draft. Opening the app again registers the worker, and sharing works
+     again
 
    Bookmarklet implementations should construct the destination like this
    (paste as a single line into the bookmark's URL field):
