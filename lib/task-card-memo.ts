@@ -18,6 +18,7 @@ export interface TaskCardProps {
   /** Moves the task to a quadrant from the card menu; the owner offers Undo. */
   onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
+  onClearSnooze?: (taskId: string) => Promise<void>;
   onStartTimer?: (taskId: string) => Promise<void>;
   onStopTimer?: (taskId: string) => Promise<void>;
   taskRef?: (el: HTMLElement | null) => void;

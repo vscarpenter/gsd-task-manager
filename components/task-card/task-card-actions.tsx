@@ -2,11 +2,12 @@
 
 import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon, ArrowRightLeftIcon } from "lucide-react";
 import { cn, formatRelative, isRepeatClick } from "@/lib/utils";
-import { DATE_CONFIG, SWIPE_CONFIG, TIME_MS } from "@/lib/constants";
+import { DATE_CONFIG, TIME_MS } from "@/lib/constants";
 import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { quadrantForTask, quadrants } from "@/lib/quadrants";
+import { SNOOZE_PRESETS } from "@/lib/snooze-presets";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
 
 /** True when a future due date is within 24h. Used to color-shift the clock glyph. */
@@ -49,6 +50,7 @@ export interface TaskCardActionsProps {
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onSave?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
+  onClearSnooze?: (taskId: string) => Promise<void>;
   onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
 }
 
@@ -64,6 +66,7 @@ export function TaskCardActions({
   onSnooze,
   onSave,
   onMoveTo,
+  onClearSnooze,
 }: TaskCardActionsProps) {
   return (
     <div
@@ -118,7 +121,7 @@ export function TaskCardActions({
 
         {/* Mobile: the edit button; the overflow menu below serves every width. */}
         <MobileEditButton task={task} onEdit={onEdit} />
-        <CardMenu task={task} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} onSave={onSave} onMoveTo={onMoveTo} />
+        <CardMenu task={task} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} onSave={onSave} onMoveTo={onMoveTo} onClearSnooze={onClearSnooze} />
       </div>
     </div>
   );
@@ -187,6 +190,7 @@ interface CardMenuProps {
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onSave?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
+  onClearSnooze?: (taskId: string) => Promise<void>;
   onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
 }
 
@@ -194,7 +198,7 @@ interface CardMenuProps {
  * The ⋯ menu. Always in the row: shown on touch widths, and revealed with the
  * hover icons from `sm` up so a mouse user can reach Move to and the rest.
  */
-function CardMenu({ task, onDelete, onShare, onDuplicate, onSnooze, onSave, onMoveTo }: CardMenuProps) {
+function CardMenu({ task, onDelete, onShare, onDuplicate, onSnooze, onClearSnooze, onSave, onMoveTo }: CardMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -226,19 +230,35 @@ function CardMenu({ task, onDelete, onShare, onDuplicate, onSnooze, onSave, onMo
             Duplicate
           </DropdownMenuItem>
         )}
-        {/* The non-gesture route to the trailing swipe's Snooze, same preset. */}
-        {onSnooze && !task.completed && (
-          <DropdownMenuItem data-testid="snooze-task" onClick={() => onSnooze(task.id, SWIPE_CONFIG.SNOOZE_MINUTES)}>
-            <MoonIcon className="mr-2 h-4 w-4" />
-            Snooze 1 hour
-          </DropdownMenuItem>
-        )}
+        {onSnooze && !task.completed ? <SnoozeSubmenu task={task} onSnooze={onSnooze} onClearSnooze={onClearSnooze} /> : null}
         <DropdownMenuItem data-testid="delete-task" onClick={() => onDelete(task)} className="text-rust-d focus:text-rust-d">
           <Trash2Icon className="mr-2 h-4 w-4" />
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/** The trailing swipe's Snooze, with the full preset list and a way to undo one. */
+function SnoozeSubmenu({ task, onSnooze, onClearSnooze }: { task: TaskRecord; onSnooze: (taskId: string, minutes: number) => Promise<void>; onClearSnooze?: (taskId: string) => Promise<void> }) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger data-testid="snooze-task">
+        <MoonIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+        Snooze
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        {SNOOZE_PRESETS.map((preset) => (
+          <DropdownMenuItem key={preset.label} onClick={() => onSnooze(task.id, preset.minutes)}>
+            {preset.label}
+          </DropdownMenuItem>
+        ))}
+        {onClearSnooze && isTaskSnoozed(task) ? (
+          <DropdownMenuItem onClick={() => onClearSnooze(task.id)}>Clear snooze</DropdownMenuItem>
+        ) : null}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 

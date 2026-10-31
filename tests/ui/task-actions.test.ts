@@ -3,12 +3,12 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { createTask, duplicateTask, moveTaskToQuadrant, snoozeTask } from "@/lib/tasks";
+import { clearSnooze, createTask, duplicateTask, moveTaskToQuadrant, snoozeTask } from "@/lib/tasks";
 import { TaskValidationError } from "@/lib/tasks/crud/validation-error";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { createMockTask } from "@/tests/fixtures";
 import { logError } from "@/lib/error-logger";
-import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater, handleDuplicate, handleMoveTo } from "@/components/matrix-simplified/task-actions";
+import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater, handleDuplicate, handleMoveTo, handleClearSnooze } from "@/components/matrix-simplified/task-actions";
 
 vi.mock("@/lib/tasks/saved", () => ({ saveTaskForLater: vi.fn(), returnSavedTask: vi.fn() }));
 
@@ -22,6 +22,7 @@ vi.mock("@/lib/tasks", () => ({
   deleteTask: vi.fn(),
   snoozeTask: vi.fn(),
   duplicateTask: vi.fn(),
+  clearSnooze: vi.fn(),
   moveTaskToQuadrant: vi.fn(),
 }));
 
@@ -184,6 +185,38 @@ describe("handleMoveTo", () => {
     const offerUndo = vi.fn();
     await handleMoveTo(createMockTask(), "urgent-important", offerUndo);
     expect(offerUndo).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
+  });
+});
+
+describe("snooze toasts for the native presets", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it.each([
+    [15, "Snoozed for 15 minutes"],
+    [180, "Snoozed for 3 hours"],
+    [1440, "Snoozed for 1 day"],
+    [10080, "Snoozed for 1 week"],
+  ])("reads %i minutes as %j", async (minutes, message) => {
+    vi.mocked(snoozeTask).mockResolvedValue({} as never);
+    await handleSnooze("task-1", minutes);
+    expect(toast.success).toHaveBeenCalledWith(message, expect.any(Object));
+  });
+});
+
+describe("handleClearSnooze", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it("clears the snooze and confirms", async () => {
+    vi.mocked(clearSnooze).mockResolvedValue({} as never);
+    await handleClearSnooze("task-1");
+    expect(clearSnooze).toHaveBeenCalledWith("task-1");
+    expect(toast.success).toHaveBeenCalledWith("Snooze cleared", expect.any(Object));
+  });
+
+  it("reports a failure", async () => {
+    vi.mocked(clearSnooze).mockRejectedValue(new Error("boom"));
+    await handleClearSnooze("task-1");
     expect(toast.error).toHaveBeenCalled();
   });
 });
