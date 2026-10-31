@@ -719,6 +719,33 @@ describe("NotificationChecker", () => {
 			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
 		});
 
+		it("defers a timed reminder that came due inside quiet hours to the end of the window", async () => {
+			vi.mocked(notifications.getNotificationSettings).mockResolvedValue(
+				createSettings({ quietHoursStart: "22:00", quietHoursEnd: "07:00" }),
+			);
+			const due = new Date(2026, 8, 24, 2, 0).toISOString();
+			await runAt(new Date(2026, 8, 24, 7, 0), createTask({ dueDate: due, notifyBefore: 15 }));
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+		});
+
+		it("still drops that deferred reminder an hour after the window ends", async () => {
+			vi.mocked(notifications.getNotificationSettings).mockResolvedValue(
+				createSettings({ quietHoursStart: "22:00", quietHoursEnd: "07:00" }),
+			);
+			const due = new Date(2026, 8, 24, 2, 0).toISOString();
+			await runAt(new Date(2026, 8, 24, 8, 1), createTask({ dueDate: due, notifyBefore: 15 }));
+			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+		});
+
+		it("counts that deferred reminder in the badge at 07:00", async () => {
+			vi.mocked(notifications.getNotificationSettings).mockResolvedValue(
+				createSettings({ quietHoursStart: "22:00", quietHoursEnd: "07:00" }),
+			);
+			vi.setSystemTime(new Date(2026, 8, 24, 7, 0));
+			mockTasks.push(createTask({ dueDate: new Date(2026, 8, 24, 2, 0).toISOString(), notifyBefore: 15 }));
+			expect(await getDueSoonCount()).toBe(1);
+		});
+
 		it("counts that deferred reminder in the badge at 10:00", async () => {
 			vi.mocked(notifications.getNotificationSettings).mockResolvedValue(
 				createSettings({ quietHoursStart: "22:00", quietHoursEnd: "10:00" }),
