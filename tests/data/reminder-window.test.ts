@@ -45,6 +45,21 @@ describe("expiry", () => {
     expect(expires).toEqual(local(2026, 9, 24, 16, 30));
   });
 
+  it("measures a timed reminder deferred by quiet hours from the deferred fire time", () => {
+    process.env.TZ = "America/Chicago";
+    const quiet = { start: "22:00", end: "07:00" };
+    const { fire, expires } = reminderWindow(local(2026, 9, 24, 2).toISOString(), 15, quiet);
+    expect(fire).toEqual(local(2026, 9, 24, 7));
+    expect(expires).toEqual(local(2026, 9, 24, 8));
+  });
+
+  it("leaves a timed reminder outside quiet hours expiring an hour after the due time", () => {
+    process.env.TZ = "America/Chicago";
+    const quiet = { start: "22:00", end: "07:00" };
+    const { expires } = reminderWindow(local(2026, 9, 24, 15, 30).toISOString(), 15, quiet);
+    expect(expires).toEqual(local(2026, 9, 24, 16, 30));
+  });
+
   it("measures an all-day reminder's hour from its own fire time", () => {
     process.env.TZ = "America/Chicago";
     const { expires } = reminderWindow(local(2026, 9, 24).toISOString(), 15);
