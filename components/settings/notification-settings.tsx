@@ -72,13 +72,21 @@ export function NotificationSettingsSection({
 	);
 }
 
-/** "At time" / "45 minutes" / "3 hours" / "2 days": names a stored offset the select does not list. */
+/** Pluralize a unit: 1 stays singular. */
+function unit(count: number, word: string): string {
+	return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * Names a stored offset the select does not list, without rounding it: the same
+ * ordered rules as Android's `ReminderLabel.of`, so 90 reads "90 minutes" and 2160
+ * reads "36 hours".
+ */
 function offListLabel(minutes: number): string {
 	if (minutes === 0) return "At time";
-	if (minutes < 60) return `${minutes} minutes`;
-	if (minutes < 1440) return `${Math.round(minutes / 60)} hours`;
-	const days = Math.round(minutes / 1440);
-	return days === 1 ? "1 day" : `${days} days`;
+	if (minutes < 60 || minutes % 60 !== 0) return unit(minutes, "minute");
+	if (minutes < 1440 || minutes % 1440 !== 0) return unit(minutes / 60, "hour");
+	return unit(minutes / 1440, "day");
 }
 
 /**
