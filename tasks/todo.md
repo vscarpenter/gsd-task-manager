@@ -1329,3 +1329,29 @@ Decision: `docs/adr/0019-pull-contract-version-backfill.md`.
   2026-10-26 (package.json and bun.lock); it was left alone.
 - Assumptions: bumping the contract now, so every web client does one full pull
   after this release, is preferable to shipping a dormant mechanism.
+
+# Sprint 1, E-WEB-FIX lane (2026-10-31)
+
+Tier: Standard per PR. Every PR branched from `origin/main`, TDD, one concern each.
+
+- [x] WEB-15 #641: quiet hours seed 22:00 to 07:00 (seed only, stored windows untouched); off-list default reminder shown as stored, Android's label rule.
+- [x] WEB-12 #644: merge import keeps a local Trash row.
+- [x] WEB-48 #647: unauthenticated pull is an error; `skippedCount` stops the post-pull archive sweep for that pull.
+- [x] WEB-ID #649: reconcile confirms the session with `auth-refresh` before deleting anything.
+- [x] MCP-10 #651: `complete_task` spawns the next recurring instance with the web's rule.
+- [x] MCP-11 #652: `delete_task` description says it skips the 30-day Trash on every client.
+- [x] WEB-QH #653: timed reminders deferred by quiet hours now expire from the deferred fire time.
+- [x] #658: test-only fix for the red `main` that #647 and #649 caused together.
+- [x] Item 7 web repro: `sprint/findings/saved-at-exposure.md`, Web section. No fix.
+- WEB-21 and WEB-25 moved to E-DUE; not started here.
+
+## Resuming From Here
+
+- Done: everything above, all merged.
+- Next: nothing in this lane. Open follow-ups for the owner:
+  - `update_task` with `completed: true` and `bulk_update_tasks` still don't spawn a recurring instance (MCP-10 covers `complete_task` only).
+  - The `saved_at` exposure (item 7) is reproduced, not fixed. A fix has to tell "never read this field" from "read and empty"; reading the current row at push is not enough.
+  - A permanently rejected session keeps erroring with backoff until D-2 (sign out vs "session expired") is decided.
+  - A skipped record is not re-fetched, so the archive-sweep gate holds for one pull only (noted in `lib/sync/sync-coordinator.ts`).
+- Blockers: none.
+- Assumptions: web and MCP version bumps and the MCP publish stay with Vinny; two PRs that each pass CI can still break `main` together, so run the full suite after a merge that touches the same mocks.
