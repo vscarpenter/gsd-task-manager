@@ -47,6 +47,10 @@ function tomorrowNoon(): string {
 }
 
 test.describe("Escalation by due date", () => {
+  test.beforeEach(async ({ clearIndexedDB }) => {
+    // Fixture seeds the launch flag and clears IndexedDB, so the first load lands on the matrix, not /about.
+  });
+
   test("tags a Schedule task due tomorrow, and Mark urgent moves it to Do First", async ({ page }) => {
     await page.goto("/");
     await waitForAppLoad(page);
