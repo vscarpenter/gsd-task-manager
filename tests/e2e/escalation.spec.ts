@@ -76,6 +76,29 @@ test.describe("Escalation by due date", () => {
     await expect(page.getByRole("button", { name: "Undo", exact: true })).toBeVisible();
   });
 
+  test("the editor explains the nudge and drops it once an urgent quadrant is chosen", async ({ page }) => {
+    await page.goto("/");
+    await waitForAppLoad(page);
+    await seedTask(page, {
+      title: "Book the venue",
+      urgent: false,
+      important: true,
+      quadrant: "not-urgent-important",
+      dueDate: tomorrowNoon(),
+    });
+    await page.reload();
+    await waitForAppLoad(page);
+
+    const card = page.getByTestId("quadrant-q2").getByTestId("task-card").filter({ hasText: "Book the venue" });
+    await card.hover();
+    await card.getByRole("button", { name: "Edit task" }).click();
+    const hint = page.getByTestId("edit-escalation-hint");
+    await expect(hint).toHaveText("Moves to Do First");
+
+    await page.getByTestId("edit-quadrant-q1").click();
+    await expect(hint).toHaveCount(0);
+  });
+
   test("Off in Settings removes every tag", async ({ page }) => {
     await page.goto("/");
     await waitForAppLoad(page);

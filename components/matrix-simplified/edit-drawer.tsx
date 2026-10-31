@@ -14,6 +14,7 @@ import { useDiscardGuard } from "./use-discard-guard";
 import { useBackToClose } from "./use-back-to-close";
 import { useDrawerSave } from "./use-drawer-save";
 import { useEditDraftState } from "./use-edit-draft-state";
+import { useEscalation } from "@/components/task-card/use-escalation";
 import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
 import { ReminderField } from "./edit-drawer-reminder-field";
 import { SnoozeField } from "./edit-drawer-snooze-field";
@@ -151,6 +152,7 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
           />
 
           <EditDrawerBody
+            task={task}
             draft={draft}
             titleRef={titleRef}
             taskId={task?.id}
@@ -296,11 +298,13 @@ function DrawerHeader({
 function EditDrawerBody({
   draft,
   titleRef,
+  task,
   taskId,
   allTasks,
   dependencyError,
   onDependenciesChange,
 }: {
+  task?: TaskRecord | null;
   draft: ReturnType<typeof useEditDraftState>;
   titleRef: React.RefObject<HTMLInputElement | null>;
   taskId?: string;
@@ -308,13 +312,16 @@ function EditDrawerBody({
   dependencyError: string | null;
   onDependenciesChange: (ids: string[]) => void;
 }) {
+  const { urgent, important } = draft;
+  const escalation = useEscalation({ urgent, important, dueDate: draft.toDraft().dueDate, completed: Boolean(task?.completed), savedAt: task?.savedAt });
   return (
         <div className="flex flex-1 flex-col gap-5 overflow-auto overscroll-contain px-5 py-5">
           <TitleAndDescriptionFields draft={draft} titleRef={titleRef} />
 
           <QuadrantField
-            urgent={draft.urgent}
-            important={draft.important}
+            urgent={urgent}
+            important={important}
+            escalation={escalation}
             onChange={(u, i) => { draft.setUrgent(u); draft.setImportant(i); }}
           />
 
