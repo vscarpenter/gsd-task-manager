@@ -1,0 +1,1338 @@
+{
+  "note": "Canonical due time of day behavior (GSD parity decision D-1). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/due-time-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/due-time-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/due-time-corpus.json, and every suite runs every case. The rule: a due date at local midnight in the current zone is all day, and any other time, down to the millisecond, is a time of day. Ops: classify reports the local date and, for a time of day, the 24-hour display time, which each client formats for its locale; an all-day task shows the label 'All day'. onDate moves a due date to a local date and keeps the time of day; a null due starts all day. atTime sets the time on the same local date, and a null time means all day. timedReminderFire is due minus notifyBefore (or defaultReminder when null), in elapsed minutes, for tasks with a time of day, with quiet hours off and now far before the fire time. Past-due handling differs by client and isn't pinned here. A local time inside a daylight-saving gap shifts forward by the length of the gap, and a time inside an overlap takes the first occurrence. allDayReminderFire applies when the task is all day in the current zone. An offset under a day fires at 08:00 local on the due day, and each whole day of offset moves that back one local day. A future snooze wins, quiet hours defer the fire to their end (half-open window), and a fire time that has passed fires nothing. Cases with a passed fire time sit at least two hours past it, because the instant at which a client stops firing differs by client. If behavior changes, change this file in all three repos and all three implementations together.",
+  "version": 1,
+  "cases": [
+    {
+      "name": "local midnight is all day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T05:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-09-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "an afternoon time is a time of day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T20:30:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-24",
+        "displayTime": "15:30"
+      }
+    },
+    {
+      "name": "noon is a time of day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T17:00:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-24",
+        "displayTime": "12:00"
+      }
+    },
+    {
+      "name": "one minute past midnight is a time of day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T05:01:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-24",
+        "displayTime": "00:01"
+      }
+    },
+    {
+      "name": "one second past midnight is a time of day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T05:00:01.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-24",
+        "displayTime": "00:00"
+      }
+    },
+    {
+      "name": "one millisecond past midnight is a time of day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T05:00:00.001Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-24",
+        "displayTime": "00:00"
+      }
+    },
+    {
+      "name": "the last millisecond of a day stays on that day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-25T04:59:59.999Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-24",
+        "displayTime": "23:59"
+      }
+    },
+    {
+      "name": "midnight in UTC is all day when viewed in UTC",
+      "op": "classify",
+      "zone": "UTC",
+      "due": "2026-09-24T00:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-09-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "the same instant viewed in Chicago is the evening before",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T00:00:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-23",
+        "displayTime": "19:00"
+      }
+    },
+    {
+      "name": "a Chicago all-day task viewed in Tokyo shows a time",
+      "op": "classify",
+      "zone": "Asia/Tokyo",
+      "due": "2026-09-24T05:00:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-24",
+        "displayTime": "14:00"
+      }
+    },
+    {
+      "name": "midnight in Tokyo is all day",
+      "op": "classify",
+      "zone": "Asia/Tokyo",
+      "due": "2026-09-23T15:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-09-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "a Tokyo all-day task viewed in Chicago lands on the day before",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-09-23T15:00:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-09-23",
+        "displayTime": "10:00"
+      }
+    },
+    {
+      "name": "midnight at a half-hour offset is all day",
+      "op": "classify",
+      "zone": "Asia/Kolkata",
+      "due": "2026-09-23T18:30:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-09-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight at a quarter-hour offset is all day",
+      "op": "classify",
+      "zone": "Asia/Kathmandu",
+      "due": "2026-09-23T18:15:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-09-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight at the largest offset is all day",
+      "op": "classify",
+      "zone": "Pacific/Kiritimati",
+      "due": "2026-09-23T10:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-09-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight at the smallest offset is all day",
+      "op": "classify",
+      "zone": "Pacific/Pago_Pago",
+      "due": "2026-09-24T11:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-09-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight in London summer is all day",
+      "op": "classify",
+      "zone": "Europe/London",
+      "due": "2026-09-23T23:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-09-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight in London winter is all day",
+      "op": "classify",
+      "zone": "Europe/London",
+      "due": "2026-11-24T00:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-11-24",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight in Auckland summer is all day",
+      "op": "classify",
+      "zone": "Pacific/Auckland",
+      "due": "2026-11-30T11:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-12-01",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight in Auckland winter is all day",
+      "op": "classify",
+      "zone": "Pacific/Auckland",
+      "due": "2026-06-30T12:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-07-01",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight on the spring-forward day is all day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2027-03-14T06:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2027-03-14",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight the day after spring-forward is all day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2027-03-15T05:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2027-03-15",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight on the fall-back day is all day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-11-01T05:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-11-01",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "midnight the day after fall-back is all day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-11-02T06:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-11-02",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "the first 01:30 on the fall-back day is a time of day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-11-01T06:30:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-11-01",
+        "displayTime": "01:30"
+      }
+    },
+    {
+      "name": "the second 01:30 on the fall-back day is a time of day",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2026-11-01T07:30:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-11-01",
+        "displayTime": "01:30"
+      }
+    },
+    {
+      "name": "first instant after a 30-minute gap is a time of day",
+      "op": "classify",
+      "zone": "Australia/Lord_Howe",
+      "due": "2027-10-02T15:30:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2027-10-03",
+        "displayTime": "02:30"
+      }
+    },
+    {
+      "name": "a day with no midnight starts at 01:00, which reads as a time of day",
+      "op": "classify",
+      "zone": "America/Havana",
+      "due": "2027-03-14T05:00:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2027-03-14",
+        "displayTime": "01:00"
+      }
+    },
+    {
+      "name": "the first midnight on a day with two is all day",
+      "op": "classify",
+      "zone": "America/Havana",
+      "due": "2026-11-01T04:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-11-01",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "the second midnight on a day with two is all day",
+      "op": "classify",
+      "zone": "America/Havana",
+      "due": "2026-11-01T05:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2026-11-01",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "00:30 on a day with two midnights is a time of day",
+      "op": "classify",
+      "zone": "America/Havana",
+      "due": "2026-11-01T04:30:00.000Z",
+      "expect": {
+        "allDay": false,
+        "localDate": "2026-11-01",
+        "displayTime": "00:30"
+      }
+    },
+    {
+      "name": "a leap day classifies like any other",
+      "op": "classify",
+      "zone": "America/Chicago",
+      "due": "2028-02-29T06:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2028-02-29",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "a new year's midnight reads on the new year",
+      "op": "classify",
+      "zone": "Asia/Tokyo",
+      "due": "2026-12-31T15:00:00.000Z",
+      "expect": {
+        "allDay": true,
+        "localDate": "2027-01-01",
+        "displayTime": null
+      }
+    },
+    {
+      "name": "a task with no due date becomes all day",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": null,
+      "date": "2026-09-30",
+      "expect": {
+        "due": "2026-09-30T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "picking a date keeps the time already set",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T20:30:00.000Z",
+      "date": "2026-09-30",
+      "expect": {
+        "due": "2026-09-30T20:30:00.000Z"
+      }
+    },
+    {
+      "name": "an all-day task stays all day",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T05:00:00.000Z",
+      "date": "2026-09-30",
+      "expect": {
+        "due": "2026-09-30T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "the wall clock survives fall-back",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2026-10-31T20:30:00.000Z",
+      "date": "2026-11-02",
+      "expect": {
+        "due": "2026-11-02T21:30:00.000Z"
+      }
+    },
+    {
+      "name": "the wall clock survives spring-forward",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2027-03-13T21:30:00.000Z",
+      "date": "2027-03-15",
+      "expect": {
+        "due": "2027-03-15T20:30:00.000Z"
+      }
+    },
+    {
+      "name": "all day stays local midnight across fall-back",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2026-10-31T05:00:00.000Z",
+      "date": "2026-11-02",
+      "expect": {
+        "due": "2026-11-02T06:00:00.000Z"
+      }
+    },
+    {
+      "name": "all day stays local midnight across spring-forward",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2027-03-13T06:00:00.000Z",
+      "date": "2027-03-15",
+      "expect": {
+        "due": "2027-03-15T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "moving into a gap shifts forward by the gap",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2027-03-13T08:30:00.000Z",
+      "date": "2027-03-14",
+      "expect": {
+        "due": "2027-03-14T08:30:00.000Z"
+      }
+    },
+    {
+      "name": "moving into an overlap takes the first occurrence",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2026-10-31T06:30:00.000Z",
+      "date": "2026-11-01",
+      "expect": {
+        "due": "2026-11-01T06:30:00.000Z"
+      }
+    },
+    {
+      "name": "moving off an overlap's second occurrence keeps its wall clock",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2026-11-01T07:30:00.000Z",
+      "date": "2026-11-02",
+      "expect": {
+        "due": "2026-11-02T07:30:00.000Z"
+      }
+    },
+    {
+      "name": "seconds and milliseconds survive a date change",
+      "op": "onDate",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T20:30:45.123Z",
+      "date": "2026-09-30",
+      "expect": {
+        "due": "2026-09-30T20:30:45.123Z"
+      }
+    },
+    {
+      "name": "the time kept is the time in the current zone",
+      "op": "onDate",
+      "zone": "Asia/Tokyo",
+      "due": "2026-09-24T05:00:00.000Z",
+      "date": "2026-09-30",
+      "expect": {
+        "due": "2026-09-30T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "a leap day resolves",
+      "op": "onDate",
+      "zone": "Asia/Tokyo",
+      "due": null,
+      "date": "2028-02-29",
+      "expect": {
+        "due": "2028-02-28T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "a new all-day date on a day with no midnight lands at 01:00",
+      "op": "onDate",
+      "zone": "America/Havana",
+      "due": null,
+      "date": "2027-03-14",
+      "expect": {
+        "due": "2027-03-14T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "a new all-day date on a day with two midnights takes the first",
+      "op": "onDate",
+      "zone": "America/Havana",
+      "due": null,
+      "date": "2026-11-01",
+      "expect": {
+        "due": "2026-11-01T04:00:00.000Z"
+      }
+    },
+    {
+      "name": "moving off a day with no midnight keeps its 01:00",
+      "op": "onDate",
+      "zone": "America/Havana",
+      "due": "2027-03-14T05:00:00.000Z",
+      "date": "2027-03-15",
+      "expect": {
+        "due": "2027-03-15T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "setting a time keeps the day",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T05:00:00.000Z",
+      "time": "09:00",
+      "expect": {
+        "due": "2026-09-24T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "clearing the time makes it all day",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T20:30:00.000Z",
+      "time": null,
+      "expect": {
+        "due": "2026-09-24T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "a new time replaces the old one",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T20:30:00.000Z",
+      "time": "09:00",
+      "expect": {
+        "due": "2026-09-24T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "setting a time drops stored seconds",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T20:30:45.123Z",
+      "time": "09:00",
+      "expect": {
+        "due": "2026-09-24T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "clearing the time drops stored seconds",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T20:30:45.123Z",
+      "time": null,
+      "expect": {
+        "due": "2026-09-24T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "choosing 00:00 is the same as all day",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T20:30:00.000Z",
+      "time": "00:00",
+      "expect": {
+        "due": "2026-09-24T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "a time inside a gap shifts forward by the gap",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2027-03-14T06:00:00.000Z",
+      "time": "02:30",
+      "expect": {
+        "due": "2027-03-14T08:30:00.000Z"
+      }
+    },
+    {
+      "name": "the first skipped minute shifts forward by the gap",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2027-03-14T06:00:00.000Z",
+      "time": "02:00",
+      "expect": {
+        "due": "2027-03-14T08:00:00.000Z"
+      }
+    },
+    {
+      "name": "a time inside an overlap takes the first occurrence",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-11-01T05:00:00.000Z",
+      "time": "01:30",
+      "expect": {
+        "due": "2026-11-01T06:30:00.000Z"
+      }
+    },
+    {
+      "name": "the first time after an overlap uses the new offset",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-11-01T05:00:00.000Z",
+      "time": "02:00",
+      "expect": {
+        "due": "2026-11-01T08:00:00.000Z"
+      }
+    },
+    {
+      "name": "clearing the second 01:30 goes to that day's midnight",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-11-01T07:30:00.000Z",
+      "time": null,
+      "expect": {
+        "due": "2026-11-01T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "a time inside London's gap shifts forward",
+      "op": "atTime",
+      "zone": "Europe/London",
+      "due": "2027-03-28T00:00:00.000Z",
+      "time": "01:30",
+      "expect": {
+        "due": "2027-03-28T01:30:00.000Z"
+      }
+    },
+    {
+      "name": "a time inside a 30-minute gap shifts by 30 minutes",
+      "op": "atTime",
+      "zone": "Australia/Lord_Howe",
+      "due": "2027-10-02T13:30:00.000Z",
+      "time": "02:15",
+      "expect": {
+        "due": "2027-10-02T15:45:00.000Z"
+      }
+    },
+    {
+      "name": "the day is the local day in the current zone",
+      "op": "atTime",
+      "zone": "America/Chicago",
+      "due": "2026-09-24T02:00:00.000Z",
+      "time": null,
+      "expect": {
+        "due": "2026-09-23T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "clearing in Tokyo gives Tokyo's midnight",
+      "op": "atTime",
+      "zone": "Asia/Tokyo",
+      "due": "2026-09-24T05:00:00.000Z",
+      "time": null,
+      "expect": {
+        "due": "2026-09-23T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "clearing on a day with no midnight lands at 01:00",
+      "op": "atTime",
+      "zone": "America/Havana",
+      "due": "2027-03-14T16:00:00.000Z",
+      "time": null,
+      "expect": {
+        "due": "2027-03-14T05:00:00.000Z"
+      }
+    },
+    {
+      "name": "setting a time at a half-hour offset",
+      "op": "atTime",
+      "zone": "Asia/Kolkata",
+      "due": "2026-09-23T18:30:00.000Z",
+      "time": "09:00",
+      "expect": {
+        "due": "2026-09-24T03:30:00.000Z"
+      }
+    },
+    {
+      "name": "no offset of its own uses the default",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T20:30:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-09-24T20:15:00.000Z"
+      }
+    },
+    {
+      "name": "a different default applies the same way",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T20:30:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 30,
+      "expect": {
+        "fire": "2026-09-24T20:00:00.000Z"
+      }
+    },
+    {
+      "name": "the task's offset beats the default",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T20:30:00.000Z",
+      "notifyBefore": 120,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-09-24T18:30:00.000Z"
+      }
+    },
+    {
+      "name": "an offset of zero fires at the due time",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T20:30:00.000Z",
+      "notifyBefore": 0,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-09-24T20:30:00.000Z"
+      }
+    },
+    {
+      "name": "an off-list offset is honored",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T20:30:00.000Z",
+      "notifyBefore": 45,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-09-24T19:45:00.000Z"
+      }
+    },
+    {
+      "name": "one day before is one day earlier on an ordinary day",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-25T20:30:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-09-24T20:30:00.000Z"
+      }
+    },
+    {
+      "name": "one day before across fall-back is 1440 elapsed minutes",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-11-01T18:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-10-31T18:00:00.000Z"
+      }
+    },
+    {
+      "name": "one day before across spring-forward is 1440 elapsed minutes",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2027-03-14T17:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2027-03-13T17:00:00.000Z"
+      }
+    },
+    {
+      "name": "an offset that crosses a gap counts elapsed minutes",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2027-03-14T08:30:00.000Z",
+      "notifyBefore": 120,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2027-03-14T06:30:00.000Z"
+      }
+    },
+    {
+      "name": "an offset that crosses an overlap counts elapsed minutes",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-11-01T07:30:00.000Z",
+      "notifyBefore": 120,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-11-01T05:30:00.000Z"
+      }
+    },
+    {
+      "name": "a task due at 00:10 may fire the night before, because it has a time",
+      "op": "timedReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:10:00.000Z",
+      "notifyBefore": 15,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-09-24T04:55:00.000Z"
+      }
+    },
+    {
+      "name": "a Chicago all-day task viewed in Tokyo has a time there",
+      "op": "timedReminderFire",
+      "zone": "Asia/Tokyo",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "expect": {
+        "fire": "2026-09-24T04:45:00.000Z"
+      }
+    },
+    {
+      "name": "the default offset fires at 08:00 on the due day, not 23:45 the night before",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "an offset of zero fires at 08:00",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": 0,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "two hours before fires at 08:00",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": 120,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "the longest offset under a day fires at 08:00 on the due day",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": 1439,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "one day before fires at 08:00 the day before",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-23T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "a default of one day applies the same way",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 1440,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-23T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "only whole days of offset move the day",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": 1500,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-23T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "two days before fires at 08:00 two days before",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": 2880,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-22T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "spring-forward day fires at 08:00 on the new offset",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2027-03-14T06:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2027-03-14T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "one day before lands on spring-forward day at 08:00",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2027-03-15T05:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2027-03-14T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "one day before spring-forward day fires at 08:00 on the old offset",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2027-03-14T06:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2027-03-13T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "fall-back day fires at 08:00 on the new offset",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-11-01T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-11-01T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "one day before fall-back day fires at 08:00 on the old offset",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-11-01T05:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-10-31T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "one day before lands on fall-back day at 08:00",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-11-02T06:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-11-01T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "Tokyo fires at 08:00 Tokyo time",
+      "op": "allDayReminderFire",
+      "zone": "Asia/Tokyo",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-23T15:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-23T23:00:00.000Z"
+      }
+    },
+    {
+      "name": "one day before in Tokyo",
+      "op": "allDayReminderFire",
+      "zone": "Asia/Tokyo",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-23T15:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-22T23:00:00.000Z"
+      }
+    },
+    {
+      "name": "London fires at 08:00 on its spring-forward day",
+      "op": "allDayReminderFire",
+      "zone": "Europe/London",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2027-03-28T00:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2027-03-28T07:00:00.000Z"
+      }
+    },
+    {
+      "name": "one day before London's spring-forward day",
+      "op": "allDayReminderFire",
+      "zone": "Europe/London",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2027-03-28T00:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2027-03-27T08:00:00.000Z"
+      }
+    },
+    {
+      "name": "Auckland fires at 08:00 on its spring-forward day",
+      "op": "allDayReminderFire",
+      "zone": "Pacific/Auckland",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2027-09-25T12:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2027-09-25T19:00:00.000Z"
+      }
+    },
+    {
+      "name": "a half-hour offset fires at 08:00",
+      "op": "allDayReminderFire",
+      "zone": "Asia/Kolkata",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-23T18:30:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T02:30:00.000Z"
+      }
+    },
+    {
+      "name": "the first of two midnights fires at 08:00 that day",
+      "op": "allDayReminderFire",
+      "zone": "America/Havana",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-11-01T04:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-11-01T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "the second of two midnights fires at 08:00 that day",
+      "op": "allDayReminderFire",
+      "zone": "America/Havana",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-11-01T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-11-01T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "a future snooze wins",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-09-23T12:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": "2026-09-24T02:00:00.000Z",
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T02:00:00.000Z"
+      }
+    },
+    {
+      "name": "quiet hours that end before 08:00 change nothing",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "07:00",
+      "expect": {
+        "fire": "2026-09-24T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "quiet hours that end exactly at 08:00 change nothing",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "08:00",
+      "expect": {
+        "fire": "2026-09-24T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "overnight quiet hours past 08:00 defer to their end",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "09:00",
+      "expect": {
+        "fire": "2026-09-24T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "daytime quiet hours around 08:00 defer to their end",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "07:30",
+      "quietHoursEnd": "08:30",
+      "expect": {
+        "fire": "2026-09-24T13:30:00.000Z"
+      }
+    },
+    {
+      "name": "deferring on fall-back day uses the new offset",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-11-01T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "09:00",
+      "expect": {
+        "fire": "2026-11-01T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "just after midnight on the due day still fires at 08:00",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-09-24T05:30:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "before 08:00 on the due day still fires at 08:00",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-09-24T12:30:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T13:00:00.000Z"
+      }
+    },
+    {
+      "name": "well after 08:00 on the due day fires nothing",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-09-24T16:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": null
+      }
+    },
+    {
+      "name": "a passed one-day reminder doesn't fall back to the due day",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-09-23T16:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": null
+      }
+    },
+    {
+      "name": "an overdue all-day task fires nothing",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-09-26T16:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": null
+      }
+    }
+  ]
+}
