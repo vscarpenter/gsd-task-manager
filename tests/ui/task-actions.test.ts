@@ -8,7 +8,7 @@ import { TaskValidationError } from "@/lib/tasks/crud/validation-error";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { createMockTask } from "@/tests/fixtures";
 import { logError } from "@/lib/error-logger";
-import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater, handleDuplicate, handleMoveTo, handleClearSnooze, handleMarkUrgent } from "@/components/matrix-simplified/task-actions";
+import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater, handleDuplicate, handleMoveTo, handleClearSnooze, handleMarkUrgent, saveEditedTask } from "@/components/matrix-simplified/task-actions";
 
 vi.mock("@/lib/tasks/saved", () => ({ saveTaskForLater: vi.fn(), returnSavedTask: vi.fn() }));
 
@@ -251,5 +251,46 @@ describe("handleMarkUrgent", () => {
     await handleMarkUrgent(task, offerUndo);
     expect(offerUndo).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
+  });
+});
+
+describe("saveEditedTask", () => {
+  beforeEach(() => {
+    // Earlier cases leave rejecting implementations behind; clearAllMocks keeps them.
+    for (const fn of [updateTask, snoozeTask, clearSnooze]) vi.mocked(fn).mockReset().mockResolvedValue({} as never);
+  });
+  const inMinutes = (m: number) => new Date(Date.now() + m * 60_000).toISOString();
+
+  it("updates the changed fields only, with no snooze call", async () => {
+    await saveEditedTask("t1", { title: "New title" });
+    expect(updateTask).toHaveBeenCalledWith("t1", { title: "New title" });
+    expect(snoozeTask).not.toHaveBeenCalled();
+    expect(clearSnooze).not.toHaveBeenCalled();
+  });
+
+  it("saves the other fields first, then snoozes for the time left", async () => {
+    await saveEditedTask("t1", { title: "New title", snoozedUntil: inMinutes(180) });
+    expect(updateTask).toHaveBeenCalledWith("t1", { title: "New title" });
+    expect(snoozeTask).toHaveBeenCalledWith("t1", 180);
+    expect(vi.mocked(updateTask).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(snoozeTask).mock.invocationCallOrder[0]
+    );
+  });
+
+  it("skips the update when only the snooze changed", async () => {
+    await saveEditedTask("t1", { snoozedUntil: inMinutes(15) });
+    expect(updateTask).not.toHaveBeenCalled();
+    expect(snoozeTask).toHaveBeenCalledWith("t1", 15);
+  });
+
+  it("clears the snooze when the key is present and empty", async () => {
+    await saveEditedTask("t1", { snoozedUntil: undefined });
+    expect(clearSnooze).toHaveBeenCalledWith("t1");
+    expect(updateTask).not.toHaveBeenCalled();
+  });
+
+  it("still saves when nothing changed, as the drawer always has", async () => {
+    await saveEditedTask("t1", {});
+    expect(updateTask).toHaveBeenCalledWith("t1", {});
   });
 });

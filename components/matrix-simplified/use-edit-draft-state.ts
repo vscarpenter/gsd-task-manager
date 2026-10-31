@@ -11,6 +11,7 @@ import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { hasVisibleText } from "@/lib/utils";
 import { generateId } from "@/lib/id-generator";
 import type { EditDraft } from "./edit-draft";
+import { useSnoozeDraft } from "./use-snooze-draft";
 
 /**
  * The preset whose own date an existing due date falls on, or "none".
@@ -65,6 +66,11 @@ export interface EditDraftState {
   /** Minutes before due, or null for "no reminder on this task". */
   reminderMinutes: number | null;
   setReminderMinutes: (v: number | null) => void;
+  /** The snooze being edited; undefined means none. */
+  snoozedUntil: string | undefined;
+  setSnoozedUntil: (v: string | undefined) => void;
+  /** False when creating a task or for a completed one. */
+  canSnooze: boolean;
   toDraft: () => EditDraft;
 }
 
@@ -120,6 +126,7 @@ function useDetailDraftFields(
     String(task?.estimatedMinutes ?? initialDraft?.estimatedMinutes ?? "")
   );
   const reminder = useReminderDraft(task, initialDraft);
+  const { draftFields: snoozeFields, ...snooze } = useSnoozeDraft(task);
 
   return {
     recurrence,
@@ -130,7 +137,9 @@ function useDetailDraftFields(
     setEstimateInput,
     reminderMinutes: reminder.minutes,
     setReminderMinutes: reminder.setMinutes,
-    reminderDraftFields: reminder.draftFields,
+    ...snooze,
+    // The reminder and the snooze both save as optional fields of the draft.
+    reminderDraftFields: () => ({ ...reminder.draftFields(), ...snoozeFields() }),
   };
 }
 
@@ -184,14 +193,15 @@ function useReminderDraft(
 
 /**
  * The fields whose value differs between the drawer's starting draft and the
- * current one. A cleared field stays in the result as `undefined`.
+ * current one. A cleared field stays in the result as `undefined`, including one
+ * whose key left the draft entirely (an optional field is omitted when unset).
  *
  * Saving only these keeps a drawer that sat open in a stale tab from writing
  * its old title, tags, or flags over a newer save from somewhere else.
  */
 export function changedDraftFields(start: EditDraft, current: EditDraft): Partial<EditDraft> {
   const changed: Partial<EditDraft> = {};
-  for (const key of Object.keys(current) as Array<keyof EditDraft>) {
+  for (const key of new Set([...Object.keys(start), ...Object.keys(current)]) as Set<keyof EditDraft>) {
     if (JSON.stringify(start[key]) !== JSON.stringify(current[key])) {
       Object.assign(changed, { [key]: current[key] });
     }

@@ -17,6 +17,7 @@ import { useEditDraftState } from "./use-edit-draft-state";
 import { useEscalation } from "@/components/task-card/use-escalation";
 import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
 import { ReminderField } from "./edit-drawer-reminder-field";
+import { SnoozeField } from "./edit-drawer-snooze-field";
 import { DependenciesField } from "./edit-drawer-dependencies";
 import { LengthLimitNote } from "./limit-note";
 import { extractUrlsFromTitle } from "@/lib/capture-parser";
@@ -408,6 +409,8 @@ function TaskDetailFields({ draft }: { draft: ReturnType<typeof useEditDraftStat
       <EstimateField value={draft.estimateInput} onChange={draft.setEstimateInput} />
 
       <ReminderField minutes={draft.reminderMinutes} onChange={draft.setReminderMinutes} />
+
+      {draft.canSnooze ? <SnoozeField snoozedUntil={draft.snoozedUntil} onChange={draft.setSnoozedUntil} /> : null}
     </>
   );
 }

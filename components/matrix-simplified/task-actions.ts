@@ -13,6 +13,7 @@ import { TIME_UNITS, TOAST_DURATION } from "@/lib/constants";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
 
 import type { CapturePayload } from "./capture-bar";
+import type { EditDraft } from "./edit-draft";
 
 export function reportTaskMutationError(
   error: unknown,
@@ -188,4 +189,22 @@ export async function handleMarkUrgent(
   } catch (error) {
     reportTaskMutationError(error, ErrorActions.UPDATE_TASK, "Failed to mark task urgent", task.id);
   }
+}
+
+/**
+ * Save the drawer's changes. The snooze is not part of the task draft schema, so it is
+ * written as its own step after the other fields. Going last also lets an explicit
+ * snooze win over the reset that a changed due date or reminder applies.
+ */
+export async function saveEditedTask(taskId: string, changed: Partial<EditDraft>): Promise<void> {
+  const { snoozedUntil, ...fields } = changed;
+  const snoozeChanged = "snoozedUntil" in changed;
+  if (Object.keys(fields).length > 0 || !snoozeChanged) await updateTask(taskId, fields);
+  if (!snoozeChanged) return;
+  if (!snoozedUntil) {
+    await clearSnooze(taskId);
+    return;
+  }
+  const minutes = Math.max(1, Math.ceil((Date.parse(snoozedUntil) - Date.now()) / TIME_UNITS.MS_PER_MINUTE));
+  await snoozeTask(taskId, minutes);
 }
