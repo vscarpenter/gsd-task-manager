@@ -34,6 +34,15 @@ if (!window.matchMedia) {
   }) as MediaQueryList;
 }
 
+// Radix Switch and Checkbox measure their button with ResizeObserver, which jsdom lacks.
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as unknown as typeof ResizeObserver;
+}
+
 // Polyfill for isContentEditable property in jsdom
 Object.defineProperty(HTMLElement.prototype, 'isContentEditable', {
   get: function() {

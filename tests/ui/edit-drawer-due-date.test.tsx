@@ -81,13 +81,12 @@ describe("<EditDrawer> due date round trip", () => {
     expect(await saveAndReadDueDate(onSubmit)).toBe(stored);
   });
 
-  it("keeps the time of day when the user re-picks the preset the date already matches", async () => {
-    const stored = localIso(5, 1, 14, 30);
-    const onSubmit = openTask(stored);
+  it("makes the date all day when the user re-picks the preset it already matches", async () => {
+    const onSubmit = openTask(localIso(5, 1, 14, 30));
 
     await user.click(screen.getByRole("button", { name: /^this week$/i }));
 
-    expect(await saveAndReadDueDate(onSubmit)).toBe(stored);
+    expect(await saveAndReadDueDate(onSubmit)).toBe(localIso(5, 1));
   });
 
   it("shows a date that matches no preset as its own date", () => {

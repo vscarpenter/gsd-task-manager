@@ -2,6 +2,8 @@
 
 import type { TaskRecord, NotificationSettings } from "@/lib/types";
 import { NOTIFICATION_TIMING, NOTIFICATION_ASSETS } from "@/lib/constants";
+import { differenceInCalendarDays } from "date-fns";
+import { timeOf } from "@/lib/due-time";
 import { getNotificationSettings } from "./settings";
 import {
   isNotificationSupported,
@@ -40,6 +42,14 @@ function isTaskSnoozed(task: TaskRecord): boolean {
  * Generate notification title based on time until due
  */
 function getNotificationTitle(task: TaskRecord, minutesUntil: number): string {
+  // An all-day task counts calendar days: hours to its midnight is a time nobody chose.
+  if (task.dueDate !== undefined && timeOf(task.dueDate) === undefined) {
+    const days = differenceInCalendarDays(new Date(task.dueDate), new Date());
+    if (days <= 0) return `Due today: ${task.title}`;
+    if (days === 1) return `Due tomorrow: ${task.title}`;
+    return `Due in ${days} days: ${task.title}`;
+  }
+
   if (minutesUntil <= 0) {
     return `Due now: ${task.title}`;
   }
