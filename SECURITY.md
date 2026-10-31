@@ -52,6 +52,11 @@ GSD Task Manager is a privacy-first application where all data is stored locally
      worker removes its private fields before any controlled network request or
      cache write and deletes legacy capture cache entries during activation
 
+   - Sharing into the installed PWA (the manifest's `share_target`) uses a POST
+     to `/share-target/` that the service worker answers itself. It redirects
+     to the same fragment form, so shared text never becomes a network request,
+     a log line, or a cache key
+
    Bookmarklet implementations should construct the destination like this
    (paste as a single line into the bookmark's URL field):
 
