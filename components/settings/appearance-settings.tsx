@@ -43,7 +43,7 @@ function EscalationWindowRow() {
 					const next = ESCALATION_WINDOW_OPTIONS.find((o) => windowValue(o) === e.target.value);
 					if (next !== undefined) writeEscalationWindow(next);
 				}}
-				className="rounded-md bg-background-muted px-2 py-1.5 text-sm text-foreground pointer-coarse:min-h-11"
+				className="rounded-md border border-card-border bg-background-muted px-2 py-1.5 text-sm text-foreground pointer-coarse:min-h-11"
 			>
 				{ESCALATION_WINDOW_OPTIONS.map((option) => (
 					<option key={windowValue(option)} value={windowValue(option)}>
