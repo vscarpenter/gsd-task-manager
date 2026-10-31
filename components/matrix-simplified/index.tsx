@@ -18,7 +18,7 @@ import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
-import { captureAndReveal, handleDuplicate, handleMoveTo, handleSnooze, handleToggle, reportTaskMutationError } from "./task-actions";
+import { captureAndReveal, handleDuplicate, handleMarkUrgent, handleMoveTo, handleSnooze, handleToggle, reportTaskMutationError } from "./task-actions";
 import { neighborFocusId, scheduleCardFocus } from "./focus-after-removal";
 import { DragLayer } from "./drag-layer";
 import { FilteredEmpty } from "./filtered-empty";
@@ -388,7 +388,7 @@ export function MatrixSimplified() {
             }}
             onDelete={handleDelete}
             onShare={handleShareOpen}
-            onSnooze={handleSnooze} onSave={(task) => handleSaveForLater(task, handleSuccess).then((saved) => { if (saved) captureInputRef.current?.focus(); })} onDuplicate={handleDuplicate} onMoveTo={(task, quadrant) => handleMoveTo(task, quadrant, handleSuccess)}
+            onSnooze={handleSnooze} onSave={(task) => handleSaveForLater(task, handleSuccess).then((saved) => { if (saved) captureInputRef.current?.focus(); })} onDuplicate={handleDuplicate} onMoveTo={(task, quadrant) => handleMoveTo(task, quadrant, handleSuccess)} onMarkUrgent={(task) => handleMarkUrgent(task, handleSuccess)}
             onAddInQuadrant={handleAddInQuadrant}
             highlightedTaskId={highlightedTaskId}
             onTaskRef={handleTaskRef}
