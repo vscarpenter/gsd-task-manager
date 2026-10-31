@@ -1,4 +1,4 @@
-import type { TaskRecord } from "@/lib/types";
+import type { QuadrantId, TaskRecord } from "@/lib/types";
 
 /**
  * Props interface for TaskCard component
@@ -15,6 +15,8 @@ export interface TaskCardProps {
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onSave?: (task: TaskRecord) => Promise<void> | void;
+  /** Moves the task to a quadrant from the card menu; the owner offers Undo. */
+  onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onStartTimer?: (taskId: string) => Promise<void>;
   onStopTimer?: (taskId: string) => Promise<void>;

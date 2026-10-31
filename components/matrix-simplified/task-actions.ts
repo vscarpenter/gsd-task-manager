@@ -2,15 +2,15 @@
 
 import { toast } from "sonner";
 
-import { createTask, toggleCompleted, deleteTask, snoozeTask } from "@/lib/tasks";
+import { createTask, toggleCompleted, deleteTask, snoozeTask, duplicateTask, moveTaskToQuadrant } from "@/lib/tasks";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { ErrorActions, logError } from "@/lib/error-logger";
-import { quadrantForTask } from "@/lib/quadrants";
+import { quadrantForTask, quadrants } from "@/lib/quadrants";
 import { taskValidationMessage } from "@/lib/tasks/crud/validation-error";
 import { TIME_UNITS, TOAST_DURATION } from "@/lib/constants";
-import type { TaskRecord } from "@/lib/types";
+import type { QuadrantId, TaskRecord } from "@/lib/types";
 
 import type { CapturePayload } from "./capture-bar";
 
@@ -136,5 +136,28 @@ export async function handleSaveForLater(
   } catch (error) {
     reportTaskMutationError(error, "save_task", error instanceof Error ? error.message : "Failed to move to Saved", task.id);
     return false;
+  }
+}
+
+export async function handleDuplicate(task: TaskRecord): Promise<void> {
+  try {
+    await duplicateTask(task.id);
+    toast.success("Task duplicated", { duration: TOAST_DURATION.SHORT });
+  } catch (error) {
+    reportTaskMutationError(error, "duplicate_task", "Failed to duplicate task", task.id);
+  }
+}
+
+/** The menu route to a quadrant drag: same move, with an Undo back to where it was. */
+export async function handleMoveTo(
+  task: TaskRecord,
+  target: QuadrantId,
+  offerUndo: (message: string, undo: () => Promise<void>) => void
+): Promise<void> {
+  try {
+    await moveTaskToQuadrant(task.id, target);
+    offerUndo(`Moved to ${quadrants.find((q) => q.id === target)?.title}`, () => moveTaskToQuadrant(task.id, task.quadrant).then(() => {}));
+  } catch (error) {
+    reportTaskMutationError(error, "move_task", "Failed to move task", task.id);
   }
 }

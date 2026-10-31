@@ -1,12 +1,13 @@
 "use client";
 
-import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon } from "lucide-react";
+import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon, ArrowRightLeftIcon } from "lucide-react";
 import { cn, formatRelative, isRepeatClick } from "@/lib/utils";
 import { DATE_CONFIG, SWIPE_CONFIG, TIME_MS } from "@/lib/constants";
 import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import type { TaskRecord } from "@/lib/types";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { quadrantForTask, quadrants } from "@/lib/quadrants";
+import type { QuadrantId, TaskRecord } from "@/lib/types";
 
 /** True when a future due date is within 24h. Used to color-shift the clock glyph. */
 function isWithinDay(iso: string): boolean {
@@ -48,6 +49,7 @@ export interface TaskCardActionsProps {
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onSave?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
+  onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
 }
 
 export function TaskCardActions({
@@ -61,6 +63,7 @@ export function TaskCardActions({
   onDuplicate,
   onSnooze,
   onSave,
+  onMoveTo,
 }: TaskCardActionsProps) {
   return (
     <div
@@ -113,8 +116,9 @@ export function TaskCardActions({
         {/* Desktop: all buttons on hover. Snooze is touch-only, by design. */}
         <DesktopActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSave={onSave} />
 
-        {/* Mobile: edit + overflow menu */}
-        <MobileActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} onSave={onSave} />
+        {/* Mobile: the edit button; the overflow menu below serves every width. */}
+        <MobileEditButton task={task} onEdit={onEdit} />
+        <CardMenu task={task} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} onSave={onSave} onMoveTo={onMoveTo} />
       </div>
     </div>
   );
@@ -160,17 +164,7 @@ function DesktopTaskAction({ label, testId, icon: Icon, onClick, destructive = f
   );
 }
 
-interface MobileActionsProps {
-  task: TaskRecord;
-  onEdit: (task: TaskRecord) => void;
-  onDelete: (task: TaskRecord) => Promise<void> | void;
-  onShare?: (task: TaskRecord) => void;
-  onDuplicate?: (task: TaskRecord) => Promise<void> | void;
-  onSave?: (task: TaskRecord) => Promise<void> | void;
-  onSnooze?: (taskId: string, minutes: number) => Promise<void>;
-}
-
-function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze, onSave }: MobileActionsProps) {
+function MobileEditButton({ task, onEdit }: { task: TaskRecord; onEdit: (task: TaskRecord) => void }) {
   return (
     <div className="task-card-mobile-actions flex sm:hidden items-center gap-2">
       <button
@@ -182,49 +176,92 @@ function MobileActions({ task, onEdit, onDelete, onShare, onDuplicate, onSnooze,
       >
         <PencilIcon className="h-4 w-4" />
       </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            data-testid="task-card-menu"
-            type="button"
-            className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent touch-manipulation transition-colors"
-            aria-label="More actions"
-          >
-            <MoreHorizontalIcon className="h-4 w-4" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {onSave && !task.completed ? (
-            <DropdownMenuItem data-testid="save-task-mobile" onClick={() => onSave(task)}>
-              <BookmarkIcon className="mr-2 h-4 w-4" aria-hidden="true" />Move to Saved
-            </DropdownMenuItem>
-          ) : null}
-                {onShare && (
-            <DropdownMenuItem onClick={() => onShare(task)}>
-              <Share2Icon className="mr-2 h-4 w-4" />
-              Share
-            </DropdownMenuItem>
-          )}
-          {onDuplicate && (
-            <DropdownMenuItem onClick={() => onDuplicate(task)}>
-              <CopyIcon className="mr-2 h-4 w-4" />
-              Duplicate
-            </DropdownMenuItem>
-          )}
-          {/* The non-gesture route to the trailing swipe's Snooze, same preset. */}
-          {onSnooze && !task.completed && (
-            <DropdownMenuItem data-testid="snooze-task" onClick={() => onSnooze(task.id, SWIPE_CONFIG.SNOOZE_MINUTES)}>
-              <MoonIcon className="mr-2 h-4 w-4" />
-              Snooze 1 hour
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem data-testid="delete-task" onClick={() => onDelete(task)} className="text-rust-d focus:text-rust-d">
-            <Trash2Icon className="mr-2 h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
+  );
+}
+
+interface CardMenuProps {
+  task: TaskRecord;
+  onDelete: (task: TaskRecord) => Promise<void> | void;
+  onShare?: (task: TaskRecord) => void;
+  onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  onSave?: (task: TaskRecord) => Promise<void> | void;
+  onSnooze?: (taskId: string, minutes: number) => Promise<void>;
+  onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
+}
+
+/**
+ * The ⋯ menu. Always in the row: shown on touch widths, and revealed with the
+ * hover icons from `sm` up so a mouse user can reach Move to and the rest.
+ */
+function CardMenu({ task, onDelete, onShare, onDuplicate, onSnooze, onSave, onMoveTo }: CardMenuProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          data-testid="task-card-menu"
+          type="button"
+          className="rounded p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-background-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent touch-manipulation transition-colors sm:min-h-0 sm:min-w-0 sm:px-1.5 sm:py-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:data-[state=open]:opacity-100"
+          aria-label="More actions"
+        >
+          <MoreHorizontalIcon className="h-4 w-4 sm:h-3 sm:w-3" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {onSave && !task.completed ? (
+          <DropdownMenuItem data-testid="save-task-mobile" onClick={() => onSave(task)}>
+            <BookmarkIcon className="mr-2 h-4 w-4" aria-hidden="true" />Move to Saved
+          </DropdownMenuItem>
+        ) : null}
+        {onMoveTo && !task.completed ? <MoveToSubmenu task={task} onMoveTo={onMoveTo} /> : null}
+        {onShare && (
+          <DropdownMenuItem onClick={() => onShare(task)}>
+            <Share2Icon className="mr-2 h-4 w-4" />
+            Share
+          </DropdownMenuItem>
+        )}
+        {onDuplicate && (
+          <DropdownMenuItem onClick={() => onDuplicate(task)}>
+            <CopyIcon className="mr-2 h-4 w-4" />
+            Duplicate
+          </DropdownMenuItem>
+        )}
+        {/* The non-gesture route to the trailing swipe's Snooze, same preset. */}
+        {onSnooze && !task.completed && (
+          <DropdownMenuItem data-testid="snooze-task" onClick={() => onSnooze(task.id, SWIPE_CONFIG.SNOOZE_MINUTES)}>
+            <MoonIcon className="mr-2 h-4 w-4" />
+            Snooze 1 hour
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem data-testid="delete-task" onClick={() => onDelete(task)} className="text-rust-d focus:text-rust-d">
+          <Trash2Icon className="mr-2 h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function MoveToSubmenu({ task, onMoveTo }: { task: TaskRecord; onMoveTo: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void }) {
+  const current = quadrantForTask(task.urgent, task.important).id;
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger data-testid="move-to">
+        <ArrowRightLeftIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+        Move to
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        {quadrants.map((quadrant) => (
+          <DropdownMenuItem
+            key={quadrant.id}
+            disabled={quadrant.id === current}
+            onClick={() => onMoveTo(task, quadrant.id)}
+          >
+            {quadrant.title}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 }
 

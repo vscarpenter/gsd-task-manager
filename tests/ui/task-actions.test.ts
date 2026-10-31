@@ -3,12 +3,12 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { createTask, snoozeTask } from "@/lib/tasks";
+import { createTask, duplicateTask, moveTaskToQuadrant, snoozeTask } from "@/lib/tasks";
 import { TaskValidationError } from "@/lib/tasks/crud/validation-error";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { createMockTask } from "@/tests/fixtures";
 import { logError } from "@/lib/error-logger";
-import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater } from "@/components/matrix-simplified/task-actions";
+import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater, handleDuplicate, handleMoveTo } from "@/components/matrix-simplified/task-actions";
 
 vi.mock("@/lib/tasks/saved", () => ({ saveTaskForLater: vi.fn(), returnSavedTask: vi.fn() }));
 
@@ -21,6 +21,8 @@ vi.mock("@/lib/tasks", () => ({
   toggleCompleted: vi.fn(),
   deleteTask: vi.fn(),
   snoozeTask: vi.fn(),
+  duplicateTask: vi.fn(),
+  moveTaskToQuadrant: vi.fn(),
 }));
 
 vi.mock("@/lib/error-logger", async (importOriginal) => ({
@@ -142,5 +144,46 @@ describe("captureAndReveal", () => {
 
     await expect(captureAndReveal({ title: "Pay rent", urgent: true, important: true, tags: [] }, reveal)).resolves.toBe(false);
     expect(reveal).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleDuplicate", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it("duplicates and confirms", async () => {
+    const task = createMockTask();
+    vi.mocked(duplicateTask).mockResolvedValue({ ...task, id: "copy" } as never);
+    await handleDuplicate(task);
+    expect(duplicateTask).toHaveBeenCalledWith(task.id);
+    expect(toast.success).toHaveBeenCalledWith("Task duplicated", expect.any(Object));
+  });
+
+  it("reports a failure", async () => {
+    vi.mocked(duplicateTask).mockRejectedValue(new Error("boom"));
+    await handleDuplicate(createMockTask());
+    expect(toast.error).toHaveBeenCalled();
+  });
+});
+
+describe("handleMoveTo", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it("moves, names the destination, and offers an Undo back to the original quadrant", async () => {
+    const task = createMockTask({ urgent: false, important: true, quadrant: "not-urgent-important" });
+    vi.mocked(moveTaskToQuadrant).mockResolvedValue({ ...task, urgent: true, quadrant: "urgent-important" } as never);
+    const offerUndo = vi.fn();
+    await handleMoveTo(task, "urgent-important", offerUndo);
+    expect(moveTaskToQuadrant).toHaveBeenCalledWith(task.id, "urgent-important");
+    expect(offerUndo).toHaveBeenCalledWith("Moved to Do First", expect.any(Function));
+    await offerUndo.mock.calls[0][1]();
+    expect(moveTaskToQuadrant).toHaveBeenLastCalledWith(task.id, "not-urgent-important");
+  });
+
+  it("reports a failed move and offers no Undo", async () => {
+    vi.mocked(moveTaskToQuadrant).mockRejectedValue(new Error("boom"));
+    const offerUndo = vi.fn();
+    await handleMoveTo(createMockTask(), "urgent-important", offerUndo);
+    expect(offerUndo).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalled();
   });
 });
