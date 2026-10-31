@@ -2,6 +2,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { renderToString } from 'react-dom/server';
 import { SettingsRow, SettingsSelectRow } from '@/components/settings/shared-components';
 import { AboutSection } from '@/components/settings/about-section';
+import packageJson from '@/package.json';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
 import { FeatureSettings } from '@/components/settings/feature-settings';
 import { NotificationSettingsSection } from '@/components/settings/notification-settings';
@@ -177,6 +178,18 @@ describe('Settings Components', () => {
       expect(screen.getByText('Version')).toBeInTheDocument();
     });
 
+    it('falls back to the package.json version when no build number is injected', () => {
+      const saved = process.env.NEXT_PUBLIC_BUILD_NUMBER;
+      delete process.env.NEXT_PUBLIC_BUILD_NUMBER;
+      try {
+        render(<AboutSection />);
+        expect(screen.getByText(packageJson.version)).toBeInTheDocument();
+        expect(screen.queryByText('6.1.1')).not.toBeInTheDocument();
+      } finally {
+        if (saved !== undefined) process.env.NEXT_PUBLIC_BUILD_NUMBER = saved;
+      }
+    });
+
     it('renders build date row', () => {
       render(<AboutSection />);
       expect(screen.getByText('Build')).toBeInTheDocument();
@@ -321,6 +334,51 @@ describe('Settings Components', () => {
         />
       );
       expect(screen.getByText('Default reminder')).toBeInTheDocument();
+    });
+
+    it('renders an off-list default reminder as stored instead of snapping it', () => {
+      render(
+        <NotificationSettingsSection
+          settings={{ ...enabledSettings, defaultReminder: 45 }}
+          onNotificationToggle={vi.fn()}
+          onDefaultReminderChange={vi.fn()}
+        />
+      );
+      const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
+      expect(select.value).toBe('45');
+      expect(select.selectedOptions[0]).toHaveTextContent('45 minutes');
+    });
+
+    it.each([
+      [1, '1 minute'],
+      [90, '90 minutes'],
+      [180, '3 hours'],
+      [2160, '36 hours'],
+      [2880, '2 days'],
+    ])('labels an off-list default reminder of %i minutes as "%s" without rounding', (minutes, label) => {
+      render(
+        <NotificationSettingsSection
+          settings={{ ...enabledSettings, defaultReminder: minutes }}
+          onNotificationToggle={vi.fn()}
+          onDefaultReminderChange={vi.fn()}
+        />
+      );
+      const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
+      expect(select.value).toBe(String(minutes));
+      expect(select.selectedOptions[0]).toHaveTextContent(label);
+    });
+
+    it('labels a zero-minute default reminder as at time', () => {
+      render(
+        <NotificationSettingsSection
+          settings={{ ...enabledSettings, defaultReminder: 0 }}
+          onNotificationToggle={vi.fn()}
+          onDefaultReminderChange={vi.fn()}
+        />
+      );
+      const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
+      expect(select.value).toBe('0');
+      expect(select.selectedOptions[0]).toHaveTextContent('At time');
     });
 
     it('hides default reminder select when notifications disabled', () => {

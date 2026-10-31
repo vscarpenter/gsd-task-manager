@@ -8,7 +8,7 @@
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
 import { classifyRemoteDeletion } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
@@ -129,16 +129,18 @@ async function applyRemoteRecords(records: RecordModel[], ownerId: string, merge
  * LWW: remote wins if remote client_updated_at > local updatedAt, or is equal
  * while `mergeSameVersion` backfills a newly synced field.
  * Throws StaleSyncSessionError when the user's session ends before a write.
+ * `skippedCount` is how many fetched records could not be applied; a pull that
+ * skipped any is not a whole pull, and work that needs one must not run on it.
  */
 export async function pullRemoteChanges(
   lastClientUpdatedAt: string | null,
   options: PullOptions = {},
-): Promise<{ pulledCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
+): Promise<{ pulledCount: number; skippedCount: number; authenticated: boolean; maxObservedTimestamp: string | null }> {
   const ownerId = getCurrentUserId();
 
   if (!ownerId) {
     logger.warn('Pull skipped: not authenticated');
-    return { pulledCount: 0, authenticated: false, maxObservedTimestamp: null };
+    return { pulledCount: 0, skippedCount: 0, authenticated: false, maxObservedTimestamp: null };
   }
 
   assertSafeRecordId(ownerId, 'ownerId');
@@ -172,7 +174,7 @@ export async function pullRemoteChanges(
   await reconcileDeletedTasks(ownerId);
 
   logger.debug('Pull completed', { pulledCount, fetched: records.length });
-  return { pulledCount, authenticated: true, maxObservedTimestamp };
+  return { pulledCount, skippedCount, authenticated: true, maxObservedTimestamp };
 }
 
 /**
@@ -240,6 +242,14 @@ async function reconcileDeletedTasks(ownerId: string): Promise<void> {
 
   const db = getDb();
   const remoteTaskIds = new Set(remoteIndex.keys());
+
+  // An empty listing is also what a rejected token gets, so before anything is
+  // deleted the session is confirmed. Nothing to delete means no extra request.
+  // Any failure here propagates: the sync reports an error and deletes nothing.
+  const [candidates, candidateQueueRows] = await Promise.all([db.tasks.toArray(), db.syncQueue.toArray()]);
+  if (planRemoteAbsence(candidates, remoteTaskIds, candidateQueueRows).deleteIds.length === 0) return;
+  await confirmSessionIdentity(ownerId);
+
   await db.transaction('rw', [db.tasks, db.deletedTasks, db.syncQueue, db.syncMetadata], async () => {
     // The index fetch may have outlived a sign-out; delete nothing for a past session.
     await assertSyncSessionCurrent(ownerId);

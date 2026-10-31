@@ -2,6 +2,7 @@ import { clsx } from "clsx";
 import { differenceInCalendarDays } from "date-fns";
 import { extendTailwindMerge } from "tailwind-merge";
 import { TIME_MS, DATE_CONFIG } from "@/lib/constants";
+import { formatTimeOf } from "@/lib/due-time";
 
 // tailwind-merge's default config only knows Tailwind's built-in font-size
 // scale (text-xs..text-9xl), so it doesn't recognize the Inkwell type ramp's
@@ -67,7 +68,8 @@ export function formatDueDate(value?: string): string {
     day: "numeric",
     year: "numeric"
   });
-  return `${dayOfWeek} - ${dateStr}`;
+  const time = formatTimeOf(value, DATE_CONFIG.LOCALE);
+  return time ? `${dayOfWeek} - ${dateStr}, ${time}` : `${dayOfWeek} - ${dateStr}`;
 }
 
 export function formatRelative(value?: string): string {
@@ -83,7 +85,9 @@ export function formatRelative(value?: string): string {
     return formatDueDate(value);
   }
 
-  return relativeTimeFormatter.format(dayDelta, "day");
+  const relative = relativeTimeFormatter.format(dayDelta, "day");
+  const time = formatTimeOf(value, DATE_CONFIG.LOCALE);
+  return time ? `${relative}, ${time}` : relative;
 }
 
 /**

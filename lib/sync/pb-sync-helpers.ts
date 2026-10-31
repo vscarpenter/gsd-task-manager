@@ -182,6 +182,26 @@ export async function fetchRemoteTaskIndex(ownerId: string): Promise<{
   }
 }
 
+/** The server answered auth-refresh, but with a record that is not the sync owner. */
+export class SessionIdentityMismatchError extends Error {
+  constructor() {
+    super('Sync session belongs to a different account');
+    this.name = 'SessionIdentityMismatchError';
+  }
+}
+
+/**
+ * Ask the server whether this session is really the owner's. A token the server
+ * rejects still lists `tasks` as 200 with zero items, the answer an empty account
+ * gives, so only auth-refresh (a 401 for a guest) tells the two apart. Rejection,
+ * an unreachable server, or another account's record all throw, and the caller
+ * must then delete nothing.
+ */
+export async function confirmSessionIdentity(ownerId: string): Promise<void> {
+  const { record } = await getPocketBase().collection('users').authRefresh();
+  if (record.id !== ownerId) throw new SessionIdentityMismatchError();
+}
+
 export async function fetchRemoteTaskEntry(
   ownerId: string,
   taskId: string

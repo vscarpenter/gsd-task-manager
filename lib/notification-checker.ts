@@ -15,6 +15,7 @@ import { isoNow } from "@/lib/utils";
 import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
 import { createLogger } from "@/lib/logger";
 import { isResetPending } from "@/lib/reset-lock";
+import { reminderWindow, type QuietHours } from "@/lib/notifications/reminder-window";
 
 const logger = createLogger("NOTIFICATIONS");
 
@@ -90,7 +91,10 @@ class NotificationChecker {
 
 		await Promise.all(
 			tasksWithDueDates.map((task) =>
-				this.checkTask(task, now, settings.defaultReminder),
+				this.checkTask(task, now, settings.defaultReminder, {
+					start: settings.quietHoursStart,
+					end: settings.quietHoursEnd,
+				}),
 			),
 		);
 
@@ -116,6 +120,7 @@ class NotificationChecker {
 		task: TaskRecord,
 		now: Date,
 		defaultReminder: number,
+		quiet: QuietHours,
 	): Promise<void> {
 		if (!task.dueDate) {
 			return;
@@ -129,10 +134,11 @@ class NotificationChecker {
 		// Determine notification window (use task-specific or default)
 		const notifyBefore = task.notifyBefore ?? defaultReminder;
 
-		// Check if we should notify
+		// Check if we should notify: inside the reminder window, not already sent.
+		const { fire, expires } = reminderWindow(task.dueDate, notifyBefore, quiet);
 		const shouldNotify =
-			minutesUntil <= notifyBefore && // Within notification window
-			minutesUntil > NOTIFICATION_TIMING.OVERDUE_NOTIFICATION_THRESHOLD && // Not more than 1 hour overdue (to avoid spam)
+			now >= fire &&
+			now < expires && // Not past the grace period (to avoid spam)
 			!task.notificationSent; // Haven't sent notification yet
 
 		if (!shouldNotify) {
@@ -304,17 +310,14 @@ export async function getDueSoonCount(): Promise<number> {
 			continue;
 		}
 
-		const dueDate = new Date(task.dueDate);
-		const minutesUntil = TIME_UTILS.msToMinutes(
-			dueDate.getTime() - now.getTime(),
-		);
 		const notifyBefore = task.notifyBefore ?? settings.defaultReminder;
+		const { fire, expires } = reminderWindow(task.dueDate, notifyBefore, {
+			start: settings.quietHoursStart,
+			end: settings.quietHoursEnd,
+		});
 
 		// Count tasks within notification window
-		if (
-			minutesUntil <= notifyBefore &&
-			minutesUntil > NOTIFICATION_TIMING.OVERDUE_NOTIFICATION_THRESHOLD
-		) {
+		if (now >= fire && now < expires) {
 			count++;
 		}
 	}
