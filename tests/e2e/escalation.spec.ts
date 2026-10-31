@@ -93,8 +93,7 @@ test.describe("Escalation by due date", () => {
     await card.hover();
     await card.getByRole("button", { name: "Edit task" }).click();
     const hint = page.getByTestId("edit-escalation-hint");
-    await expect(hint).toContainText("Escalating: due tomorrow, not marked urgent.");
-    await expect(hint).toContainText("Moves to Do First");
+    await expect(hint).toHaveText("Moves to Do First");
 
     await page.getByTestId("edit-quadrant-q1").click();
     await expect(hint).toHaveCount(0);

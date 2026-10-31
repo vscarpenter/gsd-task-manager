@@ -43,16 +43,14 @@ describe("<EditDrawer> escalation hint", () => {
     window.localStorage.removeItem(ESCALATION_WINDOW_KEY);
   });
 
-  it("explains the nudge beside the quadrant picker while the task is escalating", () => {
+  it("says where Mark urgent would send the task, beside the quadrant picker", () => {
     open({ dueDate: tomorrowAt(15, 30) });
-    const hint = screen.getByTestId("edit-escalation-hint");
-    expect(hint).toHaveTextContent("Escalating: due tomorrow, not marked urgent.");
-    expect(hint).toHaveTextContent("Moves to Do First");
+    expect(screen.getByTestId("edit-escalation-hint")).toHaveTextContent(/^Moves to Do First$/);
   });
 
   it("names Delegate for an Eliminate task", () => {
     open({ important: false, quadrant: "not-urgent-not-important", dueDate: tomorrowAt(0, 0) });
-    expect(screen.getByTestId("edit-escalation-hint")).toHaveTextContent("Moves to Delegate");
+    expect(screen.getByTestId("edit-escalation-hint")).toHaveTextContent(/^Moves to Delegate$/);
   });
 
   it.each([
