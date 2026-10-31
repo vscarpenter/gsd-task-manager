@@ -2,6 +2,7 @@
 
 import type { TaskRecord, NotificationSettings } from "@/lib/types";
 import { NOTIFICATION_TIMING, NOTIFICATION_ASSETS } from "@/lib/constants";
+import { timeOf } from "@/lib/due-time";
 import { getNotificationSettings } from "./settings";
 import {
   isNotificationSupported,
@@ -41,7 +42,9 @@ function isTaskSnoozed(task: TaskRecord): boolean {
  */
 function getNotificationTitle(task: TaskRecord, minutesUntil: number): string {
   if (minutesUntil <= 0) {
-    return `Due now: ${task.title}`;
+    // An all-day reminder fires at 08:00, hours after its midnight due time.
+    const allDay = task.dueDate !== undefined && timeOf(task.dueDate) === undefined;
+    return `${allDay ? "Due today" : "Due now"}: ${task.title}`;
   }
 
   if (minutesUntil < NOTIFICATION_TIMING.MINUTES_PER_HOUR) {

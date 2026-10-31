@@ -587,6 +587,31 @@ describe("Notifications module", () => {
 			});
 		});
 
+		it("says Due today for an all-day task whose midnight has passed", async () => {
+			mockNotificationConstructor.permission = "granted";
+			mockDb.notificationSettings.get.mockResolvedValue({
+				id: "settings",
+				enabled: true,
+				defaultReminder: 15,
+				soundEnabled: true,
+				permissionAsked: true,
+				updatedAt: new Date().toISOString(),
+			});
+			Object.defineProperty(global.navigator, 'serviceWorker', {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				value: undefined as any,
+				writable: true,
+				configurable: true,
+			});
+			const task = createTask({ title: "Task", dueDate: new Date(2026, 8, 24).toISOString() });
+
+			await showTaskNotification(task, -480);
+			expect(mockNotificationConstructor).toHaveBeenLastCalledWith(
+				"Due today: Task",
+				expect.any(Object),
+			);
+		});
+
 		it("should format notification title based on time until due", async () => {
 			mockNotificationConstructor.permission = "granted";
 			mockDb.notificationSettings.get.mockResolvedValue({

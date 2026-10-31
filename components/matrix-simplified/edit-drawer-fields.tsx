@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarIcon, XIcon } from "lucide-react";
 import { DATE_CONFIG } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib/quadrants";
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import type { RecurrenceType, Subtask } from "@/lib/types";
@@ -121,11 +122,17 @@ interface DueDateFieldProps {
   onPresetChange: (preset: DuePreset) => void;
   onCustomDateChange: (date: string | undefined) => void;
   onToggleCustomInput: (show: boolean) => void;
+  dueTime: string | undefined;
+  onDueTimeChange: (time: string | undefined) => void;
 }
+
+/** A time picked when All day is switched off; the user can change it right away. */
+const DEFAULT_DUE_TIME = "09:00";
 
 export function DueDateField({
   duePreset, customDate, showCustomDateInput,
   onPresetChange, onCustomDateChange, onToggleCustomInput,
+  dueTime, onDueTimeChange,
 }: DueDateFieldProps): React.ReactElement {
   return (
     <Field label="Due date" as="group">
@@ -183,6 +190,28 @@ export function DueDateField({
           </button>
         )}
       </div>
+
+      {customDate || duePreset !== "none" ? (
+        <div className="mt-2 flex items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-small font-medium text-foreground">
+            <Switch
+              aria-label="All day"
+              checked={dueTime === undefined}
+              onCheckedChange={(allDay) => onDueTimeChange(allDay ? undefined : DEFAULT_DUE_TIME)}
+            />
+            All day
+          </label>
+          {dueTime !== undefined ? (
+            <input
+              type="time"
+              value={dueTime}
+              onChange={(e) => { if (e.target.value) onDueTimeChange(e.target.value); }}
+              aria-label="Due time"
+              className="pointer-coarse:text-base rounded-md border border-border bg-background px-2.5 py-1 text-small font-medium text-foreground outline-none focus:border-foreground-muted focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+            />
+          ) : null}
+        </div>
+      ) : null}
     </Field>
   );
 }

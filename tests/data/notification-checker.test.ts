@@ -681,4 +681,54 @@ describe("NotificationChecker", () => {
 			expect(mockDb.tasks.update).not.toHaveBeenCalled();
 		});
 	});
+
+	describe("all-day tasks (due at local midnight)", () => {
+		const allDayDue = new Date(2026, 8, 24).toISOString();
+
+		async function runAt(now: Date, task: TaskRecord): Promise<void> {
+			vi.setSystemTime(now);
+			mockTasks.push(task);
+			await notificationChecker.checkAndNotify();
+		}
+
+		it("stays quiet at 23:45 the night before", async () => {
+			await runAt(new Date(2026, 8, 23, 23, 45), createTask({ dueDate: allDayDue, notifyBefore: 15 }));
+			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+		});
+
+		it("fires at 08:00 on the due day", async () => {
+			await runAt(new Date(2026, 8, 24, 8, 0), createTask({ dueDate: allDayDue, notifyBefore: 15 }));
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+		});
+
+		it("drops the reminder an hour after 08:00", async () => {
+			await runAt(new Date(2026, 8, 24, 9, 1), createTask({ dueDate: allDayDue, notifyBefore: 15 }));
+			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+		});
+
+		it("fires a one day offset at 08:00 the day before", async () => {
+			await runAt(new Date(2026, 8, 23, 8, 0), createTask({ dueDate: allDayDue, notifyBefore: 1440 }));
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+		});
+
+		it("still honors a future snooze", async () => {
+			const snoozedUntil = new Date(2026, 8, 24, 8, 30).toISOString();
+			await runAt(new Date(2026, 8, 24, 8, 0), createTask({ dueDate: allDayDue, notifyBefore: 15, snoozedUntil }));
+			expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+		});
+
+		it("keeps a timed task at due minus the offset", async () => {
+			const due = new Date(2026, 8, 24, 15, 30).toISOString();
+			await runAt(new Date(2026, 8, 24, 15, 15), createTask({ dueDate: due, notifyBefore: 15 }));
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+		});
+
+		it("counts an all-day task in the badge only inside its window", async () => {
+			vi.setSystemTime(new Date(2026, 8, 23, 23, 45));
+			mockTasks.push(createTask({ dueDate: allDayDue, notifyBefore: 15 }));
+			expect(await getDueSoonCount()).toBe(0);
+			vi.setSystemTime(new Date(2026, 8, 24, 8, 0));
+			expect(await getDueSoonCount()).toBe(1);
+		});
+	});
 });
