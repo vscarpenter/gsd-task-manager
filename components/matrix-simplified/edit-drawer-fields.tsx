@@ -5,10 +5,12 @@ import { CalendarIcon, XIcon } from "lucide-react";
 import { DATE_CONFIG } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib/quadrants";
+import type { EscalationResult } from "@/lib/escalation";
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import type { RecurrenceType, Subtask } from "@/lib/types";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { DueTimeControls } from "./edit-drawer-due-time";
+import { EscalationHint } from "./edit-drawer-escalation-hint";
 import { TagChip } from "./edit-drawer-tag-chip";
 import { LengthLimitNote } from "./limit-note";
 
@@ -55,9 +57,11 @@ interface QuadrantFieldProps {
   urgent: boolean;
   important: boolean;
   onChange: (urgent: boolean, important: boolean) => void;
+  /** While set and escalating, a hint says what Mark urgent would do. */
+  escalation?: EscalationResult;
 }
 
-export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProps): React.ReactElement {
+export function QuadrantField({ urgent, important, onChange, escalation }: QuadrantFieldProps): React.ReactElement {
   return (
     <Field label="Quadrant" as="group">
       <div className="grid grid-cols-2 gap-2">
@@ -89,6 +93,7 @@ export function QuadrantField({ urgent, important, onChange }: QuadrantFieldProp
           );
         })}
       </div>
+      <EscalationHint escalation={escalation} />
     </Field>
   );
 }

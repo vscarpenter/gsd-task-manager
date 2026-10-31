@@ -15,7 +15,7 @@ export interface EscalationResult {
   target: EscalationTarget | null;
 }
 
-type EscalationTask = Pick<TaskRecord, "urgent" | "important" | "completed" | "savedAt" | "dueDate">;
+export type EscalationTask = Pick<TaskRecord, "urgent" | "important" | "completed" | "savedAt" | "dueDate">;
 
 const MS_PER_DAY = 86_400_000;
 
