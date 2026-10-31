@@ -196,7 +196,7 @@ export const updateTaskTool: Tool = {
 export const completeTaskTool: Tool = {
   name: 'complete_task',
   description:
-    'Mark a task as complete or incomplete. Quick shortcut for updating completion status. Use dryRun=true to preview changes.',
+    'Mark a task as complete or incomplete. Quick shortcut for updating completion status. Completing a recurring task also creates its next instance, as the web app does. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {
