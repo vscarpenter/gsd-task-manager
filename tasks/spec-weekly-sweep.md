@@ -80,12 +80,13 @@ Every action already exists. The sweep calls it and adds nothing to it.
 |---|---|---|---|
 | Complete | `toggleCompleted` | `TaskStore.toggleComplete` | `TaskStore.setCompleted` |
 | New date, Add date | `updateTask` | `TaskStore.saveEdits` | `TaskStore.change` |
-| Mark urgent, Move | `moveTaskToQuadrant` | `TaskStore.saveEdits` | `TaskStore.change` |
+| Mark urgent | F1's `handleMarkUrgent` (`components/matrix-simplified/task-actions.ts`, #638) | F1's `TaskActions.markUrgent` (`App/Matrix/TaskActions.swift`, #44) | F1's `TaskActionsViewModel.markUrgent` (`app/.../matrix/`, #38) |
+| Move to quadrant | `moveTaskToQuadrant` | `TaskStore.saveEdits` | `TaskStore.change` |
 | Save for later | `saveTaskForLater` | `TaskStore.moveToSaved` | `TaskStore.moveToSaved` |
 | Return to matrix | `returnSavedTask`, with its quadrant and due date choices | `TaskStore.returnToMatrix` | `TaskStore.returnToMatrix` |
 | Delete (to Trash) | `deleteTask` | `TaskStore.delete` | `TaskStore.delete` |
 
-Existing rules hold: Save refuses a running timer, completing a recurring task spawns the next one, and Delete goes to Trash. New date uses the client's existing date control, including All day and time of day once C14 ships. Mark urgent carries its F1 hint ("Moves to Do First").
+Existing rules hold: Save refuses a running timer, completing a recurring task spawns the next one, and Delete goes to Trash. New date uses the client's existing date control, including All day and time of day once C14 ships. Mark urgent calls F1's own action, with its hint, toast, and Undo. Don't build a second one here.
 
 ## 6. Per-device state
 
@@ -125,7 +126,15 @@ The notification text is fixed: "Weekly sweep" and "A few minutes to clear what'
 |---|---|---|---|
 | Delivery | The notification checker, when the app is running, within 60 minutes after the occurrence. Otherwise it doesn't fire. The setting says so | One repeating `UNCalendarNotificationTrigger` | One inexact alarm, rescheduled after it fires and in `BootReceiver` |
 | Permission | The existing contextual ask, when the user turns it on | Same | Same (`ReminderPermission`) |
-| Limits | None | Apple caps pending notifications at 64, and I found no cap in `App/Notifications/`. Confirm a large task list can't push this one out | None: task reminders stop at `MAX_SCHEDULED_REMINDERS` (400), below Android's 500 |
+| Limits | None | iOS keeps 64 pending notifications. E-IOS-DATA's B-37 check owns that question (`sprint/findings/B-37.md`, once written). Apply its answer to this reminder too | None: task reminders stop at `MAX_SCHEDULED_REMINDERS` (400), below Android's 500 |
+
+**Task reminder rebuilds (read, not run):**
+
+- *Apple:* `TaskStore.resyncReminders` calls `cancelAll` (`TaskStore.swift:818`), and `LiveReminderScheduler.cancelAll` calls `removeAllPendingNotificationRequests` (`:68-70`). The app runs that resync whenever the task set changes, so a repeating trigger added once disappears at the next task change. `resyncReminders` must schedule the sweep reminder again from the stored setting after its `cancelAll`. Leave `cancelAll` alone, because Erase All Data also uses it (`TaskStore.swift:1054`) and has to clear this reminder. Erase clears the stored setting too.
+- *Android:* `ReminderScheduler.resyncAll` only touches alarms for the task ids it's given, one `PendingIntent` per id, so it leaves a separate alarm alone. Give the sweep alarm its own action, so it can't match a task's `PendingIntent` by request code. For the same reason, a local erase won't clear it by itself: the erase has to cancel it explicitly.
+- *Web:* nothing to rebuild. The checker reads the setting each time it runs.
+
+The tests hold on Apple and Android: `a task reminder resync keeps the sweep reminder` and `a local erase clears the sweep reminder`.
 
 ## 7. Surfaces
 
@@ -191,7 +200,7 @@ The Matrix screen and card are hotspots on every client, so land through the spr
 3. Session, on each client: opening, skipping, and leaving write nothing to any task and queue no push; reaching the end stamps last swept; leaving doesn't; a task completed elsewhere mid-sweep is skipped.
 4. Each action on each card calls the existing path, and its Undo works.
 5. UI: the entry follows `entryShown`; Review links to the sweep on web; the accessible names and live region; no count outside the position line.
-6. Reminder: scheduling on and off on native. On web, firing inside and outside the 60-minute window.
+6. Reminder: scheduling on and off on native, plus the two named tests in section 6. On web, firing inside and outside the 60-minute window.
 7. E2E on web: seed an overdue task, a stale Q4 task, and an undated Schedule task. Sweep them in order, complete one, skip one, and confirm the skipped task is unchanged.
 8. `verify-frontend-change` on web, and a simulator and emulator run on native, in two time zones.
 
