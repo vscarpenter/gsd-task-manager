@@ -77,8 +77,11 @@ export async function updateNotificationSettings(
   await db.notificationSettings.put(result.data);
 }
 
-/** The window toggleQuietHours seeds — the same overnight span the iOS client defaults to. */
-const DEFAULT_QUIET_HOURS = { start: "22:00", end: "08:00" } as const;
+/**
+ * The window toggleQuietHours seeds, matching the native clients' 22:00 to 07:00 default.
+ * It applies only when turning quiet hours on; a stored window is never rewritten.
+ */
+const DEFAULT_QUIET_HOURS = { start: "22:00", end: "07:00" } as const;
 
 /** Flip whether notifications play a sound. */
 export async function toggleNotificationSound(): Promise<void> {

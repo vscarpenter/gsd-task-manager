@@ -163,6 +163,7 @@ describe('pullRemoteChanges cursor clamping', () => {
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({
         getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
+        authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
       }),
     });
 
