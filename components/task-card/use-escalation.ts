@@ -1,14 +1,13 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { evaluateEscalation, type EscalationResult } from "@/lib/escalation";
+import { evaluateEscalation, type EscalationResult, type EscalationTask } from "@/lib/escalation";
 import {
   DEFAULT_ESCALATION_WINDOW_DAYS,
   readEscalationWindow,
   subscribeEscalationWindow,
   type EscalationWindow,
 } from "@/lib/preferences/escalation-window";
-import type { TaskRecord } from "@/lib/types";
 
 const RESYNC_AFTER_MIDNIGHT_MS = 1000;
 
@@ -40,7 +39,7 @@ function subscribeLocalDay(onChange: () => void): () => void {
 }
 
 /** The card's escalation signal, live against the per-device window and the local day. */
-export function useEscalation(task: TaskRecord): EscalationResult {
+export function useEscalation(task: EscalationTask): EscalationResult {
   const windowDays = useSyncExternalStore<EscalationWindow>(
     subscribeEscalationWindow,
     readEscalationWindow,
