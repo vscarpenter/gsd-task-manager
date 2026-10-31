@@ -6,6 +6,7 @@ import { OAuthButtons } from "@/components/sync/oauth-buttons";
 import type { LogoutControls } from "@/components/sync/use-logout";
 import type { SignOutEverywhereControls } from "@/components/sync/use-sign-out-everywhere";
 import type { AuthState, OAuthProvider } from "@/lib/sync/pb-auth";
+import { accountNote, accountNoteText } from "@/lib/apple-identity";
 import type { SyncStatusInfo } from "./use-sync-auth-dialog";
 
 interface OAuthCallbacks {
@@ -82,6 +83,17 @@ interface AuthenticatedSectionProps {
   signOutEverywhere: SignOutEverywhereControls;
 }
 
+/** Which account an Apple sign-in landed on, since each provider is its own account. */
+function AccountNoteText({ provider, email }: { provider?: string | null; email: string | null }) {
+  const note = accountNote(provider, email);
+  if (!note) return null;
+  return (
+    <p role="note" className="mt-2 text-xs text-foreground-muted">
+      {accountNoteText(note)}
+    </p>
+  );
+}
+
 /** UI for when the user is authenticated and sync is active */
 export function AuthenticatedSection({
   syncStatus,
@@ -100,6 +112,7 @@ export function AuthenticatedSection({
             via {syncStatus.provider}
           </p>
         )}
+        <AccountNoteText provider={syncStatus.provider} email={syncStatus.email} />
       </div>
 
       <ErrorMessage error={error} />

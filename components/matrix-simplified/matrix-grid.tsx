@@ -1,7 +1,7 @@
 "use client";
 
 import { quadrants, type RedesignQuadrantKey } from "@/lib/quadrants";
-import type { TaskRecord } from "@/lib/types";
+import type { QuadrantId, TaskRecord } from "@/lib/types";
 import { QuadrantPane } from "./quadrant-pane";
 
 interface MatrixGridProps {
@@ -13,6 +13,8 @@ interface MatrixGridProps {
   onDelete: (task: TaskRecord) => void | Promise<void>;
   onShare: (task: TaskRecord) => void;
   onSave?: (task: TaskRecord) => Promise<void> | void;
+  onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
   onMarkUrgent?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
@@ -28,7 +30,7 @@ export function MatrixGrid({
   onInspect,
   onToggleComplete,
   onDelete,
-  onShare, onSnooze, onSave, onMarkUrgent,
+  onShare, onSnooze, onSave, onDuplicate, onMoveTo, onMarkUrgent,
   onAddInQuadrant,
   highlightedTaskId,
   onTaskRef,
@@ -79,7 +81,7 @@ export function MatrixGrid({
             onInspect={onInspect}
             onToggleComplete={onToggleComplete}
             onDelete={onDelete}
-            onShare={onShare} onSnooze={onSnooze} onSave={onSave} onMarkUrgent={onMarkUrgent}
+            onShare={onShare} onSnooze={onSnooze} onSave={onSave} onDuplicate={onDuplicate} onMoveTo={onMoveTo} onMarkUrgent={onMarkUrgent}
             onAddInQuadrant={onAddInQuadrant}
             highlightedTaskId={highlightedTaskId}
             onTaskRef={onTaskRef}
