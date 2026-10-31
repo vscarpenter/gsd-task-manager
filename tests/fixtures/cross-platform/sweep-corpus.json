@@ -1,0 +1,1692 @@
+{
+  "note": "Canonical weekly sweep behavior (GSD parity decision D-14; spec gsd-taskmanager/tasks/spec-weekly-sweep.md). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/sweep-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/sweep-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/sweep-corpus.json, and every suite runs every case. A task field left out takes the model's default: not urgent, not important, not completed, savedAt and dueDate null, createdAt and updatedAt 2026-11-07T00:00:00.000Z, location active. location isn't a task field: the test keeps only active rows before calling the function, because archived and trashed rows live in their own stores. windowDays null means escalation is Off, and escalation itself is pinned by escalation-corpus.json. Every age is a count of local calendar days in zone, never elapsed time. reminder.weekday is ISO: 1 is Monday and 7 is Sunday. A local time inside a daylight-saving gap shifts forward by the length of the gap, and a time inside an overlap takes the first occurrence. If behavior changes, change the spec, this file in all three repos, and all three implementations together.",
+  "version": 1,
+  "cases": [
+    {
+      "name": "the full order: overdue, escalating, stale with Q4 first, old Saved, undated Schedule",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "u2",
+          "urgent": false,
+          "important": true,
+          "createdAt": "2026-11-05T00:00:00.000Z"
+        },
+        {
+          "id": "u1",
+          "urgent": false,
+          "important": true,
+          "createdAt": "2026-11-01T00:00:00.000Z"
+        },
+        {
+          "id": "v2",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-09T17:00:00.000Z"
+        },
+        {
+          "id": "v1",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-09-01T17:00:00.000Z"
+        },
+        {
+          "id": "s3",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-01T00:00:00.000Z"
+        },
+        {
+          "id": "s2",
+          "urgent": true,
+          "important": false,
+          "updatedAt": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "id": "s1",
+          "urgent": false,
+          "important": false,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        },
+        {
+          "id": "e2",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        },
+        {
+          "id": "e1",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        },
+        {
+          "id": "o2",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-07T06:00:00.000Z"
+        },
+        {
+          "id": "o1",
+          "urgent": true,
+          "important": false,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "o1",
+            "reason": "overdue"
+          },
+          {
+            "id": "o2",
+            "reason": "overdue"
+          },
+          {
+            "id": "e1",
+            "reason": "escalating"
+          },
+          {
+            "id": "e2",
+            "reason": "escalating"
+          },
+          {
+            "id": "s1",
+            "reason": "stale"
+          },
+          {
+            "id": "s2",
+            "reason": "stale"
+          },
+          {
+            "id": "s3",
+            "reason": "stale"
+          },
+          {
+            "id": "v1",
+            "reason": "saved"
+          },
+          {
+            "id": "v2",
+            "reason": "saved"
+          },
+          {
+            "id": "u1",
+            "reason": "undated-schedule"
+          },
+          {
+            "id": "u2",
+            "reason": "undated-schedule"
+          }
+        ]
+      }
+    },
+    {
+      "name": "nothing qualifies",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": false
+        },
+        {
+          "id": "c",
+          "urgent": false,
+          "important": false
+        },
+        {
+          "id": "d",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-20T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "overdue covers every quadrant",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-04T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": false,
+          "dueDate": "2026-11-06T06:00:00.000Z"
+        },
+        {
+          "id": "d",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-07T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "overdue"
+          },
+          {
+            "id": "b",
+            "reason": "overdue"
+          },
+          {
+            "id": "c",
+            "reason": "overdue"
+          },
+          {
+            "id": "d",
+            "reason": "overdue"
+          }
+        ]
+      }
+    },
+    {
+      "name": "due today isn't overdue",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-08T15:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "due today earlier than now isn't overdue either",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-08T14:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "yesterday at 23:59 is overdue a minute after midnight",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T00:01:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-08T05:59:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "overdue"
+          }
+        ]
+      }
+    },
+    {
+      "name": "overdue stays with escalation Off",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": null,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "overdue"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the zone decides what's overdue: Tokyo",
+      "op": "cards",
+      "zone": "Asia/Tokyo",
+      "now": "2026-11-09T01:00:00+09:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-08T14:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "overdue"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the zone decides what's overdue: Chicago at that instant",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-08T14:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "overdue ties fall back to id",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        },
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "overdue"
+          },
+          {
+            "id": "b",
+            "reason": "overdue"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a Schedule task due today escalates",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-08T15:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "escalating"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an Eliminate task escalates too",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "escalating"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the window's last day escalates",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-10T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "escalating"
+          }
+        ]
+      }
+    },
+    {
+      "name": "one day past the window doesn't",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-11T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "a one-day window",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 1,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-10T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "escalating"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a seven-day window",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 7,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-15T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-16T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "escalating"
+          }
+        ]
+      }
+    },
+    {
+      "name": "escalation Off shows no due-soon card",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": null,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "an urgent task due soon isn't escalating",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": false,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "escalating ties put important first",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "b",
+            "reason": "escalating"
+          },
+          {
+            "id": "a",
+            "reason": "escalating"
+          }
+        ]
+      }
+    },
+    {
+      "name": "14 local days without an edit is stale",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "13 local days isn't",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-26T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "Q4 comes first even when it's newer",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": false,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "b",
+            "reason": "stale"
+          },
+          {
+            "id": "a",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "within Q4, oldest first",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": false,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": false,
+          "updatedAt": "2026-09-01T00:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "b",
+            "reason": "stale"
+          },
+          {
+            "id": "a",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "outside Q4, oldest first whatever the quadrant",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": false,
+          "updatedAt": "2026-10-01T00:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": false,
+          "important": true,
+          "updatedAt": "2026-09-01T00:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "c",
+            "reason": "stale"
+          },
+          {
+            "id": "b",
+            "reason": "stale"
+          },
+          {
+            "id": "a",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "stale ties fall back to id",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        },
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "stale"
+          },
+          {
+            "id": "b",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a future stamp isn't stale",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2027-01-01T00:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "14 local days can be under 14 elapsed days",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T00:30:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-26T04:30:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "14 elapsed days can be 13 local days",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T23:30:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-26T05:30:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "the zone decides what's stale: Chicago",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T08:30:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-25T16:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the zone decides what's stale: Tokyo at that instant",
+      "op": "cards",
+      "zone": "Asia/Tokyo",
+      "now": "2026-11-08T23:30:00+09:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "updatedAt": "2026-10-25T16:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "Saved 30 local days ago gets a card",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-09T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "saved"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Saved 29 local days ago doesn't",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-10T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "old Saved runs oldest first",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-09T17:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": false,
+          "savedAt": "2026-09-01T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "b",
+            "reason": "saved"
+          },
+          {
+            "id": "a",
+            "reason": "saved"
+          }
+        ]
+      }
+    },
+    {
+      "name": "old Saved ties fall back to id",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-09T17:00:00.000Z"
+        },
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-09T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "saved"
+          },
+          {
+            "id": "b",
+            "reason": "saved"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a Saved task is never overdue here",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "savedAt": "2026-10-10T17:00:00.000Z",
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "a Saved task never escalates here",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-10T17:00:00.000Z",
+          "dueDate": "2026-11-09T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "a Saved task with an old edit isn't stale",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-10T17:00:00.000Z",
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "a Saved Schedule task isn't undated Schedule",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-10T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "the zone decides how old Saved is: Chicago",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T08:30:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-09T16:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "saved"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the zone decides how old Saved is: Tokyo at that instant",
+      "op": "cards",
+      "zone": "Asia/Tokyo",
+      "now": "2026-11-08T23:30:00+09:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "savedAt": "2026-10-09T16:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "an undated Schedule task gets a card",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "undated-schedule"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a dated Schedule task doesn't",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-20T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "undated Do First, Delegate, and Eliminate don't",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": false
+        },
+        {
+          "id": "c",
+          "urgent": false,
+          "important": false
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "undated Schedule runs oldest first",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "createdAt": "2026-11-05T00:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "createdAt": "2026-11-01T00:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "b",
+            "reason": "undated-schedule"
+          },
+          {
+            "id": "a",
+            "reason": "undated-schedule"
+          }
+        ]
+      }
+    },
+    {
+      "name": "undated Schedule ties fall back to id",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true
+        },
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "undated-schedule"
+          },
+          {
+            "id": "b",
+            "reason": "undated-schedule"
+          }
+        ]
+      }
+    },
+    {
+      "name": "overdue beats stale",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-05T06:00:00.000Z",
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "overdue"
+          }
+        ]
+      }
+    },
+    {
+      "name": "escalating beats stale",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-09T06:00:00.000Z",
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "escalating"
+          }
+        ]
+      }
+    },
+    {
+      "name": "stale beats undated Schedule",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "with escalation Off, a stale due-soon task is stale",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": null,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-09T06:00:00.000Z",
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "stale"
+          }
+        ]
+      }
+    },
+    {
+      "name": "completed tasks never get a card",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "completed": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "completed": true,
+          "updatedAt": "2026-10-25T17:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": false,
+          "important": true,
+          "completed": true
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "a completed Saved task never gets a card",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "completed": true,
+          "savedAt": "2026-10-09T17:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "archived tasks never get a card",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "location": "archived",
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "trashed tasks never get a card",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "location": "trashed",
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "cards": []
+      }
+    },
+    {
+      "name": "recurrence and tags don't change a card",
+      "op": "cards",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z",
+          "recurrence": "weekly",
+          "tags": [
+            "home"
+          ]
+        }
+      ],
+      "expect": {
+        "cards": [
+          {
+            "id": "a",
+            "reason": "overdue"
+          }
+        ]
+      }
+    },
+    {
+      "name": "never swept, with cards",
+      "op": "entryShown",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "lastSweptAt": null,
+      "cardCount": 3,
+      "expect": {
+        "shown": true
+      }
+    },
+    {
+      "name": "never swept, with nothing to do",
+      "op": "entryShown",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "lastSweptAt": null,
+      "cardCount": 0,
+      "expect": {
+        "shown": false
+      }
+    },
+    {
+      "name": "swept today",
+      "op": "entryShown",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "lastSweptAt": "2026-11-08T09:00:00-06:00",
+      "cardCount": 3,
+      "expect": {
+        "shown": false
+      }
+    },
+    {
+      "name": "swept six local days ago",
+      "op": "entryShown",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "lastSweptAt": "2026-11-02T23:30:00-06:00",
+      "cardCount": 3,
+      "expect": {
+        "shown": false
+      }
+    },
+    {
+      "name": "swept seven local days ago",
+      "op": "entryShown",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "lastSweptAt": "2026-11-01T01:00:00-05:00",
+      "cardCount": 3,
+      "expect": {
+        "shown": true
+      }
+    },
+    {
+      "name": "swept long ago, with nothing to do",
+      "op": "entryShown",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "lastSweptAt": "2026-01-01T00:00:00.000Z",
+      "cardCount": 0,
+      "expect": {
+        "shown": false
+      }
+    },
+    {
+      "name": "seven local days can be under seven elapsed days",
+      "op": "entryShown",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T00:30:00-06:00",
+      "lastSweptAt": "2026-11-01T23:30:00-06:00",
+      "cardCount": 3,
+      "expect": {
+        "shown": true
+      }
+    },
+    {
+      "name": "the zone decides: Tokyo",
+      "op": "entryShown",
+      "zone": "Asia/Tokyo",
+      "now": "2026-11-08T23:30:00+09:00",
+      "lastSweptAt": "2026-11-01T16:00:00.000Z",
+      "cardCount": 3,
+      "expect": {
+        "shown": false
+      }
+    },
+    {
+      "name": "a swept time in the future hides the entry",
+      "op": "entryShown",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "lastSweptAt": "2026-11-20T00:00:00.000Z",
+      "cardCount": 3,
+      "expect": {
+        "shown": false
+      }
+    },
+    {
+      "name": "off means no reminder",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "reminder": {
+        "enabled": false,
+        "weekday": 7,
+        "time": "09:00"
+      },
+      "expect": {
+        "fire": null
+      }
+    },
+    {
+      "name": "later today",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T08:59:00-06:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "09:00"
+      },
+      "expect": {
+        "fire": "2026-11-08T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "exactly at the time moves to next week",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T09:00:00-06:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "09:00"
+      },
+      "expect": {
+        "fire": "2026-11-15T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "just past the time moves to next week",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "09:00"
+      },
+      "expect": {
+        "fire": "2026-11-15T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "midweek looks ahead to Sunday",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2026-11-11T12:00:00-06:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "09:00"
+      },
+      "expect": {
+        "fire": "2026-11-15T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "Monday is weekday 1",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2026-11-08T10:00:00-06:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 1,
+        "time": "07:30"
+      },
+      "expect": {
+        "fire": "2026-11-09T13:30:00.000Z"
+      }
+    },
+    {
+      "name": "the wall clock survives fall-back",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2026-10-31T12:00:00-05:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "09:00"
+      },
+      "expect": {
+        "fire": "2026-11-01T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "the wall clock survives spring-forward",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2027-03-13T12:00:00-06:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "09:00"
+      },
+      "expect": {
+        "fire": "2027-03-14T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "a time inside a gap shifts forward by the gap",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2027-03-13T12:00:00-06:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "02:30"
+      },
+      "expect": {
+        "fire": "2027-03-14T08:30:00.000Z"
+      }
+    },
+    {
+      "name": "a time inside an overlap takes the first occurrence",
+      "op": "nextReminder",
+      "zone": "America/Chicago",
+      "now": "2026-10-31T12:00:00-05:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "01:30"
+      },
+      "expect": {
+        "fire": "2026-11-01T06:30:00.000Z"
+      }
+    },
+    {
+      "name": "Tokyo's Sunday",
+      "op": "nextReminder",
+      "zone": "Asia/Tokyo",
+      "now": "2026-11-07T12:00:00+09:00",
+      "reminder": {
+        "enabled": true,
+        "weekday": 7,
+        "time": "09:00"
+      },
+      "expect": {
+        "fire": "2026-11-08T00:00:00.000Z"
+      }
+    }
+  ]
+}

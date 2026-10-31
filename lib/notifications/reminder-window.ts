@@ -23,7 +23,9 @@ export interface ReminderWindow {
  * When a due date's reminder fires and stops being sent.
  *
  * A timed task fires at its due time minus the offset and expires an hour past
- * the due time. An all-day task (local midnight) fires at 09:00 local on its due
+ * the later of the due time and its fire time. Quiet hours can defer the fire
+ * past the due time (due 02:00, window ends 07:00), and an hour measured from
+ * the due time would drop that reminder before it could fire. An all-day task (local midnight) fires at 09:00 local on its due
  * day, one day earlier per whole day of offset, and expires an hour after that,
  * since an hour past midnight would drop every 09:00 reminder.
  */
@@ -35,7 +37,8 @@ export function reminderWindow(
   const due = new Date(dueIso);
   if (timeOf(dueIso)) {
     const fire = new Date(due.getTime() - notifyBeforeMinutes * NOTIFICATION_TIMING.MS_PER_MINUTE);
-    return { fire: deferPastQuietHours(fire, quiet), expires: new Date(due.getTime() + GRACE_MS) };
+    const deferred = deferPastQuietHours(fire, quiet);
+    return { fire: deferred, expires: new Date(Math.max(due.getTime(), deferred.getTime()) + GRACE_MS) };
   }
   const wholeDays = Math.floor(notifyBeforeMinutes / NOTIFICATION_TIMING.MINUTES_PER_DAY);
   const planned = new Date(due.getFullYear(), due.getMonth(), due.getDate() - wholeDays, ALL_DAY_REMINDER_HOUR);
