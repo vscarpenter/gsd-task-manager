@@ -17,6 +17,8 @@ export interface TaskCardProps {
   onSave?: (task: TaskRecord) => Promise<void> | void;
   /** Moves the task to a quadrant from the card menu; the owner offers Undo. */
   onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
+  /** Sets the urgent flag on an escalating task; the owner offers Undo. */
+  onMarkUrgent?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onClearSnooze?: (taskId: string) => Promise<void>;
   onStartTimer?: (taskId: string) => Promise<void>;

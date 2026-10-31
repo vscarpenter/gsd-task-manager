@@ -430,6 +430,8 @@ function SchedulingAndLinksFields({
             onPresetChange={draft.setDuePreset}
             onCustomDateChange={draft.setCustomDate}
             onToggleCustomInput={draft.setShowCustomDateInput}
+            dueTime={draft.dueTime}
+            onDueTimeChange={draft.setDueTime}
           />
 
           <TagsField

@@ -466,5 +466,35 @@ describe("Backup envelope", () => {
       expect(await db.tasks.get("shared")).toBeDefined();
       expect(await db.deletedTasks.get("shared")).toBeUndefined();
     });
+
+    it("should_not_overwrite_a_local_trash_row_when_merging", async () => {
+      const db = getDb();
+      await db.deletedTasks.put({
+        ...createMockTask({ id: "trashed-local", title: "Local edit" }),
+        deletedAt: "2026-03-01T00:00:00.000Z",
+      });
+
+      await importTasks(
+        {
+          version: "2.1.0",
+          exportedAt: "2026-01-01T00:00:00.000Z",
+          tasks: [],
+          deletedTasks: [
+            {
+              ...createMockTask({ id: "trashed-local", title: "Backup copy" }),
+              deletedAt: "2026-01-01T00:00:00.000Z",
+            },
+            { ...createMockTask({ id: "trashed-new" }), deletedAt: "2026-01-02T00:00:00.000Z" },
+          ],
+        },
+        "merge"
+      );
+
+      // Merge adds what is missing; it never rewrites a row the user already has.
+      const kept = await db.deletedTasks.get("trashed-local");
+      expect(kept?.title).toBe("Local edit");
+      expect(kept?.deletedAt).toBe("2026-03-01T00:00:00.000Z");
+      expect(await db.deletedTasks.get("trashed-new")).toBeDefined();
+    });
   });
 });

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { RecurrenceType, Subtask, TaskRecord } from "@/lib/types";
 import { DUE_PRESETS, localDayOf, resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
+import { combine, onDate, timeOf } from "@/lib/due-time";
 import { useDefaultReminder } from "@/lib/notifications/use-default-reminder";
 import { UI_TIMING } from "@/lib/constants/ui";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
@@ -43,6 +44,9 @@ export interface EditDraftState {
   setCustomDate: (v: string | undefined) => void;
   showCustomDateInput: boolean;
   setShowCustomDateInput: (v: boolean) => void;
+  /** Local "HH:mm", or undefined for an all-day due date. */
+  dueTime: string | undefined;
+  setDueTime: (v: string | undefined) => void;
   tags: string[];
   setTags: (v: string[]) => void;
   tagInput: string;
@@ -234,12 +238,16 @@ function useAutofocusTitle(titleRef: RefObject<HTMLInputElement | null>): void {
 function resolveDueDate(
   customDate: string | undefined,
   duePreset: DuePreset,
+  dueTime: string | undefined,
   storedDueDate: string | undefined
 ): string | undefined {
   const rawDate = customDate ?? resolveDuePreset(duePreset);
   if (!rawDate) return undefined;
-  if (storedDueDate && localDayOf(storedDueDate) === rawDate) return storedDueDate;
-  return new Date(`${rawDate}T00:00:00`).toISOString();
+  if (storedDueDate && timeOf(storedDueDate) === dueTime) {
+    // An untouched time keeps its seconds too, so a day change never rewrites it.
+    return localDayOf(storedDueDate) === rawDate ? storedDueDate : onDate(storedDueDate, rawDate);
+  }
+  return combine(rawDate, dueTime);
 }
 
 /**
@@ -257,7 +265,19 @@ function useDueDateDraft(task: TaskRecord | null | undefined) {
     task ? classifyExistingCustomDate(task.dueDate) : undefined
   );
   const [showCustomDateInput, setShowCustomDateInput] = useState(false);
-  return { duePreset, setDuePreset, customDate, setCustomDate, showCustomDateInput, setShowCustomDateInput };
+  const [dueTime, setDueTime] = useState<string | undefined>(() =>
+    task?.dueDate ? timeOf(task.dueDate) : undefined
+  );
+  // A preset writes an all-day date, as Android does (`preset.resolve(today).atStartOfDay`).
+  // Only picking a date keeps the time already set.
+  const changePreset = (preset: DuePreset): void => {
+    setDuePreset(preset);
+    setDueTime(undefined);
+  };
+  return {
+    duePreset, setDuePreset: changePreset, customDate, setCustomDate,
+    showCustomDateInput, setShowCustomDateInput, dueTime, setDueTime,
+  };
 }
 
 export function useEditDraftState(
@@ -293,7 +313,7 @@ export function useEditDraftState(
     description: description.trim(),
     urgent,
     important,
-    dueDate: resolveDueDate(due.customDate, due.duePreset, task?.dueDate),
+    dueDate: resolveDueDate(due.customDate, due.duePreset, due.dueTime, task?.dueDate),
     tags,
     dependencies,
     recurrence: detail.recurrence,

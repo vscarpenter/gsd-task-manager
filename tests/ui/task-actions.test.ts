@@ -3,12 +3,12 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { clearSnooze, createTask, duplicateTask, moveTaskToQuadrant, snoozeTask } from "@/lib/tasks";
+import { clearSnooze, createTask, duplicateTask, moveTaskToQuadrant, snoozeTask, updateTask } from "@/lib/tasks";
 import { TaskValidationError } from "@/lib/tasks/crud/validation-error";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { createMockTask } from "@/tests/fixtures";
 import { logError } from "@/lib/error-logger";
-import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater, handleDuplicate, handleMoveTo, handleClearSnooze } from "@/components/matrix-simplified/task-actions";
+import { captureAndReveal, handleCapture, handleSnooze, handleSaveForLater, handleDuplicate, handleMoveTo, handleClearSnooze, handleMarkUrgent } from "@/components/matrix-simplified/task-actions";
 
 vi.mock("@/lib/tasks/saved", () => ({ saveTaskForLater: vi.fn(), returnSavedTask: vi.fn() }));
 
@@ -24,6 +24,7 @@ vi.mock("@/lib/tasks", () => ({
   duplicateTask: vi.fn(),
   clearSnooze: vi.fn(),
   moveTaskToQuadrant: vi.fn(),
+  updateTask: vi.fn(),
 }));
 
 vi.mock("@/lib/error-logger", async (importOriginal) => ({
@@ -217,6 +218,38 @@ describe("handleClearSnooze", () => {
   it("reports a failure", async () => {
     vi.mocked(clearSnooze).mockRejectedValue(new Error("boom"));
     await handleClearSnooze("task-1");
+    expect(toast.error).toHaveBeenCalled();
+  });
+});
+
+describe("handleMarkUrgent", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it("sets urgent through updateTask and offers an Undo that clears it", async () => {
+    const task = createMockTask({ urgent: false, important: true });
+    vi.mocked(updateTask).mockResolvedValue({ ...task, urgent: true } as never);
+    const offerUndo = vi.fn();
+    await handleMarkUrgent(task, offerUndo);
+    expect(updateTask).toHaveBeenCalledWith(task.id, { urgent: true });
+    expect(offerUndo).toHaveBeenCalledWith("Moved to Do First", expect.any(Function));
+    await offerUndo.mock.calls[0][1]();
+    expect(updateTask).toHaveBeenLastCalledWith(task.id, { urgent: false });
+  });
+
+  it("names Delegate for an Eliminate task", async () => {
+    const task = createMockTask({ urgent: false, important: false });
+    vi.mocked(updateTask).mockResolvedValue({ ...task, urgent: true } as never);
+    const offerUndo = vi.fn();
+    await handleMarkUrgent(task, offerUndo);
+    expect(offerUndo).toHaveBeenCalledWith("Moved to Delegate", expect.any(Function));
+  });
+
+  it("reports a failed update and offers no Undo", async () => {
+    const task = createMockTask();
+    vi.mocked(updateTask).mockRejectedValue(new Error("boom"));
+    const offerUndo = vi.fn();
+    await handleMarkUrgent(task, offerUndo);
+    expect(offerUndo).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalled();
   });
 });

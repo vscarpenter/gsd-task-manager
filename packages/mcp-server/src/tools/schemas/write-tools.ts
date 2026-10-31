@@ -222,7 +222,7 @@ export const completeTaskTool: Tool = {
 export const deleteTaskTool: Tool = {
   name: 'delete_task',
   description:
-    'Permanently delete a task. This action cannot be undone. Deletes default to dryRun=true, so pass dryRun=false explicitly to apply.',
+    'Permanently delete a task. The delete is immediate and cannot be undone: it skips the 30-day Trash on every client, so the task cannot be restored from the web, iOS, or Android app. Deletes default to dryRun=true, so pass dryRun=false explicitly to apply.',
   inputSchema: {
     type: 'object',
     properties: {

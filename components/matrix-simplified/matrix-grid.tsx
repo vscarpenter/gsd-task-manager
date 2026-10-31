@@ -16,6 +16,7 @@ interface MatrixGridProps {
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onClearSnooze?: (taskId: string) => Promise<void>;
   onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
+  onMarkUrgent?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onAddInQuadrant: (key: RedesignQuadrantKey) => void;
   highlightedTaskId?: string | null;
@@ -30,7 +31,7 @@ export function MatrixGrid({
   onInspect,
   onToggleComplete,
   onDelete,
-  onShare, onSnooze, onSave, onDuplicate, onMoveTo, onClearSnooze,
+  onShare, onSnooze, onSave, onDuplicate, onMoveTo, onClearSnooze, onMarkUrgent,
   onAddInQuadrant,
   highlightedTaskId,
   onTaskRef,
@@ -81,7 +82,7 @@ export function MatrixGrid({
             onInspect={onInspect}
             onToggleComplete={onToggleComplete}
             onDelete={onDelete}
-            onShare={onShare} onSnooze={onSnooze} onSave={onSave} onDuplicate={onDuplicate} onMoveTo={onMoveTo} onClearSnooze={onClearSnooze}
+            onShare={onShare} onSnooze={onSnooze} onSave={onSave} onDuplicate={onDuplicate} onMoveTo={onMoveTo} onClearSnooze={onClearSnooze} onMarkUrgent={onMarkUrgent}
             onAddInQuadrant={onAddInQuadrant}
             highlightedTaskId={highlightedTaskId}
             onTaskRef={onTaskRef}

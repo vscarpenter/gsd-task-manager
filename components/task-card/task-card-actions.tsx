@@ -1,14 +1,21 @@
 "use client";
 
-import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon, ArrowRightLeftIcon } from "lucide-react";
+import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon, ArrowRightLeftIcon, ArrowUpIcon } from "lucide-react";
 import { cn, formatRelative, isRepeatClick } from "@/lib/utils";
 import { DATE_CONFIG, TIME_MS } from "@/lib/constants";
 import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { quadrantForTask, quadrants } from "@/lib/quadrants";
+import { escalationLabel, type EscalationResult } from "@/lib/escalation";
+import { useEscalation } from "@/components/task-card/use-escalation";
+import { QUADRANT_INK, quadrantForTask, quadrants } from "@/lib/quadrants";
 import { SNOOZE_PRESETS } from "@/lib/snooze-presets";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
+
+const MARK_URGENT_HINT = {
+  "urgent-important": "Moves to Do First",
+  "urgent-not-important": "Moves to Delegate",
+} as const;
 
 /** True when a future due date is within 24h. Used to color-shift the clock glyph. */
 function isWithinDay(iso: string): boolean {
@@ -52,6 +59,7 @@ export interface TaskCardActionsProps {
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onClearSnooze?: (taskId: string) => Promise<void>;
   onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
+  onMarkUrgent?: (task: TaskRecord) => Promise<void> | void;
 }
 
 export function TaskCardActions({
@@ -65,9 +73,10 @@ export function TaskCardActions({
   onDuplicate,
   onSnooze,
   onSave,
-  onMoveTo,
-  onClearSnooze,
+  onMoveTo, onMarkUrgent, onClearSnooze,
 }: TaskCardActionsProps) {
+  const escalation = useEscalation(task);
+  const markUrgent = escalation.escalating && onMarkUrgent ? { target: escalation.target, run: onMarkUrgent } : undefined;
   return (
     <div
       data-testid="task-card-actions"
@@ -113,18 +122,24 @@ export function TaskCardActions({
             <RepeatIcon className="h-3 w-3" />
           </span>
         ) : null}
+        <EscalatingTag escalation={escalation} />
         <SnoozedChip task={task} />
       </div>
       <div className="flex shrink-0 items-center gap-0.5">
         {/* Desktop: all buttons on hover. Snooze is touch-only, by design. */}
-        <DesktopActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSave={onSave} />
+        <DesktopActions task={task} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSave={onSave} markUrgent={markUrgent} />
 
         {/* Mobile: the edit button; the overflow menu below serves every width. */}
         <MobileEditButton task={task} onEdit={onEdit} />
-        <CardMenu task={task} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} onSave={onSave} onMoveTo={onMoveTo} onClearSnooze={onClearSnooze} />
+        <CardMenu task={task} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} onSnooze={onSnooze} onSave={onSave} onMoveTo={onMoveTo} onClearSnooze={onClearSnooze} markUrgent={markUrgent} />
       </div>
     </div>
   );
+}
+
+interface MarkUrgent {
+  target: EscalationResult["target"];
+  run: (task: TaskRecord) => Promise<void> | void;
 }
 
 interface DesktopActionsProps {
@@ -134,11 +149,15 @@ interface DesktopActionsProps {
   onDelete: (task: TaskRecord) => Promise<void> | void;
   onShare?: (task: TaskRecord) => void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
+  markUrgent?: MarkUrgent;
 }
 
-function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSave }: DesktopActionsProps) {
+function DesktopActions({ task, onEdit, onDelete, onShare, onDuplicate, onSave, markUrgent }: DesktopActionsProps) {
   return (
     <div className="task-card-desktop-actions hidden sm:flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      {markUrgent?.target ? (
+        <DesktopTaskAction label={`Mark urgent, ${MARK_URGENT_HINT[markUrgent.target].replace("Moves", "moves")}`} testId="mark-urgent" icon={ArrowUpIcon} onClick={() => markUrgent.run(task)} />
+      ) : null}
       {onSave && !task.completed ? <DesktopTaskAction label="Move to Saved" testId="save-task" icon={BookmarkIcon} onClick={() => onSave(task)} /> : null}
       {onShare ? <DesktopTaskAction label="Share task" icon={Share2Icon} onClick={() => onShare(task)} /> : null}
       {onDuplicate ? <DesktopTaskAction label="Duplicate task" icon={CopyIcon} onClick={() => onDuplicate(task)} /> : null}
@@ -192,13 +211,14 @@ interface CardMenuProps {
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
   onClearSnooze?: (taskId: string) => Promise<void>;
   onMoveTo?: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void;
+  markUrgent?: MarkUrgent;
 }
 
 /**
  * The ⋯ menu. Always in the row: shown on touch widths, and revealed with the
  * hover icons from `sm` up so a mouse user can reach Move to and the rest.
  */
-function CardMenu({ task, onDelete, onShare, onDuplicate, onSnooze, onClearSnooze, onSave, onMoveTo }: CardMenuProps) {
+function CardMenu({ task, onDelete, onShare, onDuplicate, onSnooze, onClearSnooze, onSave, onMoveTo, markUrgent }: CardMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -212,6 +232,7 @@ function CardMenu({ task, onDelete, onShare, onDuplicate, onSnooze, onClearSnooz
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <MarkUrgentMenuItem task={task} markUrgent={markUrgent} />
         {onSave && !task.completed ? (
           <DropdownMenuItem data-testid="save-task-mobile" onClick={() => onSave(task)}>
             <BookmarkIcon className="mr-2 h-4 w-4" aria-hidden="true" />Move to Saved
@@ -262,6 +283,19 @@ function SnoozeSubmenu({ task, onSnooze, onClearSnooze }: { task: TaskRecord; on
   );
 }
 
+function MarkUrgentMenuItem({ task, markUrgent }: { task: TaskRecord; markUrgent?: MarkUrgent }) {
+  if (!markUrgent?.target) return null;
+  return (
+    <DropdownMenuItem data-testid="mark-urgent-menu" onClick={() => markUrgent.run(task)}>
+      <ArrowUpIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+      <span className="flex flex-col">
+        Mark urgent
+        <span className="text-xs text-foreground-muted">{MARK_URGENT_HINT[markUrgent.target]}</span>
+      </span>
+    </DropdownMenuItem>
+  );
+}
+
 function MoveToSubmenu({ task, onMoveTo }: { task: TaskRecord; onMoveTo: (task: TaskRecord, quadrant: QuadrantId) => Promise<void> | void }) {
   const current = quadrantForTask(task.urgent, task.important).id;
   return (
@@ -298,6 +332,29 @@ function SnoozedChip({ task }: { task: TaskRecord }) {
     >
       <MoonIcon className="h-3 w-3 shrink-0" aria-hidden />
       Snoozed {formatSnoozeRemaining(getRemainingSnoozeMinutes(task))}
+    </span>
+  );
+}
+
+/**
+ * Escalation signal: text plus an up arrow in the target quadrant's ink, never
+ * color alone. The visible word is "Escalating"; the full due phrase is the
+ * accessible name so the card stays quiet.
+ */
+function EscalatingTag({ escalation }: { escalation: EscalationResult }) {
+  if (!escalation.escalating || escalation.daysUntilDue === null || !escalation.target) return null;
+  const ink = QUADRANT_INK[escalation.target === "urgent-important" ? "q1" : "q3"];
+  const fullLabel = escalationLabel(escalation.daysUntilDue);
+  return (
+    <span
+      data-testid="task-card-escalating-tag"
+      role="img"
+      aria-label={fullLabel}
+      className="inline-flex items-center gap-1 font-semibold"
+      style={{ color: ink }}
+    >
+      <ArrowUpIcon className="h-3 w-3 shrink-0" aria-hidden />
+      <span aria-hidden>Escalating</span>
     </span>
   );
 }

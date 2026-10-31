@@ -1,0 +1,730 @@
+{
+  "note": "Canonical escalation-by-due-date behavior (GSD parity decisions D-11 and D-12; spec gsd-taskmanager/tasks/spec-escalation.md). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/escalation-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/escalation-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/escalation-corpus.json, and every suite runs every case. windowDays null means the setting is Off. A task field left out takes the model's default. If behavior changes, change the spec, this file in all three repos, and all three implementations together.",
+  "version": 1,
+  "cases": [
+    {
+      "name": "schedule task due tomorrow escalates toward Do First",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 1,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "schedule task due today escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-29T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 0,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "schedule task due on the window's last day escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-31T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 2,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "schedule task due one day past the window does not escalate",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-11-01T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 3,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "schedule task overdue by one day escalates as overdue",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-28T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": -1,
+        "reason": "overdue",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "schedule task overdue since last year escalates as overdue",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2025-10-29T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": -365,
+        "reason": "overdue",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "eliminate task due tomorrow escalates toward Delegate",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": false,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 1,
+        "reason": "due-soon",
+        "target": "urgent-not-important"
+      }
+    },
+    {
+      "name": "eliminate task overdue escalates toward Delegate",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": false,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-28T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": -1,
+        "reason": "overdue",
+        "target": "urgent-not-important"
+      }
+    },
+    {
+      "name": "do-first task is already urgent",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": true,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 1,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "delegate task is already urgent even when overdue",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": true,
+        "important": false,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-28T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": -1,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "completed task never escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": true,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 1,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "completed overdue task never escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": true,
+        "savedAt": null,
+        "dueDate": "2026-10-28T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": -1,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "saved task never escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": "2026-10-27T15:00:00.000Z",
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 1,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "task with no due date never escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": null
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": null,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "window off: due today does not escalate",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": null,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-29T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 0,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "window off: overdue does not escalate",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": null,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-28T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": -1,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "window 1: due tomorrow escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 1,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 1,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "window 1: due in two days does not escalate",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 1,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-31T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 2,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "window 1: overdue still escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 1,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-28T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": -1,
+        "reason": "overdue",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "window 3: due in three days escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 3,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-11-01T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 3,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "window 7: due in seven days escalates across the fall-back change",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 7,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-11-05T06:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 7,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "window 7: due in eight days does not escalate",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 7,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-11-06T06:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 8,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "recurrence doesn't matter",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z",
+        "recurrence": "weekly"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 1,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "snooze doesn't matter",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z",
+        "snoozedUntil": "2026-10-29T18:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 1,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "tuesday evening counts friday as three calendar days",
+      "zone": "America/Chicago",
+      "now": "2026-10-27T21:30:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 3,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "tuesday evening, window 3: friday escalates",
+      "zone": "America/Chicago",
+      "now": "2026-10-27T21:30:00-05:00",
+      "windowDays": 3,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 3,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "one minute before midnight counts tomorrow as one day",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T23:59:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 1,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "one minute after midnight counts today as zero days",
+      "zone": "America/Chicago",
+      "now": "2026-10-30T00:01:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 0,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "a due time later today is zero days",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-29T22:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 0,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "a due time earlier today that has passed is still zero days, not overdue",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T14:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-29T14:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 0,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "the same instants in Chicago count one day",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T20:00:00.000Z",
+      "windowDays": 0,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": false,
+        "daysUntilDue": 1,
+        "reason": null,
+        "target": null
+      }
+    },
+    {
+      "name": "the same instants in Tokyo count zero days",
+      "zone": "Asia/Tokyo",
+      "now": "2026-10-29T20:00:00.000Z",
+      "windowDays": 0,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-30T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 0,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "window 0 escalates only what is due today or overdue",
+      "zone": "America/Chicago",
+      "now": "2026-10-29T10:00:00-05:00",
+      "windowDays": 0,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-28T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": -1,
+        "reason": "overdue",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "fall back: saturday noon to monday midnight is two days",
+      "zone": "America/Chicago",
+      "now": "2026-10-31T12:00:00-05:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-11-02T06:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 2,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "spring forward: saturday noon to monday midnight is two days",
+      "zone": "America/Chicago",
+      "now": "2027-03-13T12:00:00-06:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2027-03-15T05:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 2,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "year boundary: new year's eve night to new year's day is one day",
+      "zone": "America/Chicago",
+      "now": "2026-12-31T22:00:00-06:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2027-01-01T06:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 1,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "leap year: february 28 to march 1 is two days",
+      "zone": "America/Chicago",
+      "now": "2028-02-28T10:00:00-06:00",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": true,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2028-03-01T06:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 2,
+        "reason": "due-soon",
+        "target": "urgent-important"
+      }
+    },
+    {
+      "name": "UTC device",
+      "zone": "UTC",
+      "now": "2026-10-29T23:30:00.000Z",
+      "windowDays": 2,
+      "task": {
+        "urgent": false,
+        "important": false,
+        "completed": false,
+        "savedAt": null,
+        "dueDate": "2026-10-31T00:00:00.000Z"
+      },
+      "expect": {
+        "escalating": true,
+        "daysUntilDue": 2,
+        "reason": "due-soon",
+        "target": "urgent-not-important"
+      }
+    }
+  ]
+}

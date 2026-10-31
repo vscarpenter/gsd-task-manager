@@ -1,0 +1,43 @@
+{
+  "version": "2.1.0",
+  "exportedAt": "2026-10-26T12:00:00.000Z",
+  "tasks": [
+    {
+      "title": "Read the cross-client article",
+      "description": "Read when this project becomes active.\nhttps://example.com/saved",
+      "urgent": false,
+      "important": true,
+      "recurrence": "none",
+      "tags": [
+        "reading"
+      ],
+      "subtasks": [],
+      "dependencies": [],
+      "notificationEnabled": true,
+      "id": "fkXzSdXIafQr",
+      "quadrant": "not-urgent-important",
+      "completed": false,
+      "savedAt": "2026-10-26T12:00:00.000Z",
+      "createdAt": "2026-10-26T12:00:00.000Z",
+      "updatedAt": "2026-10-26T12:00:00.000Z",
+      "notificationSent": false,
+      "timeEntries": []
+    }
+  ],
+  "archivedTasks": [],
+  "deletedTasks": [],
+  "smartViews": [],
+  "notificationSettings": {
+    "id": "settings",
+    "enabled": true,
+    "defaultReminder": 15,
+    "soundEnabled": true,
+    "permissionAsked": false,
+    "updatedAt": "2026-10-26T12:00:00.000Z"
+  },
+  "archiveSettings": {
+    "id": "settings",
+    "enabled": false,
+    "archiveAfterDays": 30
+  }
+}

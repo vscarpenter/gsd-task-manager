@@ -140,6 +140,14 @@ describe('Tool Schemas', () => {
   });
 
   describe('Write Tools', () => {
+    it('delete_task says the delete is permanent, skips Trash everywhere, and defaults to a dry run', () => {
+      const text = deleteTaskTool.description ?? '';
+      expect(text).toMatch(/permanent/i);
+      expect(text).toMatch(/30-day Trash/);
+      expect(text).toMatch(/every client/i);
+      expect(text).toMatch(/dryRun=true/);
+    });
+
     it('all write tools should have optional dryRun parameter', () => {
       writeTools.forEach((tool) => {
         expect(tool.inputSchema.properties).toHaveProperty('dryRun');

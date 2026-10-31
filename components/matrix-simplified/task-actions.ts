@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 
-import { createTask, toggleCompleted, deleteTask, snoozeTask, clearSnooze, duplicateTask, moveTaskToQuadrant } from "@/lib/tasks";
+import { createTask, toggleCompleted, deleteTask, snoozeTask, clearSnooze, updateTask, duplicateTask, moveTaskToQuadrant } from "@/lib/tasks";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
@@ -170,5 +170,22 @@ export async function handleClearSnooze(taskId: string): Promise<void> {
     toast.success("Snooze cleared", { duration: TOAST_DURATION.SHORT });
   } catch (error) {
     reportTaskMutationError(error, ErrorActions.SNOOZE_TASK, "Failed to clear snooze", taskId);
+  }
+}
+
+/**
+ * Mark urgent on an escalating card: an ordinary edit through updateTask, so the
+ * card moves with the usual animation. Undo clears the flag again.
+ */
+export async function handleMarkUrgent(
+  task: TaskRecord,
+  offerUndo: (message: string, undo: () => Promise<void>) => void
+): Promise<void> {
+  try {
+    const moved = await updateTask(task.id, { urgent: true });
+    const destination = quadrantForTask(moved.urgent, moved.important).title;
+    offerUndo(`Moved to ${destination}`, () => updateTask(task.id, { urgent: false }).then(() => {}));
+  } catch (error) {
+    reportTaskMutationError(error, ErrorActions.UPDATE_TASK, "Failed to mark task urgent", task.id);
   }
 }

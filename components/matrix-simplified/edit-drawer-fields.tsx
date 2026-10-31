@@ -8,6 +8,7 @@ import { quadrants, QUADRANT_ACCENT, QUADRANT_HEADER, QUADRANT_INK } from "@/lib
 import { DUE_PRESETS, type DuePreset } from "@/lib/due-date-presets";
 import type { RecurrenceType, Subtask } from "@/lib/types";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
+import { DueTimeControls } from "./edit-drawer-due-time";
 import { TagChip } from "./edit-drawer-tag-chip";
 import { LengthLimitNote } from "./limit-note";
 
@@ -121,11 +122,12 @@ interface DueDateFieldProps {
   onPresetChange: (preset: DuePreset) => void;
   onCustomDateChange: (date: string | undefined) => void;
   onToggleCustomInput: (show: boolean) => void;
+  dueTime: string | undefined;
+  onDueTimeChange: (time: string | undefined) => void;
 }
 
 export function DueDateField({
-  duePreset, customDate, showCustomDateInput,
-  onPresetChange, onCustomDateChange, onToggleCustomInput,
+  duePreset, customDate, showCustomDateInput, onPresetChange, onCustomDateChange, onToggleCustomInput, dueTime, onDueTimeChange,
 }: DueDateFieldProps): React.ReactElement {
   return (
     <Field label="Due date" as="group">
@@ -183,6 +185,7 @@ export function DueDateField({
           </button>
         )}
       </div>
+      {(customDate || duePreset !== "none") && <DueTimeControls dueTime={dueTime} onDueTimeChange={onDueTimeChange} />}
     </Field>
   );
 }
