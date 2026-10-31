@@ -4,6 +4,7 @@ import type { GsdConfig, Task } from '../../types.js';
 const mocks = vi.hoisted(() => ({
   fetchSinglePBTaskFresh: vi.fn(),
   updateTaskInPBById: vi.fn().mockResolvedValue(undefined),
+  createTaskInPB: vi.fn().mockResolvedValue(undefined),
   getAuthInfo: vi.fn().mockResolvedValue({ ownerId: 'owner-1', deviceId: 'device-1' }),
   invalidate: vi.fn(),
 }));
@@ -16,6 +17,7 @@ vi.mock('../../write-ops/helpers.js', async () => {
     ...actual,
     fetchSinglePBTaskFresh: mocks.fetchSinglePBTaskFresh,
     updateTaskInPBById: mocks.updateTaskInPBById,
+    createTaskInPB: mocks.createTaskInPB,
     getAuthInfo: mocks.getAuthInfo,
   };
 });
@@ -221,5 +223,117 @@ describe('updateTask', () => {
 
     expect(result.task.completed).toBe(true);
     expect(result.dryRun).toBe(true);
+  });
+});
+
+describe('completeTask with a recurring task', () => {
+  // Mirrors toggleCompleted in lib/tasks/crud/toggle.ts: completing a recurring
+  // task spawns the next instance. Dates are mid-day and clear of DST changes,
+  // because the web rule advances them in local time.
+  function recurring(recurrence: Task['recurrence'], dueDate?: string, extra: Partial<Task> = {}): Task {
+    return task('series', {
+      recurrence,
+      ...(dueDate ? { dueDate } : {}),
+      tags: ['home'],
+      subtasks: [{ id: 'st-1', title: 'Step', completed: true }],
+      notificationSent: true,
+      lastNotificationAt: '2026-06-10T11:00:00.000Z',
+      snoozedUntil: '2026-06-10T13:00:00.000Z',
+      ...extra,
+    });
+  }
+
+  async function complete(current: Task, options?: { dryRun?: boolean }) {
+    const fresh = freshRecord(current);
+    // freshRecord hard-codes the notification fields; give the series real values.
+    Object.assign(fresh.record, {
+      notification_sent: true,
+      last_notification_at: '2026-06-10T11:00:00.000Z',
+      snoozed_until: '2026-06-10T13:00:00.000Z',
+    });
+    mocks.fetchSinglePBTaskFresh.mockResolvedValue(fresh);
+    return completeTask(config, current.id, true, options);
+  }
+
+  it.each([
+    ['daily', '2026-06-10T12:00:00.000Z', '2026-06-11T12:00:00.000Z'],
+    ['weekly', '2026-06-10T12:00:00.000Z', '2026-06-17T12:00:00.000Z'],
+    ['monthly', '2026-06-10T12:00:00.000Z', '2026-07-10T12:00:00.000Z'],
+    // The web uses setMonth, which overflows: Jan 31 plus a month is Mar 3.
+    ['monthly', '2026-01-31T12:00:00.000Z', '2026-03-03T12:00:00.000Z'],
+  ] as const)('creates the next %s instance due %s -> %s', async (recurrence, due, next) => {
+    const result = await complete(recurring(recurrence, due));
+
+    expect(mocks.createTaskInPB).toHaveBeenCalledTimes(1);
+    const created = mocks.createTaskInPB.mock.calls[0][1] as Task;
+    expect(created.dueDate).toBe(next);
+    expect(result.recurringInstance?.id).toBe(created.id);
+  });
+
+  it('resets the instance the way the web does and keeps the series fields', async () => {
+    const original = recurring('daily', '2026-06-10T12:00:00.000Z');
+    await complete(original);
+
+    const created = mocks.createTaskInPB.mock.calls[0][1] as Task;
+    expect(created.id).not.toBe(original.id);
+    expect(created).toMatchObject({
+      title: original.title,
+      recurrence: 'daily',
+      tags: ['home'],
+      completed: false,
+      notificationSent: false,
+      quadrant: original.quadrant,
+    });
+    expect(created.completedAt).toBeUndefined();
+    expect(created.lastNotificationAt).toBeUndefined();
+    expect(created.snoozedUntil).toBeUndefined();
+    expect(created.subtasks).toEqual([{ id: 'st-1', title: 'Step', completed: false }]);
+    expect(created.createdAt).toBe(created.updatedAt);
+  });
+
+  it('keeps an undated recurring instance undated', async () => {
+    await complete(recurring('weekly'));
+
+    expect((mocks.createTaskInPB.mock.calls[0][1] as Task).dueDate).toBeUndefined();
+  });
+
+  it('creates nothing for a one-off task', async () => {
+    const result = await complete(task('once'));
+
+    expect(mocks.createTaskInPB).not.toHaveBeenCalled();
+    expect(result.recurringInstance).toBeUndefined();
+  });
+
+  it('creates nothing when marking a recurring task incomplete', async () => {
+    mocks.fetchSinglePBTaskFresh.mockResolvedValue(
+      freshRecord(recurring('daily', '2026-06-10T12:00:00.000Z', { completed: true }))
+    );
+
+    await completeTask(config, 'series', false);
+
+    expect(mocks.createTaskInPB).not.toHaveBeenCalled();
+  });
+
+  it('creates nothing when the task was already complete', async () => {
+    await complete(recurring('daily', '2026-06-10T12:00:00.000Z', { completed: true }));
+
+    expect(mocks.createTaskInPB).not.toHaveBeenCalled();
+  });
+
+  it('previews the next instance on a dry run without saving anything', async () => {
+    const result = await complete(recurring('daily', '2026-06-10T12:00:00.000Z'), { dryRun: true });
+
+    expect(result.recurringInstance?.dueDate).toBe('2026-06-11T12:00:00.000Z');
+    expect(mocks.createTaskInPB).not.toHaveBeenCalled();
+    expect(mocks.updateTaskInPBById).not.toHaveBeenCalled();
+  });
+
+  it('says so when the task completed but the next instance could not be created', async () => {
+    mocks.createTaskInPB.mockRejectedValueOnce(new Error('network down'));
+
+    await expect(complete(recurring('daily', '2026-06-10T12:00:00.000Z'))).rejects.toThrow(
+      /marked complete, but the next recurring instance could not be created/
+    );
+    expect(mocks.updateTaskInPBById).toHaveBeenCalledTimes(1);
   });
 });

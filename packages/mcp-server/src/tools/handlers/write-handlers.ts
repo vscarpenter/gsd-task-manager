@@ -104,9 +104,15 @@ export async function handleCompleteTask(
   if (result.dryRun) {
     message = `🔍 DRY RUN - Task would be marked as ${args.completed ? 'complete' : 'incomplete'} (not saved):\n\n`;
     message += JSON.stringify(result.task, null, 2);
+    if (result.recurringInstance) {
+      message += `\n\nThe next recurring instance would be created:\n\n${JSON.stringify(result.recurringInstance, null, 2)}`;
+    }
     message += `\n\nTo apply this change, remove dryRun or set it to false.`;
   } else {
     message = `✅ Task marked as ${args.completed ? 'complete' : 'incomplete'}!\n\n${JSON.stringify(result.task, null, 2)}`;
+    if (result.recurringInstance) {
+      message += `\n\nNext recurring instance created:\n\n${JSON.stringify(result.recurringInstance, null, 2)}`;
+    }
   }
 
   return {
