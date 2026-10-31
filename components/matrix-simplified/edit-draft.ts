@@ -14,4 +14,6 @@ export interface EditDraft {
   /** Minutes before the due date to remind. Undefined means "use the global default". */
   notifyBefore?: number;
   notificationEnabled?: boolean;
+  /** When the task wakes up again. Undefined means not snoozed; saved on its own, not through the draft schema. */
+  snoozedUntil?: string;
 }

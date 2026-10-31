@@ -4,7 +4,7 @@ import { handleSaveForLater, taskContext } from "./task-actions";
 
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { DndContext, closestCorners } from "@dnd-kit/core";
-import { createTask, updateTask, deleteTask, restoreTask } from "@/lib/tasks";
+import { createTask, deleteTask, restoreTask } from "@/lib/tasks";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
 import { toast } from "sonner";
 import { TOAST_DURATION } from "@/lib/constants";
@@ -18,7 +18,7 @@ import { quadrantByRdKey, type RedesignQuadrantKey } from "@/lib/quadrants";
 import { ShareTaskDialog } from "@/components/share-task-dialog";
 import { AppShell } from "./app-shell";
 import { CaptureBar, type CapturePayload } from "./capture-bar";
-import { captureAndReveal, handleClearSnooze, handleDuplicate, handleMarkUrgent, handleMoveTo, handleSnooze, handleToggle, reportTaskMutationError } from "./task-actions";
+import { saveEditedTask, captureAndReveal, handleClearSnooze, handleDuplicate, handleMarkUrgent, handleMoveTo, handleSnooze, handleToggle, reportTaskMutationError } from "./task-actions";
 import { neighborFocusId, scheduleCardFocus } from "./focus-after-removal";
 import { DragLayer } from "./drag-layer";
 import { FilteredEmpty } from "./filtered-empty";
@@ -278,7 +278,7 @@ export function MatrixSimplified() {
     try {
       if (taskId) {
         // Only what this drawer changed: its other fields may be stale.
-        await updateTask(taskId, changed ?? draft);
+        await saveEditedTask(taskId, changed ?? draft);
         toast.success("Task updated", { duration: TOAST_DURATION.SHORT });
         dispatchOverlay({ type: "closeEdit" });
       } else {
