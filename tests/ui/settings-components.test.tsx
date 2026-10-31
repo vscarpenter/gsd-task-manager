@@ -2,6 +2,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { renderToString } from 'react-dom/server';
 import { SettingsRow, SettingsSelectRow } from '@/components/settings/shared-components';
 import { AboutSection } from '@/components/settings/about-section';
+import packageJson from '@/package.json';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
 import { FeatureSettings } from '@/components/settings/feature-settings';
 import { NotificationSettingsSection } from '@/components/settings/notification-settings';
@@ -175,6 +176,18 @@ describe('Settings Components', () => {
     it('renders version label', () => {
       render(<AboutSection />);
       expect(screen.getByText('Version')).toBeInTheDocument();
+    });
+
+    it('falls back to the package.json version when no build number is injected', () => {
+      const saved = process.env.NEXT_PUBLIC_BUILD_NUMBER;
+      delete process.env.NEXT_PUBLIC_BUILD_NUMBER;
+      try {
+        render(<AboutSection />);
+        expect(screen.getByText(packageJson.version)).toBeInTheDocument();
+        expect(screen.queryByText('6.1.1')).not.toBeInTheDocument();
+      } finally {
+        if (saved !== undefined) process.env.NEXT_PUBLIC_BUILD_NUMBER = saved;
+      }
     });
 
     it('renders build date row', () => {
