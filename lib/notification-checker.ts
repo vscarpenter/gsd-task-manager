@@ -15,7 +15,7 @@ import { isoNow } from "@/lib/utils";
 import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
 import { createLogger } from "@/lib/logger";
 import { isResetPending } from "@/lib/reset-lock";
-import { reminderWindow } from "@/lib/notifications/reminder-window";
+import { reminderWindow, type QuietHours } from "@/lib/notifications/reminder-window";
 
 const logger = createLogger("NOTIFICATIONS");
 
@@ -91,7 +91,10 @@ class NotificationChecker {
 
 		await Promise.all(
 			tasksWithDueDates.map((task) =>
-				this.checkTask(task, now, settings.defaultReminder),
+				this.checkTask(task, now, settings.defaultReminder, {
+					start: settings.quietHoursStart,
+					end: settings.quietHoursEnd,
+				}),
 			),
 		);
 
@@ -117,6 +120,7 @@ class NotificationChecker {
 		task: TaskRecord,
 		now: Date,
 		defaultReminder: number,
+		quiet: QuietHours,
 	): Promise<void> {
 		if (!task.dueDate) {
 			return;
@@ -131,7 +135,7 @@ class NotificationChecker {
 		const notifyBefore = task.notifyBefore ?? defaultReminder;
 
 		// Check if we should notify: inside the reminder window, not already sent.
-		const { fire, expires } = reminderWindow(task.dueDate, notifyBefore);
+		const { fire, expires } = reminderWindow(task.dueDate, notifyBefore, quiet);
 		const shouldNotify =
 			now >= fire &&
 			now < expires && // Not past the grace period (to avoid spam)
@@ -307,7 +311,10 @@ export async function getDueSoonCount(): Promise<number> {
 		}
 
 		const notifyBefore = task.notifyBefore ?? settings.defaultReminder;
-		const { fire, expires } = reminderWindow(task.dueDate, notifyBefore);
+		const { fire, expires } = reminderWindow(task.dueDate, notifyBefore, {
+			start: settings.quietHoursStart,
+			end: settings.quietHoursEnd,
+		});
 
 		// Count tasks within notification window
 		if (now >= fire && now < expires) {

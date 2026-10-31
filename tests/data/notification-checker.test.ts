@@ -711,6 +711,23 @@ describe("NotificationChecker", () => {
 			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
 		});
 
+		it("fires at 09:00 when quiet hours end then, instead of dropping the 08:00 reminder", async () => {
+			vi.mocked(notifications.getNotificationSettings).mockResolvedValue(
+				createSettings({ quietHoursStart: "22:00", quietHoursEnd: "09:00" }),
+			);
+			await runAt(new Date(2026, 8, 24, 9, 0), createTask({ dueDate: allDayDue, notifyBefore: 15 }));
+			expect(notifications.showTaskNotification).toHaveBeenCalledTimes(1);
+		});
+
+		it("counts that deferred reminder in the badge at 09:00", async () => {
+			vi.mocked(notifications.getNotificationSettings).mockResolvedValue(
+				createSettings({ quietHoursStart: "22:00", quietHoursEnd: "09:00" }),
+			);
+			vi.setSystemTime(new Date(2026, 8, 24, 9, 0));
+			mockTasks.push(createTask({ dueDate: allDayDue, notifyBefore: 15 }));
+			expect(await getDueSoonCount()).toBe(1);
+		});
+
 		it("still honors a future snooze", async () => {
 			const snoozedUntil = new Date(2026, 8, 24, 8, 30).toISOString();
 			await runAt(new Date(2026, 8, 24, 8, 0), createTask({ dueDate: allDayDue, notifyBefore: 15, snoozedUntil }));

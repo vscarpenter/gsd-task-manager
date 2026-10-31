@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { RecurrenceType, Subtask, TaskRecord } from "@/lib/types";
 import { DUE_PRESETS, localDayOf, resolveDuePreset, type DuePreset } from "@/lib/due-date-presets";
-import { combine, timeOf } from "@/lib/due-time";
+import { combine, onDate, timeOf } from "@/lib/due-time";
 import { useDefaultReminder } from "@/lib/notifications/use-default-reminder";
 import { UI_TIMING } from "@/lib/constants/ui";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
@@ -243,8 +243,9 @@ function resolveDueDate(
 ): string | undefined {
   const rawDate = customDate ?? resolveDuePreset(duePreset);
   if (!rawDate) return undefined;
-  if (storedDueDate && localDayOf(storedDueDate) === rawDate && timeOf(storedDueDate) === dueTime) {
-    return storedDueDate;
+  if (storedDueDate && timeOf(storedDueDate) === dueTime) {
+    // An untouched time keeps its seconds too, so a day change never rewrites it.
+    return localDayOf(storedDueDate) === rawDate ? storedDueDate : onDate(storedDueDate, rawDate);
   }
   return combine(rawDate, dueTime);
 }
