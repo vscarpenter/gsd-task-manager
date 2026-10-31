@@ -50,7 +50,7 @@ export function NotificationSettingsSection({
 					<SettingsSelectRow
 						label="Default reminder"
 						value={reminderLabel(settings.defaultReminder)}
-						options={REMINDER_OPTIONS}
+						options={reminderOptions(settings.defaultReminder)}
 						onChange={onDefaultReminderChange}
 					/>
 					<SoundAndQuietHoursRows
@@ -72,11 +72,32 @@ export function NotificationSettingsSection({
 	);
 }
 
+/** "At time" / "45 minutes" / "3 hours" / "2 days": names a stored offset the select does not list. */
+function offListLabel(minutes: number): string {
+	if (minutes === 0) return "At time";
+	if (minutes < 60) return `${minutes} minutes`;
+	if (minutes < 1440) return `${Math.round(minutes / 60)} hours`;
+	const days = Math.round(minutes / 1440);
+	return days === 1 ? "1 day" : `${days} days`;
+}
+
+/**
+ * The select's options, plus the stored offset when the list lacks it. A reminder synced
+ * from a native client can be off-list; render it as stored, never snap it to another value.
+ */
+function reminderOptions(defaultReminder: number): { value: string; label: string }[] {
+	const stored = defaultReminder.toString();
+	if (REMINDER_OPTIONS.some((opt) => opt.value === stored)) return REMINDER_OPTIONS;
+	return [...REMINDER_OPTIONS, { value: stored, label: offListLabel(defaultReminder) }].sort(
+		(a, b) => Number(a.value) - Number(b.value),
+	);
+}
+
 /** Label for the stored default-reminder offset. */
 function reminderLabel(defaultReminder: number): string {
 	return (
-		REMINDER_OPTIONS.find((opt) => opt.value === defaultReminder.toString())?.label ||
-		"30 minutes"
+		reminderOptions(defaultReminder).find((opt) => opt.value === defaultReminder.toString())?.label ??
+		offListLabel(defaultReminder)
 	);
 }
 

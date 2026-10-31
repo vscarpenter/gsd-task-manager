@@ -323,6 +323,32 @@ describe('Settings Components', () => {
       expect(screen.getByText('Default reminder')).toBeInTheDocument();
     });
 
+    it('renders an off-list default reminder as stored instead of snapping it', () => {
+      render(
+        <NotificationSettingsSection
+          settings={{ ...enabledSettings, defaultReminder: 45 }}
+          onNotificationToggle={vi.fn()}
+          onDefaultReminderChange={vi.fn()}
+        />
+      );
+      const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
+      expect(select.value).toBe('45');
+      expect(select.selectedOptions[0]).toHaveTextContent('45 minutes');
+    });
+
+    it('labels a zero-minute default reminder as at time', () => {
+      render(
+        <NotificationSettingsSection
+          settings={{ ...enabledSettings, defaultReminder: 0 }}
+          onNotificationToggle={vi.fn()}
+          onDefaultReminderChange={vi.fn()}
+        />
+      );
+      const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
+      expect(select.value).toBe('0');
+      expect(select.selectedOptions[0]).toHaveTextContent('At time');
+    });
+
     it('hides default reminder select when notifications disabled', () => {
       render(
         <NotificationSettingsSection

@@ -29,7 +29,7 @@ describe("notification control mutations", () => {
 
       const settings = await getNotificationSettings();
       expect(settings.quietHoursStart).toBe("22:00");
-      expect(settings.quietHoursEnd).toBe("08:00");
+      expect(settings.quietHoursEnd).toBe("07:00");
     });
 
     it("clears both edges when the window is set", async () => {
@@ -51,7 +51,7 @@ describe("notification control mutations", () => {
 
       const settings = await getNotificationSettings();
       expect(settings.quietHoursStart).toBe("22:00");
-      expect(settings.quietHoursEnd).toBe("08:00");
+      expect(settings.quietHoursEnd).toBe("07:00");
     });
   });
 
