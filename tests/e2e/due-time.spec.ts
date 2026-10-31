@@ -24,7 +24,7 @@ test.describe("Due time of day", () => {
 
     await matrix.openEditDrawer("Send the invoice");
     const drawer = page.locator("[data-testid='edit-drawer']");
-    await drawer.getByRole("button", { name: "Next week" }).click();
+    await drawer.getByRole("button", { name: "Next week", exact: true }).click();
 
     const allDay = drawer.getByRole("switch", { name: "All day" });
     await expect(allDay).toBeChecked();
