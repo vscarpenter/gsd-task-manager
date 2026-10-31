@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
 import { TaskCard } from "@/components/task-card";
 import { ESCALATION_WINDOW_KEY, writeEscalationWindow } from "@/lib/preferences/escalation-window";
 import type { TaskRecord } from "@/lib/types";
@@ -98,6 +99,12 @@ describe("TaskCard escalation", () => {
     expect(screen.queryByTestId("task-card-escalating-tag")).toBeNull();
   });
 
+  it("server-renders the default window without touching the browser", () => {
+    const task = makeTask();
+    const html = renderToString(<TaskCard task={task} allTasks={[task]} {...handlers} />);
+    expect(html).toContain("Escalating: due tomorrow, not marked urgent.");
+  });
+
   it("widens with the setting", () => {
     window.localStorage.setItem(ESCALATION_WINDOW_KEY, "7");
     renderCard(makeTask({ dueDate: dueInDays(5) }));
@@ -117,5 +124,34 @@ describe("TaskCard escalation", () => {
     expect(screen.getByText("Moves to Delegate")).toBeInTheDocument();
     await userEvent.click(screen.getByTestId("mark-urgent-menu"));
     expect(onMarkUrgent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("TaskCard escalation across midnight", () => {
+  beforeEach(() => {
+    window.localStorage.removeItem(ESCALATION_WINDOW_KEY);
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+    vi.setSystemTime(new Date(2026, 9, 29, 23, 30, 0));
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const dueNov2 = () => new Date(2026, 10, 1, 12, 0, 0).toISOString();
+
+  it("adds the tag when the local day rolls over while the card stays mounted", () => {
+    renderCard(makeTask({ dueDate: dueNov2() }));
+    expect(screen.queryByTestId("task-card-escalating-tag")).toBeNull();
+    act(() => vi.advanceTimersByTime(31 * 60 * 1000));
+    expect(screen.getByTestId("task-card-escalating-tag")).toHaveAccessibleName(
+      "Escalating: due in 2 days, not marked urgent."
+    );
+  });
+
+  it("re-evaluates when a suspended tab becomes visible again", () => {
+    renderCard(makeTask({ dueDate: dueNov2() }));
+    vi.setSystemTime(new Date(2026, 9, 31, 9, 0, 0));
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(screen.getByTestId("task-card-escalating-tag")).toHaveAccessibleName(
+      "Escalating: due tomorrow, not marked urgent."
+    );
   });
 });
