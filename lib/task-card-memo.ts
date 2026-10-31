@@ -20,6 +20,7 @@ export interface TaskCardProps {
   /** Sets the urgent flag on an escalating task; the owner offers Undo. */
   onMarkUrgent?: (task: TaskRecord) => Promise<void> | void;
   onSnooze?: (taskId: string, minutes: number) => Promise<void>;
+  onClearSnooze?: (taskId: string) => Promise<void>;
   onStartTimer?: (taskId: string) => Promise<void>;
   onStopTimer?: (taskId: string) => Promise<void>;
   taskRef?: (el: HTMLElement | null) => void;

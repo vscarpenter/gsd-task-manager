@@ -262,6 +262,9 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSub: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSubTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSubContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   ),
@@ -458,10 +461,10 @@ describe("TaskCardActions snooze", () => {
     return onSnooze;
   }
 
-  it("offers Snooze 1 hour in the mobile menu as the non-gesture route", async () => {
+  it("offers the snooze presets in the menu as the non-gesture route", async () => {
     const onSnooze = await renderActions();
 
-    await userEvent.click(screen.getByRole("button", { name: "Snooze 1 hour" }));
+    await userEvent.click(screen.getByRole("button", { name: "1 hour" }));
 
     expect(onSnooze).toHaveBeenCalledWith("t5", 60);
   });
@@ -469,7 +472,7 @@ describe("TaskCardActions snooze", () => {
   it("drops the mobile snooze item once the task is done", async () => {
     await renderActions({ completed: true });
 
-    expect(screen.queryByRole("button", { name: "Snooze 1 hour" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "1 hour" })).toBeNull();
   });
 
   it("keeps the desktop hover cluster free of snooze", async () => {

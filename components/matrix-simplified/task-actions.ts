@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 
-import { createTask, toggleCompleted, deleteTask, snoozeTask, updateTask, duplicateTask, moveTaskToQuadrant } from "@/lib/tasks";
+import { createTask, toggleCompleted, deleteTask, snoozeTask, clearSnooze, updateTask, duplicateTask, moveTaskToQuadrant } from "@/lib/tasks";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
@@ -103,6 +103,8 @@ export async function handleToggle(
 
 /** "1 hour", "30 minutes": the toast's reading of a snooze preset. */
 function snoozeDurationLabel(minutes: number): string {
+  if (minutes === TIME_UNITS.MINUTES_PER_DAY) return "1 day";
+  if (minutes === 7 * TIME_UNITS.MINUTES_PER_DAY) return "1 week";
   if (minutes % TIME_UNITS.MINUTES_PER_HOUR !== 0) return `${minutes} minutes`;
   const hours = minutes / TIME_UNITS.MINUTES_PER_HOUR;
   return hours === 1 ? "1 hour" : `${hours} hours`;
@@ -159,6 +161,15 @@ export async function handleMoveTo(
     offerUndo(`Moved to ${quadrants.find((q) => q.id === target)?.title}`, () => moveTaskToQuadrant(task.id, task.quadrant).then(() => {}));
   } catch (error) {
     reportTaskMutationError(error, "move_task", "Failed to move task", task.id);
+  }
+}
+
+export async function handleClearSnooze(taskId: string): Promise<void> {
+  try {
+    await clearSnooze(taskId);
+    toast.success("Snooze cleared", { duration: TOAST_DURATION.SHORT });
+  } catch (error) {
+    reportTaskMutationError(error, ErrorActions.SNOOZE_TASK, "Failed to clear snooze", taskId);
   }
 }
 

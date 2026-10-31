@@ -34,3 +34,33 @@ test.describe("Card menu: Duplicate and Move to", () => {
     await expect(page.getByTestId("quadrant-q2").getByTestId("task-card").filter({ hasText: "Plan the offsite" })).toBeVisible();
   });
 });
+
+test.describe("Card menu: Snooze presets", () => {
+  test.beforeEach(async ({ clearIndexedDB }) => {
+    // Fixture seeds the launch flag and clears IndexedDB, so the first load lands on the matrix, not /about.
+  });
+
+  test("a mouse user can snooze for a preset and clear it", async ({ page }) => {
+    const matrix = new MatrixPage(page);
+    await matrix.goto();
+    await matrix.createTask("Call the plumber *");
+    const card = page.getByTestId("task-card").filter({ hasText: "Call the plumber" });
+    await card.hover();
+    await card.getByRole("button", { name: "More actions" }).click();
+    // Keyboard path: a pointer teleported onto a Radix submenu item races its popper positioning.
+    await page.getByRole("menuitem", { name: "Snooze", exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    await page.getByRole("menuitem", { name: "Tomorrow" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Snoozed for 1 day")).toBeVisible();
+    await expect(card.getByTestId("task-card-snoozed-chip")).toBeVisible();
+
+    await card.hover();
+    await card.getByRole("button", { name: "More actions" }).click();
+    await page.getByRole("menuitem", { name: "Snooze", exact: true }).focus();
+    await page.keyboard.press("ArrowRight");
+    await page.getByRole("menuitem", { name: "Clear snooze" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(card.getByTestId("task-card-snoozed-chip")).toHaveCount(0);
+  });
+});
