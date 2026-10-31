@@ -11,7 +11,9 @@
         "cloudfront-function-url-rewrite.cjs!",
         "docker/pb_hooks/*.js!",
         "docker/pb_migrations/*.js!",
-        "docker/pb_fresh_migrations/*.js!"
+        "docker/pb_fresh_migrations/*.js!",
+        "lib/escalation.ts!",
+        "lib/preferences/escalation-window.ts!"
       ],
       "project": [
         "{app,components,lib}/**/*.{ts,tsx}!",
