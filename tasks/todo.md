@@ -1,3 +1,17 @@
+# Release must-fixes from the Sprint 1 deployment review (2026-10-31)
+
+Branch: `fix/release-must-fixes` off `main` (`0709c88`). Standard tier. Same branch name in `gsd-iosapp`. Not pushed.
+
+## Resuming From Here
+
+- [x] A snoozed reminder fires when the snooze ends, including after one has shown and past the first window (`b85e66e`). Notifications set `renotify`, so a snoozed reminder alerts even if the old one is still on screen.
+- [x] Web 14.4.0 (`141ffeb`) and MCP 1.4.1 with its changelog (`21fc6b9`).
+- [x] Verify: `bun run test` 4,068, typecheck, lint, build (service worker cache stamped 14.4.0), bundle budget, MCP 369, and the snooze, card menu, and swipe browser specs in Chromium, 14 of 14.
+- **Next:** owner pushes and opens the PR, so CI runs all three browsers, then tags `v14.4.0` and `mcp-v1.4.1`.
+- **Not done, out of the must-fix scope:** the whole `package.json` ships in a client chunk (`about-section.tsx`). The MCP `dueDate` description invites UTC midnight, which clients read as a timed task on the wrong day.
+- **Assumptions:** a snooze that ended over an hour ago stays dropped, matching the existing grace period. `getDueSoonCount` still counts only the first window, so the badge doesn't include a task whose snooze just ended. The title of a reminder that fires after the due date says "Due now".
+- **Open elsewhere:** account deletion holds no sync on web or Android, the shape iOS just fixed. From reading only, and not run here.
+
 # Session state, 2026-10-27: launch QA with five personas (`fix/launch-qa-first-run`)
 
 ## Resuming From Here
