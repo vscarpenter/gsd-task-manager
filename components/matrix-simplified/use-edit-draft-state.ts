@@ -268,10 +268,11 @@ function useDueDateDraft(task: TaskRecord | null | undefined) {
   const [dueTime, setDueTime] = useState<string | undefined>(() =>
     task?.dueDate ? timeOf(task.dueDate) : undefined
   );
-  // "None" removes the due date, and a date picked later starts all day again.
+  // A preset writes an all-day date, as Android does (`preset.resolve(today).atStartOfDay`).
+  // Only picking a date keeps the time already set.
   const changePreset = (preset: DuePreset): void => {
     setDuePreset(preset);
-    if (preset === "none") setDueTime(undefined);
+    setDueTime(undefined);
   };
   return {
     duePreset, setDuePreset: changePreset, customDate, setCustomDate,

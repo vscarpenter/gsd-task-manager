@@ -612,6 +612,37 @@ describe("Notifications module", () => {
 			);
 		});
 
+		it("counts calendar days for an all-day task, not hours to its midnight", async () => {
+			mockNotificationConstructor.permission = "granted";
+			mockDb.notificationSettings.get.mockResolvedValue({
+				id: "settings",
+				enabled: true,
+				defaultReminder: 15,
+				soundEnabled: true,
+				permissionAsked: true,
+				updatedAt: new Date().toISOString(),
+			});
+			Object.defineProperty(global.navigator, 'serviceWorker', {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				value: undefined as any,
+				writable: true,
+				configurable: true,
+			});
+			vi.useFakeTimers({ toFake: ["Date"] });
+			try {
+				vi.setSystemTime(new Date(2026, 8, 23, 8, 0));
+				const tomorrow = createTask({ title: "Task", dueDate: new Date(2026, 8, 24).toISOString() });
+				await showTaskNotification(tomorrow, 16 * 60);
+				expect(mockNotificationConstructor).toHaveBeenLastCalledWith("Due tomorrow: Task", expect.any(Object));
+
+				vi.setSystemTime(new Date(2026, 8, 22, 8, 0));
+				await showTaskNotification(tomorrow, 40 * 60);
+				expect(mockNotificationConstructor).toHaveBeenLastCalledWith("Due in 2 days: Task", expect.any(Object));
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
 		it("should format notification title based on time until due", async () => {
 			mockNotificationConstructor.permission = "granted";
 			mockDb.notificationSettings.get.mockResolvedValue({

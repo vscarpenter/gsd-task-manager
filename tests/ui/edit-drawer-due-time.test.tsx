@@ -81,10 +81,19 @@ describe("<EditDrawer> due time of day", () => {
     expect(await savedDueDate(onSubmit)).toBe(localIso(4, 30));
   });
 
-  it("keeps the time when a preset moves the day", async () => {
+  it("makes the task all day when a preset is picked, as Android does", async () => {
     const onSubmit = open({ dueDate: localIso(4, 30, 15, 30) });
     await user.click(screen.getByRole("button", { name: "Next week" }));
-    expect(await savedDueDate(onSubmit)).toBe(localIso(5, 4, 15, 30));
+    expect(screen.getByRole("switch", { name: /all day/i })).toBeChecked();
+    expect(await savedDueDate(onSubmit)).toBe(localIso(5, 4));
+  });
+
+  it("keeps the time when a custom date is picked", async () => {
+    const onSubmit = open({ dueDate: localIso(4, 30, 15, 30) });
+    await user.click(screen.getByRole("button", { name: /clear custom date/i }));
+    await user.click(screen.getByRole("button", { name: /pick a date/i }));
+    fireEvent.change(screen.getByLabelText(/pick a custom due date/i), { target: { value: "2026-05-20" } });
+    expect(await savedDueDate(onSubmit)).toBe(localIso(5, 20, 15, 30));
   });
 
   it("a preset on a task with no time stays all day", async () => {
