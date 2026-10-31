@@ -1,0 +1,3114 @@
+{
+  "note": "Canonical top three behavior (GSD parity decision D-13; spec gsd-taskmanager/tasks/spec-top-three.md). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/top-three-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/top-three-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/top-three-corpus.json, and every suite runs every case. A task field left out takes the model's default: not urgent, not important, not completed, savedAt, dueDate, focusDate, and focusRank null, createdAt and updatedAt 2026-10-01T00:00:00.000Z, location active. location isn't a task field: the test keeps only active rows before calling the function, because archived and trashed rows live in their own stores and no selector reads them. windowDays null means escalation is Off, and escalation itself is pinned by escalation-corpus.json. Today is the local date of now in zone. focusDate is compared as text with that date. In pullMerge the current contract is 4, focus_date and focus_rank are first read at 4, and saved_at is first read at 3. A stored version below a field's first-read version makes that field copyable; a null stored version counts as below every version. tombstoned means a local archive or trash row exists and the remote isn't strictly newer than it. In pushFocus, current is the task's row in the active store when the queue item drains, and omit means both keys stay off the wire. If behavior changes, change the spec, this file in all three repos, and all three implementations together.",
+  "version": 1,
+  "cases": [
+    {
+      "name": "three picks in rank order",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a",
+          "b",
+          "c"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "input order doesn't matter",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        },
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a",
+          "b",
+          "c"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "no picks is an empty list",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a pick from yesterday doesn't count today",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a pick dated tomorrow doesn't count today",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-05",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "any quadrant can be a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": false,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": false,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        },
+        {
+          "id": "c",
+          "urgent": false,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a",
+          "b",
+          "c"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a gap in ranks is fine",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a",
+          "c"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a completed task isn't a pick and frees its slot",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "completed": true
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "picks": [
+          "b",
+          "c"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a Saved task isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "savedAt": "2026-10-26T12:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        }
+      ],
+      "expect": {
+        "picks": [
+          "b"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "an archived task isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "location": "archived"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        }
+      ],
+      "expect": {
+        "picks": [
+          "b"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a trashed task isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "location": "trashed"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        }
+      ],
+      "expect": {
+        "picks": [
+          "b"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a date with no rank isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": null
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a rank with no date isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": null,
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "rank zero isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 0
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "rank four isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 4
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a fractional rank isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1.5
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a date with a time isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04T00:00",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "an unpadded date isn't a pick",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-4",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "the same row is today in Tokyo",
+      "op": "picks",
+      "zone": "Asia/Tokyo",
+      "now": "2026-11-05T01:00:00+09:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-05",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "and isn't today in Chicago at that instant",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-05",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a pick still counts at the last minute of its day",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T23:59:59-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a pick stops counting at local midnight",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-05T00:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "the fall-back day is one local day",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-01T23:30:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-01",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "the spring-forward day is one local day",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2027-03-14T23:30:00-05:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2027-03-14",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "two tasks at one rank order by newest updatedAt and offer to tidy",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "picks": [
+          "b",
+          "a"
+        ],
+        "overflow": [],
+        "needsTidy": true
+      }
+    },
+    {
+      "name": "an exact tie falls back to id",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-02T10:00:00.000Z"
+        },
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-02T10:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a",
+          "b"
+        ],
+        "overflow": [],
+        "needsTidy": true
+      }
+    },
+    {
+      "name": "a fourth pick overflows and offers to tidy",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        },
+        {
+          "id": "d",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "picks": [
+          "b",
+          "a",
+          "c"
+        ],
+        "overflow": [
+          "d"
+        ],
+        "needsTidy": true
+      }
+    },
+    {
+      "name": "two devices each picking three",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "d",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "e",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "f",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "picks": [
+          "a",
+          "d",
+          "b"
+        ],
+        "overflow": [
+          "e",
+          "c",
+          "f"
+        ],
+        "needsTidy": true
+      }
+    },
+    {
+      "name": "a completed task at a shared rank causes no tidy offer",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "completed": true
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [
+          "b"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "a Saved task at a shared rank causes no tidy offer",
+      "op": "picks",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "savedAt": "2026-10-26T12:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "picks": [
+          "b"
+        ],
+        "overflow": [],
+        "needsTidy": false
+      }
+    },
+    {
+      "name": "the first pick takes rank 1",
+      "op": "nextRank",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true
+        }
+      ],
+      "expect": {
+        "rank": 1
+      }
+    },
+    {
+      "name": "the next pick takes rank 2",
+      "op": "nextRank",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "rank": 2
+      }
+    },
+    {
+      "name": "a freed middle rank is reused",
+      "op": "nextRank",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "rank": 2
+      }
+    },
+    {
+      "name": "a completed pick's rank is free",
+      "op": "nextRank",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "completed": true
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        }
+      ],
+      "expect": {
+        "rank": 1
+      }
+    },
+    {
+      "name": "yesterday's rank is free",
+      "op": "nextRank",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "rank": 1
+      }
+    },
+    {
+      "name": "three picks leave no rank",
+      "op": "nextRank",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "rank": null
+      }
+    },
+    {
+      "name": "a conflict with all ranks taken leaves no rank",
+      "op": "nextRank",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        },
+        {
+          "id": "d",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "rank": null
+      }
+    },
+    {
+      "name": "a duplicate rank still leaves the free one",
+      "op": "nextRank",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "rank": 2
+      }
+    },
+    {
+      "name": "nothing to tidy writes nothing",
+      "op": "tidy",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        }
+      ],
+      "expect": {
+        "writes": []
+      }
+    },
+    {
+      "name": "a gap in ranks alone writes nothing, because it's no conflict",
+      "op": "tidy",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "writes": []
+      }
+    },
+    {
+      "name": "a shared rank moves only the row that has to change",
+      "op": "tidy",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "writes": [
+          {
+            "id": "a",
+            "focusDate": "2026-11-04",
+            "focusRank": 2
+          }
+        ]
+      }
+    },
+    {
+      "name": "a fourth pick is cleared",
+      "op": "tidy",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2
+        },
+        {
+          "id": "d",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "writes": [
+          {
+            "id": "a",
+            "focusDate": "2026-11-04",
+            "focusRank": 2
+          },
+          {
+            "id": "c",
+            "focusDate": "2026-11-04",
+            "focusRank": 3
+          },
+          {
+            "id": "d",
+            "focusDate": null,
+            "focusRank": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "two devices each picking three",
+      "op": "tidy",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "d",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "e",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "f",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 3,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "writes": [
+          {
+            "id": "d",
+            "focusDate": "2026-11-04",
+            "focusRank": 2
+          },
+          {
+            "id": "b",
+            "focusDate": "2026-11-04",
+            "focusRank": 3
+          },
+          {
+            "id": "e",
+            "focusDate": null,
+            "focusRank": null
+          },
+          {
+            "id": "c",
+            "focusDate": null,
+            "focusRank": null
+          },
+          {
+            "id": "f",
+            "focusDate": null,
+            "focusRank": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "completed rows are left alone",
+      "op": "tidy",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1,
+          "completed": true
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "writes": []
+      }
+    },
+    {
+      "name": "the full order: overdue Q1, escalating, Q1 by due date, rest of Q1",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "h",
+          "urgent": true,
+          "important": true,
+          "createdAt": "2026-10-01T00:00:00.000Z"
+        },
+        {
+          "id": "i",
+          "urgent": true,
+          "important": true,
+          "createdAt": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "id": "g",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-10T06:00:00.000Z"
+        },
+        {
+          "id": "f",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-04T06:00:00.000Z"
+        },
+        {
+          "id": "d",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        },
+        {
+          "id": "e",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-03T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-03T06:00:00.000Z"
+        },
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-02T06:00:00.000Z"
+        },
+        {
+          "id": "j",
+          "urgent": true,
+          "important": false,
+          "dueDate": "2026-11-03T06:00:00.000Z"
+        },
+        {
+          "id": "k",
+          "urgent": false,
+          "important": true
+        },
+        {
+          "id": "l",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-20T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a",
+          "b",
+          "e",
+          "c",
+          "d",
+          "f",
+          "g",
+          "i",
+          "h"
+        ]
+      }
+    },
+    {
+      "name": "today's picks aren't suggested",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true
+        }
+      ],
+      "expect": {
+        "ids": [
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "yesterday's pick can still be suggested",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "completed tasks aren't suggested",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "completed": true
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true
+        }
+      ],
+      "expect": {
+        "ids": [
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "Saved tasks aren't suggested",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "savedAt": "2026-10-26T12:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true
+        }
+      ],
+      "expect": {
+        "ids": [
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "archived tasks aren't suggested",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "location": "archived"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true
+        }
+      ],
+      "expect": {
+        "ids": [
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "trashed tasks aren't suggested",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "location": "trashed"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true
+        }
+      ],
+      "expect": {
+        "ids": [
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "Delegate tasks aren't suggested, even overdue",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": false,
+          "dueDate": "2026-11-02T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": []
+      }
+    },
+    {
+      "name": "Schedule tasks outside the window aren't suggested",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-07T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": []
+      }
+    },
+    {
+      "name": "the window's last day is included",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-06T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "a one-day window excludes two days out",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 1,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-06T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "a seven-day window reaches a week out",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 7,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-11T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-12T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "an overdue Schedule task escalates under any window",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 1,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-02T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "with escalation Off, only Q1 is suggested",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": null,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-02T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-04T06:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true
+        }
+      ],
+      "expect": {
+        "ids": [
+          "c"
+        ]
+      }
+    },
+    {
+      "name": "Off doesn't change overdue Q1",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": null,
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-04T06:00:00.000Z"
+        },
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-02T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "due today isn't overdue, whatever the time",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-04T15:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-03T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "b",
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "due yesterday at 23:59 is overdue a minute after midnight",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T00:01:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-04T05:59:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-05T05:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "in Tokyo the Q1 task is already overdue, so it leads",
+      "op": "suggest",
+      "zone": "Asia/Tokyo",
+      "now": "2026-11-05T01:00:00+09:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "x",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-04T14:00:00.000Z"
+        },
+        {
+          "id": "y",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T00:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "x",
+          "y"
+        ]
+      }
+    },
+    {
+      "name": "at the same instant in Chicago it's only due today, so it follows",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "x",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-04T14:00:00.000Z"
+        },
+        {
+          "id": "y",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T00:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "y",
+          "x"
+        ]
+      }
+    },
+    {
+      "name": "escalating ties put important first",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": false,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "b",
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "exact ties fall back to id",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        },
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "dueDate": "2026-11-05T06:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "undated Q1 runs oldest first",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "createdAt": "2026-10-02T00:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "createdAt": "2026-10-01T00:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "b",
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "undated Q1 ties fall back to id",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "createdAt": "2026-10-01T00:00:00.000Z"
+        },
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "createdAt": "2026-10-01T00:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "ids": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "nothing eligible is an empty list",
+      "op": "suggest",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "windowDays": 2,
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": false,
+          "important": true
+        },
+        {
+          "id": "b",
+          "urgent": false,
+          "important": false
+        }
+      ],
+      "expect": {
+        "ids": []
+      }
+    },
+    {
+      "name": "yesterday's unfinished picks are offered in rank order",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 2
+        },
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-11-03",
+        "ids": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "a finished pick isn't offered",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1,
+          "completed": true
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 2
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-11-03",
+        "ids": [
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "a Saved pick isn't offered",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1,
+          "savedAt": "2026-10-26T12:00:00.000Z"
+        }
+      ],
+      "expect": {
+        "fromDate": null,
+        "ids": []
+      }
+    },
+    {
+      "name": "an archived pick isn't offered",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1,
+          "location": "archived"
+        }
+      ],
+      "expect": {
+        "fromDate": null,
+        "ids": []
+      }
+    },
+    {
+      "name": "a trashed pick isn't offered",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1,
+          "location": "trashed"
+        }
+      ],
+      "expect": {
+        "fromDate": null,
+        "ids": []
+      }
+    },
+    {
+      "name": "today's picks aren't carry-over",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": null,
+        "ids": []
+      }
+    },
+    {
+      "name": "a future date isn't carry-over",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-05",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": null,
+        "ids": []
+      }
+    },
+    {
+      "name": "a bad rank isn't carry-over",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 4
+        }
+      ],
+      "expect": {
+        "fromDate": null,
+        "ids": []
+      }
+    },
+    {
+      "name": "Friday's picks are offered on Monday",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-09T09:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-06",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-11-06",
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "only the latest earlier date is offered",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-02",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-11-03",
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "when the latest date is all finished, the latest unfinished date is offered",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-02",
+          "focusRank": 1
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1,
+          "completed": true
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-11-02",
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "seven days back is still offered",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-10-28",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-10-28",
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "eight days back isn't",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-10-27",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": null,
+        "ids": []
+      }
+    },
+    {
+      "name": "seven days is counted in local days across a clock change",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-06T09:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-10-30",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-10-30",
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "a two-device overflow is capped at three, by the conflict rule",
+      "op": "carryOver",
+      "zone": "America/Chicago",
+      "now": "2026-11-04T10:00:00-06:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1,
+          "updatedAt": "2026-11-01T10:00:00.000Z"
+        },
+        {
+          "id": "b",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 1,
+          "updatedAt": "2026-11-03T10:00:00.000Z"
+        },
+        {
+          "id": "c",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 2
+        },
+        {
+          "id": "d",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-03",
+          "focusRank": 3
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-11-03",
+        "ids": [
+          "b",
+          "a",
+          "c"
+        ]
+      }
+    },
+    {
+      "name": "the zone decides which day is earlier",
+      "op": "carryOver",
+      "zone": "Asia/Tokyo",
+      "now": "2026-11-05T01:00:00+09:00",
+      "tasks": [
+        {
+          "id": "a",
+          "urgent": true,
+          "important": true,
+          "focusDate": "2026-11-04",
+          "focusRank": 1
+        }
+      ],
+      "expect": {
+        "fromDate": "2026-11-04",
+        "ids": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "unset on the wire is unset locally",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "",
+        "focus_rank": 0
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "a pick maps across",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "2026-11-04",
+        "focus_rank": 2
+      },
+      "expect": {
+        "focusDate": "2026-11-04",
+        "focusRank": 2
+      }
+    },
+    {
+      "name": "a date with rank zero is unset",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "2026-11-04",
+        "focus_rank": 0
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "a rank with no date is unset",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "",
+        "focus_rank": 2
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "rank four is unset",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "2026-11-04",
+        "focus_rank": 4
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "a negative rank is unset",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "2026-11-04",
+        "focus_rank": -1
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "a fractional rank is unset",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "2026-11-04",
+        "focus_rank": 1.5
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "a malformed date is unset",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "11/04/2026",
+        "focus_rank": 2
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "an impossible date is unset",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "2026-02-30",
+        "focus_rank": 2
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "February 29 is unset outside a leap year",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "2026-02-29",
+        "focus_rank": 2
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "February 29 is kept in a leap year",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": "2028-02-29",
+        "focus_rank": 2
+      },
+      "expect": {
+        "focusDate": "2028-02-29",
+        "focusRank": 2
+      }
+    },
+    {
+      "name": "a record from before the field existed is unset",
+      "op": "fromWire",
+      "wire": {
+        "focus_date": null,
+        "focus_rank": null
+      },
+      "expect": {
+        "focusDate": null,
+        "focusRank": null
+      }
+    },
+    {
+      "name": "an unset pick writes the empty values, never null",
+      "op": "toWire",
+      "task": {
+        "focusDate": null,
+        "focusRank": null
+      },
+      "expect": {
+        "focus_date": "",
+        "focus_rank": 0
+      }
+    },
+    {
+      "name": "a pick writes both fields",
+      "op": "toWire",
+      "task": {
+        "focusDate": "2026-11-04",
+        "focusRank": 3
+      },
+      "expect": {
+        "focus_date": "2026-11-04",
+        "focus_rank": 3
+      }
+    },
+    {
+      "name": "no local row inserts",
+      "op": "pullMerge",
+      "storedContract": 4,
+      "tombstoned": false,
+      "local": null,
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "insert",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-02T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "ordinary pull: a newer remote wins",
+      "op": "pullMerge",
+      "storedContract": 4,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-01T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "take-remote",
+        "conflict": true,
+        "row": {
+          "updatedAt": "2026-11-02T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "ordinary pull: the same version is a no-op",
+      "op": "pullMerge",
+      "storedContract": 4,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "none",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-02T10:00:00.000Z",
+          "focusDate": null,
+          "focusRank": null,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "ordinary pull: a locally newer un-pick stays un-picked",
+      "op": "pullMerge",
+      "storedContract": 4,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "none",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": null,
+          "focusRank": null,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "backfill: the same version takes the field",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "take-remote",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-02T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "backfill: a locally newer row copies only the focus fields",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "copy-fields",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "backfill: a locally newer row with no remote pick stays put",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "none",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": null,
+          "focusRank": null,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "backfill: a locally newer pick isn't overwritten",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": "2026-11-03",
+        "focusRank": 1,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "none",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": "2026-11-03",
+          "focusRank": 1,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "backfill: a newer remote still wins and counts as a conflict",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-01T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "take-remote",
+        "conflict": true,
+        "row": {
+          "updatedAt": "2026-11-02T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "backfill: a newer remote with no pick clears a local pick",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-01T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 1,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "take-remote",
+        "conflict": true,
+        "row": {
+          "updatedAt": "2026-11-02T10:00:00.000Z",
+          "focusDate": null,
+          "focusRank": null,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "backfill with no stored version behaves the same",
+      "op": "pullMerge",
+      "storedContract": null,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "copy-fields",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "backfill: an older row under a tombstone stays gone",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": true,
+      "local": null,
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "none",
+        "conflict": false,
+        "row": null
+      }
+    },
+    {
+      "name": "a remote newer than its tombstone returns",
+      "op": "pullMerge",
+      "storedContract": 4,
+      "tombstoned": false,
+      "local": null,
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": null
+      },
+      "expect": {
+        "action": "insert",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-02T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "saved_at isn't copied at contract 3: a null there is a real Return",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": "2026-10-26T12:00:00.000Z"
+      },
+      "expect": {
+        "action": "none",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": null,
+          "focusRank": null,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "focus is copied at contract 3, and saved_at still isn't",
+      "op": "pullMerge",
+      "storedContract": 3,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": "2026-10-26T12:00:00.000Z"
+      },
+      "expect": {
+        "action": "copy-fields",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": null
+        }
+      }
+    },
+    {
+      "name": "a build older than Saved copies saved_at too",
+      "op": "pullMerge",
+      "storedContract": 2,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": "2026-11-04",
+        "focusRank": 2,
+        "savedAt": "2026-10-26T12:00:00.000Z"
+      },
+      "expect": {
+        "action": "copy-fields",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": "2026-11-04",
+          "focusRank": 2,
+          "savedAt": "2026-10-26T12:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "a build older than Saved copies saved_at alone when there's no pick",
+      "op": "pullMerge",
+      "storedContract": 2,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": "2026-10-26T12:00:00.000Z"
+      },
+      "expect": {
+        "action": "copy-fields",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": null,
+          "focusRank": null,
+          "savedAt": "2026-10-26T12:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "no stored version copies saved_at too",
+      "op": "pullMerge",
+      "storedContract": null,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": null
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": "2026-10-26T12:00:00.000Z"
+      },
+      "expect": {
+        "action": "copy-fields",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": null,
+          "focusRank": null,
+          "savedAt": "2026-10-26T12:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "a build older than Saved keeps a local savedAt",
+      "op": "pullMerge",
+      "storedContract": 2,
+      "tombstoned": false,
+      "local": {
+        "updatedAt": "2026-11-03T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": "2026-11-02T00:00:00.000Z"
+      },
+      "remote": {
+        "updatedAt": "2026-11-02T10:00:00.000Z",
+        "focusDate": null,
+        "focusRank": null,
+        "savedAt": "2026-10-26T12:00:00.000Z"
+      },
+      "expect": {
+        "action": "none",
+        "conflict": false,
+        "row": {
+          "updatedAt": "2026-11-03T10:00:00.000Z",
+          "focusDate": null,
+          "focusRank": null,
+          "savedAt": "2026-11-02T00:00:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "a payload from before the upgrade takes the row's pick",
+      "op": "pushFocus",
+      "payload": {
+        "focusDate": null,
+        "focusRank": null
+      },
+      "current": {
+        "focusDate": "2026-11-04",
+        "focusRank": 2
+      },
+      "expect": {
+        "focus_date": "2026-11-04",
+        "focus_rank": 2
+      }
+    },
+    {
+      "name": "a real un-pick clears the server",
+      "op": "pushFocus",
+      "payload": {
+        "focusDate": null,
+        "focusRank": null
+      },
+      "current": {
+        "focusDate": null,
+        "focusRank": null
+      },
+      "expect": {
+        "focus_date": "",
+        "focus_rank": 0
+      }
+    },
+    {
+      "name": "an un-pick after the edit was queued still clears",
+      "op": "pushFocus",
+      "payload": {
+        "focusDate": "2026-11-04",
+        "focusRank": 1
+      },
+      "current": {
+        "focusDate": null,
+        "focusRank": null
+      },
+      "expect": {
+        "focus_date": "",
+        "focus_rank": 0
+      }
+    },
+    {
+      "name": "a pick made after the edit was queued goes out",
+      "op": "pushFocus",
+      "payload": {
+        "focusDate": "2026-11-03",
+        "focusRank": 1
+      },
+      "current": {
+        "focusDate": "2026-11-04",
+        "focusRank": 3
+      },
+      "expect": {
+        "focus_date": "2026-11-04",
+        "focus_rank": 3
+      }
+    },
+    {
+      "name": "no current row leaves both keys off, so the server keeps its value",
+      "op": "pushFocus",
+      "payload": {
+        "focusDate": null,
+        "focusRank": null
+      },
+      "current": null,
+      "expect": {
+        "omit": true
+      }
+    },
+    {
+      "name": "no current row ignores the payload's pick too",
+      "op": "pushFocus",
+      "payload": {
+        "focusDate": "2026-11-04",
+        "focusRank": 1
+      },
+      "current": null,
+      "expect": {
+        "omit": true
+      }
+    }
+  ]
+}
