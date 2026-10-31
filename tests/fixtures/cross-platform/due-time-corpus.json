@@ -1,5 +1,5 @@
 {
-  "note": "Canonical due time of day behavior (GSD parity decision D-1). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/due-time-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/due-time-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/due-time-corpus.json, and every suite runs every case. The rule: a due date at local midnight in the current zone is all day, and any other time, down to the millisecond, is a time of day. Ops: classify reports the local date and, for a time of day, the 24-hour display time, which each client formats for its locale; an all-day task shows the label 'All day'. onDate moves a due date to a local date and keeps the time of day; a null due starts all day. atTime sets the time on the same local date, and a null time means all day. timedReminderFire is due minus notifyBefore (or defaultReminder when null), in elapsed minutes, for tasks with a time of day, with quiet hours off and now far before the fire time. Past-due handling differs by client and isn't pinned here. A local time inside a daylight-saving gap shifts forward by the length of the gap, and a time inside an overlap takes the first occurrence. allDayReminderFire applies when the task is all day in the current zone. An offset under a day fires at 08:00 local on the due day, and each whole day of offset moves that back one local day. A future snooze wins, quiet hours defer the fire to their end (half-open window), and a fire time that has passed fires nothing. Cases with a passed fire time sit at least two hours past it, because the instant at which a client stops firing differs by client. If behavior changes, change this file in all three repos and all three implementations together.",
+  "note": "Canonical due time of day behavior (GSD parity decision D-1). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/due-time-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/due-time-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/due-time-corpus.json, and every suite runs every case. The rule: a due date at local midnight in the current zone is all day, and any other time, down to the millisecond, is a time of day. Ops: classify reports the local date and, for a time of day, the 24-hour display time, which each client formats for its locale; an all-day task shows the label 'All day'. onDate moves a due date to a local date and keeps the time of day; a null due starts all day. atTime sets the time on the same local date, and a null time means all day. timedReminderFire is due minus notifyBefore (or defaultReminder when null), in elapsed minutes, for tasks with a time of day, with quiet hours off and now far before the fire time. Past-due handling differs by client and isn't pinned here. A local time inside a daylight-saving gap shifts forward by the length of the gap, and a time inside an overlap takes the first occurrence. allDayReminderFire applies when the task is all day in the current zone. An offset under a day fires at 09:00 local on the due day, and each whole day of offset moves that back one local day. A future snooze wins, quiet hours defer the fire to their end (half-open window), and a fire time that has passed fires nothing. Cases with a passed fire time sit at least two hours past it, because the instant at which a client stops firing differs by client. If behavior changes, change this file in all three repos and all three implementations together.",
   "version": 1,
   "cases": [
     {
@@ -840,7 +840,7 @@
       }
     },
     {
-      "name": "the default offset fires at 08:00 on the due day, not 23:45 the night before",
+      "name": "the default offset fires at 09:00 on the due day, not 23:45 the night before",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -851,11 +851,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-24T13:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
-      "name": "an offset of zero fires at 08:00",
+      "name": "an offset of zero fires at 09:00",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -866,11 +866,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-24T13:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
-      "name": "two hours before fires at 08:00",
+      "name": "two hours before fires at 09:00",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -881,11 +881,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-24T13:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
-      "name": "the longest offset under a day fires at 08:00 on the due day",
+      "name": "the longest offset under a day fires at 09:00 on the due day",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -896,11 +896,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-24T13:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
-      "name": "one day before fires at 08:00 the day before",
+      "name": "one day before fires at 09:00 the day before",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -911,7 +911,7 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-23T13:00:00.000Z"
+        "fire": "2026-09-23T14:00:00.000Z"
       }
     },
     {
@@ -926,7 +926,7 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-23T13:00:00.000Z"
+        "fire": "2026-09-23T14:00:00.000Z"
       }
     },
     {
@@ -941,11 +941,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-23T13:00:00.000Z"
+        "fire": "2026-09-23T14:00:00.000Z"
       }
     },
     {
-      "name": "two days before fires at 08:00 two days before",
+      "name": "two days before fires at 09:00 two days before",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -956,11 +956,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-22T13:00:00.000Z"
+        "fire": "2026-09-22T14:00:00.000Z"
       }
     },
     {
-      "name": "spring-forward day fires at 08:00 on the new offset",
+      "name": "spring-forward day fires at 09:00 on the new offset",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -971,11 +971,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2027-03-14T13:00:00.000Z"
+        "fire": "2027-03-14T14:00:00.000Z"
       }
     },
     {
-      "name": "one day before lands on spring-forward day at 08:00",
+      "name": "one day before lands on spring-forward day at 09:00",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -986,11 +986,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2027-03-14T13:00:00.000Z"
+        "fire": "2027-03-14T14:00:00.000Z"
       }
     },
     {
-      "name": "one day before spring-forward day fires at 08:00 on the old offset",
+      "name": "one day before spring-forward day fires at 09:00 on the old offset",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1001,11 +1001,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2027-03-13T14:00:00.000Z"
+        "fire": "2027-03-13T15:00:00.000Z"
       }
     },
     {
-      "name": "fall-back day fires at 08:00 on the new offset",
+      "name": "fall-back day fires at 09:00 on the new offset",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1016,11 +1016,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-11-01T14:00:00.000Z"
+        "fire": "2026-11-01T15:00:00.000Z"
       }
     },
     {
-      "name": "one day before fall-back day fires at 08:00 on the old offset",
+      "name": "one day before fall-back day fires at 09:00 on the old offset",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1031,11 +1031,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-10-31T13:00:00.000Z"
+        "fire": "2026-10-31T14:00:00.000Z"
       }
     },
     {
-      "name": "one day before lands on fall-back day at 08:00",
+      "name": "one day before lands on fall-back day at 09:00",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1046,11 +1046,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-11-01T14:00:00.000Z"
+        "fire": "2026-11-01T15:00:00.000Z"
       }
     },
     {
-      "name": "Tokyo fires at 08:00 Tokyo time",
+      "name": "Tokyo fires at 09:00 Tokyo time",
       "op": "allDayReminderFire",
       "zone": "Asia/Tokyo",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1061,7 +1061,7 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-23T23:00:00.000Z"
+        "fire": "2026-09-24T00:00:00.000Z"
       }
     },
     {
@@ -1076,11 +1076,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-22T23:00:00.000Z"
+        "fire": "2026-09-23T00:00:00.000Z"
       }
     },
     {
-      "name": "London fires at 08:00 on its spring-forward day",
+      "name": "London fires at 09:00 on its spring-forward day",
       "op": "allDayReminderFire",
       "zone": "Europe/London",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1091,7 +1091,7 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2027-03-28T07:00:00.000Z"
+        "fire": "2027-03-28T08:00:00.000Z"
       }
     },
     {
@@ -1106,11 +1106,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2027-03-27T08:00:00.000Z"
+        "fire": "2027-03-27T09:00:00.000Z"
       }
     },
     {
-      "name": "Auckland fires at 08:00 on its spring-forward day",
+      "name": "Auckland fires at 09:00 on its spring-forward day",
       "op": "allDayReminderFire",
       "zone": "Pacific/Auckland",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1121,11 +1121,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2027-09-25T19:00:00.000Z"
+        "fire": "2027-09-25T20:00:00.000Z"
       }
     },
     {
-      "name": "a half-hour offset fires at 08:00",
+      "name": "a half-hour offset fires at 09:00",
       "op": "allDayReminderFire",
       "zone": "Asia/Kolkata",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1136,11 +1136,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-24T02:30:00.000Z"
+        "fire": "2026-09-24T03:30:00.000Z"
       }
     },
     {
-      "name": "the first of two midnights fires at 08:00 that day",
+      "name": "the first of two midnights fires at 09:00 that day",
       "op": "allDayReminderFire",
       "zone": "America/Havana",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1151,11 +1151,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-11-01T13:00:00.000Z"
+        "fire": "2026-11-01T14:00:00.000Z"
       }
     },
     {
-      "name": "the second of two midnights fires at 08:00 that day",
+      "name": "the second of two midnights fires at 09:00 that day",
       "op": "allDayReminderFire",
       "zone": "America/Havana",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1166,7 +1166,7 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-11-01T13:00:00.000Z"
+        "fire": "2026-11-01T14:00:00.000Z"
       }
     },
     {
@@ -1185,7 +1185,7 @@
       }
     },
     {
-      "name": "quiet hours that end before 08:00 change nothing",
+      "name": "the 07:00 seed ends before 09:00 and changes nothing",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1196,11 +1196,11 @@
       "quietHoursStart": "22:00",
       "quietHoursEnd": "07:00",
       "expect": {
-        "fire": "2026-09-24T13:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
-      "name": "quiet hours that end exactly at 08:00 change nothing",
+      "name": "the older 08:00 seed ends before 09:00 and changes nothing",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1211,11 +1211,11 @@
       "quietHoursStart": "22:00",
       "quietHoursEnd": "08:00",
       "expect": {
-        "fire": "2026-09-24T13:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
-      "name": "overnight quiet hours past 08:00 defer to their end",
+      "name": "overnight quiet hours ending exactly at 09:00 change nothing",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1230,7 +1230,7 @@
       }
     },
     {
-      "name": "daytime quiet hours around 08:00 defer to their end",
+      "name": "overnight quiet hours ending a minute past 09:00 defer by that minute",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-01-01T00:00:00.000Z",
@@ -1238,10 +1238,85 @@
       "notifyBefore": null,
       "defaultReminder": 15,
       "snoozedUntil": null,
-      "quietHoursStart": "07:30",
-      "quietHoursEnd": "08:30",
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "09:01",
       "expect": {
-        "fire": "2026-09-24T13:30:00.000Z"
+        "fire": "2026-09-24T14:01:00.000Z"
+      }
+    },
+    {
+      "name": "overnight quiet hours well past 09:00 defer to their end",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "10:00",
+      "expect": {
+        "fire": "2026-09-24T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "daytime quiet hours ending exactly at 09:00 change nothing",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "08:00",
+      "quietHoursEnd": "09:00",
+      "expect": {
+        "fire": "2026-09-24T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "daytime quiet hours around 09:00 defer to their end",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "08:30",
+      "quietHoursEnd": "09:30",
+      "expect": {
+        "fire": "2026-09-24T14:30:00.000Z"
+      }
+    },
+    {
+      "name": "quiet hours starting exactly at 09:00 defer to their end",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "09:00",
+      "quietHoursEnd": "10:00",
+      "expect": {
+        "fire": "2026-09-24T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "quiet hours starting a minute after 09:00 change nothing",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "09:01",
+      "quietHoursEnd": "10:00",
+      "expect": {
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
@@ -1254,13 +1329,28 @@
       "defaultReminder": 15,
       "snoozedUntil": null,
       "quietHoursStart": "22:00",
-      "quietHoursEnd": "09:00",
+      "quietHoursEnd": "10:00",
       "expect": {
-        "fire": "2026-11-01T15:00:00.000Z"
+        "fire": "2026-11-01T16:00:00.000Z"
       }
     },
     {
-      "name": "just after midnight on the due day still fires at 08:00",
+      "name": "a one-day reminder defers on the day before",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-01-01T00:00:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": 1440,
+      "defaultReminder": 15,
+      "snoozedUntil": null,
+      "quietHoursStart": "22:00",
+      "quietHoursEnd": "10:00",
+      "expect": {
+        "fire": "2026-09-23T15:00:00.000Z"
+      }
+    },
+    {
+      "name": "just after midnight on the due day still fires at 09:00",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-09-24T05:30:00.000Z",
@@ -1271,14 +1361,14 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-24T13:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
-      "name": "before 08:00 on the due day still fires at 08:00",
+      "name": "before 09:00 on the due day still fires at 09:00",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
-      "now": "2026-09-24T12:30:00.000Z",
+      "now": "2026-09-24T13:30:00.000Z",
       "due": "2026-09-24T05:00:00.000Z",
       "notifyBefore": null,
       "defaultReminder": 15,
@@ -1286,11 +1376,11 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-24T13:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
       }
     },
     {
-      "name": "well after 08:00 on the due day fires nothing",
+      "name": "well after 09:00 on the due day fires nothing",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-09-24T16:00:00.000Z",
