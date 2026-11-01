@@ -104,6 +104,18 @@ describe('Snooze Functionality', () => {
       expect(mockPut).toHaveBeenCalled();
     });
 
+    it('asks for the reminder again after one has already shown', async () => {
+      mockGet.mockResolvedValue({ ...baseTask, notificationSent: true });
+      await snoozeTask('test-task-1', 60);
+      expect(mockPut.mock.calls[0][0].notificationSent).toBe(false);
+    });
+
+    it('leaves the reminder state alone when clearing a snooze', async () => {
+      mockGet.mockResolvedValue({ ...baseTask, notificationSent: true });
+      await snoozeTask('test-task-1', 0);
+      expect(mockPut.mock.calls[0][0].notificationSent).toBe(true);
+    });
+
     it('sets snoozedUntil correctly for valid duration', async () => {
       await snoozeTask('test-task-1', 60);
 

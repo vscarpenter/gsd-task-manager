@@ -423,3 +423,8 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **The code-shape ratchet skips comment lines.** Folding a comment onto a statement buys nothing; extract a component or hook instead.
 - **Persona QA artifacts to discount.** Headless Chromium logs `[PWA] Periodic sync registration failed`, which headed Chrome does not. Repeat local builds bump the footer's build stamp past `package.json`. The local export server sends `no-store`, so slow-3G reload times run longer than production, where hashed chunks are `immutable`.
 - **Worktree agents start on `main`.** All three fix agents had to fast-forward or reset to the feature branch before working. Say so in the brief, and cherry-pick their commits back.
+
+## A corpus proves only the function it calls (2026-10-31)
+
+51 cases of the due-time corpus pinned `reminderFireAt`, which production never called, while the checker ran its own rule and lost snoozed reminders. When a corpus covers behavior, confirm the live path runs the code under test.
+

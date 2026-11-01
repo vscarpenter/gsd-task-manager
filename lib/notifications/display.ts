@@ -73,12 +73,14 @@ function getNotificationTitle(task: TaskRecord, minutesUntil: number): string {
 function createNotificationOptions(
   task: TaskRecord,
   settings: NotificationSettings
-): NotificationOptions {
+): NotificationOptions & { renotify: boolean } {
   return {
     body: task.description || "Task reminder",
     icon: NOTIFICATION_ASSETS.ICON_192,
     badge: NOTIFICATION_ASSETS.BADGE,
     tag: `task-${task.id}`,
+    // A snoozed reminder shares this tag, and would otherwise replace one still on screen silently.
+    renotify: true,
     requireInteraction: false,
     silent: !settings.soundEnabled,
     data: {

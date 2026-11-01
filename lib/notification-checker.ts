@@ -15,14 +15,14 @@ import { isoNow } from "@/lib/utils";
 import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
 import { createLogger } from "@/lib/logger";
 import { isResetPending } from "@/lib/reset-lock";
-import { reminderWindow, type QuietHours } from "@/lib/notifications/reminder-window";
+import { isReminderDue, reminderWindow, type QuietHours } from "@/lib/notifications/reminder-window";
 
 const logger = createLogger("NOTIFICATIONS");
 
 /**
  * Whether a stored task still wants the reminder that was checked for it. A
- * task completed, already marked, or given a new due date or reminder offset
- * in the meantime has a different reminder (or none), so the mark is skipped.
+ * task completed, already marked, snoozed, or given a new due date or reminder
+ * offset in the meantime has a different reminder (or none), so the mark is skipped.
  */
 function isSameReminder(current: TaskRecord, checked: TaskRecord): boolean {
 	return (
@@ -30,7 +30,8 @@ function isSameReminder(current: TaskRecord, checked: TaskRecord): boolean {
 		!current.savedAt &&
 		!current.notificationSent &&
 		current.dueDate === checked.dueDate &&
-		current.notifyBefore === checked.notifyBefore
+		current.notifyBefore === checked.notifyBefore &&
+		current.snoozedUntil === checked.snoozedUntil
 	);
 }
 
@@ -134,23 +135,18 @@ class NotificationChecker {
 		// Determine notification window (use task-specific or default)
 		const notifyBefore = task.notifyBefore ?? defaultReminder;
 
-		// Check if we should notify: inside the reminder window, not already sent.
-		const { fire, expires } = reminderWindow(task.dueDate, notifyBefore, quiet);
 		const shouldNotify =
-			now >= fire &&
-			now < expires && // Not past the grace period (to avoid spam)
-			!task.notificationSent; // Haven't sent notification yet
+			!task.notificationSent && // Haven't sent notification yet
+			isReminderDue({
+				dueIso: task.dueDate,
+				notifyBefore,
+				now,
+				snoozedUntil: task.snoozedUntil,
+				quiet,
+			});
 
 		if (!shouldNotify) {
 			return;
-		}
-
-		// Check if snoozed
-		if (task.snoozedUntil) {
-			const snoozeDate = new Date(task.snoozedUntil);
-			if (snoozeDate > now) {
-				return; // Still snoozed
-			}
 		}
 
 		// The lock can begin while this check waits for IndexedDB. Skip the task
