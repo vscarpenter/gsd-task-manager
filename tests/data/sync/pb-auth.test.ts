@@ -35,6 +35,8 @@ const AUTH_METHODS = {
   },
 };
 
+const DAY_SECONDS = 24 * 60 * 60;
+
 function tokenExpiringIn(seconds: number): string {
   const payload = Buffer.from(
     JSON.stringify({ exp: Math.floor(Date.now() / 1000) + seconds })
@@ -435,14 +437,57 @@ describe('PocketBase Auth', () => {
   });
 
   describe('ensureValidAuth', () => {
-    it('returns true without refreshing when the token is still valid', async () => {
+    it('returns true without refreshing while more than 7 days remain', async () => {
       mockPb.authStore.isValid = true;
-      mockPb.authStore.token = tokenExpiringIn(3600);
+      mockPb.authStore.token = tokenExpiringIn(8 * DAY_SECONDS);
 
       const result = await ensureValidAuth();
 
       expect(result).toBe(true);
       expect(mockAuthRefresh).not.toHaveBeenCalled();
+    });
+
+    it('refreshes a valid token once 7 days or fewer remain, as iOS and Android do', async () => {
+      // A web session must slide like the native ones: with a 30-day server
+      // token, any visit in the last week renews it, so a regular user is
+      // never signed out. A 5-minute window meant it almost never renewed.
+      mockPb.authStore.isValid = true;
+      mockPb.authStore.token = tokenExpiringIn(6 * DAY_SECONDS);
+      mockAuthRefresh.mockResolvedValue({});
+
+      const result = await ensureValidAuth();
+
+      expect(mockAuthRefresh).toHaveBeenCalledTimes(1);
+      expect(result).toBe(true);
+    });
+
+    it('keeps a still-valid token when the early refresh is unreachable', async () => {
+      // Offline or a 5xx says nothing about the session; the token works for days.
+      mockPb.authStore.isValid = true;
+      mockPb.authStore.token = tokenExpiringIn(6 * DAY_SECONDS);
+      mockAuthRefresh.mockRejectedValue(
+        Object.assign(new Error('Something went wrong while processing your request.'), { status: 503 }),
+      );
+
+      const result = await ensureValidAuth();
+
+      expect(mockAuthRefresh).toHaveBeenCalledTimes(1);
+      expect(result).toBe(true);
+    });
+
+    it('reports failure when the server rejects the early refresh', async () => {
+      // A 401 on a token that hasn't expired means the session was revoked
+      // (for example by "Sign out of all devices"), so it isn't usable.
+      mockPb.authStore.isValid = true;
+      mockPb.authStore.token = tokenExpiringIn(6 * DAY_SECONDS);
+      mockAuthRefresh.mockRejectedValue(
+        Object.assign(new Error('The request requires valid record authorization token.'), { status: 401 }),
+      );
+
+      const result = await ensureValidAuth();
+
+      expect(mockAuthRefresh).toHaveBeenCalledTimes(1);
+      expect(result).toBe(false);
     });
 
     it('proactively refreshes a valid token near expiry', async () => {

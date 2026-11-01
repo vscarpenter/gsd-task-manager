@@ -20,7 +20,15 @@ const logger = createLogger('SYNC_AUTH');
 
 export type OAuthProvider = 'google' | 'github' | 'apple';
 const DEFAULT_OAUTH_TIMEOUT_MS = 120_000;
-const AUTH_REFRESH_THRESHOLD_SECONDS = 5 * 60;
+/**
+ * Renew the session once this little time is left on the token, matching the
+ * 7-day skew on iOS (`AuthService.refreshSkew`) and Android (`AuthManager`).
+ * PocketBase only refreshes a token that hasn't expired yet, so a short window
+ * meant a web session almost never renewed and simply ran out. The server's
+ * auth duration is 30 days (docker/pb_migrations/1793562900_users_auth_token_30_days.js),
+ * so any visit in a token's last week keeps a regular user signed in.
+ */
+const AUTH_REFRESH_THRESHOLD_SECONDS = 7 * 24 * 60 * 60;
 
 /**
  * Runtime whitelist of OAuth providers. The `OAuthProvider` type is erased
@@ -295,9 +303,9 @@ export type AuthRefreshOutcome = 'refreshed' | 'no-session' | 'rejected' | 'unre
 /**
  * Attempt to refresh the auth token and report how it ended.
  *
- * PocketBase JWTs expire client-side, but the server session may still be
- * valid. This calls the server to exchange the current (possibly expired)
- * token for a fresh one.
+ * Exchanges the current token for a fresh one with a full lifetime. PocketBase
+ * accepts only a token that is still valid: once it has expired the server
+ * answers 401, so this must run before expiry (see ensureValidAuth).
  */
 export async function refreshAuthOutcome(): Promise<AuthRefreshOutcome> {
   const pb = getPocketBase();
@@ -327,14 +335,17 @@ export async function refreshAuth(): Promise<boolean> {
 /**
  * Ensure there's a usable auth session for a background operation.
  *
- * Background sync, the health monitor, and fullSync historically only checked
- * `authStore.isValid`, which flips false the instant the JWT's exp passes —
- * even though PocketBase can still mint a fresh token from the server session.
- * This attempts that silent refresh so a merely-expired token doesn't surface
- * as "not authenticated" until the user manually re-auths.
+ * Returns true at once while more than AUTH_REFRESH_THRESHOLD_SECONDS remain.
+ * Inside that window it renews the token so the session slides forward:
  *
- * Checks `isValid` first so a healthy session never triggers a redundant
- * network refresh. Returns true when the session is (or becomes) valid.
+ * - refreshed: true.
+ * - unreachable (offline, 429, 5xx): true if the current token is still
+ *   valid, since a failed request says nothing about the session.
+ * - rejected (401/403): false, even for an unexpired token, because the
+ *   session was revoked (for example by "Sign out of all devices").
+ *
+ * An expired token is still sent once; the server rejects it, so the caller
+ * reports that the user must sign in again.
  */
 export async function ensureValidAuth(): Promise<boolean> {
   const pb = getPocketBase();
@@ -345,5 +356,8 @@ export async function ensureValidAuth(): Promise<boolean> {
   ) {
     return true;
   }
-  return refreshAuth();
+  const outcome = await refreshAuthOutcome();
+  if (outcome === 'refreshed') return true;
+  if (outcome === 'unreachable') return pb.authStore.isValid;
+  return false;
 }
