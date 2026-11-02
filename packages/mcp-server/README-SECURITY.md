@@ -43,7 +43,9 @@ first account-scoped call: before any write, and before `get_sync_status`. A
 backend that cannot be reached never stops the server — tools stay registered and
 each call reports the connection problem without changing your saved credentials.
 Anything that can read an accepted user token has full read/write/delete access to
-that account's tasks until it expires. Know the limits:
+that account's tasks until it expires. Tokens last 30 days (the `users`
+collection's auth duration, set by `docker/pb_migrations/1793562900_users_auth_token_30_days.js`),
+and the MCP server never renews the one in its config. Know the limits:
 
 - **PocketBase has no per-token revocation.** Logging out in the browser clears
   that browser's copy but does **not** invalidate other copies of the token.

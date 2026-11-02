@@ -471,11 +471,14 @@ Check authentication token status including expiration date, days remaining, and
 }
 ```
 
-**Status Levels**:
-- `healthy` - More than 7 days until expiration
-- `warning` - 2-7 days until expiration
-- `critical` - Less than 2 days until expiration
+**Status Levels** (thresholds from `src/auth/token-status.ts`):
+- `healthy` - More than 14 days until expiration
+- `warning` - 4-14 days until expiration
+- `critical` - 3 days or fewer until expiration
 - `expired` - Token has expired
+
+Tokens from the hosted server and the Docker image last 30 days. The MCP server
+never renews its token, so copy a fresh one from the web app before it expires.
 
 **Example Usage:**
 - "Check my token status"
