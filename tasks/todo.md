@@ -1,3 +1,15 @@
+# Settings bookmarklet (2026-11-01)
+
+Branch: `feat/settings-bookmarklet` off `main` (`e5acd3a`). Standard tier. Not pushed. The dependency refresh sits separately on `chore/deps-update-2026-11-01` (`619f090`), also not pushed.
+
+## Resuming From Here
+
+- [x] Settings → Bookmarklet: default tags, drag link, Copy code. A click opens the review drawer and nothing saves until Create task.
+- [x] Web 14.6.0, because production already serves 14.5.1.
+- **Next:** owner tries the bookmark on a strict-CSP site such as github.com in each browser, then pushes both branches and opens the PRs.
+- **Not tested:** a real bookmarks-bar click. Playwright can't drive the bookmarks bar, so the specs click the same link inside a page instead.
+- **Assumptions:** captures start in Eliminate (parser default). A browser that has never opened GSD redirects to the landing page and loses the capture.
+
 # Release must-fixes from the Sprint 1 deployment review (2026-10-31)
 
 Branch: `fix/release-must-fixes` off `main` (`0709c88`). Standard tier. Same branch name in `gsd-iosapp`. Not pushed.

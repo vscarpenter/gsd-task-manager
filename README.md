@@ -4,7 +4,7 @@ A privacy-first Eisenhower matrix for deciding what to do, schedule, delegate,
 or eliminate.
 
 **Live app:** [gsd.vinny.dev](https://gsd.vinny.dev)
-**Current version:** 14.5.2
+**Current version:** 14.6.0
 **Current product:** the v11 single-matrix shell, offline-first local storage,
 optional PocketBase sync, and the GSD MCP server.
 
@@ -19,6 +19,7 @@ optional PocketBase sync, and the GSD MCP server.
 - A responsive four-quadrant matrix with drag-and-drop movement.
 - Quick Capture, full task editing, search, keyboard navigation, and optional
   built-in Smart Views.
+- A bookmarklet from Settings that captures any web page for review in GSD.
 - Due dates, tags, dependency selection, and circular-dependency prevention.
 - Archive, dashboard/review analytics, sync history, settings, and onboarding.
 - Local IndexedDB persistence, JSON import/export, offline PWA support, and
