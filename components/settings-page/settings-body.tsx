@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -9,6 +9,7 @@ import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 
 import { AppearanceSettings } from "@/components/settings/appearance-settings";
+import { BookmarkletSettings } from "@/components/settings/bookmarklet-settings";
 import { FeatureSettings } from "@/components/settings/feature-settings";
 import { NotificationSettingsSection } from "@/components/settings/notification-settings";
 import { SyncSettings } from "@/components/settings/sync-settings";
@@ -29,6 +30,14 @@ import { useStorageSummary } from "./use-storage-summary";
 const ImportDialog = lazy(() =>
   import("@/components/import-dialog").then((m) => ({ default: m.ImportDialog }))
 );
+
+/** Sections that own their state and take no props from the settings page. */
+const SELF_CONTAINED_SECTIONS: Partial<Record<SettingsSectionId, ComponentType>> = {
+  bookmarklet: BookmarkletSettings,
+  trash: TrashSettings,
+  feedback: FeedbackSettings,
+  about: AboutSection,
+};
 
 const logger = createLogger("UI");
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -85,6 +94,7 @@ export function SettingsBody({
     SETTINGS_SECTIONS.find((s) => s.id === activeSection) ?? SETTINGS_SECTIONS[0];
 
   const storage = useStorageSummary(tasks);
+  const SelfContainedSection = SELF_CONTAINED_SECTIONS[activeSection];
 
   // Returns whether the backup was actually written, so callers (e.g. the
   // delete-account dialog's export-first gate) can refuse to proceed when the
@@ -153,7 +163,6 @@ export function SettingsBody({
         {activeSection === "archive" && (
           <ArchiveSettings onViewArchive={() => router.push("/archive")} />
         )}
-        {activeSection === "trash" && <TrashSettings />}
         {activeSection === "data" && (
           <DataManagement
             activeTasks={storage.activeTasks}
@@ -170,8 +179,7 @@ export function SettingsBody({
             pendingSync={settings.pendingSync}
           />
         )}
-        {activeSection === "feedback" && <FeedbackSettings />}
-        {activeSection === "about" && <AboutSection />}
+        {SelfContainedSection && <SelfContainedSection />}
       </SectionCard>
 
       {importDialogOpen && (

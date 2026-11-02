@@ -132,6 +132,12 @@ function renderBody(section: Parameters<typeof SettingsBody>[0]["activeSection"]
 }
 
 describe("SettingsBody", () => {
+  it("renders the bookmarklet section", () => {
+    renderBody("bookmarklet");
+    expect(screen.getByRole("heading", { name: "Bookmarklet" })).toBeInTheDocument();
+    expect(screen.getByText("Add to GSD")).toBeInTheDocument();
+  });
+
   it("renders the data section with the task-count summary", () => {
     renderBody("data");
     // 2 active + 1 done out of 3 total.

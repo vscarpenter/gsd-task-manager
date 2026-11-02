@@ -62,11 +62,14 @@ GSD Task Manager is a privacy-first application where all data is stored locally
      no draft. Opening the app again registers the worker, and sharing works
      again
 
-   Bookmarklet implementations should construct the destination like this
-   (paste as a single line into the bookmark's URL field):
+   **Settings → Bookmarklet** generates this link for the current origin, with
+   optional default tags. It encodes the whole source, because browsers
+   percent-decode a `javascript:` URL before running it. It also opens GSD with
+   `noopener,noreferrer`, so the page's address stays out of the request and the
+   page gets no handle on the GSD tab. Written by hand, the source looks like this:
 
    ```js
-   javascript:(function(){var p=new URLSearchParams({action:"capture",title:document.title||location.hostname,url:location.href,tags:"readme,todo"});window.open("https://gsd.vinny.dev/#"+p.toString(),"_blank");})();
+   javascript:(function(){var p=new URLSearchParams({action:"capture",title:document.title,url:location.href,tags:"readme,todo"});window.open("https://gsd.vinny.dev/#"+p.toString(),"_blank","noopener,noreferrer");})();
    ```
 
 5. **No Error Telemetry**
