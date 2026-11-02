@@ -27,7 +27,7 @@ gsd-verify up
 
 1. It refuses to start if this checkout already has a live instance.
 2. It runs `bun run build:e2e`, unless `out/` already matches the current source. A build takes about 10 seconds, and a reuse takes about 2. Pass `--rebuild` to force one.
-3. It copies `out/` to `$TMPDIR/gsd-verify/<build>/` and serves the copy with `scripts/lib/static-export-server.cjs`, on the first free port from 3210 to 3229. Pass `--port N` to choose one.
+3. It copies `out/` to `$TMPDIR/gsd-verify/<digest of every file in out/>/` and serves the copy with `scripts/lib/static-export-server.cjs`, on the first free port from 3210 to 3229. Pass `--port N` to choose one.
 4. It runs doctor, which includes loading the matrix in a real browser.
 
 Ready means `up` exits 0 and prints `Ready: http://127.0.0.1:<port>`. An answering server isn't enough, so `up` stops the server and fails if the matrix doesn't load.
@@ -45,7 +45,7 @@ gsd-verify doctor
 Run this first whenever anything looks off. It changes nothing in the app, and it saves its own proof to the evidence folder. Exit 0 means the instance is worth driving. It checks that:
 
 - the recorded pid is the export server, and that pid owns the port
-- the served `sw.js` matches the snapshot, so this is the build you think it is
+- the served `sw.js` matches the snapshot, so the server is answering from this run's copy (the digest in the snapshot's name is what ties that copy to the build)
 - the source still matches the build (a stale instance fails here, and `drive` refuses to run)
 - the matrix loads with a clean console, the production CSP header is present, and the internet is blocked
 

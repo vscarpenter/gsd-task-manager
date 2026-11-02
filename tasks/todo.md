@@ -1,12 +1,13 @@
 # verify-gsd skill (2026-11-02)
 
-Branch: `chore/verify-gsd-skill` off `main` (`1f261ac`). Standard tier: skill files and a helper, no app code. Not pushed.
+Branch: `chore/verify-gsd-skill` off `main` (`1f261ac`). Standard tier: skill files and a helper, no app code. PR #667 is open at `3d0b8ef`, and the snapshot fix is committed on top of it but not pushed.
 
 ## Resuming From Here
 
 - [x] `.claude/skills/verify-gsd/`: `gsd-verify` (up, doctor, drive, down), Playwright fixtures, five mapped features, 37 journey tests.
 - [x] Verify: journeys green against a production build, unit suite 4,099, typecheck, lint, shape, knip. Negative paths ran: console error, stale source, dead server, dev server in the checkout.
-- **Next:** owner pushes and opens the PR, and decides on the palette bug below.
+- [x] Codex P2 on #667 confirmed and fixed: snapshots were keyed by `sw.js`, which holds only a version string, so `up --rebuild` served an old build while doctor passed. They're now keyed by a digest of the whole export. All 37 journeys were rerun on a correct snapshot.
+- **Next:** with the owner's go-ahead, push the fix, wait for CI on the new head, resolve the Codex thread, and merge #667. Then decide on the palette bug below.
 - **App bug, not fixed:** the palette's `Import tasks from JSON` and `Send feedback` change the URL to `/settings/#data` or `/settings/#feedback`, but the page stays on Appearance. 8 of 8 attempts failed, and a full load of either URL works. `backup-import-palette` marks it `test.fail()`. Footer, help drawer, and Review nudge links to `/settings#feedback` weren't tested. Cause not confirmed: `useActiveSection` only rereads the hash on `hashchange`, which `pushState` doesn't fire.
 - **Assumptions:** the helper runs through `bash` and never deletes anything, because global settings deny `chmod` and `rm` to agents. `$TMPDIR` snapshots wait for the OS to purge them, and run folders wait for the owner.
 

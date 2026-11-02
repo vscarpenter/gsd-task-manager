@@ -52,6 +52,12 @@ sha_of_file() {
   shasum -a 256 "$1" | cut -d' ' -f1
 }
 
+# Identifies a build by every file in it. sw.js can't do this: it holds only a
+# version string, and local builds of different code alternate between two versions.
+export_digest() {
+  (cd "$1" && find . -type f -exec shasum -a 256 {} + | LC_ALL=C sort | shasum -a 256 | cut -d' ' -f1)
+}
+
 # Next dev and next build both delete .next and out, so a build here would break
 # a dev server the owner is using in this checkout.
 next_process_in_checkout() {
@@ -110,7 +116,7 @@ build_if_needed() {
     recorded="$(cat "$LAST_BUILD_FILE")"
   fi
   if [ "$force" = "no" ] && [ -f "$REPO_ROOT/out/sw.js" ] &&
-    [ "$recorded" = "$fingerprint $(sha_of_file "$REPO_ROOT/out/sw.js")" ]; then
+    [ "$recorded" = "$fingerprint $(export_digest "$REPO_ROOT/out")" ]; then
     echo "Reusing out/: it matches the last gsd-verify build of this source." >&2
     echo "$fingerprint"
     return 0
@@ -133,7 +139,7 @@ build_if_needed() {
   if [ -z "$dirty_before" ]; then
     git restore -- "${BUILD_REWRITTEN_FILES[@]}"
   fi
-  echo "$fingerprint $(sha_of_file "$REPO_ROOT/out/sw.js")" >"$LAST_BUILD_FILE"
+  echo "$fingerprint $(export_digest "$REPO_ROOT/out")" >"$LAST_BUILD_FILE"
   echo "$fingerprint"
 }
 
@@ -141,9 +147,9 @@ build_if_needed() {
 # later build or dev server deletes out/, and neither can touch the copy. The
 # helper never deletes the copy: the OS purges $TMPDIR, and the same build reuses it.
 snapshot_build() {
-  local root="${TMPDIR:-/tmp}/gsd-verify" sha snapshot partial
-  sha="$(sha_of_file "$REPO_ROOT/out/sw.js")"
-  snapshot="$root/${sha:0:12}"
+  local root="${TMPDIR:-/tmp}/gsd-verify" digest snapshot partial
+  digest="$(export_digest "$REPO_ROOT/out")"
+  snapshot="$root/${digest:0:12}"
   if [ ! -f "$snapshot/out/sw.js" ]; then
     partial="$snapshot.partial.$$"
     mkdir -p "$partial"
