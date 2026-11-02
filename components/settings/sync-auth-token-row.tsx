@@ -47,7 +47,7 @@ export function SyncAuthTokenRow() {
   return (
     <SettingsRow
       label="MCP access"
-      description="Connect an MCP client to your cloud tasks. Treat this token like a password."
+      description="Connect an MCP client to your cloud tasks. Treat this token like a password. It expires within 30 days, so copy a new one when it does."
     >
       <Button
         variant="subtle"
