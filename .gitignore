@@ -58,6 +58,8 @@ sync.md
 !.claude/skills/pb-collection/
 !.claude/skills/branch-preflight/
 !.claude/skills/verify-frontend-change/
+!.claude/skills/verify-gsd/
+.claude/skills/verify-gsd/journeys/adhoc/
 !.claude/skills/claude-code-primitives/
 !.claude/skills/cleaning-up-merged-branches/
 

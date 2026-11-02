@@ -1,0 +1,394 @@
+#!/usr/bin/env bash
+# Launch, check, drive, and tear down one disposable GSD instance.
+# Usage is documented in ../SKILL.md. Run `gsd-verify help` for a summary.
+
+set -euo pipefail
+
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$SKILL_DIR/../../.." && pwd)"
+RUNS_DIR="$REPO_ROOT/.claude/verify-gsd-runs"
+CURRENT_FILE="$RUNS_DIR/current"
+LAST_BUILD_FILE="$RUNS_DIR/last-build"
+PLAYWRIGHT="$REPO_ROOT/node_modules/.bin/playwright"
+SERVER_SCRIPT="$REPO_ROOT/scripts/lib/static-export-server.cjs"
+FIRST_PORT=3210
+LAST_PORT=3229
+READY_ATTEMPTS=50
+
+# The build rewrites these two tracked files. Neither one changes the output.
+BUILD_REWRITTEN_FILES=(AGENTS.md next-env.d.ts)
+
+# Paths that cannot change what the app bundles, so editing a journey or a doc
+# does not mark a running instance as stale.
+FINGERPRINT_PATHSPEC=(
+  .
+  ":(exclude).claude"
+  ":(exclude).github"
+  ":(exclude).gitignore"
+  ":(exclude)docs"
+  ":(exclude)tasks"
+  ":(exclude)tests"
+  ":(exclude)tools"
+  ":(exclude)*.md"
+  ":(exclude)next-env.d.ts"
+)
+
+die() {
+  echo "gsd-verify: $*" >&2
+  exit 1
+}
+
+source_fingerprint() {
+  cd "$REPO_ROOT"
+  {
+    git rev-parse HEAD
+    git diff HEAD -- "${FINGERPRINT_PATHSPEC[@]}"
+    git ls-files -z -o --exclude-standard -- "${FINGERPRINT_PATHSPEC[@]}" |
+      xargs -0 shasum -a 256 2>/dev/null || true
+  } | shasum -a 256 | cut -d' ' -f1
+}
+
+sha_of_file() {
+  shasum -a 256 "$1" | cut -d' ' -f1
+}
+
+# Identifies a build by every file in it. sw.js can't do this: it holds only a
+# version string, and local builds of different code alternate between two versions.
+export_digest() {
+  (cd "$1" && find . -type f -exec shasum -a 256 {} + | LC_ALL=C sort | shasum -a 256 | cut -d' ' -f1)
+}
+
+# Next dev and next build both delete .next and out, so a build here would break
+# a dev server the owner is using in this checkout.
+next_process_in_checkout() {
+  local pid cwd
+  for pid in $(pgrep -f 'next-server|next/dist/bin/next|next dev|next build' || true); do
+    case "$(ps -o comm= -p "$pid" 2>/dev/null)" in
+      *sh | "") continue ;;
+    esac
+    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+    if [ "$cwd" = "$REPO_ROOT" ]; then
+      echo "$pid"
+    fi
+  done
+}
+
+port_owner() {
+  lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | head -n 1
+}
+
+pick_port() {
+  local port
+  for port in $(seq "$FIRST_PORT" "$LAST_PORT"); do
+    if [ -z "$(port_owner "$port")" ]; then
+      echo "$port"
+      return 0
+    fi
+  done
+  die "no free port between $FIRST_PORT and $LAST_PORT."
+}
+
+current_run_dir() {
+  [ -s "$CURRENT_FILE" ] || return 1
+  local dir
+  dir="$RUNS_DIR/$(cat "$CURRENT_FILE")"
+  [ -f "$dir/run.env" ] || return 1
+  echo "$dir"
+}
+
+load_current_run() {
+  local dir
+  dir="$(current_run_dir)" || die "no running instance in this checkout. Run: gsd-verify up"
+  # shellcheck disable=SC1091
+  source "$dir/run.env"
+}
+
+# True only when the recorded pid is our server, so nothing else ever gets killed.
+server_is_ours() {
+  kill -0 "$1" 2>/dev/null || return 1
+  ps -o command= -p "$1" 2>/dev/null | grep -Fq "$SERVER_SCRIPT"
+}
+
+build_if_needed() {
+  local force="$1" build_log="$2" fingerprint recorded=""
+  fingerprint="$(source_fingerprint)"
+  if [ -f "$LAST_BUILD_FILE" ]; then
+    recorded="$(cat "$LAST_BUILD_FILE")"
+  fi
+  if [ "$force" = "no" ] && [ -f "$REPO_ROOT/out/sw.js" ] &&
+    [ "$recorded" = "$fingerprint $(export_digest "$REPO_ROOT/out")" ]; then
+    echo "Reusing out/: it matches the last gsd-verify build of this source." >&2
+    echo "$fingerprint"
+    return 0
+  fi
+
+  local busy
+  busy="$(next_process_in_checkout | tr '\n' ' ')"
+  if [ -n "$busy" ]; then
+    die "a Next process (pid $busy) is running in this checkout, and a build would delete its .next and out. Stop it, or run from a git worktree."
+  fi
+
+  local dirty_before
+  cd "$REPO_ROOT"
+  dirty_before="$(git status --porcelain -- "${BUILD_REWRITTEN_FILES[@]}")"
+  echo "Building the static export. Log: $build_log" >&2
+  if ! bun run build:e2e >"$build_log" 2>&1; then
+    tail -n 30 "$build_log" >&2
+    die "build failed. Full log: $build_log"
+  fi
+  if [ -z "$dirty_before" ]; then
+    git restore -- "${BUILD_REWRITTEN_FILES[@]}"
+  fi
+  echo "$fingerprint $(export_digest "$REPO_ROOT/out")" >"$LAST_BUILD_FILE"
+  echo "$fingerprint"
+}
+
+# Copies out/ to a directory named for this build and prints that directory. A
+# later build or dev server deletes out/, and neither can touch the copy. The
+# helper never deletes the copy: the OS purges $TMPDIR, and the same build reuses it.
+snapshot_build() {
+  local root="${TMPDIR:-/tmp}/gsd-verify" digest snapshot partial
+  digest="$(export_digest "$REPO_ROOT/out")"
+  snapshot="$root/${digest:0:12}"
+  if [ ! -f "$snapshot/out/sw.js" ]; then
+    partial="$snapshot.partial.$$"
+    mkdir -p "$partial"
+    cp -R "$REPO_ROOT/out" "$partial/out"
+    mv "$partial" "$snapshot"
+  fi
+  echo "$snapshot"
+}
+
+start_server() {
+  local snapshot="$1" port="$2" log="$3"
+  # The server serves ./out relative to its working directory.
+  (
+    cd "$snapshot"
+    PORT="$port" exec nohup node "$SERVER_SCRIPT" >>"$log" 2>&1 </dev/null
+  ) &
+  echo "$!"
+}
+
+wait_for_server() {
+  local url="$1" attempt
+  for attempt in $(seq 1 "$READY_ATTEMPTS"); do
+    if curl -fs -o /dev/null "$url/"; then
+      return 0
+    fi
+    sleep 0.2
+  done
+  return 1
+}
+
+check_browser() {
+  [ -x "$PLAYWRIGHT" ] || die "Playwright is missing. Run: bun install"
+  (cd "$REPO_ROOT" && "$PLAYWRIGHT" install --dry-run chromium 2>/dev/null) |
+    sed -n 's/^ *Install location: *//p' | head -n 1 |
+    { read -r location && [ -d "$location" ]; } ||
+    die "this Playwright version's Chromium is not installed. Run: bunx playwright install chromium"
+}
+
+cmd_up() {
+  local force="no" port=""
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --rebuild) force="yes" ;;
+      --port)
+        port="${2:?--port needs a value}"
+        shift
+        ;;
+      *) die "unknown option for up: $1" ;;
+    esac
+    shift
+  done
+
+  local existing
+  if existing="$(current_run_dir)"; then
+    # shellcheck disable=SC1091
+    source "$existing/run.env"
+    if server_is_ours "$SERVER_PID"; then
+      die "an instance is already running at $BASE_URL (run $RUN_ID). Refusing to double-drive it. Run: gsd-verify doctor, or gsd-verify down"
+    fi
+  fi
+
+  check_browser
+  if [ -z "$port" ]; then
+    port="$(pick_port)"
+  elif [ -n "$(port_owner "$port")" ]; then
+    die "port $port is already in use."
+  fi
+
+  local run_id run_dir evidence snapshot fingerprint
+  run_id="run-$(date +%Y%m%d-%H%M%S)-$$"
+  run_dir="$RUNS_DIR/$run_id"
+  evidence="$run_dir/evidence"
+  mkdir -p "$evidence"
+
+  fingerprint="$(build_if_needed "$force" "$evidence/build.log")"
+  snapshot="$(snapshot_build)"
+
+  local pid url="http://127.0.0.1:$port"
+  pid="$(start_server "$snapshot" "$port" "$evidence/server.log")"
+  if ! wait_for_server "$url"; then
+    kill "$pid" 2>/dev/null || true
+    die "the server did not answer at $url. Log: $evidence/server.log"
+  fi
+
+  cat >"$run_dir/run.env" <<EOF
+RUN_ID=$run_id
+EVIDENCE_DIR=$evidence
+SNAPSHOT_DIR=$snapshot
+SERVER_PID=$pid
+PORT=$port
+BASE_URL=$url
+FINGERPRINT=$fingerprint
+BUILD_SW_SHA=$(sha_of_file "$snapshot/out/sw.js")
+COMMIT=$(git -C "$REPO_ROOT" rev-parse --short HEAD)
+EOF
+  echo "$run_id" >"$CURRENT_FILE"
+
+  # An answering server is not a usable app. Hold `up` until the matrix runs.
+  if ! cmd_doctor; then
+    cmd_down
+    die "the instance started but failed doctor. Evidence: $evidence"
+  fi
+  echo "Ready: $url"
+  echo "Evidence: $evidence"
+}
+
+doctor_line() {
+  printf '%-4s %s\n' "$1" "$2"
+}
+
+cmd_doctor() {
+  load_current_run
+  local failed=0
+
+  if server_is_ours "$SERVER_PID"; then
+    doctor_line ok "server pid $SERVER_PID is the export server"
+  else
+    doctor_line FAIL "server pid $SERVER_PID is not running"
+    failed=1
+  fi
+
+  if [ "$(port_owner "$PORT")" = "$SERVER_PID" ]; then
+    doctor_line ok "port $PORT belongs to pid $SERVER_PID"
+  else
+    doctor_line FAIL "port $PORT does not belong to pid $SERVER_PID"
+    failed=1
+  fi
+
+  if [ "$(curl -fsS "$BASE_URL/sw.js" 2>/dev/null | shasum -a 256 | cut -d' ' -f1)" = "$BUILD_SW_SHA" ]; then
+    doctor_line ok "served build matches the snapshot (commit $COMMIT)"
+  else
+    doctor_line FAIL "$BASE_URL/sw.js does not match the snapshot"
+    failed=1
+  fi
+
+  if [ "$(source_fingerprint)" = "$FINGERPRINT" ]; then
+    doctor_line ok "source matches the build"
+  else
+    doctor_line FAIL "source changed after this build, so proof would describe old code. Run: gsd-verify down && gsd-verify up"
+    failed=1
+  fi
+
+  if [ "$failed" -ne 0 ]; then
+    return 1
+  fi
+  if run_playwright doctor "$SKILL_DIR/journeys" doctor.journey.ts >/dev/null; then
+    doctor_line ok "matrix loads, console clean, internet blocked"
+  else
+    doctor_line FAIL "usability journey failed. Read: $LAST_DRIVE_DIR/playwright.log"
+    return 1
+  fi
+}
+
+# Sets LAST_DRIVE_DIR rather than printing it, because callers discard stdout.
+run_playwright() {
+  local label="$1" test_dir="$2"
+  shift 2
+  LAST_DRIVE_DIR="$EVIDENCE_DIR/$label-$(date +%H%M%S)-$$-$RANDOM"
+  mkdir -p "$LAST_DRIVE_DIR"
+  (
+    cd "$REPO_ROOT"
+    GSD_VERIFY_BASE_URL="$BASE_URL" \
+      GSD_VERIFY_EVIDENCE="$LAST_DRIVE_DIR" \
+      GSD_VERIFY_TESTDIR="$test_dir" \
+      "$PLAYWRIGHT" test --config "$SKILL_DIR/playwright.config.ts" "$@"
+  ) 2>&1 | tee "$LAST_DRIVE_DIR/playwright.log"
+}
+
+cmd_drive() {
+  [ "$#" -ge 1 ] || die "drive needs a journey name or a file path. Example: gsd-verify drive capture"
+  local target="$1" test_dir file label
+  shift
+  load_current_run
+  if [ "$(source_fingerprint)" != "$FINGERPRINT" ]; then
+    die "source changed after this build, so proof would describe old code. Run: gsd-verify down && gsd-verify up"
+  fi
+  server_is_ours "$SERVER_PID" || die "the server is gone. Run: gsd-verify down && gsd-verify up"
+
+  if [ -f "$SKILL_DIR/journeys/$target.journey.ts" ]; then
+    test_dir="$SKILL_DIR/journeys"
+    file="$target.journey.ts"
+  elif [ -f "$target" ]; then
+    test_dir="$(cd "$(dirname "$target")" && pwd)"
+    file="$(basename "$target")"
+  else
+    die "no journey named $target and no such file. Journeys: $(cd "$SKILL_DIR/journeys" && ls -- *.journey.ts | sed 's/\.journey\.ts$//' | tr '\n' ' ')"
+  fi
+  label="$(basename "$file" .journey.ts)"
+
+  local status=0
+  run_playwright "$label" "$test_dir" "$file" "$@" || status=$?
+  echo "Evidence: $LAST_DRIVE_DIR"
+  return "$status"
+}
+
+cmd_down() {
+  local dir
+  if ! dir="$(current_run_dir)"; then
+    echo "No instance to stop."
+    return 0
+  fi
+  # shellcheck disable=SC1091
+  source "$dir/run.env"
+  if server_is_ours "$SERVER_PID"; then
+    kill "$SERVER_PID"
+    local attempt
+    for attempt in $(seq 1 "$READY_ATTEMPTS"); do
+      kill -0 "$SERVER_PID" 2>/dev/null || break
+      sleep 0.2
+    done
+    if kill -0 "$SERVER_PID" 2>/dev/null; then
+      die "server pid $SERVER_PID ignored SIGTERM. Evidence is safe in $EVIDENCE_DIR"
+    fi
+    echo "Stopped server pid $SERVER_PID."
+  fi
+  : >"$CURRENT_FILE"
+  echo "Evidence kept: $EVIDENCE_DIR"
+}
+
+cmd_help() {
+  cat <<'EOF'
+gsd-verify up [--rebuild] [--port N]   Build if the source changed, snapshot out/, serve it, run doctor.
+gsd-verify doctor                      Read-only: is this instance worth driving? Exit 0 means yes.
+gsd-verify drive <journey|file> [...]  Run a journey. Extra args go to Playwright, such as -g "capture-enter".
+gsd-verify down                        Stop the server. Evidence stays.
+EOF
+}
+
+main() {
+  local command="${1:-help}"
+  [ "$#" -gt 0 ] && shift
+  case "$command" in
+    up) cmd_up "$@" ;;
+    doctor) cmd_doctor ;;
+    drive) cmd_drive "$@" ;;
+    down) cmd_down ;;
+    help | -h | --help) cmd_help ;;
+    *) die "unknown command: $command. Run: gsd-verify help" ;;
+  esac
+}
+
+main "$@"
