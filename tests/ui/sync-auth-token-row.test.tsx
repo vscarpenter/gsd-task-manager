@@ -41,6 +41,14 @@ afterEach(() => {
 });
 
 describe("SyncAuthTokenRow", () => {
+  it("warns that a copied token expires within 30 days and won't renew itself", () => {
+    render(<SyncAuthTokenRow />);
+
+    expect(
+      screen.getByText(/expires within 30 days.*copy a new one when it does/i),
+    ).toBeInTheDocument();
+  });
+
   it("copies only the raw token without rendering the credential or account record", async () => {
     const { container } = render(<SyncAuthTokenRow />);
     expect(screen.getByText("MCP access")).toBeInTheDocument();
