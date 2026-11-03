@@ -85,7 +85,7 @@ const SCREENS: Screen[] = [
   {
     key: "privacy",
     title: "Your data stays yours.",
-    body: "Your tasks are saved in this browser and work offline. Sync is optional. If you turn it on, your tasks are uploaded to a server run by GSD's developer.",
+    body: "Your tasks are stored in this browser and work offline. Sync is optional. If you turn it on, your tasks are uploaded to a server run by GSD's developer.",
     visual: (
       <div
         className="flex h-16 w-16 items-center justify-center rounded-2xl"

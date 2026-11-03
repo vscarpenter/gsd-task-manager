@@ -35,6 +35,8 @@ describe("Onboarding", () => {
     await user.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.getByRole("button", { name: /start using gsd/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sign in to sync/i })).toBeInTheDocument();
+    // "stored", not "saved", so the privacy line doesn't read as the Saved feature.
+    expect(screen.getByText(/Your tasks are stored in this browser and work offline\./)).toBeInTheDocument();
   });
 
   it("calls onClose when Skip is pressed", async () => {
