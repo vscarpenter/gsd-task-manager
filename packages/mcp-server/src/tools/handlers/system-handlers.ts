@@ -33,9 +33,11 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     });
   }
 
-  // Check authentication
+  // Check authentication. getSyncStatus catches its own errors and returns
+  // healthy: false, so read the result rather than relying on a throw.
   try {
     const status = await getSyncStatus(config);
+    if (!status.healthy) throw new Error('Sync status unhealthy');
     checks.push({
       name: 'Authentication',
       status: 'success',
