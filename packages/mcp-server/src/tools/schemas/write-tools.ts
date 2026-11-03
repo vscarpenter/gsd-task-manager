@@ -39,7 +39,8 @@ export const createTaskTool: Tool = {
         type: 'array',
         maxItems: SCHEMA_LIMITS.MAX_TAGS,
         items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.TAG_MAX_LENGTH },
-        description: 'Tags for categorization (e.g., ["#work", "#project-alpha"])',
+        description:
+          'Tags, lowercase, without a leading # (for example ["work", "project-alpha"]). The apps store tags this way, so "#work" would be a separate tag.',
       },
       subtasks: {
         type: 'array',
@@ -70,7 +71,7 @@ export const createTaskTool: Tool = {
         description: 'Task IDs that must be completed before this task',
       },
       notifyBefore: {
-        type: 'number',
+        type: 'integer',
         description:
           'Minutes before due date to send a reminder notification (0 disables the reminder)',
         minimum: 0,
@@ -80,7 +81,7 @@ export const createTaskTool: Tool = {
         description: 'Whether notifications are enabled for this task (default: true)',
       },
       estimatedMinutes: {
-        type: 'number',
+        type: 'integer',
         description: 'Estimated time to complete in minutes (1-10080, i.e. up to 7 days)',
         minimum: 1,
         maximum: 10080,
@@ -97,7 +98,7 @@ export const createTaskTool: Tool = {
 export const updateTaskTool: Tool = {
   name: 'update_task',
   description:
-    'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Use dryRun=true to preview changes.',
+    'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Setting completed=true does not create the next instance of a recurring task; use complete_task for that. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -134,7 +135,7 @@ export const updateTaskTool: Tool = {
         type: 'array',
         maxItems: SCHEMA_LIMITS.MAX_TAGS,
         items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.TAG_MAX_LENGTH },
-        description: 'Replace tags entirely',
+        description: 'Replace tags entirely. Use lowercase tags without a leading #, as the apps store them.',
       },
       subtasks: {
         type: 'array',
@@ -167,10 +168,11 @@ export const updateTaskTool: Tool = {
       },
       completed: {
         type: 'boolean',
-        description: 'Mark as complete/incomplete',
+        description:
+          'Mark as complete/incomplete. Does not create the next recurring instance; use complete_task for that.',
       },
       notifyBefore: {
-        type: 'number',
+        type: 'integer',
         description: 'Minutes before due date to send a reminder (0 disables the reminder)',
         minimum: 0,
       },
@@ -179,7 +181,7 @@ export const updateTaskTool: Tool = {
         description: 'Whether notifications are enabled for this task',
       },
       estimatedMinutes: {
-        type: 'number',
+        type: 'integer',
         description: 'Estimated time to complete in minutes (1-10080)',
         minimum: 1,
         maximum: 10080,
@@ -245,7 +247,7 @@ export const deleteTaskTool: Tool = {
 export const bulkUpdateTasksTool: Tool = {
   name: 'bulk_update_tasks',
   description:
-    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation (10 for deletes) for safety. Destructive deletes default to dryRun=true — pass dryRun=false explicitly to apply.',
+    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation (10 for deletes) for safety. Bulk complete does not create the next instance of a recurring task; use complete_task for that. Deletes are permanent and skip the 30-day Trash on every client. Destructive deletes default to dryRun=true — pass dryRun=false explicitly to apply.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -254,7 +256,7 @@ export const bulkUpdateTasksTool: Tool = {
         minItems: 1,
         maxItems: SCHEMA_LIMITS.MAX_BULK_TASKS,
         items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.ID_MAX_LENGTH },
-        description: 'Array of task IDs to update (max 50)',
+        description: 'Array of task IDs to update (max 50, or 10 for type=delete)',
       },
       operation: {
         type: 'object',
@@ -283,7 +285,8 @@ export const bulkUpdateTasksTool: Tool = {
             minItems: 1,
             maxItems: SCHEMA_LIMITS.MAX_TAGS,
             items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.TAG_MAX_LENGTH },
-            description: 'For type=add_tags or remove_tags: array of tags',
+            description:
+              'For type=add_tags or remove_tags: array of tags, lowercase, without a leading #',
           },
           dueDate: {
             type: 'string',

@@ -33,9 +33,11 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     });
   }
 
-  // Check authentication
+  // Check authentication. getSyncStatus catches its own errors and returns
+  // healthy: false, so read the result rather than relying on a throw.
   try {
     const status = await getSyncStatus(config);
+    if (!status.healthy) throw new Error('Sync status unhealthy');
     checks.push({
       name: 'Authentication',
       status: 'success',
@@ -86,12 +88,15 @@ function buildToolsHelpSection(): string {
 
 ### Metadata & Status Tools
 - **get_sync_status** - Check PocketBase health and task count
-- **get_task_stats** - Get high-level task statistics
+- **get_task_stats** - Get high-level task statistics (counts include Saved items)
+- **get_token_status** - Check auth token expiration status
 
 ### Task Access Tools
 - **list_tasks** - List all tasks with optional filtering (quadrant, completed, tags)
 - **get_task** - Get a single task by ID
 - **search_tasks** - Search across titles, descriptions, tags, subtasks
+
+Saved items (Move to Saved in the apps) are hidden from list, get, search, and analytics.
 
 ### Analytics Tools
 - **get_productivity_metrics** - Comprehensive metrics (completions, streaks, rates)
@@ -105,13 +110,12 @@ function buildToolsHelpSection(): string {
 - **update_task** - Update an existing task (partial updates supported)
 - **complete_task** - Quick toggle for task completion status
 - **delete_task** - Permanently delete a task
-- **bulk_update_tasks** - Update multiple tasks at once (max 50)
+- **bulk_update_tasks** - Update multiple tasks at once (max 50, or 10 per delete)
 
 ### Configuration & System Tools
 - **validate_config** - Diagnose configuration issues
 - **get_help** - This help message (supports topic filtering)
 - **get_cache_stats** - View cache performance statistics
-- **get_token_status** - Check auth token expiration status
 
 `;
 }
@@ -121,8 +125,12 @@ function buildSetupHelpSection(): string {
 
 **First-time Setup:**
 \`\`\`bash
-npx gsd-mcp-server --setup
+npm install --global gsd-mcp-server@${VERSION}
+gsd-mcp-server --setup
 \`\`\`
+Install an exact version globally rather than running it through npx: the
+setup wizard writes the path of the copy that ran it, and npm can prune the
+npx cache.
 
 **Configuration Requirements:**
 - GSD_POCKETBASE_URL - PocketBase server URL (e.g., https://api.vinny.io)
@@ -147,7 +155,7 @@ function buildExamplesHelpSection(): string {
 **Task Management:**
 - "List all urgent and important tasks"
 - "Search for tasks about quarterly report"
-- "Show me tasks tagged #work"
+- "Show me tasks tagged work"
 
 **Write Operations:**
 - "Create a task: Review quarterly budget"
@@ -161,7 +169,7 @@ function buildTroubleshootingHelpSection(): string {
   return `## Troubleshooting
 
 **"Configuration error" on startup:**
-- Run: \`npx gsd-mcp-server --setup\`
+- Run: \`gsd-mcp-server --setup\`
 - Ensure GSD_POCKETBASE_URL and GSD_AUTH_TOKEN are set
 
 **"Authentication failed":**
@@ -175,7 +183,7 @@ function buildTroubleshootingHelpSection(): string {
 - Ensure PocketBase server is running
 
 **For more help:**
-- Run: \`npx gsd-mcp-server --validate\`
+- Run: \`gsd-mcp-server --validate\`
 - GitHub: https://github.com/vscarpenter/gsd-task-manager/issues
 
 `;
@@ -201,7 +209,7 @@ function buildAdditionalResourcesSection(): string {
   return `## Additional Resources
 
 - **Full Documentation:** https://github.com/vscarpenter/gsd-task-manager/tree/main/packages/mcp-server
-- **Setup Guide:** Run \`npx gsd-mcp-server --setup\`
+- **Setup Guide:** Run \`gsd-mcp-server --setup\` after a global install
 - **Issues/Support:** https://github.com/vscarpenter/gsd-task-manager/issues
 
 **Version:** ${VERSION}

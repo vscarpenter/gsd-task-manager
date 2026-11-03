@@ -47,10 +47,15 @@ that account's tasks until it expires. Tokens last 30 days (the `users`
 collection's auth duration, set by `docker/pb_migrations/1793562900_users_auth_token_30_days.js`),
 and the MCP server never renews the one in its config. Know the limits:
 
-- **PocketBase has no per-token revocation.** Logging out in the browser clears
-  that browser's copy but does **not** invalidate other copies of the token.
-  The only ways to invalidate an issued token early are changing your account
-  password/identity or rotating the collection's token secret on the server.
+- **Revoking a token.** Signing out in the browser clears that browser's copy
+  but does **not** invalidate other copies of the token. On a self-hosted
+  (Docker) server, Settings → Cloud Sync → Sign out of all devices rotates your
+  token key, which ends every session, MCP tokens included
+  (`docker/pb_hooks/session_revoke.pb.js`). On the hosted service that button
+  signs out only the current device, and an issued token stays valid until it
+  expires (at most 30 days). The server operator can end it sooner by rotating
+  the users collection's token secret. Accounts sign in with Google, Apple, or
+  GitHub, so there is no account password to change.
 - **The setup wizard writes a token-bearing file** (`~/.gsd-mcp-setup.json`,
   mode 0600) for you to copy into the Claude Desktop config. It is deleted
   automatically the first time the MCP server starts with valid env config —
@@ -70,9 +75,10 @@ and the MCP server never renews the one in its config. Know the limits:
 ## If You Accidentally Commit Credentials
 
 1. **Immediately revoke the exposed credentials**:
-   - For JWT tokens: logging out is **not** enough (see above) — change your
-     account password or rotate the token secret in PocketBase to invalidate
-     all outstanding tokens, then sign in again for a fresh token
+   - For JWT tokens: signing out on one device is **not** enough (see above).
+     On a self-hosted server, use Settings → Cloud Sync → Sign out of all
+     devices. On the hosted service, ask the operator to rotate the users
+     collection's token secret. Then sign in again for a fresh token
 
 2. **Remove from git history**:
    ```bash

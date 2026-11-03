@@ -299,6 +299,59 @@ describe('Tool Schemas', () => {
     });
   });
 
+  describe('Descriptions match server behavior', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const props = (tool: { inputSchema: { properties?: unknown } }) => tool.inputSchema.properties as any;
+
+    it('read tools say Saved items are excluded, and get_task_stats says it counts them', () => {
+      expect(listTasksTool.description).toMatch(/Saved items .*are excluded/);
+      expect(getTaskTool.description).toMatch(/Saved items are excluded/);
+      expect(searchTasksTool.description).toMatch(/Saved items excluded/);
+      expect(getTaskStatsTool.description).toMatch(/including Saved items/);
+    });
+
+    it('tag descriptions teach lowercase tags without a leading #', () => {
+      const tagDescriptions = [
+        props(createTaskTool).tags.description,
+        props(updateTaskTool).tags.description,
+        props(bulkUpdateTasksTool).operation.properties.tags.description,
+      ];
+      tagDescriptions.forEach((text: string) => {
+        expect(text).toMatch(/without a leading #/);
+        expect(text).not.toMatch(/\["#/);
+      });
+    });
+
+    it('update_task and bulk_update_tasks say completing does not spawn the next recurring instance', () => {
+      expect(updateTaskTool.description).toMatch(/does not create the next instance of a recurring task/);
+      expect(props(updateTaskTool).completed.description).toMatch(/Does not create the next recurring instance/);
+      expect(bulkUpdateTasksTool.description).toMatch(/does not create the next instance of a recurring task/);
+    });
+
+    it('bulk_update_tasks says deletes skip Trash and are capped at 10', () => {
+      expect(bulkUpdateTasksTool.description).toMatch(/skip the 30-day Trash/);
+      expect(props(bulkUpdateTasksTool).taskIds.description).toMatch(/10 for type=delete/);
+    });
+
+    it('get_token_status lists the invalid status', () => {
+      expect(getTokenStatusTool.description).toMatch(/invalid/);
+    });
+
+    it('validate_config does not claim to check environment variables', () => {
+      expect(validateConfigTool.description).not.toMatch(/environment variables/i);
+      expect(validateConfigTool.description).toMatch(/task access/);
+    });
+
+    it('integer-only fields advertise type integer, matching the Zod schemas', () => {
+      for (const tool of [createTaskTool, updateTaskTool]) {
+        expect(props(tool).notifyBefore.type).toBe('integer');
+        expect(props(tool).estimatedMinutes.type).toBe('integer');
+      }
+      expect(props(getTagAnalyticsTool).limit.type).toBe('integer');
+      expect(props(getTagAnalyticsTool).limit.minimum).toBe(1);
+    });
+  });
+
   describe('Schema Consistency', () => {
     it('quadrant enum should be consistent across tools', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

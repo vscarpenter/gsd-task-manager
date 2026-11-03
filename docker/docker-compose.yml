@@ -14,7 +14,7 @@ services:
     volumes:
       - pb_data:/pb_data          # PocketBase database persistence
       # Uncomment to use your own SSL certificates (see README.md):
-      # - ~/certs:/certs:ro
+      # - ./certs:/certs:ro
     environment:
       - SITE_ADDRESS=localhost
       # 32-char AES-256 key for at-rest task encryption. Provide via a gitignored
@@ -25,8 +25,8 @@ services:
       #
       # For custom SSL certificates, uncomment all three:
       # - TLS_MODE=custom
-      # - TLS_CERT=/certs/localhost-cert.pem
-      # - TLS_KEY=/certs/localhost-key.pem
+      # - TLS_CERT=/certs/cert.pem
+      # - TLS_KEY=/certs/key.pem
       #
       # For a real domain with automatic Let's Encrypt, both lines are required
       # — SITE_ADDRESS alone still serves the private CA certificate:

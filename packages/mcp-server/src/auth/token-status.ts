@@ -44,7 +44,7 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
 
 function reauthInstructions(): string[] {
   return [
-    '1. Visit https://gsd.vinny.dev and sign in',
+    '1. Open the GSD web app you sync with (gsd.vinny.dev for the hosted service) and sign in',
     '2. Open Settings → Cloud Sync → Copy auth token',
     '3. Update GSD_AUTH_TOKEN in your Claude Desktop config',
     '4. Restart Claude Desktop',

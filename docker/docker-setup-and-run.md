@@ -23,6 +23,9 @@ Both commands should print version information without errors.
 
 ## Build & Run
 
+Create the task encryption key first (see [Task encryption key](#task-encryption-key-required)
+below); compose refuses to start without it. Then:
+
 ```bash
 cd docker
 docker compose up --build
@@ -87,28 +90,34 @@ still returns arrays over the API.
 
 ## First-Time PocketBase Setup
 
-PocketBase starts with no collections or admin account. Complete these steps once:
+PocketBase starts with no `tasks` collection and no admin account. Complete these steps once:
 
 1. Create or update a PocketBase superuser inside the container:
    ```bash
    docker compose exec gsd pocketbase superuser upsert admin@example.com 'change-this-password' --dir=/pb_data
    ```
-2. Set up the **tasks** collection via the setup script from the repo root:
-   ```bash
-   PB_URL=https://localhost \
-   PB_ADMIN_EMAIL=admin@example.com \
-   PB_ADMIN_PASSWORD='change-this-password' \
-   ./scripts/setup-pocketbase-collections.sh
-   ```
-3. To use the admin UI, temporarily publish PocketBase on localhost only:
+2. Temporarily publish PocketBase on localhost only, then restart
+   (`docker compose up -d`). The setup script signs in as the superuser, and
+   Caddy blocks superuser routes on the public origin, so the script can't run
+   through `https://localhost`.
    ```yaml
    ports:
      - "443:443"
      - "80:80"
      - "127.0.0.1:8090:8090"
    ```
-   Restart, open **http://127.0.0.1:8090/_/**, then remove the port mapping when setup is complete.
-4. Optionally configure OAuth providers under **Settings → Auth providers** in the local admin dashboard.
+3. Set up the **tasks** collection via the setup script from the repo root:
+   ```bash
+   PB_URL=http://127.0.0.1:8090 \
+   PB_ADMIN_EMAIL=admin@example.com \
+   PB_ADMIN_PASSWORD='change-this-password' \
+   ./scripts/setup-pocketbase-collections.sh
+   ```
+4. Optionally configure OAuth providers (Google, Apple, GitHub) at
+   **http://127.0.0.1:8090/_/**: open the **users** collection's settings, then
+   **Options › OAuth2**. Apple returns with a POST, which `/api/gsd/oauth-callback`
+   accepts.
+5. Remove the port mapping and restart when setup is complete.
 
 ## Test the App
 
@@ -162,6 +171,8 @@ mkdir -p docker/certs
 mkcert -cert-file docker/certs/cert.pem -key-file docker/certs/key.pem localhost
 ```
 
+The container runs as the non-root `gsd` user, which must be able to read both files.
+
 ### 3. Configure docker-compose.yml
 
 Uncomment the certificate lines in `docker-compose.yml`:
@@ -205,9 +216,15 @@ PocketBase data (database, uploaded files) is stored in a Docker volume named `p
 
 ### Back up data
 
+Stop the stack first for a consistent SQLite copy:
+
 ```bash
-docker cp $(docker compose ps -q gsd):/pb_data ./pb_backup
+docker compose stop
+docker cp $(docker compose ps -aq gsd):/pb_data ./pb_backup
+docker compose start
 ```
+
+Back up `GSD_TASKS_ENC_KEY` separately; the database is unreadable without it.
 
 ### Reset all data
 
@@ -232,7 +249,9 @@ ports:
   - "8443:443"
 ```
 
-Then access the app at `https://localhost:8443`.
+Then access the app at `https://localhost:8443`. Register
+`https://localhost:8443/api/gsd/oauth-callback` with each OAuth provider, since
+the redirect URL includes the port.
 
 ### PocketBase admin not loading
 
@@ -244,7 +263,7 @@ docker compose logs -f
 
 ### OAuth not working
 
-OAuth providers must be configured in PocketBase admin (**Settings → Auth providers**). Register `https://localhost/api/gsd/oauth-callback` (or the same path on your custom `SITE_ADDRESS`) as the redirect URL with each provider. This image disables PocketBase's built-in `/api/oauth2-redirect`, because it can deliver a sign-in code to a browser other than the one that started sign-in.
+OAuth providers must be configured in PocketBase admin (the **users** collection's settings, **Options › OAuth2**). Register `https://localhost/api/gsd/oauth-callback` (or the same path on your custom `SITE_ADDRESS`) as the redirect URL with each provider. This image disables PocketBase's built-in `/api/oauth2-redirect`, because it can deliver a sign-in code to a browser other than the one that started sign-in.
 
 ### Build fails during `bun install`
 
