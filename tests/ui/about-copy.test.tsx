@@ -83,4 +83,16 @@ describe("about-page sync and server claims", () => {
     expect(container.textContent).not.toMatch(/filter in one click/i);
     expect(container.textContent).toMatch(/turn on in Settings/i);
   });
+
+  it("should_not_claim_smart_views_save_your_own_filters", () => {
+    const { container } = render(<FeaturesSection />);
+    expect(container.textContent).not.toMatch(/save filters/i);
+    expect(container.textContent).toMatch(/ready-made filters/i);
+  });
+
+  it("should_call_the_analytics_page_review", () => {
+    render(<FeaturesSection />);
+    expect(screen.getByRole("heading", { name: "Review" })).toBeInTheDocument();
+    expect(screen.queryByText(/Analytics Dashboard/)).toBeNull();
+  });
 });
