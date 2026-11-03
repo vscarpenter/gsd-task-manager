@@ -35,9 +35,9 @@ describe("<AuthenticatedSection> Apple account note", () => {
     expect(screen.getByRole("note")).toHaveTextContent(/private relay email.*separate account/i);
   });
 
-  it("says another provider elsewhere would be a different account", () => {
+  it("says a different email elsewhere would show different tasks", () => {
     renderSignedIn("apple", "me@example.com");
-    expect(screen.getByRole("note")).toHaveTextContent(/Signed in with Apple.*different account/i);
+    expect(screen.getByRole("note")).toHaveTextContent(/Signed in with Apple.*different email/i);
   });
 
   it("stays quiet for Google and GitHub", () => {
