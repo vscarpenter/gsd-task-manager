@@ -692,7 +692,7 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
       });
     });
 
@@ -703,10 +703,10 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} onSuccess={onSuccess} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: /logout/i }));
+      await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
       await waitFor(() => {
         expect(mockDisableSync).toHaveBeenCalled();
@@ -721,10 +721,10 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: /logout/i }));
+      await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
       await waitFor(() => {
         expect(mockDisableSync).toHaveBeenCalled();
@@ -742,12 +742,12 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: /logout/i }));
+      await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
-      expect(screen.getByText('Logging out...')).toBeInTheDocument();
+      expect(screen.getByText('Signing out…')).toBeInTheDocument();
     });
 
     it('should disable logout button while logging out', async () => {
@@ -761,10 +761,10 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
       });
 
-      const logoutButton = screen.getByRole('button', { name: /logout/i });
+      const logoutButton = screen.getByRole('button', { name: 'Sign out' });
       await user.click(logoutButton);
 
       expect(logoutButton).toBeDisabled();
@@ -779,10 +779,10 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: /logout/i }));
+      await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
       await waitFor(() => {
         const errorElement = screen.getByText('Logout failed');
@@ -801,14 +801,14 @@ describe('SyncAuthDialog', () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
       });
 
-      await user.click(screen.getByRole('button', { name: /logout/i }));
+      await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
       await waitFor(() => {
         expect(screen.getByText(/3 unsynchronized changes/)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /Logout Anyway/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /sign out anyway/i })).toBeInTheDocument();
       });
     });
 
@@ -903,7 +903,7 @@ describe('SyncAuthDialog', () => {
         expect(screen.getByText('test@example.com')).toBeInTheDocument();
       });
 
-      it('asks the user to finish with Logout when this device could not finish', async () => {
+      it('asks the user to finish with Sign out when this device could not finish', async () => {
         const user = userEvent.setup();
         mockSignOutEverywhere.mockRejectedValue(new MockLocalSignOutIncompleteError(true));
 
@@ -911,7 +911,7 @@ describe('SyncAuthDialog', () => {
         await user.click(await screen.findByRole('button', { name: 'Sign out everywhere' }));
 
         expect(await screen.findByRole('alert')).toHaveTextContent(
-          "Your other devices are signed out, but this device couldn't finish signing out. Choose Logout to finish."
+          "Your other devices are signed out, but this device couldn't finish signing out. Choose Sign out to finish."
         );
       });
     });
