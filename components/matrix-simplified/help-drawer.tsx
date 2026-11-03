@@ -1,11 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
-import { quadrantByRdKey } from "@/lib/quadrants";
-import { ROUTES } from "@/lib/routes";
 import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { HelpGuideSections } from "./help-drawer-sections";
 
 export interface HelpDrawerProps {
   open: boolean;
@@ -54,11 +52,15 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           }}
         >
           <div>
+            <p className="text-eyebrow uppercase" style={{ margin: "0 0 4px", color: "var(--gray-500)" }}>
+              Field Guide
+            </p>
             <DialogTitle asChild className="text-h1">
               <h2 style={{ margin: 0 }}>How to use GSD</h2>
             </DialogTitle>
             <DialogDescription className="sr-only">
-              How the matrix works, the markers for the Add a task bar, keyboard tips, and sync.
+              How the matrix works, adding tasks, due dates and reminders, Saved, finding things, sync, keyboard tips,
+              and your data.
             </DialogDescription>
           </div>
         </header>
@@ -68,240 +70,10 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps) {
           className="pb-[max(2.5rem,env(safe-area-inset-bottom))] pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pt-[1.375rem]"
           style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 28 }}
         >
-          <Section label="The board and the Add a task bar">
-            <Concept title="The matrix">
-              The matrix sorts your tasks into four quadrants by urgency and importance. On a phone the quadrants
-              stack in one column. Drag a task onto another quadrant to move it; the quadrant under it lights up.
-            </Concept>
-            <Concept title="Adding a task">
-              Every task starts in the Add a task bar. It is at the top on a computer and at the bottom on a phone. Type
-              your task and press <kbd>Enter</kbd>. Markers in the text pick the quadrant (see below). To pick it
-              yourself, click or tap the quadrant button that appears in the bar as you type. Keyboard tip: press{" "}
-              <kbd>Tab</kbd> to reach the quadrant button, then press <kbd>Enter</kbd> or <kbd>Space</kbd> to change
-              it.
-            </Concept>
-          </Section>
-
-          <Section label="The four quadrants">
-            {(["q1", "q2", "q3", "q4"] as const).map((rdKey) => (
-              <QuadrantLine key={rdKey} rdKey={rdKey} title={quadrantByRdKey(rdKey).title} hint={quadrantByRdKey(rdKey).rdHint} />
-            ))}
-          </Section>
-
-          <Section label="Markers in the Add a task bar">
-            <p style={bodyStyle}>
-              Add markers to your text. The quadrant button in the bar shows where the task will go.
-              Click or tap it to change that.
-            </p>
-            <SyntaxRow symbol="!!" meaning="Urgent and important (Do First)" />
-            <SyntaxRow symbol="*" meaning="Important (Schedule)" />
-            <SyntaxRow symbol="!" meaning="Urgent (Delegate)" />
-            <SyntaxRow symbol="none" meaning="No marker: the task goes to Eliminate" />
-            <SyntaxRow symbol="#tag" meaning="Adds a tag" />
-            <p style={{ ...bodyStyle, color: "var(--gray-500)" }}>
-              Example: <code style={codeStyle}>call the bank !! #money #home</code> creates an urgent and important task
-              (Do First) tagged <code style={codeStyle}>#money</code> and <code style={codeStyle}>#home</code>.
-            </p>
-          </Section>
-
-          <Section label="Keyboard tips">
-            <ShortcutRow keys={["n"]} action="Jump to the Add a task bar" />
-            <ShortcutRow keys={["⌘", "K"]} action="Open the command palette" />
-            <ShortcutRow keys={["Shift", "N"]} action="Open the full New task form" />
-            <ShortcutRow keys={["/"]} action="Go to the search field" />
-            <ShortcutRow keys={["⌥", "/"]} action="Search tasks from any page" />
-            <ShortcutRow keys={["⌥", "N"]} action="Jump to the Add a task bar from any page" />
-            <ShortcutRow keys={["⌥", "R"]} action="Open Review" />
-            <ShortcutRow keys={["⌥", "1–4"]} action="Go to a quadrant" />
-            <ShortcutRow keys={["Enter"]} action="Add the task (in the Add a task bar)" />
-            <ShortcutRow keys={["?"]} action="Open this help panel" />
-            <ShortcutRow keys={["Esc"]} action="Close any open panel" />
-            <p style={{ ...bodyStyle, color: "var(--gray-500)", fontSize: "var(--t-caption)" }}>
-              Option shortcuts use the key&rsquo;s position on the keyboard. They are off while you type in a text field
-              or have a dialog open.
-            </p>
-          </Section>
-
-          <Section label="Complete, edit, and move tasks">
-            <p style={bodyStyle}>
-              <strong>Complete</strong>: tap the circle on a task card. Recurring tasks automatically create the next one.
-            </p>
-            <p style={bodyStyle}>
-              <strong>Swipe on a touch screen</strong>: swipe a task right to complete it. Swipe left to snooze it for
-              1 hour or delete it.
-            </p>
-            <p style={bodyStyle}>
-              <strong>Edit</strong>: hover a task card and click the pencil to open the edit form with that
-              task&rsquo;s details. On a phone the pencil is always visible. Save to update, close without saving to cancel.
-            </p>
-            <p style={bodyStyle}>
-              <strong>Move</strong>: drag a task onto any other quadrant. A plain click never starts a drag.
-            </p>
-          </Section>
-
-          <Section label="Cloud sync (optional)">
-            <p style={bodyStyle}>
-              The cloud icon at the top is your sync control. Click it to sign in with Google, Apple, or GitHub. Signing
-              in creates a sync account and uploads the tasks already in this browser to a server run by GSD&rsquo;s
-              developer. After that, your devices show the same tasks.
-            </p>
-            <p style={{ ...bodyStyle, color: "var(--gray-500)" }}>
-              A number on the icon counts changes waiting to sync. An exclamation mark means your session expired. Click
-              the icon to sign in again. Visit{" "}
-              <Link href={"/sync-history" as const} style={linkStyle} onClick={onClose}>
-                Sync history
-              </Link>{" "}
-              for a recent log, or{" "}
-              <Link href={ROUTES.SETTINGS} style={linkStyle} onClick={onClose}>
-                Settings
-              </Link>{" "}
-              to change how often it syncs, sign out, or delete the account.
-            </p>
-          </Section>
-
-          <PrivacySection onClose={onClose} />
+          <HelpGuideSections onClose={onClose} />
         </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-/**
- * Split out so the drawer body stays under the code-shape ceiling; it is the
- * one section that grows as new settings surfaces (sync, feedback) need a
- * pointer from here.
- */
-function PrivacySection({ onClose }: { onClose: () => void }) {
-  return (
-    <Section label="Privacy">
-      <p style={bodyStyle}>
-        Your tasks are stored in this browser and work offline. They are never sent to a server unless you turn on
-        sync with the cloud icon at the top. Feedback you choose to send goes to GSD&rsquo;s server and contains none
-        of your tasks.
-        Sync settings are in{" "}
-        <Link href={ROUTES.SETTINGS} style={linkStyle} onClick={onClose}>
-          Settings
-        </Link>{" "}
-        once you are signed in.
-      </p>
-      <p style={bodyStyle}>
-        Found a problem, or want something added?{" "}
-        <Link href="/settings#feedback" style={linkStyle} onClick={onClose}>
-          Send feedback
-        </Link>
-        . It has no account or device identifier, and you can read exactly what is sent before it goes.
-      </p>
-      <p style={bodyStyle}>
-        More about GSD:{" "}
-        <Link href={"/about" as const} style={linkStyle} onClick={onClose}>
-          read the About page →
-        </Link>
-      </p>
-    </Section>
-  );
-}
-
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <h3 className="text-eyebrow uppercase" style={{ margin: 0, color: "var(--gray-500)" }}>
-        {label}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
-function Concept({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-h3" style={{ color: "var(--slate)" }}>
-        {title}
-      </div>
-      <p style={{ ...bodyStyle, marginTop: 2 }}>{children}</p>
-    </div>
-  );
-}
-
-function QuadrantLine({
-  rdKey,
-  title,
-  hint,
-}: {
-  rdKey: "q1" | "q2" | "q3" | "q4";
-  title: string;
-  hint: string;
-}) {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "12px 1fr",
-        gap: 12,
-        alignItems: "center",
-        padding: "8px 10px",
-        background: `var(--${rdKey}-wash)`,
-        borderRadius: 10,
-      }}
-    >
-      <span
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: 999,
-          background: `var(--${rdKey})`,
-          display: "inline-block",
-        }}
-      />
-      <div>
-        <div style={{ fontWeight: 600, color: "var(--slate)", fontSize: "var(--t-small)" }}>{title}</div>
-        <div style={{ fontSize: "var(--t-caption)", color: "var(--gray-500)", lineHeight: 1.4 }}>{hint}</div>
-      </div>
-    </div>
-  );
-}
-
-function SyntaxRow({ symbol, meaning }: { symbol: string; meaning: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "var(--t-small)" }}>
-      <code style={{ ...codeStyle, minWidth: 40, textAlign: "center" }}>{symbol}</code>
-      <span style={{ color: "var(--gray-700)" }}>{meaning}</span>
-    </div>
-  );
-}
-
-function ShortcutRow({ keys, action }: { keys: string[]; action: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "var(--t-small)" }}>
-      <div style={{ display: "flex", gap: 4, minWidth: 80 }}>
-        {keys.map((k) => (
-          <kbd key={k}>{k}</kbd>
-        ))}
-      </div>
-      <span style={{ color: "var(--gray-700)" }}>{action}</span>
-    </div>
-  );
-}
-
-const bodyStyle: React.CSSProperties = {
-  margin: 0,
-  fontSize: "var(--t-small)",
-  lineHeight: 1.55,
-  color: "var(--gray-700)",
-};
-
-const codeStyle: React.CSSProperties = {
-  fontFamily: "var(--mono)",
-  fontSize: "var(--t-caption)",
-  padding: "2px 8px",
-  borderRadius: "var(--r-xs)",
-  background: "var(--gray-100)",
-  color: "var(--slate)",
-};
-
-const linkStyle: React.CSSProperties = {
-  color: "var(--accent)",
-  textDecoration: "underline",
-  textUnderlineOffset: 2,
-};

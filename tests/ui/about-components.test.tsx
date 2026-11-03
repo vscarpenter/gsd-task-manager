@@ -27,17 +27,17 @@ describe('About Components', () => {
       expect(screen.getByText(/Open App/)).toBeInTheDocument();
     });
 
-    it('links to the iOS app on the App Store', () => {
+    it('links to the iPhone, iPad, and Mac app on the App Store', () => {
       render(<HeroSection />);
 
-      const link = screen.getByRole('link', { name: /ios app/i });
+      const link = screen.getByRole('link', { name: /app for iphone, ipad, and mac/i });
       expect(link).toHaveAttribute('href', 'https://apps.apple.com/app/id6776731612');
     });
 
     it('opens the App Store link in a new tab without leaking the opener', () => {
       render(<HeroSection />);
 
-      const link = screen.getByRole('link', { name: /ios app/i });
+      const link = screen.getByRole('link', { name: /app for iphone, ipad, and mac/i });
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
     });

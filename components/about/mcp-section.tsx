@@ -8,10 +8,12 @@ const exampleQueries = [
   '"Mark the budget review as done."',
 ];
 
+/** The shape `gsd-mcp-server --setup` writes (packages/mcp-server/src/cli/setup-wizard.ts). */
 const claudeDesktopConfig = `{
   "mcpServers": {
-    "gsd": {
-      "command": "gsd-mcp-server",
+    "gsd-tasks": {
+      "command": "/path/to/node",
+      "args": ["/path/to/node_modules/gsd-mcp-server/dist/index.js"],
       "env": {
         "GSD_POCKETBASE_URL": "https://api.vinny.io",
         "GSD_AUTH_TOKEN": "<your-auth-token>"
@@ -25,9 +27,13 @@ const intro =
 
 const setupHint = (
   <>
-    Run <code>npm install --global gsd-mcp-server</code>, then{" "}
-    <code>gsd-mcp-server --setup</code>. It signs you in and writes a config like
-    the one below, with full paths, so Claude Desktop can find the server.
+    Install an exact release with{" "}
+    <code>npm install --global gsd-mcp-server@1.4.1</code>, then run{" "}
+    <code>gsd-mcp-server --setup</code>. Setup asks you to paste the token from
+    Settings › Cloud Sync › Copy auth token. It then writes a config like the one
+    below, with the full paths to Node and the server, for you to add to Claude
+    Desktop. The token expires within 30 days. When it does, copy a new one and
+    run setup again.
   </>
 );
 

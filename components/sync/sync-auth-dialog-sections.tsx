@@ -68,7 +68,7 @@ export function SessionExpiredSection({
           variant="ghost"
           className="w-full text-sm text-foreground-muted"
         >
-          {isLoading ? "Logging out..." : "Disconnect account instead"}
+          {isLoading ? "Signing out…" : "Disconnect account instead"}
         </Button>
       </div>
     </div>
@@ -123,7 +123,7 @@ export function AuthenticatedSection({
         variant="subtle"
         className="w-full"
       >
-        {isLoading ? "Logging out..." : "Logout"}
+        {isLoading ? "Signing out…" : "Sign out"}
       </Button>
 
       {logout.showLogoutConfirm && (
@@ -203,13 +203,13 @@ export function LogoutConfirmation({
     <div className="rounded-lg border border-status-blocked/45 bg-status-blocked-muted p-3">
       <p className="mb-2 text-sm font-medium text-status-blocked-ink">
         You have {pendingChanges} unsynchronized {changeLabel}.
-        Logging out will discard them.
+        Signing out will discard them.
       </p>
       <ConfirmButtons
         isLoading={isLoading}
         onCancel={onCancel}
         onConfirm={onConfirm}
-        confirmLabel="Logout Anyway"
+        confirmLabel="Sign out anyway"
       />
     </div>
   );

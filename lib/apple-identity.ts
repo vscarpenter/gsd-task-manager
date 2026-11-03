@@ -19,9 +19,9 @@ export function accountNote(provider: string | null | undefined, email: string |
   return email && isRelayEmail(email) ? "relay-separate-account" : "apple-may-differ";
 }
 
-/** The iOS copy, with "your web tasks" and "on the web" turned into "your other devices" for this client. */
+/** The native copy (DOC-6), with "your web account" turned into "your other devices" for this client. */
 export function accountNoteText(note: AccountNote): string {
   return note === "relay-separate-account"
     ? "Signed in with a private relay email. This is a separate account from your tasks on other devices."
-    : "Signed in with Apple. If you use Google or GitHub on your other devices, that’s a different account and won’t show the same tasks.";
+    : "Signed in with Apple. If your other devices sign in with a different email, they won’t show the same tasks.";
 }

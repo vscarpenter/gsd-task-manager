@@ -50,9 +50,9 @@ const features: Feature[] = [
   },
   {
     icon: BarChart3,
-    title: "Analytics Dashboard",
+    title: "Review",
     description:
-      "Completion rates, streaks, quadrant distribution. See where your time actually goes.",
+      "Completion rates, streaks, where your tasks sit, and what's due soon. See where your time actually goes.",
   },
   {
     icon: Keyboard,
@@ -70,7 +70,7 @@ const features: Feature[] = [
     icon: Tags,
     title: "Tags and Filters",
     description:
-      "Label tasks with custom tags. Smart views, which you turn on in Settings, save filters you reuse.",
+      "Label tasks with custom tags. Smart views, which you turn on in Settings, are ready-made filters like Today's Focus and Overdue Backlog.",
   },
   {
     icon: CheckSquare,

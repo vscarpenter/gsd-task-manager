@@ -59,11 +59,19 @@ describe("ResetEverythingDialog", () => {
     // Title text appears in both heading and reset button — verify heading
     expect(screen.getByRole("heading", { name: "Reset everything" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Reset everything" })).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "This will permanently delete all your data. This action cannot be undone."
-      )
-    ).toBeInTheDocument();
+    const description = screen.getByText(/Deletes everything in this browser and signs you out\./);
+    // Reset clears this browser only (lib/reset-everything.ts); the server copy survives.
+    expect(description).toHaveTextContent(
+      "If you use sync, your synced copy stays on the server; to delete that, use Delete account in Settings › Cloud Sync."
+    );
+    expect(screen.queryByText(/permanently delete all your data/)).toBeNull();
+  });
+
+  it("names smart view settings rather than retired custom views", () => {
+    render(<ResetEverythingDialog {...baseProps} />);
+
+    expect(screen.getByText("• Smart view settings")).toBeInTheDocument();
+    expect(screen.queryByText(/custom smart views/i)).toBeNull();
   });
 
   it("shows data summary with correct task counts", () => {

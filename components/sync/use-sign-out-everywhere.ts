@@ -66,7 +66,7 @@ export function useSignOutEverywhere({
 function signOutEverywhereFailure(err: unknown): string {
   if (err instanceof LocalSignOutIncompleteError) {
     const prefix = err.otherSessionsEnded ? "Your other devices are signed out, but this" : "This";
-    return `${prefix} device couldn't finish signing out. Choose Logout to finish.`;
+    return `${prefix} device couldn't finish signing out. Choose Sign out to finish.`;
   }
   const reason = err instanceof Error ? err.message : "Unknown error";
   return `Couldn't sign out of all devices (${reason}). You're still signed in.`;

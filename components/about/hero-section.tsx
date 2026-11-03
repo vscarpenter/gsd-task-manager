@@ -38,7 +38,7 @@ function HeroCtas() {
         rel="noopener noreferrer"
         className={secondaryCta}
       >
-        Get the iOS app
+        Get the app for iPhone, iPad, and Mac
       </a>
 
       <a href="#how-it-works" className={secondaryCta}>

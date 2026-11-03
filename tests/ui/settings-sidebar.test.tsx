@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { SettingsSidebar } from "@/components/settings-page/settings-sidebar";
-import { SETTINGS_SECTION_IDS } from "@/components/settings-page/settings-sidebar-data";
+import { SETTINGS_SECTIONS, SETTINGS_SECTION_IDS } from "@/components/settings-page/settings-sidebar-data";
 
 function renderSidebar() {
   return render(
@@ -14,6 +14,11 @@ function renderSidebar() {
 }
 
 describe("SettingsSidebar", () => {
+  it("says Appearance holds the escalation window, which guides point to", () => {
+    const appearance = SETTINGS_SECTIONS.find((section) => section.id === "appearance");
+    expect(appearance?.description).toBe("Theme, display, and escalation");
+  });
+
   // The sidebar ships twice — a horizontal pill row for mobile and a vertical
   // rail for desktop — and only one is visible at a time via CSS. jsdom applies
   // no stylesheet, so both are in the tree here.

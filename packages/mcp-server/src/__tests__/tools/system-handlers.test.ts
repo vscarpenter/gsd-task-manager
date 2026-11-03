@@ -36,7 +36,7 @@ function responseText(response: McpToolResponse): string {
 describe('handleValidateConfig', () => {
   beforeEach(() => {
     mocks.healthCheck.mockReset().mockResolvedValue({});
-    mocks.getSyncStatus.mockReset().mockResolvedValue({ taskCount: 2 });
+    mocks.getSyncStatus.mockReset().mockResolvedValue({ healthy: true, taskCount: 2, lastSyncAt: null });
     mocks.listTasks.mockReset().mockResolvedValue([{ id: 'task-1' }]);
   });
 
@@ -47,6 +47,26 @@ describe('handleValidateConfig', () => {
     expect(text).not.toContain('private.internal');
     expect(text).not.toContain('user:secret');
     expect(text).not.toContain('token=hidden');
+  });
+
+  it('reports authentication success only when the sync status is healthy', async () => {
+    mocks.getSyncStatus.mockResolvedValueOnce({ healthy: true, taskCount: 2, lastSyncAt: null });
+
+    const { checks } = JSON.parse(responseText(await handleValidateConfig(privateConfig)));
+    const auth = checks.find((check: { name: string }) => check.name === 'Authentication');
+
+    expect(auth).toMatchObject({ status: 'success', details: 'Authenticated (2 tasks accessible)' });
+  });
+
+  it('reports an authentication error when getSyncStatus returns unhealthy instead of throwing', async () => {
+    // getSyncStatus catches its own errors (bad or revoked token, unreachable
+    // server) and returns healthy: false, so the check must read the result.
+    mocks.getSyncStatus.mockResolvedValueOnce({ healthy: false, taskCount: 0, lastSyncAt: null });
+
+    const { checks } = JSON.parse(responseText(await handleValidateConfig(privateConfig)));
+    const auth = checks.find((check: { name: string }) => check.name === 'Authentication');
+
+    expect(auth).toMatchObject({ status: 'error', details: 'Token validation failed' });
   });
 
   it('does not echo raw backend errors containing the private endpoint', async () => {
@@ -76,5 +96,21 @@ describe('handleGetHelp tool list', () => {
     const text = responseText(await handleGetHelp({ topic: 'tools' }));
 
     expect(text).toContain('(quadrant, completed, tags)');
+  });
+
+  it('states the 10-per-delete bulk cap and that Saved items are hidden', async () => {
+    const text = responseText(await handleGetHelp({ topic: 'tools' }));
+
+    expect(text).toContain('(max 50, or 10 per delete)');
+    expect(text).toContain('Saved items');
+  });
+});
+
+describe('handleGetHelp setup advice', () => {
+  it('recommends a pinned global install instead of npx', async () => {
+    const text = responseText(await handleGetHelp({}));
+
+    expect(text).toMatch(/npm install --global gsd-mcp-server@\d+\.\d+\.\d+/);
+    expect(text).not.toContain('npx gsd-mcp-server');
   });
 });

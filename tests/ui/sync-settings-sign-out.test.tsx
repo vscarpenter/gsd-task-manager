@@ -84,7 +84,7 @@ describe("SyncSettings sign out", () => {
     expect(disableSync).not.toHaveBeenCalled();
     expect(screen.getByText(/3 unsynchronized changes/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /logout anyway/i }));
+    await user.click(screen.getByRole("button", { name: /sign out anyway/i }));
 
     expect(disableSync).toHaveBeenCalledOnce();
   });

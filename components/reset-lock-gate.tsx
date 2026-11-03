@@ -149,7 +149,7 @@ function LockedMessage({ headingId, retryError, onRetry }: LockedMessageProps) {
 					{"Reset didn't finish"}
 				</h1>
 				<p className="text-base leading-relaxed text-foreground-muted">
-					{"Your tasks are still saved in this browser. GSD stays locked until they're deleted."}
+					{"Your tasks are still stored in this browser. GSD stays locked until they're deleted."}
 				</p>
 			</div>
 			<Button onClick={onRetry}>Try again</Button>

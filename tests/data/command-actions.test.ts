@@ -15,6 +15,7 @@ function createMockHandlers(overrides?: Partial<CommandActionHandlers>): Command
     onViewDashboard: vi.fn(),
     onViewMatrix: vi.fn(),
     onViewArchive: vi.fn(),
+    onViewSaved: vi.fn(),
     onApplySmartView: vi.fn(),
     ...overrides,
   };
@@ -55,6 +56,32 @@ describe('buildCommandActions', () => {
     expect(navIds).toContain('view-matrix');
     expect(navIds).toContain('view-dashboard');
     expect(navIds).toContain('view-archive');
+    expect(navIds).toContain('view-saved');
+  });
+
+  it('offers a View saved command that opens Saved', () => {
+    const handlers = createMockHandlers();
+    const actions = buildCommandActions(handlers, [], defaultConditions);
+    const saved = actions.find((action) => action.id === 'view-saved');
+
+    expect(saved?.label).toBe('View saved');
+    expect(saved?.section).toBe('navigation');
+    expect(saved?.keywords).toEqual(expect.arrayContaining(['saved', 'bookmarks', 'later', 'reading']));
+    expect(saved?.focusAfterExecute).toBe('handoff');
+
+    saved?.onExecute();
+    expect(handlers.onViewSaved).toHaveBeenCalled();
+  });
+
+  it('names the help command after the Field Guide and keeps the old search terms', () => {
+    const actions = buildCommandActions(createMockHandlers(), [], defaultConditions);
+    const help = actions.find((action) => action.id === 'open-help');
+
+    expect(help?.label).toBe('Open Field Guide');
+    expect(help?.shortcut).toEqual(['?']);
+    expect(help?.keywords).toEqual(
+      expect.arrayContaining(['help', 'guide', 'documentation', 'tutorial', 'user guide'])
+    );
   });
 
   it('distinguishes focus handoffs from in-place actions', () => {
@@ -68,6 +95,7 @@ describe('buildCommandActions', () => {
       'view-matrix',
       'view-dashboard',
       'view-archive',
+      'view-saved',
       'open-settings',
       'open-help',
     ]) {

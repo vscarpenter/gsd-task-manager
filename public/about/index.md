@@ -13,9 +13,9 @@ when a client sends `Accept: text/markdown`.
 - Classifies every task by **urgency** and **importance** (the four Eisenhower
   quadrants).
 - Runs offline by default — IndexedDB via Dexie is the source of truth.
-- Ships as an installable PWA with a service worker, push notifications, and
+- Ships as an installable PWA with a service worker, reminder notifications, and
   badge updates.
-- Adds optional cloud sync (PocketBase + OAuth via Google or GitHub) for
+- Adds optional cloud sync (PocketBase + OAuth via Google, Apple, or GitHub) for
   users who want their tasks on multiple devices.
 - Exposes an MCP server (`gsd-mcp-server` on npm) so MCP-aware assistants can
   read and mutate tasks with the user's permission.
@@ -25,9 +25,9 @@ when a client sends `Accept: text/markdown`.
 | Layer | Tech | Notes |
 | --- | --- | --- |
 | UI | Next.js 16 App Router, React 19 | Static export — no SSR, no API routes |
-| Storage | IndexedDB via Dexie v13 | Local first; export to JSON for backup |
+| Storage | IndexedDB via Dexie 4 | Local first; export to JSON for backup |
 | Sync | PocketBase 0.23+ | Last-write-wins; SSE realtime; opt-in |
-| Auth | PocketBase OAuth2 (Google, GitHub) | Tokens persisted in `localStorage` |
+| Auth | PocketBase OAuth2 (Google, Apple, GitHub) | Tokens persisted in `localStorage` |
 | MCP | `gsd-mcp-server` (stdio) | 19 tools across read, write, analytics |
 | Hosting | S3 + CloudFront | Edge function rewrites paths and adds Link headers |
 

@@ -34,7 +34,8 @@ export const getTagAnalyticsTool: Tool = {
     type: 'object',
     properties: {
       limit: {
-        type: 'number',
+        type: 'integer',
+        minimum: 1,
         description: 'Maximum number of tags to return (default: all)',
       },
     },

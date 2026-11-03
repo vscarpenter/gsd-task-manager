@@ -24,13 +24,19 @@ describe('McpSection config snippet', () => {
     const { container } = render(<McpSection />);
     const code = container.querySelector('pre code')?.textContent ?? '';
     return JSON.parse(code) as {
-      mcpServers: Record<string, { command: string; env: Record<string, string> }>;
+      mcpServers: Record<string, { command: string; args: string[]; env: Record<string, string> }>;
     };
   };
 
-  it('uses the server card command', () => {
-    const server = Object.values(renderedConfig().mcpServers)[0]!;
-    expect(server.command).toBe(transport.install.command);
+  // The sample mirrors what `gsd-mcp-server --setup` writes: the `gsd-tasks`
+  // key, Node as the command, and the installed package's entrypoint as the arg.
+  it('matches the shape the setup wizard writes', () => {
+    const { mcpServers } = renderedConfig();
+    expect(Object.keys(mcpServers)).toEqual(['gsd-tasks']);
+    const server = mcpServers['gsd-tasks']!;
+    expect(server.command).toMatch(/node$/);
+    expect(server.args).toHaveLength(1);
+    expect(server.args[0]).toMatch(new RegExp(`/${transport.install.command}/dist/index\\.js$`));
   });
 
   it('sets exactly the env vars the server card requires', () => {
@@ -45,5 +51,14 @@ describe('McpSection config snippet', () => {
   it('points readers to the setup wizard', () => {
     const { container } = render(<McpSection />);
     expect(container.textContent).toContain('gsd-mcp-server --setup');
+  });
+
+  it('pins the install and says setup asks for a pasted token that expires', () => {
+    const { container } = render(<McpSection />);
+    const text = container.textContent ?? '';
+    expect(text).toMatch(/npm install --global gsd-mcp-server@\d+\.\d+\.\d+/);
+    expect(text).toContain('paste the token from Settings › Cloud Sync › Copy auth token');
+    expect(text).toContain('expires within 30 days');
+    expect(text).not.toMatch(/signs you in/i);
   });
 });

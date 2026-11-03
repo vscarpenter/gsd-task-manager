@@ -86,7 +86,7 @@ async function fetchTasks(config: GsdConfig): Promise<Task[]> {
         `  1. Your internet connection\n` +
         `  2. GSD_POCKETBASE_URL is correct\n` +
         `  3. Your auth token is valid\n\n` +
-        `Run: npx gsd-mcp-server --validate`
+        `Run: gsd-mcp-server --validate`
     );
     const status = (error as { status?: unknown } | null)?.status;
     if (typeof status === 'number') Object.assign(safeError, { status });

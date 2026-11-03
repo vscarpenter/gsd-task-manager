@@ -41,9 +41,9 @@ describe("accountNoteText", () => {
     );
   });
 
-  it("says another provider on other devices is a different account", () => {
+  it("says only a different email on other devices shows different tasks", () => {
     expect(accountNoteText("apple-may-differ")).toBe(
-      "Signed in with Apple. If you use Google or GitHub on your other devices, that’s a different account and won’t show the same tasks.",
+      "Signed in with Apple. If your other devices sign in with a different email, they won’t show the same tasks.",
     );
   });
 });

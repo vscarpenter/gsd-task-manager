@@ -15,10 +15,12 @@ describe("HelpDrawer", () => {
     );
   });
 
-  it("lets its title speak without an eyebrow above it", () => {
+  it("carries the Field Guide eyebrow every client shares (DOC-1)", () => {
     render(<HelpDrawer open onClose={vi.fn()} />);
 
-    expect(screen.queryByText("Field guide")).toBeNull();
+    expect(screen.getByText("Field Guide")).toBeInTheDocument();
+    // The eyebrow sits outside the title, so the dialog keeps its name.
+    expect(screen.getByRole("dialog", { name: "How to use GSD" })).toBeInTheDocument();
   });
 
   it("sets its title upright, since the serif ships no italic for the browser to use", () => {
@@ -154,5 +156,110 @@ describe("HelpDrawer plain wording", () => {
     expect(help).toHaveTextContent("swipe a task right to complete it");
     expect(help).toHaveTextContent("Swipe left to snooze it for 1 hour or delete it");
     expect(screen.getByRole("heading", { name: "Keyboard tips" })).toBeInTheDocument();
+  });
+});
+
+describe("HelpDrawer shared outline", () => {
+  const sectionOrder = [
+    "The matrix",
+    "Adding a task",
+    "Due dates and reminders",
+    "Escalating",
+    "Working with a task",
+    "Saved",
+    "Undo, Trash, and Archive",
+    "Finding things",
+    "Review",
+    "Getting tasks in from elsewhere",
+    "Cloud sync (optional)",
+    "Keyboard tips",
+    "Your data",
+    "Feedback",
+  ];
+
+  it("follows the shared Field Guide section order", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const headings = screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
+
+    expect(headings).toEqual(sectionOrder);
+  });
+
+  it("explains Saved and links to it", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("Choose Move to Saved from a task\u2019s ⋯ menu.");
+    expect(help).toHaveTextContent("Return to matrix");
+    expect(help).toHaveTextContent("they don\u2019t send reminders");
+    expect(screen.getByRole("link", { name: "Saved" })).toHaveAttribute("href", "/saved");
+  });
+
+  it("lists the card menu and every snooze preset", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("Move to Saved, Move to (pick a quadrant), Share, Duplicate, Snooze, and Delete");
+    expect(help).toHaveTextContent(
+      "15 minutes, 30 minutes, 1 hour, 3 hours, Tomorrow (a day from now), Next week (a week from now), and Clear snooze"
+    );
+    expect(help).toHaveTextContent("hover a task to see the main actions as icons");
+  });
+
+  it("explains due dates, All day, all-day reminders, quiet hours, and background checks", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("This week (Friday), Next week (Monday)");
+    expect(help).toHaveTextContent("A due date is All day unless you turn All day off and set a time.");
+    expect(help).toHaveTextContent("An all-day task reminds you at 9:00 on its due day.");
+    expect(help).toHaveTextContent("A reminder that lands in quiet hours waits until they end.");
+    expect(help).toHaveTextContent("Installed as an app in Chrome or Edge, GSD can also check in the background.");
+    expect(help).not.toHaveTextContent(/push notification/i);
+  });
+
+  it("explains escalation and where to change it", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("its card says Escalating");
+    expect(help).toHaveTextContent("Nothing moves on its own.");
+    expect(help).toHaveTextContent("Settings › Appearance");
+  });
+
+  it("covers paste, links, the Android share sheet, and the bookmarklet", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("Paste several lines to add up to 20 tasks at once");
+    expect(help).toHaveTextContent("A link you type moves into the task\u2019s description.");
+    expect(help).toHaveTextContent("On Android, install GSD from Chrome, then share a page to GSD");
+    expect(help).toHaveTextContent("Settings › Bookmarklet");
+  });
+
+  it("covers Undo, Trash, Archive, Review, the timer, and the sign-in lifetime", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("A deleted task stays in Trash for 30 days");
+    expect(help).toHaveTextContent("after 30, 60, or 90 days");
+    expect(help).toHaveTextContent("shows what you finished, your streak");
+    expect(help).toHaveTextContent("a timer appears on its card");
+    expect(help).toHaveTextContent("as long as you open GSD at least once every 30 days");
+  });
+
+  it("describes the palette by what it searches and names the Windows and Linux keys", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+    const help = screen.getByTestId("help-drawer-scroll");
+
+    expect(help).toHaveTextContent("searches tasks, views, and actions");
+    expect(help).toHaveTextContent("On Windows and Linux, use Ctrl instead of ⌘ and Alt instead of ⌥.");
+  });
+
+  it("says reset clears only this browser", () => {
+    render(<HelpDrawer open onClose={vi.fn()} />);
+
+    expect(screen.getByTestId("help-drawer-scroll")).toHaveTextContent(
+      "Reset everything deletes everything in this browser and signs you out."
+    );
   });
 });

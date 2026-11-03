@@ -10,9 +10,12 @@ Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task m
 Install a reviewed, exact release and run its interactive setup wizard:
 
 ```bash
-npm install --global gsd-mcp-server@1.3.2
+npm install --global gsd-mcp-server@1.4.1
 gsd-mcp-server --setup
 ```
+
+1.4.1 is the current release when this README was written; the npm badge above
+shows the latest. Install that exact version rather than a range or `npx`.
 
 The wizard validates a normal user account and writes an owner-only configuration
 artifact for Claude Desktop. That generated configuration launches the exact local
@@ -25,21 +28,22 @@ See [Installation](#installation) section below for detailed setup instructions.
 
 ## Features
 
-**Reliability & Performance** (v0.6.0) 🆕 🔥
-- ✅ **Retry Logic** - Automatic exponential backoff for transient failures (500, 502, 503, 504, 429)
-- ✅ **Token Monitoring** - Proactive warnings for expiring tokens (healthy/warning/critical/expired)
+**Reliability & Performance**
+- ✅ **Rate-limit handling** - Writes are paced and retried once after a 429, honoring Retry-After. Reads are not retried, so ask again after a network error.
+- ✅ **Token Monitoring** - Proactive warnings for expiring tokens (healthy/warning/critical/expired/invalid)
 - ✅ **Caching** - In-memory TTL cache (30s) with automatic invalidation on writes
 - ✅ **Dry-Run Mode** - Preview all write operations before committing
 - ✅ **Dependency Validation** - Circular dependency detection using BFS algorithm
 - ✅ **Cache Stats Tool** - Monitor cache hit rates and performance
 
 **Write Operations** (v0.4.0)
-- ✅ **Create Tasks** - Add new tasks with natural language (supports dryRun)
+- ✅ **Create Tasks** - Create tasks from a plain-English request; Claude fills in the fields (supports dryRun)
 - ✅ **Update Tasks** - Modify any task property (supports dryRun)
 - ✅ **Complete Tasks** - Mark tasks as done or incomplete (supports dryRun)
 - ✅ **Delete Tasks** - Permanently remove tasks (supports dryRun)
-- ✅ **Bulk Operations** - Update up to 50 tasks at once (supports dryRun)
-- 🔒 **Safety Features** - Bulk limits (50 tasks max), validation, dry-run preview
+- ✅ **Bulk Operations** - Update up to 50 tasks at once, or delete up to 10 (supports dryRun)
+- 🔒 **Safety Features** - Bulk limits (50 tasks, 10 deletes), validation, dry-run preview
+
 **Quick Start Helpers** (v0.3.2)
 - ✅ **6 Built-in Prompts** - One-click workflows (daily standup, weekly review, focus mode, etc.)
 - ✅ **Comprehensive Help Tool** - In-Claude documentation with topic filtering
@@ -61,7 +65,7 @@ See [Installation](#installation) section below for detailed setup instructions.
 - ✅ Streak tracking (current and longest)
 
 **Metadata Access** (v0.1.0)
-- ✅ Sync status monitoring (now includes token status)
+- ✅ Sync backend health check (`get_sync_status`) and token expiry (`get_token_status`)
 - ✅ Task statistics (metadata only)
 
 **Task Access** (v0.2.0+)
@@ -74,8 +78,8 @@ See [Installation](#installation) section below for detailed setup instructions.
 ## Prerequisites
 
 1. **GSD Task Manager** with sync enabled
-2. **OAuth Authentication** completed (Google or GitHub)
-3. **Node.js** 18+ installed
+2. **OAuth Authentication** completed (Google, Apple, or GitHub)
+3. **Node.js** 20 or later (18 still runs, but it is past end of life)
 4. **Claude Desktop** or another MCP-compatible client
 
 ## CLI Usage
@@ -102,7 +106,8 @@ gsd-mcp-server
 - ✅ Generates ready-to-use Claude Desktop config
 - ✅ Provides platform-specific config file paths
 
-**Validation Tool Features:**
+**Validation Tool Features** (`--validate`; the `validate_config` tool runs the
+connectivity, authentication, and task-access checks only):
 - ✅ Checks environment variables
 - ✅ Tests PocketBase connectivity and authentication
 - ✅ Provides actionable error messages
@@ -114,7 +119,9 @@ gsd-mcp-server
 ### Option A: Install an Exact Published Release (Recommended)
 
 Install an explicitly reviewed version, such as `npm install --global
-gsd-mcp-server@1.3.2`. Updating is a deliberate reinstall followed by `--setup`.
+gsd-mcp-server@1.4.1`. Updating is a deliberate reinstall followed by `--setup`.
+Don't run the server through `npx`: the setup wizard writes the path of the copy
+that ran it, and npm can prune the npx cache, which silently breaks Claude Desktop.
 
 ### Option B: Build from Source
 
@@ -132,11 +139,16 @@ For development or if you want to modify the code:
 You'll need an auth token from your PocketBase sync setup:
 
 1. Open GSD Task Manager in your browser
-2. Sign in with Google or GitHub to enable cloud sync
-3. Open **Settings → Cloud Sync → Copy auth token**
+2. Sign in with Google, Apple, or GitHub to enable cloud sync
+3. Open **Settings → Cloud Sync → MCP access → Copy auth token**
 
 Paste the copied token as the `GSD_AUTH_TOKEN` value. The button copies only the
 raw token. Keep it private: it grants access to your synced tasks.
+
+The copied token is the web session's current one, so it can have anywhere from
+30 days down to a few days left. Run `get_token_status` after pasting to see the
+real date. When the web app renews its own session, a token already copied into
+MCP keeps working until its own expiry.
 
 ### 2. Configure Claude Desktop
 
@@ -170,7 +182,8 @@ is intentionally not reproduced in terminal-oriented instructions.
 
 **Configuration Notes**:
 - Replace `your-auth-token-here` with your actual token from Step 1
-- `GSD_POCKETBASE_URL`: Your self-hosted PocketBase instance URL
+- `GSD_POCKETBASE_URL`: Your PocketBase URL (`https://api.vinny.io` for the hosted service, or your own server). Must be HTTPS, or http://localhost / 127.0.0.1 / [::1] for local development, with no credentials, query, or fragment.
+- Administrator (superuser) tokens are refused; use the token of a normal signed-in account.
 
 ### 3. Restart Claude Desktop
 
@@ -197,8 +210,8 @@ Once configured, you can ask Claude questions like:
 
 **Sync Status** (v0.1.0)
 - "What's my GSD sync status?"
-- "When was my last sync?"
-- "Do I have any sync conflicts?"
+- "When does my MCP token expire?"
+- "Is the sync backend reachable?"
 
 **Task Overview** (v0.1.0)
 - "How many tasks do I have in GSD?"
@@ -210,7 +223,7 @@ Once configured, you can ask Claude questions like:
 - "Show me tasks in the Do First quadrant"
 - "What tasks are due this week?"
 - "Search for tasks about [keyword]"
-- "Show me all tasks tagged #work"
+- "Show me all tasks tagged work"
 - "What are my urgent tasks?"
 - "Find tasks mentioning [name or topic]"
 
@@ -234,16 +247,28 @@ Once configured, you can ask Claude questions like:
 - "What tools are available?"
 - "How do I troubleshoot issues?"
 
-**Write Operations** (v0.4.0) 🆕
+**Write Operations** (v0.4.0)
 - "Create a task: Finish quarterly report, urgent and important, due Friday"
-- "Mark task #abc123 as complete"
-- "Move all #work tasks to the Schedule quadrant"
-- "Update task #xyz789 to add tags #project-alpha and #high-priority"
+- "Mark task abc123 as complete"
+- "Move all work tasks to the Schedule quadrant"
+- "Update task xyz789 to add tags project-alpha and high-priority"
 - "Delete completed tasks from last month"
-- "Complete all tasks tagged #quick-wins"
-- "Change due date of task #def456 to next Monday"
+- "Complete all tasks tagged quick-wins"
+- "Change due date of task def456 to next Monday"
 
 Claude will use the MCP tools to fetch real-time data from your PocketBase backend and can now modify your tasks!
+
+Tags are stored lowercase without a leading `#`, the way the apps store them. The
+server stores tags exactly as given, so ask for `work`, not `#work`, or the tag
+won't match the one the apps use.
+
+### Saved items (1.4.0)
+
+Items saved in the apps (Move to Saved) stay out of `list_tasks`, `get_task`,
+`search_tasks`, and the analytics tools, so `get_task` answers "Task not found"
+for a saved ID. `get_task_stats` and `get_sync_status` still count them. Updates
+keep an item saved. Completing a saved item is refused, so return it to the
+matrix in the app first. The MCP server can't save an item or return one.
 
 ## Available Tools
 
@@ -253,15 +278,16 @@ Get sync health information.
 **Returns**:
 ```json
 {
-  "lastSyncAt": 1735171200000,
-  "pendingPushCount": 0,
-  "pendingPullCount": 0,
-  "conflictCount": 0,
-  "deviceCount": 3,
-  "storageUsed": 45678,
-  "storageQuota": 10485760
+  "healthy": true,
+  "taskCount": 42,
+  "lastSyncAt": null,
+  "authenticated": true,
+  "pocketBaseUrl": "https://[pocketbase-host]"
 }
 ```
+
+`lastSyncAt` is always null because PocketBase is live. `taskCount` includes Saved items.
+The host is redacted so the output is safe to paste into a chat.
 
 ### `get_task_stats`
 Get task statistics (metadata only).
@@ -271,17 +297,19 @@ Get task statistics (metadata only).
 {
   "totalTasks": 42,
   "activeTasks": 38,
-  "deletedTasks": 4,
-  "lastUpdated": 1735171200000,
-  "oldestTask": 1730000000000,
-  "newestTask": 1735171200000
+  "completedTasks": 4,
+  "lastUpdated": "2026-10-30T14:00:00.000Z",
+  "oldestTask": "2026-01-05T09:00:00.000Z",
+  "newestTask": "2026-10-30T14:00:00.000Z"
 }
 ```
+
+Counts include Saved items. Every field is null if the stats can't be read.
 
 ---
 
 ### `list_tasks` (v0.2.0)
-List all tasks with optional filtering. **Requires authentication**.
+List tasks with optional filtering. Saved items are excluded. **Requires authentication**.
 
 **Parameters**:
 - `quadrant` (optional): Filter by quadrant ID
@@ -290,7 +318,7 @@ List all tasks with optional filtering. **Requires authentication**.
   - `urgent-not-important` (Q3 - Delegate)
   - `not-urgent-not-important` (Q4 - Eliminate)
 - `completed` (optional): Filter by completion status (true/false)
-- `tags` (optional): Array of tags to filter by (matches any)
+- `tags` (optional): Array of tags to filter by (matches any; exact match, so use `work`, not `#work`)
 
 **Returns**:
 ```json
@@ -304,7 +332,7 @@ List all tasks with optional filtering. **Requires authentication**.
     "quadrant": "urgent-important",
     "completed": false,
     "dueDate": "2025-01-03T17:00:00.000Z",
-    "tags": ["#work", "#finance"],
+    "tags": ["work", "finance"],
     "subtasks": [
       { "id": "sub-1", "title": "Gather data", "completed": true },
       { "id": "sub-2", "title": "Write analysis", "completed": false }
@@ -323,7 +351,7 @@ Get a single task by ID. **Requires authentication**.
 **Parameters**:
 - `taskId` (required): The unique ID of the task
 
-**Returns**: Single task object (same structure as `list_tasks`)
+**Returns**: Single task object (same structure as `list_tasks`). A Saved item answers "Task not found".
 
 ### `search_tasks` (v0.2.0)
 Search tasks by text query across titles, descriptions, tags, and subtasks. **Requires authentication**.
@@ -331,12 +359,12 @@ Search tasks by text query across titles, descriptions, tags, and subtasks. **Re
 **Parameters**:
 - `query` (required): Search text to match
 
-**Returns**: Array of matching tasks (same structure as `list_tasks`)
+**Returns**: Array of matching tasks (same structure as `list_tasks`). Saved items are excluded.
 
 ---
 
 ### `get_productivity_metrics` (v0.3.0)
-Get comprehensive productivity metrics. **Requires authentication**.
+Get comprehensive productivity metrics. Saved items are excluded. **Requires authentication**.
 
 **Returns**:
 ```json
@@ -386,13 +414,13 @@ Analyze task distribution and performance across quadrants. **Requires authentic
 Get statistics for all tags with usage and completion rates. **Requires authentication**.
 
 **Parameters**:
-- `limit` (optional): Maximum number of tags to return
+- `limit` (optional): Maximum number of tags to return (a positive whole number)
 
 **Returns**:
 ```json
 [
   {
-    "tag": "#work",
+    "tag": "work",
     "count": 35,
     "completedCount": 28,
     "completionRate": 80
@@ -419,7 +447,8 @@ Generate AI-friendly summary of task insights. **Requires authentication**.
 **Returns**: Plain text summary with key metrics, streaks, deadlines, and recommendations.
 
 ### `validate_config` (v0.3.0)
-Validate MCP server configuration and diagnose issues.
+Diagnose the server's connection: PocketBase connectivity, authentication, and
+task access. It doesn't check environment variables; the `--validate` CLI does.
 
 **Returns**:
 ```json
@@ -428,16 +457,25 @@ Validate MCP server configuration and diagnose issues.
     {
       "name": "PocketBase Connectivity",
       "status": "success",
-      "details": "Connected to https://api.vinny.io"
+      "details": "Connected to https://[pocketbase-host]"
     },
     {
       "name": "Authentication",
       "status": "success",
-      "details": "Authenticated (3 devices registered)"
+      "details": "Authenticated (42 tasks accessible)"
+    },
+    {
+      "name": "Task Access",
+      "status": "success",
+      "details": "Successfully fetched 40 tasks"
     }
   ]
 }
 ```
+
+The host is redacted so the output is safe to paste into a chat. A token the
+server rejects reports `"status": "error"` with `"Token validation failed"`.
+Task Access counts exclude Saved items.
 
 ### `get_help` (v0.3.2)
 Get comprehensive help documentation including available tools, usage examples, and troubleshooting tips.
@@ -464,10 +502,16 @@ Check authentication token status including expiration date, days remaining, and
 ```json
 {
   "status": "warning",
-  "expiresAt": "2025-01-15T12:00:00.000Z",
+  "expired": false,
+  "expiresAt": "2026-11-08T12:00:00.000Z",
   "daysRemaining": 5,
-  "message": "Token expires in 5 days. Consider re-authenticating soon.",
-  "needsReauth": false
+  "message": "Auth token expires in 5 days. Consider re-authenticating this week.",
+  "instructions": [
+    "1. Open the GSD web app you sync with (gsd.vinny.dev for the hosted service) and sign in",
+    "2. Open Settings → Cloud Sync → Copy auth token",
+    "3. Update GSD_AUTH_TOKEN in your Claude Desktop config",
+    "4. Restart Claude Desktop"
+  ]
 }
 ```
 
@@ -476,6 +520,7 @@ Check authentication token status including expiration date, days remaining, and
 - `warning` - 4-14 days until expiration
 - `critical` - 3 days or fewer until expiration
 - `expired` - Token has expired
+- `invalid` - No token is configured, or it isn't a PocketBase JWT
 
 Tokens from the hosted server and the Docker image last 30 days. The MCP server
 never renews its token, so copy a fresh one from the web app before it expires.
@@ -494,15 +539,17 @@ Get task cache statistics including hit rate, cache size, and TTL configuration.
 **Returns**:
 ```json
 {
-  "hits": 42,
-  "misses": 8,
-  "hitRate": 84,
-  "size": 15,
-  "maxEntries": 1000,
-  "ttlMs": 30000,
-  "lastInvalidation": "2025-01-09T12:00:00.000Z"
+  "performance": { "hitRate": "84.0%", "hits": 42, "misses": 8 },
+  "taskListCache": { "currentSize": 1, "maxEntries": 1000, "ttlSeconds": 30 },
+  "singleTaskCache": { "currentSize": 0, "maxEntries": 1000, "ttlSeconds": 30 },
+  "notes": [
+    "Cache is invalidated after every write operation",
+    "TTL-based expiration ensures data freshness"
+  ]
 }
 ```
+
+With `reset: true`, the response also includes `"statsReset": true`.
 
 **Example Usage:**
 - "Show me cache performance"
@@ -522,11 +569,20 @@ Create a new task from structured fields; the quadrant is derived from `urgent` 
 - `important` (required): Is this task important? (high-value, strategic)
 - `description` (optional): Task description
 - `dueDate` (optional): Due date as ISO 8601 datetime string (e.g., `"2025-10-27T17:00:00.000Z"`)
-- `tags` (optional): Array of tags (e.g., `["#work", "#project-alpha"]`)
+- `tags` (optional): Array of tags, lowercase, without a leading `#` (e.g., `["work", "project-alpha"]`)
 - `subtasks` (optional): Array of subtask objects `{title, completed}`
 - `recurrence` (optional): `'none'` | `'daily'` | `'weekly'` | `'monthly'`
 - `dependencies` (optional): Array of task IDs that must be completed first
+- `notifyBefore` (optional): Minutes before the due date to remind you (0 turns off the reminder)
+- `notificationEnabled` (optional): Whether reminders are on for this task (default: true)
+- `estimatedMinutes` (optional): Estimated time in whole minutes, 1-10080
 - `dryRun` (optional): If true, validate and preview without saving (v0.6.0)
+
+http(s) URLs in a new task's title are moved into its description.
+
+**Limits**: title 80 characters, description 600, at most 20 tags of 30 characters
+each, at most 50 subtasks of 100 characters each, at most 50 dependencies.
+`dueDate` must be ISO 8601 with a time zone (`Z` or an offset).
 
 **Returns**: The newly created task object with generated ID (or preview if dryRun)
 
@@ -537,7 +593,7 @@ Create a task:
 - Urgent: true
 - Important: true
 - Due date: Friday at 5pm
-- Tags: #work, #finance
+- Tags: work, finance
 ```
 
 ### `update_task`
@@ -554,8 +610,12 @@ Update an existing task. All fields except ID are optional. **Requires authentic
 - `subtasks` (optional): Replace all subtasks (objects with `{id, title, completed}`)
 - `recurrence` (optional): Change recurrence pattern
 - `dependencies` (optional): Replace all dependencies (validated for circular refs)
-- `completed` (optional): Mark as complete/incomplete
+- `completed` (optional): Mark as complete/incomplete. Doesn't create the next recurring instance; use `complete_task` for that. Refused for a Saved item.
+- `notifyBefore`, `notificationEnabled`, `estimatedMinutes` (optional): Same as `create_task`
 - `dryRun` (optional): If true, validate and preview changes without saving (v0.6.0)
+
+The same limits as `create_task` apply. If the task changed in another app since it
+was read, the update fails with a conflict; re-read the task and retry.
 
 **Returns**: The updated task object with list of changes (or preview if dryRun)
 
@@ -563,7 +623,7 @@ Update an existing task. All fields except ID are optional. **Requires authentic
 ```
 Update task abc123:
 - Move to "Schedule" quadrant (urgent=false, important=true)
-- Add tags: #project-alpha, #q1-goals
+- Add tags: project-alpha, q1-goals
 ```
 
 ### `complete_task`
@@ -576,6 +636,11 @@ Mark a task as complete or incomplete. Quick shortcut for updating completion st
 
 **Returns**: The updated task object (or preview if dryRun)
 
+Completing a recurring task also creates its next instance, as the apps do, and the
+response includes it. Daily moves the due date 1 day, weekly 7 days, and monthly 1
+month, and the new instance starts with its subtasks unchecked. A dry run previews
+both. Completing a Saved item is refused.
+
 **Example:**
 ```
 Mark task xyz789 as complete
@@ -586,65 +651,69 @@ Permanently delete a task. **This action cannot be undone.** **Requires authenti
 
 **Parameters**:
 - `id` (required): Task ID to delete
-- `dryRun` (optional): If true, preview what would be deleted without actually deleting (v0.6.0)
+- `dryRun` (optional, **default `true`**): Shows what would be deleted. Pass `dryRun: false` to delete.
 
-**Returns**: Confirmation with task title and any affected dependent tasks
+**Returns**: Confirmation with task title and any affected dependent tasks. Dependency
+references on other tasks are cleaned up.
 
 **Example:**
 ```
 Delete task def456
 ```
 
-**⚠️ Warning**: Deleted tasks cannot be recovered! Use `dryRun: true` to preview first.
+**⚠️ Warning**: A delete is permanent and skips the 30-day Trash on every client
+(web, iOS, Android), so it can't be restored. Calls preview by default; pass
+`dryRun: false` to apply.
 
-**Dry-Run Response** (v0.6.0):
-```json
-{
-  "taskId": "def456",
-  "taskTitle": "Example Task",
-  "dryRun": true,
-  "affectedTasks": ["Task that depends on this one"]
-}
+**Dry-Run Response** (plain text):
+```
+🔍 DRY RUN - Task would be deleted (not deleted):
+
+Task: "Example Task" (def456)
+
+⚠️ The following tasks depend on this task and would be affected:
+  - Task that depends on this one
+
+To delete this task, pass dryRun=false explicitly.
 ```
 
 ### `bulk_update_tasks`
-Update multiple tasks at once. Limited to 50 tasks per operation for safety. **Requires authentication**.
+Update multiple tasks at once. Limited to 50 tasks per operation, and 10 per delete, for safety. **Requires authentication**.
 
 **Parameters**:
-- `taskIds` (required): Array of task IDs to update (max 50)
+- `taskIds` (required): Array of task IDs to update (max 50, or 10 for `delete`)
 - `operation` (required): Operation object with `type` field
-  - `type: 'complete'` - Mark all as complete/incomplete
+  - `type: 'complete'` - Mark all as complete/incomplete (doesn't create next recurring instances; refused if any task is Saved)
     - `completed`: boolean
   - `type: 'move_quadrant'` - Move all to a quadrant
     - `urgent`: boolean
     - `important`: boolean
   - `type: 'add_tags'` - Add tags to all tasks
-    - `tags`: string[]
+    - `tags`: string[] (lowercase, without a leading `#`)
   - `type: 'remove_tags'` - Remove tags from all tasks
     - `tags`: string[]
   - `type: 'set_due_date'` - Set due date for all tasks
     - `dueDate`: ISO 8601 datetime string (empty string to clear)
-  - `type: 'delete'` - Delete all tasks
-- `maxTasks` (optional): Safety limit (default: 50)
-- `dryRun` (optional): If true, validate and preview without saving (v0.6.0)
+  - `type: 'delete'` - Delete all tasks (permanent; skips the 30-day Trash on every client)
+- `dryRun` (optional): Preview without saving. **Deletes default to `dryRun: true`**; pass `dryRun: false` to apply them.
 
-**Returns**: Result object with `updated` count and `errors` array (or preview if dryRun)
+**Returns**: `updated`, `deleted`, `errors`, and `conflicts` (task IDs skipped because they changed mid-batch), or a preview when `dryRun` is set.
 
 **Examples:**
 ```
-Complete all tasks tagged #quick-wins
+Complete all tasks tagged quick-wins
 
-Move all #work tasks to the Schedule quadrant
+Move all work tasks to the Schedule quadrant
 
-Add #priority tag to all overdue tasks
+Add the priority tag to all overdue tasks
 
 Delete all completed tasks from last year
 ```
 
 **🔒 Safety Features**:
-- Maximum 50 tasks per operation
+- Maximum 50 tasks per operation, and 10 per delete
 - Clear error messages for each failed task
-- Transactional (all-or-nothing for the API push)
+- Not transactional: each task is written separately. A task that changed since the batch was read is skipped and listed under `conflicts`. Failures are listed under `errors`, and the rest of the batch still applies.
 
 ## Privacy & Security
 
@@ -654,11 +723,15 @@ Delete all completed tasks from last year
 - ✅ Subtasks, checklists, and task dependencies
 - ✅ **Can create, update, and delete tasks**
 
+**Where the data goes**: everything a tool returns, including titles, descriptions,
+tags, subtasks, and due dates, goes to your AI assistant's provider as part of the
+conversation. The server itself talks only to your PocketBase URL.
+
 **Security Model**:
-- 🔒 **Self-hosted backend**: Tasks stored on your own PocketBase instance
-- 🔒 **OAuth authentication**: PocketBase OAuth2 with Google and GitHub providers
+- 🔒 **PocketBase backend**: Tasks stored on the hosted service or your own PocketBase instance
+- 🔒 **OAuth authentication**: PocketBase OAuth2 with Google, Apple, and GitHub providers
 - 🔒 **API rules**: PocketBase enforces owner-based access (`owner = @request.auth.id`)
-- 🛡️ **Safety limits**: Bulk operations limited to 50 tasks, clear validation
+- 🛡️ **Safety limits**: Bulk operations limited to 50 tasks (10 deletes), clear validation
 - 🔍 **Dry-run mode**: Preview write operations before committing
 
 ## Troubleshooting
@@ -667,10 +740,27 @@ Delete all completed tasks from last year
 - Check that `GSD_POCKETBASE_URL` and `GSD_AUTH_TOKEN` are set in your Claude Desktop config
 - Ensure there are no typos in the environment variable names
 
-### "API request failed: 401 Unauthorized"
-- Your auth token has expired — re-authenticate via OAuth in the GSD app
-- Open **Settings → Cloud Sync → Copy auth token**, then replace `GSD_AUTH_TOKEN` in your config
+### "Not authenticated as a normal users-collection account"
+- Your auth token expired or was revoked. Sign in to the GSD web app again
+- Open **Settings → Cloud Sync → MCP access → Copy auth token**, then replace `GSD_AUTH_TOKEN` in your config
 - Restart Claude Desktop
+- On a self-hosted (Docker) server, **Sign out of all devices** in the web app also ends the MCP token, so copy a new one after using it
+
+### "Cannot reach PocketBase at …"
+- "Your saved credentials were not changed" means it's a network or VPN problem; the token is fine
+- Try again once you're back online, or run `gsd-mcp-server --validate`
+
+### "PocketBase URL must use HTTPS"
+- Use an `https://` URL. Plain `http://` works only for localhost, 127.0.0.1, or [::1]
+
+### "PocketBase superuser tokens are not accepted"
+- You pasted an administrator token. Copy the token of a normal signed-in account from the web app instead
+
+### "Return this saved item to the matrix before completing it"
+- The task is in Saved. Choose Return to matrix in the app, then complete it
+
+### "Task … changed between read and write"
+- The task changed in another app between the read and the write. Re-read the task and retry
 
 ### "API request failed: 404 Not Found"
 - Check that `GSD_POCKETBASE_URL` is correct
@@ -715,30 +805,24 @@ npm run build
 npm publish
 ```
 
-## Future Enhancements
-
-**Advanced Features** (v0.5.0+)
-- AI-powered task suggestions based on patterns
-- Priority recommendations using AI
-- Deadline predictions
-- Historical trend analysis (7/30/90 day views)
-- Cross-integration with calendar/email (MCP chaining)
-- Custom analytics queries
-- Conflict resolution UI for concurrent edits
-- Task templates and quick creation workflows
-
 ## Architecture
 
 ```
 packages/mcp-server/
 ├── src/
-│   ├── index.ts           # MCP server setup, tool registration
+│   ├── index.ts           # CLI entry: parses options, starts the server
+│   ├── server/            # Server setup, tool registration, config, startup
+│   ├── auth/              # JWT token status
+│   ├── pocketbase-client.ts # PocketBase SDK client and principal checks
 │   ├── tools.ts           # Backward-compatible re-exports
-│   ├── cache.ts           # TTL-based in-memory cache (v0.6.0)
-│   ├── dependencies.ts    # Circular dependency validation (v0.6.0)
-│   ├── api/
-│   │   ├── client.ts      # HTTP client with error handling
-│   │   └── retry.ts       # Exponential backoff retry (v0.6.0)
+│   ├── cache.ts           # TTL-based in-memory cache
+│   ├── dependencies.ts    # Circular dependency validation
+│   ├── constants.ts       # Payload limits shared with the web app
+│   ├── errors.ts          # Typed errors (ConflictError)
+│   ├── version.ts         # Package version read at runtime
+│   ├── text/              # Capture-parser mirror (URL extraction)
+│   ├── utils/             # Logger
+│   ├── api/               # Host redaction; legacy HTTP client and retry (unused by tools)
 │   ├── tools/
 │   │   ├── handlers/      # Tool request handlers
 │   │   │   ├── index.ts   # Handler dispatcher
@@ -754,7 +838,7 @@ packages/mcp-server/
 │   │       └── system-tools.ts   # 3 system tools
 │   ├── write-ops/         # Write operations (v0.6.0)
 │   │   ├── types.ts       # Input/output types
-│   │   ├── helpers.ts     # ID gen, sync push
+│   │   ├── helpers.ts     # ID generation, PocketBase writes
 │   │   ├── task-operations.ts  # CRUD with dry-run
 │   │   └── bulk-operations.ts  # Bulk updates
 │   ├── analytics/         # Analytics calculations
@@ -763,8 +847,8 @@ packages/mcp-server/
 ├── package.json
 ├── tsconfig.json
 ├── README.md              # This file
-├── QUICKSTART.md          # Quick setup guide
-└── TESTING.md             # Testing procedures
+├── QUICKSTART.md          # Quick setup guide (in the repo, not the npm package)
+└── TESTING.md             # Testing procedures (in the repo, not the npm package)
 ```
 
 **Tech Stack**:
@@ -772,7 +856,7 @@ packages/mcp-server/
 - `zod` - Runtime schema validation
 - `typescript` - Type safety
 - `pocketbase` - PocketBase JS SDK
-- `vitest` - Testing framework (v0.6.0)
+- `vitest` - Testing framework
 
 **Communication Flow**:
 ```
@@ -780,9 +864,10 @@ Claude Desktop
     ↓ MCP Protocol (stdio)
 GSD MCP Server
     ↓ PocketBase JS SDK (HTTPS)
-PocketBase (self-hosted)
+PocketBase (hosted or self-hosted)
     ↓ SQLite
-Tasks (plaintext, owner-scoped)
+Tasks (owner-scoped; encrypted at rest on the Docker image; on the hosted
+       server, at-rest protection depends on the server's configuration)
 ```
 
 ## Contributing
@@ -799,39 +884,4 @@ MIT - Same as GSD Task Manager
 
 ---
 
-**Status**: v0.6.0 (Production Ready) ✅🔥
-
-**Current Release (v0.6.0)**:
-- 🔄 **Retry Logic** - Automatic exponential backoff for transient failures
-- ⏰ **Token Monitoring** - Proactive expiration warnings (healthy/warning/critical/expired)
-- 🚀 **Caching** - In-memory TTL cache (30s) with auto-invalidation on writes
-- 🔍 **Dry-Run Mode** - Preview all write operations before committing
-- 🔗 **Dependency Validation** - Circular dependency detection using BFS
-- 📊 **19 total MCP tools** (6 read + 5 write + 5 analytics + 3 system)
-- ✅ **70 passing tests** - Comprehensive schema and integration coverage
-
-**New Tools (v0.6.0)**:
-- `get_token_status` - Check JWT token health and expiration
-- `get_cache_stats` - Monitor cache performance and hit rates
-
-**Bug Fixes (v0.4.1-v0.4.7)**:
-- v0.4.1: Fixed Worker API payload structure
-- v0.4.2: Fixed JWT token schema (sub, deviceId)
-- v0.4.3: Added SHA-256 checksum calculation
-- v0.4.4: Added Worker rejection array checking
-- v0.4.5: Fixed field names (quadrant, timestamps)
-- v0.4.6: Fixed type mismatches (dueDate, subtasks.title)
-- v0.4.7: Fixed MCP tool input schemas
-
-**Previous Feature Releases**:
-- v0.4.0 - Write operations (create, update, delete)
-- v0.3.2 - Built-in prompts, help tool
-- v0.3.0 - Interactive setup, analytics, validation
-- v0.2.0 - Full task access
-- v0.1.0 - Metadata-only access
-
-**Privacy**: Self-hosted PocketBase backend, owner-scoped API rules
-**Security**: OAuth authentication, owner-based access control
-**Capabilities**: Full CRUD task management with natural language interface
-**Reliability**: Automatic retry, caching, dry-run preview (v0.6.0)
-**Deployment**: Published to npm ✅ | Production ready ✅ | All tests passed ✅
+**Current release:** 1.4.1. See [CHANGELOG.md](CHANGELOG.md) for every release.

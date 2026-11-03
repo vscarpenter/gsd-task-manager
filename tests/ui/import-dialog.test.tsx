@@ -94,6 +94,8 @@ describe("ImportDialog", () => {
 
     expect(screen.getByText("Merge Tasks")).toBeInTheDocument();
     expect(screen.getByText(/keep your existing tasks/i)).toBeInTheDocument();
+    // A merge adds the file's missing Trash rows and keeps local ones (lib/tasks/import-export.ts).
+    expect(screen.getByText(/archive and Trash included\. Items already in your Trash stay as they are\./)).toBeInTheDocument();
     expect(screen.getByText(/safe - no data loss/i)).toBeInTheDocument();
   });
 

@@ -176,7 +176,9 @@ export function ResetEverythingDialog(props: ResetEverythingDialogProps) {
 						Reset everything
 					</DialogTitle>
 					<DialogDescription className="text-foreground-muted">
-						This will permanently delete all your data. This action cannot be undone.
+						Deletes everything in this browser and signs you out. This can&apos;t be undone.
+						If you use sync, your synced copy stays on the server; to delete that, use
+						Delete account in Settings › Cloud Sync.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -188,11 +190,11 @@ export function ResetEverythingDialog(props: ResetEverythingDialogProps) {
 						</h4>
 						<ul className="space-y-1 text-sm text-status-overdue-ink">
 							<ResetTaskCounts {...props} />
-							<li>• All custom smart views</li>
+							<li>• Smart view settings</li>
 							<li>• All notification settings</li>
 							<li>• All archive settings</li>
 							{syncEnabled && (
-								<li>• Cloud sync configuration (you will be logged out)</li>
+								<li>• Cloud sync configuration (you will be signed out)</li>
 							)}
 							{pendingSync > 0 && (
 								<li className="font-semibold text-status-overdue-ink">

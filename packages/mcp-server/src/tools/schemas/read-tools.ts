@@ -19,7 +19,7 @@ export const getSyncStatusTool: Tool = {
 export const getTaskStatsTool: Tool = {
   name: 'get_task_stats',
   description:
-    'Get task counts: totalTasks, activeTasks (not completed), completedTasks, plus lastUpdated, oldestTask, and newestTask timestamps. Counts cover every task in the account regardless of quadrant. Use list_tasks when you need the tasks themselves rather than counts.',
+    'Get task counts: totalTasks, activeTasks (not completed), completedTasks, plus lastUpdated, oldestTask, and newestTask timestamps. Counts cover every task in the account, including Saved items, regardless of quadrant. Use list_tasks when you need the tasks themselves rather than counts.',
   inputSchema: {
     type: 'object',
     properties: {},
@@ -30,7 +30,7 @@ export const getTaskStatsTool: Tool = {
 export const listTasksTool: Tool = {
   name: 'list_tasks',
   description:
-    'List tasks with optional filters. Returns full task objects (title, description, quadrant, urgent/important, tags, subtasks, dependencies, dueDate, completed, timestamps) sorted by most recently updated first. Without filters it returns every task, completed ones included; pass completed=false for the active list. Multiple filters combine with AND; the tags filter matches a task that has any of the given tags. Results come from a short-lived cache that is invalidated on every write.',
+    'List tasks with optional filters. Returns full task objects (title, description, quadrant, urgent/important, tags, subtasks, dependencies, dueDate, completed, timestamps) sorted by most recently updated first. Saved items (Move to Saved in the apps) are excluded. Without filters it returns every other task, completed ones included; pass completed=false for the active list. Multiple filters combine with AND; the tags filter matches a task that has any of the given tags. Results come from a short-lived cache that is invalidated on every write.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -52,7 +52,8 @@ export const listTasksTool: Tool = {
       tags: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Filter by tags (tasks matching any of these tags will be returned)',
+        description:
+          'Filter by tags (tasks matching any of these tags will be returned). Exact match: use lowercase tags without a leading #, as the apps store them.',
       },
     },
     required: [],
@@ -62,7 +63,7 @@ export const listTasksTool: Tool = {
 export const getTaskTool: Tool = {
   name: 'get_task',
   description:
-    'Get a single task by its ID. Returns the full task object. Fails with "Task not found" when no task has that ID; use search_tasks or list_tasks to find an ID first.',
+    'Get a single task by its ID. Returns the full task object. Fails with "Task not found" when no task has that ID, and also for a Saved item, because Saved items are excluded; use search_tasks or list_tasks to find an ID first.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -78,7 +79,7 @@ export const getTaskTool: Tool = {
 export const searchTasksTool: Tool = {
   name: 'search_tasks',
   description:
-    'Search tasks by a case-insensitive substring match against titles, descriptions, tags, and subtask titles. Returns full task objects for every match, completed tasks included, most recently updated first; there is no relevance ranking. Use list_tasks with filters when you need a quadrant, tag, or completion filter rather than free text.',
+    'Search tasks by a case-insensitive substring match against titles, descriptions, tags, and subtask titles. Returns full task objects for every match, completed tasks included and Saved items excluded, most recently updated first; there is no relevance ranking. Use list_tasks with filters when you need a quadrant, tag, or completion filter rather than free text.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -94,7 +95,7 @@ export const searchTasksTool: Tool = {
 export const getTokenStatusTool: Tool = {
   name: 'get_token_status',
   description:
-    'Check authentication token status including expiration date, days remaining, and warnings. Use this to proactively check if re-authentication is needed. Returns status (healthy/warning/critical/expired), expiration details, and re-authentication instructions if needed.',
+    'Check authentication token status including expiration date, days remaining, and warnings. Use this to proactively check if re-authentication is needed. Returns status (healthy/warning/critical/expired/invalid; invalid means no token or not a PocketBase JWT), expiration details, and re-authentication instructions if needed.',
   inputSchema: {
     type: 'object',
     properties: {},
