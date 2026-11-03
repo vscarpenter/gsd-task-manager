@@ -203,7 +203,7 @@ function MergeCard({ disabled, onClick }: OptionCardProps) {
         <div className="flex-1">
           <h3 className="font-semibold text-foreground">Merge Tasks</h3>
           <p className="mt-1 text-sm text-foreground-muted">
-            Keep your existing tasks and add the imported ones, archive included. Tasks already on this device are added again as copies, so restoring your own backup doubles them. Your settings stay as they are.
+            Keep your existing tasks and add the imported ones, archive and Trash included. Items already in your Trash stay as they are. Tasks already on this device are added again as copies, so restoring your own backup doubles them. Your settings stay as they are.
           </p>
           <p className="mt-2 text-xs font-medium text-olive-d">
             ✓ Safe - No data loss
