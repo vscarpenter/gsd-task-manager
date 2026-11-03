@@ -5,6 +5,41 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- `validate_config` reports an Authentication error when the sync status is
+  unhealthy. `getSyncStatus` catches its own errors, so the check used to report
+  success even for a revoked or rejected token.
+
+### Documentation
+- README: `delete_task` and bulk deletes default to a dry run; pass
+  `dryRun: false` to apply. Removed the `maxTasks` parameter, which the strict
+  schema rejects. Bulk writes are per task with partial success, not
+  transactional, and deletes are capped at 10.
+- README: corrected the Returns examples for `get_sync_status`,
+  `get_task_stats`, `get_token_status`, `get_cache_stats`, and
+  `validate_config`; documented Saved items, recurrence on `complete_task`, the
+  three notification and estimate params, payload limits, URL rules, superuser
+  rejection, troubleshooting for the errors the server returns, and where tool
+  output goes. Install pins 1.4.1, sign-in lists Apple, and the stale v0.6.0
+  status block and dead retry claim are gone.
+- README-SECURITY: on a self-hosted server, Sign out of all devices ends MCP
+  tokens too; the hosted service can't revoke early.
+- The README token edits from #663 (30-day tokens, no renewal) land on npm with
+  the next release.
+- Tool descriptions: `list_tasks`, `get_task`, and `search_tasks` say Saved
+  items are excluded and `get_task_stats` says it counts them; tag examples are
+  lowercase without `#`; `update_task` and `bulk_update_tasks` say completion
+  there doesn't create the next recurring instance; bulk deletes skip Trash;
+  `get_token_status` lists `invalid`; `validate_config` no longer claims to
+  check environment variables. `notifyBefore`, `estimatedMinutes`, and
+  `get_tag_analytics` `limit` advertise `type: integer`, matching validation.
+- `get_help` and the `list_tasks` error recommend an exact global install and
+  `gsd-mcp-server --validate` instead of `npx`, and state the 10-per-delete cap.
+- Token re-auth instructions point to the GSD web app you sync with instead of
+  assuming the hosted one.
+
 ## [1.4.1] - 2026-10-31
 
 ### Fixed
