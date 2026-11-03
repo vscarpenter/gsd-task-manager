@@ -9,12 +9,31 @@ import type { McpToolResponse } from './types.js';
  * System tool handlers for configuration validation and help
  */
 
+type ConfigCheck = {
+  name: string;
+  status: 'success' | 'warning' | 'error';
+  details: string;
+};
+
+// getSyncStatus catches its own errors and returns healthy: false, so read the
+// result rather than relying on a throw.
+async function checkAuthentication(config: GsdConfig): Promise<ConfigCheck> {
+  const failed: ConfigCheck = { name: 'Authentication', status: 'error', details: 'Token validation failed' };
+  try {
+    const status = await getSyncStatus(config);
+    if (!status.healthy) return failed;
+    return {
+      name: 'Authentication',
+      status: 'success',
+      details: `Authenticated (${status.taskCount} tasks accessible)`,
+    };
+  } catch {
+    return failed;
+  }
+}
+
 export async function handleValidateConfig(config: GsdConfig): Promise<McpToolResponse> {
-  const checks: Array<{
-    name: string;
-    status: 'success' | 'warning' | 'error';
-    details: string;
-  }> = [];
+  const checks: ConfigCheck[] = [];
 
   // Check PocketBase connectivity
   try {
@@ -33,23 +52,7 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     });
   }
 
-  // Check authentication. getSyncStatus catches its own errors and returns
-  // healthy: false, so read the result rather than relying on a throw.
-  try {
-    const status = await getSyncStatus(config);
-    if (!status.healthy) throw new Error('Sync status unhealthy');
-    checks.push({
-      name: 'Authentication',
-      status: 'success',
-      details: `Authenticated (${status.taskCount} tasks accessible)`,
-    });
-  } catch {
-    checks.push({
-      name: 'Authentication',
-      status: 'error',
-      details: 'Token validation failed',
-    });
-  }
+  checks.push(await checkAuthentication(config));
 
   // Check task access
   try {
