@@ -245,6 +245,7 @@ function makeHandlers(): CommandActionHandlers {
     onViewDashboard: vi.fn(),
     onViewMatrix: vi.fn(),
     onViewArchive: vi.fn(),
+    onViewSaved: vi.fn(),
     onApplySmartView: vi.fn(),
   };
 }
@@ -513,6 +514,7 @@ describe('CommandPalette (full component)', () => {
         handlers.onViewDashboard,
         handlers.onViewMatrix,
         handlers.onViewArchive,
+        handlers.onViewSaved,
       ];
       const calledCount = allHandlers.filter(h => (h as ReturnType<typeof vi.fn>).mock.calls.length > 0).length;
       expect(calledCount).toBe(1);

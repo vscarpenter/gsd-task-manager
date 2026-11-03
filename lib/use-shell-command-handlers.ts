@@ -6,6 +6,7 @@ import { runBackupExport } from "@/lib/backup-download";
 import type { CommandActionHandlers } from "@/lib/command-actions";
 import type { FilterCriteria } from "@/lib/filters";
 import type { RedesignQuadrantKey } from "@/lib/quadrants";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Window event dispatched by the command palette when the user picks
@@ -20,7 +21,7 @@ export const FOCUS_QUADRANT_EVENT = "gsd:focus-quadrant";
 
 /**
  * Window event dispatched by the command palette when the user picks
- * "Open user guide". The AppShell already subscribes via HelpDrawer.
+ * "Open Field Guide". The AppShell already subscribes via HelpDrawer.
  */
 const OPEN_HELP_EVENT = "gsd:open-help";
 
@@ -95,6 +96,7 @@ export function useShellCommandHandlers(): ShellCommandResult {
     onViewDashboard: () => router.push("/dashboard"),
     onViewMatrix: () => router.push("/"),
     onViewArchive: () => router.push("/archive"),
+    onViewSaved: () => router.push(ROUTES.SAVED),
     onApplySmartView: (criteria, viewId) => {
       if (typeof window === "undefined") return;
       if (window.location.pathname === "/") {

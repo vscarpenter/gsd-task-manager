@@ -39,6 +39,7 @@ export interface CommandActionHandlers {
   onViewDashboard: () => void;
   onViewMatrix: () => void;
   onViewArchive: () => void;
+  onViewSaved: () => void;
   onViewSyncHistory?: () => void;
 
   // Smart views
@@ -98,33 +99,7 @@ export function buildCommandActions(
   );
 
   // Navigation section
-  actions.push(
-    {
-      id: 'view-matrix',
-      label: 'View matrix',
-      section: 'navigation',
-      keywords: ['matrix', 'quadrants', 'eisenhower', 'home'],
-      onExecute: handlers.onViewMatrix,
-      focusAfterExecute: 'handoff'
-    },
-    {
-      id: 'view-dashboard',
-      label: 'View review',
-      shortcut: ['⌥', 'R'],
-      section: 'navigation',
-      keywords: ['review', 'weekly', 'reflection', 'planning', 'dashboard', 'analytics', 'stats', 'metrics'],
-      onExecute: handlers.onViewDashboard,
-      focusAfterExecute: 'handoff'
-    },
-    {
-      id: 'view-archive',
-      label: 'View archived tasks',
-      section: 'navigation',
-      keywords: ['archive', 'completed', 'old', 'history'],
-      onExecute: handlers.onViewArchive,
-      focusAfterExecute: 'handoff'
-    }
-  );
+  actions.push(...buildNavigationActions(handlers));
 
   // Add sync history navigation if sync is enabled
   if (conditions.isSyncEnabled && handlers.onViewSyncHistory) {
@@ -159,10 +134,10 @@ export function buildCommandActions(
     },
     {
       id: 'open-help',
-      label: 'Open user guide',
+      label: 'Open Field Guide',
       shortcut: ['?'],
       section: 'settings',
-      keywords: ['help', 'guide', 'documentation', 'tutorial'],
+      keywords: ['help', 'guide', 'documentation', 'tutorial', 'user guide', 'field guide', 'how to'],
       onExecute: handlers.onOpenHelp,
       focusAfterExecute: 'handoff'
     }
@@ -199,4 +174,43 @@ export function buildCommandActions(
   });
 
   return actions;
+}
+
+/** The palette's route commands, in the rail's order where the rail has them. */
+function buildNavigationActions(handlers: CommandActionHandlers): CommandAction[] {
+  return [
+    {
+      id: 'view-matrix',
+      label: 'View matrix',
+      section: 'navigation',
+      keywords: ['matrix', 'quadrants', 'eisenhower', 'home'],
+      onExecute: handlers.onViewMatrix,
+      focusAfterExecute: 'handoff'
+    },
+    {
+      id: 'view-dashboard',
+      label: 'View review',
+      shortcut: ['⌥', 'R'],
+      section: 'navigation',
+      keywords: ['review', 'weekly', 'reflection', 'planning', 'dashboard', 'analytics', 'stats', 'metrics'],
+      onExecute: handlers.onViewDashboard,
+      focusAfterExecute: 'handoff'
+    },
+    {
+      id: 'view-archive',
+      label: 'View archived tasks',
+      section: 'navigation',
+      keywords: ['archive', 'completed', 'old', 'history'],
+      onExecute: handlers.onViewArchive,
+      focusAfterExecute: 'handoff'
+    },
+    {
+      id: 'view-saved',
+      label: 'View saved',
+      section: 'navigation',
+      keywords: ['saved', 'bookmarks', 'later', 'reading', 'notes'],
+      onExecute: handlers.onViewSaved,
+      focusAfterExecute: 'handoff'
+    }
+  ];
 }

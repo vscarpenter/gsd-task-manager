@@ -44,7 +44,7 @@ test.describe("Refined Evolution production hybrid", () => {
     await expect(commandButton).toBeFocused();
 
     await commandButton.click();
-    await page.getByText("Open user guide", { exact: true }).click();
+    await page.getByText("Open Field Guide", { exact: true }).click();
     await expect(page.getByRole("dialog", { name: /how to use gsd/i })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.locator("#main-content")).toBeFocused();
