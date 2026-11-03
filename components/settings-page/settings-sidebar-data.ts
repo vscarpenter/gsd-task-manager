@@ -35,7 +35,7 @@ export interface SectionMeta {
 }
 
 export const SETTINGS_SECTIONS: SectionMeta[] = [
-  { id: "appearance", label: "Appearance", icon: PaletteIcon, description: "Theme and display preferences", group: "Preferences" },
+  { id: "appearance", label: "Appearance", icon: PaletteIcon, description: "Theme, display, and escalation", group: "Preferences" },
   { id: "features", label: "Features", icon: SlidersHorizontalIcon, description: "Optional workspace capabilities", group: "Preferences" },
   { id: "bookmarklet", label: "Bookmarklet", icon: BookmarkPlusIcon, description: "Add tasks from any web page", group: "Preferences" },
   { id: "notifications", label: "Notifications", icon: BellIcon, description: "Reminders and alerts", group: "Preferences" },
