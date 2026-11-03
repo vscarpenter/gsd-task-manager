@@ -42,7 +42,7 @@ export function NotificationSettingsSection({
 
 	return (
 		<>
-			<PushNotificationsRow enabled={settings.enabled} onToggle={onNotificationToggle} />
+			<NotificationsRow enabled={settings.enabled} onToggle={onNotificationToggle} />
 
 			{/* Reminder, sound, quiet hours - only meaningful while notifications fire */}
 			{settings.enabled && (
@@ -110,7 +110,7 @@ function reminderLabel(defaultReminder: number): string {
 }
 
 /** The master switch for notifications. */
-function PushNotificationsRow({
+function NotificationsRow({
 	enabled,
 	onToggle,
 }: {
@@ -119,12 +119,12 @@ function PushNotificationsRow({
 }) {
 	return (
 		<SettingsRow
-			label="Push notifications"
-			description="Get reminded about tasks"
+			label="Notifications"
+			description="Remind me about due tasks. Works while GSD is open; an installed app in Chrome or Edge can also check in the background."
 			state={enabled}
 		>
 			<Switch
-				aria-label="Push notifications"
+				aria-label="Notifications"
 				checked={enabled}
 				onCheckedChange={onToggle}
 			/>

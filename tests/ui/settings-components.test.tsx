@@ -314,7 +314,7 @@ describe('Settings Components', () => {
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
-    it('renders push notifications row when settings provided', () => {
+    it('renders the notifications row with an honest description', () => {
       render(
         <NotificationSettingsSection
           settings={enabledSettings}
@@ -322,7 +322,9 @@ describe('Settings Components', () => {
           onDefaultReminderChange={vi.fn()}
         />
       );
-      expect(screen.getByText('Push notifications')).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Notifications' })).toBeInTheDocument();
+      expect(screen.getByText(/Works while GSD is open; an installed app in Chrome or Edge can also check in the background\./)).toBeInTheDocument();
+      expect(screen.queryByText(/push notifications/i)).toBeNull();
     });
 
     it('shows default reminder select when notifications enabled', () => {
@@ -401,7 +403,7 @@ describe('Settings Components', () => {
           onDefaultReminderChange={vi.fn()}
         />
       );
-      fireEvent.click(screen.getByRole('switch', { name: /push notifications/i }));
+      fireEvent.click(screen.getByRole('switch', { name: 'Notifications' }));
       expect(onToggle).toHaveBeenCalled();
     });
 

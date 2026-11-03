@@ -13,7 +13,7 @@ when a client sends `Accept: text/markdown`.
 - Classifies every task by **urgency** and **importance** (the four Eisenhower
   quadrants).
 - Runs offline by default — IndexedDB via Dexie is the source of truth.
-- Ships as an installable PWA with a service worker, push notifications, and
+- Ships as an installable PWA with a service worker, reminder notifications, and
   badge updates.
 - Adds optional cloud sync (PocketBase + OAuth via Google or GitHub) for
   users who want their tasks on multiple devices.
