@@ -97,4 +97,20 @@ describe('handleGetHelp tool list', () => {
 
     expect(text).toContain('(quadrant, completed, tags)');
   });
+
+  it('states the 10-per-delete bulk cap and that Saved items are hidden', async () => {
+    const text = responseText(await handleGetHelp({ topic: 'tools' }));
+
+    expect(text).toContain('(max 50, or 10 per delete)');
+    expect(text).toContain('Saved items');
+  });
+});
+
+describe('handleGetHelp setup advice', () => {
+  it('recommends a pinned global install instead of npx', async () => {
+    const text = responseText(await handleGetHelp({}));
+
+    expect(text).toMatch(/npm install --global gsd-mcp-server@\d+\.\d+\.\d+/);
+    expect(text).not.toContain('npx gsd-mcp-server');
+  });
 });
