@@ -17,9 +17,10 @@ optional PocketBase sync, and the GSD MCP server.
 ## What ships in v11
 
 - A responsive four-quadrant matrix with drag-and-drop movement.
-- Quick Capture, full task editing, search, keyboard navigation, and optional
-  built-in Smart Views.
+- The Add a task bar, full task editing, search, keyboard navigation, and
+  optional built-in Smart Views.
 - A bookmarklet from Settings that captures any web page for review in GSD.
+  Installed on Android, GSD also appears in the share sheet.
 - Due dates, tags, dependency selection, and circular-dependency prevention.
 - Archive, dashboard/review analytics, sync history, settings, and onboarding.
 - Local IndexedDB persistence, JSON import/export, offline PWA support, and
@@ -55,7 +56,7 @@ The Eisenhower matrix classifies work by urgency and importance:
 - **Delegate** — urgent, not important.
 - **Eliminate** — neither urgent nor important.
 
-Use the Quick Capture field or press `n` to start a task. Use `Shift+N` for the
+Use the Add a task bar or press `n` to start a task. Use `Shift+N` for the
 full composer, `/` for search, `?` for help, and `Option+1` through `Option+4`
 (`Alt` on non-Mac keyboards) to focus a quadrant. The in-app help drawer is the
 canonical shortcut ledger.
@@ -69,10 +70,10 @@ search Saved or the command palette, and choose **Return to matrix** when ready.
 Review the quadrant and due date before returning. Saved items do not contribute
 to active task counts, review analytics, reminders, or due badges.
 
-Saved works offline and travels in JSON backups. Cloud sync requires the additive
-`saved_at` migration shipped with this feature before rollout. iOS support is a
-follow-up: older iOS clients still treat saved items as ordinary tasks. See
-[`tasks/saved-tasks/spec.md`](tasks/saved-tasks/spec.md) for the compatibility scope.
+Saved works offline and travels in JSON backups. Saved also works in the iPhone,
+iPad, and Mac app and syncs between them. Very old iOS builds show saved items as
+ordinary tasks. See [`tasks/saved-tasks/spec.md`](tasks/saved-tasks/spec.md) for
+the compatibility scope.
 
 ## Local development
 
@@ -128,7 +129,7 @@ the regular browser profile and system privacy permissions are untouched.
 ## Architecture
 
 - Next.js 16 App Router static export; the application is client-side.
-- React 19, TypeScript, Tailwind CSS, and the Violet Frost Inkwell tokens.
+- React 19, TypeScript, Tailwind CSS, and the Inkwell "GSD Editorial" tokens.
 - Dexie/IndexedDB for local data and PocketBase for optional cloud sync.
 - Vitest for unit/integration coverage and Playwright for browser coverage.
 - Bun workspaces, including [`packages/mcp-server/`](packages/mcp-server/).
