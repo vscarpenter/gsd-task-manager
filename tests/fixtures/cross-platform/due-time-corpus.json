@@ -1,6 +1,6 @@
 {
-  "note": "Canonical due time of day behavior (GSD parity decision D-1). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/due-time-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/due-time-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/due-time-corpus.json, and every suite runs every case. The rule: a due date at local midnight in the current zone is all day, and any other time, down to the millisecond, is a time of day. Ops: classify reports the local date and, for a time of day, the 24-hour display time, which each client formats for its locale; an all-day task shows the label 'All day'. onDate moves a due date to a local date and keeps the time of day; a null due starts all day. atTime sets the time on the same local date, and a null time means all day. timedReminderFire is due minus notifyBefore (or defaultReminder when null), in elapsed minutes, for tasks with a time of day, with quiet hours off and now far before the fire time. Past-due handling differs by client and isn't pinned here. A local time inside a daylight-saving gap shifts forward by the length of the gap, and a time inside an overlap takes the first occurrence. allDayReminderFire applies when the task is all day in the current zone. An offset under a day fires at 09:00 local on the due day, and each whole day of offset moves that back one local day. A future snooze wins, quiet hours defer the fire to their end (half-open window), and a fire time that has passed fires nothing. Cases with a passed fire time sit at least two hours past it, because the instant at which a client stops firing differs by client. If behavior changes, change this file in all three repos and all three implementations together.",
-  "version": 1,
+  "note": "Canonical due time of day behavior (GSD parity decision D-1). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/due-time-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/due-time-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/due-time-corpus.json, and every suite runs every case. The rule: a due date at local midnight in the current zone is all day, and any other time, down to the millisecond, is a time of day. Ops: classify reports the local date and, for a time of day, the 24-hour display time, which each client formats for its locale; an all-day task shows the label 'All day'. onDate moves a due date to a local date and keeps the time of day; a null due starts all day. atTime sets the time on the same local date, and a null time means all day. timedReminderFire is due minus notifyBefore (or defaultReminder when null), in elapsed minutes, for tasks with a time of day, with quiet hours off and now far before the fire time. Past-due handling differs by client and isn't pinned here. A local time inside a daylight-saving gap shifts forward by the length of the gap, and a time inside an overlap takes the first occurrence. allDayReminderFire applies when the task is all day in the current zone. An offset under a day fires at 09:00 local on the due day, and each whole day of offset moves that back one local day. A future snooze wins when it ends at or after the reminder time, and one that ends earlier leaves the reminder at its own time (owner decision, 2026-11-03). Quiet hours defer the fire to their end (half-open window), and a fire time that has passed fires nothing. Cases with a passed fire time sit at least two hours past it, because the instant at which a client stops firing differs by client. If behavior changes, change this file in all three repos and all three implementations together.",
+  "version": 2,
   "cases": [
     {
       "name": "local midnight is all day",
@@ -1170,7 +1170,7 @@
       }
     },
     {
-      "name": "a future snooze wins",
+      "name": "a future snooze that ends before the reminder time leaves the reminder on time",
       "op": "allDayReminderFire",
       "zone": "America/Chicago",
       "now": "2026-09-23T12:00:00.000Z",
@@ -1181,7 +1181,22 @@
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-09-24T02:00:00.000Z"
+        "fire": "2026-09-24T14:00:00.000Z"
+      }
+    },
+    {
+      "name": "a future snooze that ends after the reminder time wins",
+      "op": "allDayReminderFire",
+      "zone": "America/Chicago",
+      "now": "2026-09-24T14:30:00.000Z",
+      "due": "2026-09-24T05:00:00.000Z",
+      "notifyBefore": null,
+      "defaultReminder": 15,
+      "snoozedUntil": "2026-09-24T16:00:00.000Z",
+      "quietHoursStart": null,
+      "quietHoursEnd": null,
+      "expect": {
+        "fire": "2026-09-24T16:00:00.000Z"
       }
     },
     {

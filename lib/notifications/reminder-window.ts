@@ -70,8 +70,8 @@ function deferPastQuietHours(fire: Date, quiet: QuietHours): Date {
 /**
  * Whether a reminder should show right now. A future snooze holds it. A snooze
  * that has ended asks for the reminder again, for an hour, even after the first
- * window closed. `snoozeTask` clears `notificationSent` for this, as the native
- * clients re-fire at the snooze end (Android `ReminderPlanner.fireTime`).
+ * window closed. `snoozeTask` clears `notificationSent` for this. A snooze that
+ * ends before the reminder time fires nothing, so the reminder still comes on time.
  */
 export function isReminderDue(args: {
   dueIso: string;
@@ -84,16 +84,19 @@ export function isReminderDue(args: {
   const snoozed = args.snoozedUntil ? new Date(args.snoozedUntil) : undefined;
   if (snoozed && snoozed > now) return false;
   const within = ({ fire, expires }: ReminderWindow) => now >= fire && now < expires;
-  if (within(reminderWindow(args.dueIso, args.notifyBefore, quiet))) return true;
+  const planned = reminderWindow(args.dueIso, args.notifyBefore, quiet);
+  if (within(planned)) return true;
   if (!snoozed) return false;
   const fire = deferPastQuietHours(snoozed, quiet);
+  if (fire < planned.fire) return false;
   return within({ fire, expires: new Date(fire.getTime() + GRACE_MS) });
 }
 
 /**
  * When a reminder will fire, or null when it won't: a future snooze is the fire
- * time, and a fire time that has passed fires nothing. Quiet hours defer either.
- * Mirrors Android `ReminderPlanner.fireTime` for the shared due-time corpus.
+ * time unless it ends before the reminder time, and a fire time that has passed
+ * fires nothing. Quiet hours defer either. The shared due-time corpus pins this
+ * for all three clients.
  */
 export function reminderFireAt(args: {
   dueIso: string;
@@ -105,9 +108,10 @@ export function reminderFireAt(args: {
 }): Date | null {
   const quiet = { start: args.quietHoursStart, end: args.quietHoursEnd };
   const snoozed = args.snoozedUntil ? new Date(args.snoozedUntil) : undefined;
-  const base = snoozed && snoozed > args.now
-    ? snoozed
-    : reminderWindow(args.dueIso, args.notifyBefore).fire;
+  const planned = reminderWindow(args.dueIso, args.notifyBefore).fire;
+  const snoozeWins = snoozed !== undefined && snoozed > args.now
+    && deferPastQuietHours(snoozed, quiet) >= deferPastQuietHours(planned, quiet);
+  const base = snoozeWins ? snoozed : planned;
   if (base <= args.now) return null;
   return deferPastQuietHours(base, quiet);
 }

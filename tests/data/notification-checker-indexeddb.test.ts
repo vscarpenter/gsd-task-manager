@@ -11,6 +11,7 @@ import { getDb } from "@/lib/db";
 import { getDueSoonCount, notificationChecker } from "@/lib/notification-checker";
 import * as notifications from "@/lib/notifications";
 import { pocketBaseToTaskRecord, taskRecordToPocketBase } from "@/lib/sync/task-mapper";
+import { snoozeTask } from "@/lib/tasks";
 import { createMockTask } from "@/tests/fixtures";
 import type { RecordModel } from "pocketbase";
 
@@ -176,6 +177,23 @@ describe("notification checker on a real database", () => {
 			await notificationChecker.checkAndNotify();
 
 			expect(shownCount()).toBe(2);
+		});
+
+		it("should_remind_at_the_reminder_time_after_a_snooze_that_ended_before_it", async () => {
+			const due = start.getTime() + 24 * 60 * MS_PER_MINUTE;
+			await getDb().tasks.put(createMockTask({ id: "t", dueDate: new Date(due).toISOString(), notifyBefore: 15 }));
+			await snoozeTask("t", 60);
+			at(start.getTime() + 61 * MS_PER_MINUTE);
+			await notificationChecker.checkAndNotify();
+			const shownAtSnoozeEnd = shownCount();
+
+			at(due - 14 * MS_PER_MINUTE);
+			await notificationChecker.checkAndNotify();
+
+			expect({ shownAtSnoozeEnd, shownAtReminderTime: shownCount() - shownAtSnoozeEnd }).toEqual({
+				shownAtSnoozeEnd: 0,
+				shownAtReminderTime: 1,
+			});
 		});
 	});
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { reminderWindow } from "@/lib/notifications/reminder-window";
+import { isReminderDue, reminderFireAt, reminderWindow } from "@/lib/notifications/reminder-window";
 
 // Vinny's rule (owner decision 6): an all-day task fires at 09:00 local on the
 // due day, minus one day per whole day of offset. Timed tasks fire at due - offset.
@@ -81,5 +81,33 @@ describe("across a DST change", () => {
   it("fires at 09:00 wall-clock on fall-back day", () => {
     process.env.TZ = "America/Chicago"; // 2026-11-01
     expect(reminderWindow(local(2026, 11, 1).toISOString(), 15).fire).toEqual(local(2026, 11, 1, 9));
+  });
+});
+
+// Owner decision (2026-11-03): a snooze that ends before the reminder time doesn't
+// fire, so it can't use up the reminder that comes at its own time.
+describe("a snooze and the reminder time", () => {
+  const due = local(2026, 11, 4, 10).toISOString(); // reminder at 09:45 with a 15 minute offset
+
+  it("doesn't fire when a snooze ends before the reminder time", () => {
+    const snoozedUntil = local(2026, 11, 3, 11).toISOString();
+    expect(isReminderDue({ dueIso: due, notifyBefore: 15, now: local(2026, 11, 3, 11, 1), snoozedUntil })).toBe(false);
+  });
+
+  it("fires when a snooze ends after the reminder hour closed", () => {
+    const snoozedUntil = local(2026, 11, 4, 12).toISOString();
+    expect(isReminderDue({ dueIso: due, notifyBefore: 15, now: local(2026, 11, 4, 12, 1), snoozedUntil })).toBe(true);
+  });
+
+  it("plans the reminder time, not the end of a snooze that ends before it", () => {
+    const snoozedUntil = local(2026, 11, 3, 11).toISOString();
+    const fire = reminderFireAt({ dueIso: due, notifyBefore: 15, now: local(2026, 11, 3, 10), snoozedUntil });
+    expect(fire).toEqual(local(2026, 11, 4, 9, 45));
+  });
+
+  it("plans the end of a snooze that ends after the reminder time", () => {
+    const snoozedUntil = local(2026, 11, 4, 10, 30).toISOString();
+    const fire = reminderFireAt({ dueIso: due, notifyBefore: 15, now: local(2026, 11, 4, 9, 50), snoozedUntil });
+    expect(fire).toEqual(local(2026, 11, 4, 10, 30));
   });
 });
