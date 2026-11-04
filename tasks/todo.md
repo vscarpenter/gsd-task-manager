@@ -1,23 +1,19 @@
-# Reminder statechart (2026-11-03)
+# Lost reminders (2026-11-03)
 
-Branch: `fix/lost-reminders` off `main` (`ba2229d`). Standard tier: two lib files and their tests, plus one shared corpus case. A TLA+ model of one task's web reminder (checker, snooze, local edit, pull merge) found two ways a reminder goes missing. Both replayed against the real code and failed at the predicted step.
+Branch: `fix/lost-reminders` off `main` (`ba2229d`). Standard tier: two lib files and their tests, plus one shared corpus case. Not pushed. A TLA+ statechart of one task's web reminder found two ways a reminder never shows, and both replayed against the real code.
 
 Owner decisions (2026-11-03): a pull that changes the due date resets the reminder, and a snooze that ends before the reminder time doesn't fire.
 
-## Plan
-
-- [x] Pull path: `localReminderState` in `lib/sync/task-mapper.ts` resets the sent flag, last shown time, and snooze when the pulled due date is a different instant.
-- [ ] Snooze path: `isReminderDue` and `reminderFireAt` ignore a snooze that ends before the reminder time. Update the corpus case "a future snooze wins" (web is the authority).
-- [ ] Rerun the fixed model, then version bump, full gates, and commits.
-
 ## Resuming From Here
 
-- [x] Rule that breaks: once a reminder's time comes and nothing holds it, the app still owes it until you see it.
-- **Bug 1:** the reminder shows, another device moves the due date later, and the new reminder never shows. `pocketBaseToTaskRecord` keeps the local `notificationSent` (and `snoozedUntil`) when a pull changes `dueDate` or `notifyBefore`, but a local edit through `updateTask` resets both.
-- **Bug 2:** you snooze before the reminder time, the snooze ends, and `isReminderDue` fires that early reminder and marks it sent. The reminder at its own time then never shows. The card and drawer offer snooze on any open task.
-- **Holds:** a snooze brings the reminder back when it ends, and each reminder shows once per reminder time or snooze.
-- **Not modeled:** completion, quiet hours, two open tabs, and the gap between the checker's read and its show (a snooze or completion in that gap still shows the reminder).
-- **Next:** owner decides whether a pull that changes the due date or offset should reset the sent flag and snooze like a local edit, and whether a snooze that ends early should fire at all. iOS and Android may differ; check `ReminderPlanner.fireTime` before choosing.
+- [x] `af771d4` pull path: `localReminderState` in `lib/sync/task-mapper.ts` resets the sent flag, last shown time, and snooze when the pulled due date is a different instant. Both the pull and realtime paths merge through it.
+- [x] `2e394cd` snooze path: `isReminderDue` and `reminderFireAt` ignore a snooze that ends before the reminder time. Due-time corpus v2 changes "a future snooze wins" and adds a case for a snooze that ends after.
+- [x] `6c9d807` web 14.6.2, because production serves 14.6.1.
+- [x] `e09d402` review fix: an unchanged due date string, even an unparseable one, keeps the reminder state. The `pb-sync-reviewer` pass found nothing else blocking.
+- [x] Verify: unit 4,111, typecheck, lint, quality:shape, knip, build, bundle budget. The fixed model holds every rule, including the new "no reminder before its time", and undoing either fix breaks it again.
+- **Next:** owner pushes and opens the PR.
+- **Follow-up, other repos:** iOS (`ReminderMath.swift:51`) and Android (`ReminderPlanner.kt:52-54`) still fire a snooze that ends before the reminder time, then mark it sent, so they carry bug 2. Their corpus copies are still v1. Each needs the v2 corpus and the matching change in its own session. Bug 1 wasn't checked on either.
+- **Not fixed, out of scope:** a pull that changes only `notifyBefore` keeps the sent flag, because PocketBase stores an unset offset as 0 and a reset would re-fire on unrelated edits. A snooze or completion that lands between the checker's read and its show still shows that reminder. Two open tabs can each show the same reminder.
 
 # verify-gsd skill (2026-11-02)
 
