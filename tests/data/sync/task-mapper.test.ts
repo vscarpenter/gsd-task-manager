@@ -246,6 +246,18 @@ describe('task-mapper', () => {
       expect(result!.notificationSent).toBe(false);
     });
 
+    it('should keep device-local reminder state when neither copy has a due date', () => {
+      const existingLocal = buildLocalTask({ dueDate: undefined, notificationSent: true });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: '' }), existingLocal);
+      expect(result!.notificationSent).toBe(true);
+    });
+
+    it('should keep device-local reminder state when the due date string is unchanged, even unparseable', () => {
+      const existingLocal = buildLocalTask({ dueDate: 'not-a-date', notificationSent: true });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: 'not-a-date' }), existingLocal);
+      expect(result!.notificationSent).toBe(true);
+    });
+
     it('should keep device-local reminder state when the pulled due date is the same instant written differently', () => {
       const existingLocal = buildLocalTask({ notificationSent: true });
       const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: '2026-04-10T12:00:00Z' }), existingLocal);

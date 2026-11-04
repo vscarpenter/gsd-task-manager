@@ -191,7 +191,9 @@ type LocalReminderState = Pick<TaskRecord, 'notificationSent' | 'lastNotificatio
 
 /** Due dates compare as instants, since clients write the same time in different ISO forms. */
 function isSameDueInstant(local: string | undefined, remote: string | undefined): boolean {
-  if (!local || !remote) return local === remote;
+  // Equal strings first: an unparseable one would compare NaN to NaN and look moved.
+  if (local === remote) return true;
+  if (!local || !remote) return false;
   return Date.parse(local) === Date.parse(remote);
 }
 
