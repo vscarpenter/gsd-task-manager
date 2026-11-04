@@ -10,7 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "@/lib/db";
 import { getDueSoonCount, notificationChecker } from "@/lib/notification-checker";
 import * as notifications from "@/lib/notifications";
+import { pocketBaseToTaskRecord, taskRecordToPocketBase } from "@/lib/sync/task-mapper";
 import { createMockTask } from "@/tests/fixtures";
+import type { RecordModel } from "pocketbase";
 
 vi.mock("@/lib/notifications", () => ({
 	isNotificationSupported: vi.fn(() => true),
@@ -140,6 +142,40 @@ describe("notification checker on a real database", () => {
 			const stored = await getDb().tasks.get("task-due");
 			expect(stored?.title).toBe("Edited");
 			expect(stored?.notificationSent).toBe(true);
+		});
+	});
+
+	// The two lost-reminder paths a statechart of this checker found (2026-11-03).
+	// Each step is one step of the model, on a fixed clock.
+	describe("reminders that must not go missing", () => {
+		const start = new Date(2026, 10, 3, 10, 0); // local 10:00, never an all-day midnight
+		const at = (ms: number) => vi.setSystemTime(new Date(ms));
+		const shownCount = () => vi.mocked(notifications.showTaskNotification).mock.calls.length;
+
+		beforeEach(() => {
+			vi.useFakeTimers({ toFake: ["Date"] });
+			at(start.getTime());
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		it("should_remind_again_after_another_device_moves_the_due_date", async () => {
+			const firstDue = start.getTime() + 30 * MS_PER_MINUTE;
+			await getDb().tasks.put(createMockTask({ id: "t", dueDate: new Date(firstDue).toISOString(), notifyBefore: 15 }));
+			at(firstDue - 14 * MS_PER_MINUTE);
+			await notificationChecker.checkAndNotify();
+
+			// A pull applies the other device's edit through the mapper's merge.
+			const movedDue = new Date(firstDue + 2 * 24 * 60 * MS_PER_MINUTE).toISOString();
+			const local = await getDb().tasks.get("t");
+			const remote = { ...taskRecordToPocketBase(local!, "owner", "other-device"), due_date: movedDue };
+			await getDb().tasks.put(pocketBaseToTaskRecord(remote as unknown as RecordModel, local)!);
+			at(Date.parse(movedDue) - 14 * MS_PER_MINUTE);
+			await notificationChecker.checkAndNotify();
+
+			expect(shownCount()).toBe(2);
 		});
 	});
 
