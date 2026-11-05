@@ -1,0 +1,296 @@
+{
+  "note": "Canonical What's New decision (spec gsd-taskmanager/tasks/spec-whats-new.md, matrix row G8). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/whats-new-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/whats-new-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/whats-new-corpus.json, and every suite runs every case. releases are one platform's, in no particular order; only version and notable matter to the rule. A valid version is three dot-separated non-negative integers with no leading zeros (0 itself is fine) and nothing else. lastSeenVersion null means the device has never recorded one. recordVersion is what the client writes as last seen immediately, with no user action; null means write nothing. If behavior changes, change the spec, this file in all three repos, and all three implementations together.",
+  "version": 1,
+  "releases": [
+    {
+      "version": "1.2.1",
+      "notable": false
+    },
+    {
+      "version": "1.0.0",
+      "notable": true
+    },
+    {
+      "version": "2.0.0",
+      "notable": true
+    },
+    {
+      "version": "1.10.0",
+      "notable": true
+    },
+    {
+      "version": "1.0.1",
+      "notable": false
+    },
+    {
+      "version": "1.2.0",
+      "notable": true
+    },
+    {
+      "version": "1.10.1",
+      "notable": false
+    },
+    {
+      "version": "1.1.0",
+      "notable": true
+    },
+    {
+      "version": "1.2.2",
+      "notable": false
+    }
+  ],
+  "cases": [
+    {
+      "name": "a new user sees nothing and starts from the running version",
+      "currentVersion": "1.2.0",
+      "lastSeenVersion": null,
+      "existingUser": false,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": "1.2.0"
+      }
+    },
+    {
+      "name": "an existing user meeting the feature sees the newest notable release",
+      "currentVersion": "1.2.0",
+      "lastSeenVersion": null,
+      "existingUser": true,
+      "expect": {
+        "show": true,
+        "headlineVersion": "1.2.0",
+        "unseenCount": 1,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "an existing user meeting the feature also counts patches after the newest notable release",
+      "currentVersion": "1.2.2",
+      "lastSeenVersion": null,
+      "existingUser": true,
+      "expect": {
+        "show": true,
+        "headlineVersion": "1.2.0",
+        "unseenCount": 3,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "an existing user meeting the feature on a patch counts that patch",
+      "currentVersion": "1.0.1",
+      "lastSeenVersion": null,
+      "existingUser": true,
+      "expect": {
+        "show": true,
+        "headlineVersion": "1.0.0",
+        "unseenCount": 2,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "an existing user with no release at or below the running version sees nothing",
+      "currentVersion": "0.9.0",
+      "lastSeenVersion": null,
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": "0.9.0"
+      }
+    },
+    {
+      "name": "one notable update since last seen shows",
+      "currentVersion": "1.2.0",
+      "lastSeenVersion": "1.1.0",
+      "existingUser": true,
+      "expect": {
+        "show": true,
+        "headlineVersion": "1.2.0",
+        "unseenCount": 1,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "versions compare numerically, so 1.10.0 is newer than 1.2.0",
+      "currentVersion": "1.10.1",
+      "lastSeenVersion": "1.1.0",
+      "existingUser": true,
+      "expect": {
+        "show": true,
+        "headlineVersion": "1.10.0",
+        "unseenCount": 5,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "patches alone show nothing and advance last seen",
+      "currentVersion": "1.2.2",
+      "lastSeenVersion": "1.2.0",
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": "1.2.2"
+      }
+    },
+    {
+      "name": "the same version as last seen shows nothing",
+      "currentVersion": "1.2.0",
+      "lastSeenVersion": "1.2.0",
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "a downgrade shows nothing and keeps last seen",
+      "currentVersion": "1.2.0",
+      "lastSeenVersion": "1.10.0",
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "notes for a version newer than the running one never count",
+      "currentVersion": "1.10.1",
+      "lastSeenVersion": "1.2.2",
+      "existingUser": true,
+      "expect": {
+        "show": true,
+        "headlineVersion": "1.10.0",
+        "unseenCount": 2,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "a long gap counts every release and shows the newest notable",
+      "currentVersion": "2.0.0",
+      "lastSeenVersion": "1.0.0",
+      "existingUser": true,
+      "expect": {
+        "show": true,
+        "headlineVersion": "2.0.0",
+        "unseenCount": 8,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "a running version newer than every release with nothing unseen advances last seen",
+      "currentVersion": "2.0.5",
+      "lastSeenVersion": "2.0.0",
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": "2.0.5"
+      }
+    },
+    {
+      "name": "existingUser doesn't matter once last seen is set",
+      "currentVersion": "1.2.0",
+      "lastSeenVersion": "1.1.0",
+      "existingUser": false,
+      "expect": {
+        "show": true,
+        "headlineVersion": "1.2.0",
+        "unseenCount": 1,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "an invalid last seen counts as missing for an existing user",
+      "currentVersion": "1.2.0",
+      "lastSeenVersion": "garbage",
+      "existingUser": true,
+      "expect": {
+        "show": true,
+        "headlineVersion": "1.2.0",
+        "unseenCount": 1,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "an invalid last seen counts as missing for a new user",
+      "currentVersion": "1.2.0",
+      "lastSeenVersion": "1.2",
+      "existingUser": false,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": "1.2.0"
+      }
+    },
+    {
+      "name": "a running version with two parts is invalid",
+      "currentVersion": "1.2",
+      "lastSeenVersion": null,
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "a non-numeric running version is invalid",
+      "currentVersion": "dev",
+      "lastSeenVersion": "1.0.0",
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "a running version with a leading zero is invalid",
+      "currentVersion": "1.02.0",
+      "lastSeenVersion": "1.0.0",
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "a prerelease running version is invalid",
+      "currentVersion": "1.2.0-beta",
+      "lastSeenVersion": "1.0.0",
+      "existingUser": true,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": null
+      }
+    },
+    {
+      "name": "an empty running version is invalid",
+      "currentVersion": "",
+      "lastSeenVersion": null,
+      "existingUser": false,
+      "expect": {
+        "show": false,
+        "headlineVersion": null,
+        "unseenCount": 0,
+        "recordVersion": null
+      }
+    }
+  ]
+}
