@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import {
   SETTINGS_SECTIONS,
@@ -9,11 +9,25 @@ import {
 } from "./settings-sidebar-data";
 
 const DEFAULT_SECTION: SettingsSectionId = "appearance";
+/** Fired after selectSection rewrites the hash, which replaceState does silently. */
+const SECTION_SELECTED_EVENT = "gsd:settings-section-selected";
 
 function readHashSection(): SettingsSectionId {
-  if (typeof window === "undefined") return DEFAULT_SECTION;
   const hash = window.location.hash.slice(1) as SettingsSectionId;
   return SETTINGS_SECTION_IDS.includes(hash) ? hash : DEFAULT_SECTION;
+}
+
+const readServerSection = (): SettingsSectionId => DEFAULT_SECTION;
+
+function subscribeToHash(onChange: () => void): () => void {
+  window.addEventListener("hashchange", onChange);
+  window.addEventListener("popstate", onChange);
+  window.addEventListener(SECTION_SELECTED_EVENT, onChange);
+  return () => {
+    window.removeEventListener("hashchange", onChange);
+    window.removeEventListener("popstate", onChange);
+    window.removeEventListener(SECTION_SELECTED_EVENT, onChange);
+  };
 }
 
 export interface ActiveSection {
@@ -26,24 +40,18 @@ export interface ActiveSection {
 }
 
 /**
- * Owns the settings page's active-section state.
+ * Owns the settings page's active-section state, read straight from the URL hash.
  *
- * - The initial value comes from the URL hash via a lazy initializer (no init
- *   effect), and a single effect keeps it in sync with later `hashchange` events.
+ * - The hash is an external store. A client-side link to `/settings#feedback`
+ *   renders this page before the App Router writes the URL, and pushState fires
+ *   no event; useSyncExternalStore rechecks the hash after commit, so the
+ *   section still opens (the palette bug recorded on 2026-11-02).
  * - The *effective* active section is derived during render: if the stored
  *   section is hidden (e.g. sync turned off), we fall back to the default
  *   rather than chaining a setState in an effect.
  */
 export function useActiveSection(syncEnabled: boolean): ActiveSection {
-  const [storedSection, setStoredSection] =
-    useState<SettingsSectionId>(readHashSection);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const handler = () => setStoredSection(readHashSection());
-    window.addEventListener("hashchange", handler);
-    return () => window.removeEventListener("hashchange", handler);
-  }, []);
+  const storedSection = useSyncExternalStore(subscribeToHash, readHashSection, readServerSection);
 
   const visibleSectionIds: SettingsSectionId[] = [];
   for (const section of SETTINGS_SECTIONS) {
@@ -56,10 +64,8 @@ export function useActiveSection(syncEnabled: boolean): ActiveSection {
     : DEFAULT_SECTION;
 
   const selectSection = (id: SettingsSectionId) => {
-    setStoredSection(id);
-    if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `#${id}`);
-    }
+    window.history.replaceState(null, "", `#${id}`);
+    window.dispatchEvent(new Event(SECTION_SELECTED_EVENT));
   };
 
   return { activeSection, visibleSectionIds, selectSection };

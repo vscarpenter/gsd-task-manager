@@ -27,6 +27,10 @@ import {
 import type { SettingsData } from "./use-settings-data";
 import { useStorageSummary } from "./use-storage-summary";
 
+const WhatsNewSection = lazy(() =>
+  import("@/components/settings/whats-new-section").then((m) => ({ default: m.WhatsNewSection }))
+);
+
 const ImportDialog = lazy(() =>
   import("@/components/import-dialog").then((m) => ({ default: m.ImportDialog }))
 );
@@ -36,6 +40,7 @@ const SELF_CONTAINED_SECTIONS: Partial<Record<SettingsSectionId, ComponentType>>
   bookmarklet: BookmarkletSettings,
   trash: TrashSettings,
   feedback: FeedbackSettings,
+  "whats-new": WhatsNewSection,
   about: AboutSection,
 };
 
@@ -179,7 +184,11 @@ export function SettingsBody({
             pendingSync={settings.pendingSync}
           />
         )}
-        {SelfContainedSection && <SelfContainedSection />}
+        {SelfContainedSection && (
+          <Suspense fallback={null}>
+            <SelfContainedSection />
+          </Suspense>
+        )}
       </SectionCard>
 
       {importDialogOpen && (

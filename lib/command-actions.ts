@@ -34,6 +34,7 @@ export interface CommandActionHandlers {
   onOpenSettings: () => void;
   onOpenHelp: () => void;
   onSendFeedback: () => void;
+  onOpenWhatsNew: () => void;
 
   // Navigation
   onViewDashboard: () => void;
@@ -130,6 +131,14 @@ export function buildCommandActions(
       section: 'settings',
       keywords: ['feedback', 'suggest', 'roadmap', 'vote', 'idea', 'bug'],
       onExecute: handlers.onSendFeedback,
+      focusAfterExecute: 'handoff'
+    },
+    {
+      id: 'whats-new',
+      label: "What's new",
+      section: 'settings',
+      keywords: ['whats new', 'release notes', 'changelog', 'update', 'version', 'changes'],
+      onExecute: handlers.onOpenWhatsNew,
       focusAfterExecute: 'handoff'
     },
     {

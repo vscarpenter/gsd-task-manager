@@ -1,0 +1,308 @@
+{
+  "note": "GSD release notes for every client (spec gsd-taskmanager/tasks/spec-whats-new.md, matrix row G8). The web repo is the authority: gsd-taskmanager/lib/whats-new/whats-new.json. Byte-identical copies ship inside the Apple and Android apps. Each client shows only its own platform's releases at or below its running version. notable true lets a release show the one-line post-update cue, and then headline is required. Write for users: what they can do now, one idea per item, nothing about dependencies, refactors, or tests.",
+  "schema": 1,
+  "releases": [
+    {
+      "platform": "web",
+      "version": "14.7.0",
+      "date": "2026-11-05",
+      "notable": true,
+      "headline": "See what changed in GSD, right in Settings.",
+      "new": [
+        "Settings has a What's new section with the notes for every recent version, newest first. You can also open it from the command palette.",
+        "After an update with something new, one line under the matrix intro tells you what changed. Dismiss it and it stays gone."
+      ],
+      "improved": [],
+      "fixed": [
+        "Choosing Import tasks or Send feedback in the command palette now opens that section of Settings instead of Appearance."
+      ]
+    },
+    {
+      "platform": "web",
+      "version": "14.6.2",
+      "date": "2026-11-04",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [],
+      "fixed": [
+        "When another device moves a task's due date, the web app now reminds you at the new time.",
+        "Snoozing a task before its reminder time no longer drops the reminder."
+      ]
+    },
+    {
+      "platform": "web",
+      "version": "14.6.0",
+      "date": "2026-11-02",
+      "notable": true,
+      "headline": "Save any web page to GSD with one click.",
+      "new": [
+        "A bookmarklet in Settings turns the page you're reading into a task. Drag it to your bookmarks bar, with default tags if you like.",
+        "Nothing saves until you review the task and choose Create task."
+      ],
+      "improved": [],
+      "fixed": []
+    },
+    {
+      "platform": "web",
+      "version": "14.5.2",
+      "date": "2026-11-02",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [
+        "Settings now says that a copied AI assistant (MCP) token expires within 30 days, so you know when to copy a fresh one."
+      ],
+      "fixed": []
+    },
+    {
+      "platform": "web",
+      "version": "14.5.0",
+      "date": "2026-11-01",
+      "notable": true,
+      "headline": "Stay signed in to sync for much longer.",
+      "new": [],
+      "improved": [
+        "Sync sessions now last 30 days and renew on their own while you use GSD. Before, the web app could sign you out after a week even with daily use.",
+        "The self-hosted Docker image now uses 30-day sessions too."
+      ],
+      "fixed": []
+    },
+    {
+      "platform": "web",
+      "version": "14.4.0",
+      "date": "2026-10-31",
+      "notable": true,
+      "headline": "Due times, snooze from anywhere, and a heads-up when tasks get close.",
+      "new": [
+        "Give a due date a time of day. All-day tasks remind you at 9 a.m.",
+        "A task that isn't urgent can show as escalating as its due date gets close. Pick the window in Settings, or turn it off. Nothing moves until you choose Mark urgent.",
+        "Snooze a task from its card menu or the editor, and clear a snooze.",
+        "Duplicate a task, or move it to another quadrant, from the card menu.",
+        "On Android, share a link into the GSD web app from the share sheet."
+      ],
+      "improved": [
+        "A reminder that falls in quiet hours now arrives when quiet hours end instead of being skipped.",
+        "Signing in with Apple now tells you which account you landed on."
+      ],
+      "fixed": [
+        "New sync safeguards protect the tasks on this device, including a check before sync removes anything and safer imports."
+      ]
+    },
+    {
+      "platform": "web",
+      "version": "14.3.0",
+      "date": "2026-10-27",
+      "notable": true,
+      "headline": "Dozens of small fixes that make GSD easier to pick up.",
+      "new": [],
+      "improved": [
+        "Due dates count calendar days, so \"in 2 days\" means what it says.",
+        "Dates stay in English and show the year when it isn't this year.",
+        "After you capture a task, GSD shows which quadrant it landed in.",
+        "Larger tap targets and clearer wording on phones and tablets.",
+        "Mark done is now in the task details sheet."
+      ],
+      "fixed": [
+        "A double click or a repeated Enter no longer creates duplicate tasks.",
+        "Pasting several lines checks every line before adding any.",
+        "Back closes an open drawer or dialog, and GSD warns before a reload would lose unsaved changes."
+      ]
+    },
+    {
+      "platform": "web",
+      "version": "14.2.1",
+      "date": "2026-10-27",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [],
+      "fixed": [
+        "After this update, the first sync brings your Saved items to every device, including tasks synced before Saved existed."
+      ]
+    },
+    {
+      "platform": "web",
+      "version": "14.2.0",
+      "date": "2026-10-26",
+      "notable": true,
+      "headline": "Introducing Saved: a place for reading and reference outside the matrix.",
+      "new": [
+        "Saved holds links, reading, and reference notes outside the matrix, so they stay out of your priorities until you need them.",
+        "Saved items sync with the iPhone, iPad, Mac, and Android apps.",
+        "The GSD connector for AI assistants (MCP server 1.4.0) can read and manage Saved items."
+      ],
+      "improved": [],
+      "fixed": []
+    },
+    {
+      "platform": "web",
+      "version": "13.9.9",
+      "date": "2026-10-23",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [
+        "Security updates to the libraries GSD depends on."
+      ],
+      "fixed": []
+    },
+    {
+      "platform": "web",
+      "version": "13.9.8",
+      "date": "2026-10-23",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [
+        "Clearer labels on the Review page, a short introduction in Settings, and a plain description of who runs the sync server."
+      ],
+      "fixed": []
+    },
+    {
+      "platform": "web",
+      "version": "13.9.7",
+      "date": "2026-10-23",
+      "notable": true,
+      "headline": "Each quadrant now scrolls on its own, and large text works everywhere.",
+      "new": [
+        "The matrix fits your screen, and each quadrant scrolls by itself, so a long list in one quadrant no longer pushes the others out of view."
+      ],
+      "improved": [
+        "GSD follows your browser's text size and reflows instead of scrolling sideways.",
+        "Better keyboard, touch, and screen reader support, with stronger contrast throughout.",
+        "Buttons in the task drawer are sized for touch."
+      ],
+      "fixed": [
+        "iPhone Safari no longer zooms in when you tap into the editor or the command palette."
+      ]
+    },
+    {
+      "platform": "apple",
+      "version": "3.7.0",
+      "date": "2026-10-31",
+      "notable": true,
+      "headline": "Due times, and reminders you can act on.",
+      "new": [
+        "Set a time of day on a due date. All-day tasks remind you at 9 a.m.",
+        "Reminders have Complete and Snooze 1 hour buttons, so you can act without opening the app.",
+        "A task that isn't urgent can show as escalating as its due date gets close. Pick the window in Settings, or turn it off. Nothing moves until you choose Mark urgent."
+      ],
+      "improved": [
+        "The task editor asks before discarding changes, and only when you made some.",
+        "With a keyboard, ⌘S saves the task from any field. On iPad, ⌘? opens Help.",
+        "On Mac, Trash has a right-click menu to restore or delete a task.",
+        "The matrix shows a placeholder while your tasks load instead of a blank screen."
+      ],
+      "fixed": [
+        "Several fixes protect the tasks on your device during sync and when you delete your account."
+      ]
+    },
+    {
+      "platform": "apple",
+      "version": "3.6.3",
+      "date": "2026-10-28",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [],
+      "fixed": [
+        "On iPad and Mac, a quadrant with a single task no longer stretches that card to fill the space."
+      ]
+    },
+    {
+      "platform": "apple",
+      "version": "3.6.1",
+      "date": "2026-10-27",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [],
+      "fixed": [
+        "After this update, your Saved items sync correctly, including tasks synced before Saved existed."
+      ]
+    },
+    {
+      "platform": "apple",
+      "version": "3.6.0",
+      "date": "2026-10-26",
+      "notable": true,
+      "headline": "Saved arrives, with a fresh look for iOS 27 and macOS 27.",
+      "new": [
+        "Saved holds reading and reference outside the matrix, with short notes, and syncs with the web and Android apps.",
+        "A refreshed look built for iOS 27 and macOS 27.",
+        "A large Today's Focus widget.",
+        "Quadrant completion rings, deadline badges, and search in Browse.",
+        "A 30-day Trash, so you can restore deleted tasks.",
+        "Backups that keep every detail of your tasks.",
+        "An optional, anonymous feedback form that shows you exactly what it sends."
+      ],
+      "improved": [
+        "Tasks you share from Safari or other apps reach your other devices right away instead of waiting until you open GSD.",
+        "GSD syncs and picks up shared tasks during background refresh.",
+        "Support for iPhone Duo, and upside-down portrait on iPhone.",
+        "Better layouts at large accessibility text sizes."
+      ],
+      "fixed": [
+        "Archiving a task removes its synced copy, so it can't reappear on another device."
+      ]
+    },
+    {
+      "platform": "android",
+      "version": "0.10.2",
+      "date": "2026-11-02",
+      "notable": true,
+      "headline": "Saved, escalation, and pull to sync.",
+      "new": [
+        "Saved holds reading and reference outside the matrix, with short notes, and syncs with the web and Apple apps.",
+        "Tasks due soon can show as escalating, with a Mark urgent action and a setting for the window.",
+        "Pull down on the Matrix to sync, on phones and tablets.",
+        "The Dashboard shows the completion rate for your top 8 tags.",
+        "Sync history shows totals."
+      ],
+      "improved": [
+        "All-day tasks remind you at 9 a.m. on the due day."
+      ],
+      "fixed": [
+        "Safer sync that protects Saved items, new tasks, and edits, even when a device clock is wrong."
+      ]
+    },
+    {
+      "platform": "android",
+      "version": "0.10.0",
+      "date": "2026-10-14",
+      "notable": true,
+      "headline": "Due times, a new welcome tour, and a more polished app.",
+      "new": [
+        "Set a due time, or mark a task all day.",
+        "A new welcome tour, Field Guide, and About page.",
+        "Swipe left on a task for Snooze and Delete."
+      ],
+      "improved": [
+        "GSD asks for notification permission the first time a reminder needs it, and Settings can allow exact alarms.",
+        "The editor keeps Save at the top and asks before discarding edits.",
+        "Shared links open over the app you shared from.",
+        "Better TalkBack support, stronger text contrast, and fixes for tablets and landscape.",
+        "Your tasks stay out of Android cloud backup."
+      ],
+      "fixed": []
+    },
+    {
+      "platform": "android",
+      "version": "0.9.1",
+      "date": "2026-09-21",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [
+        "Swipe to complete or delete works on every task list, not only the Matrix.",
+        "Completing a task celebrates it on every list.",
+        "Settings tells you when your sync session has expired."
+      ],
+      "fixed": [
+        "Switching sync accounts keeps the tasks on your device.",
+        "Tapping a reminder opens the task from any tab."
+      ]
+    }
+  ]
+}

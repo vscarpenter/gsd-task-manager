@@ -14,6 +14,11 @@ function renderSidebar() {
 }
 
 describe("SettingsSidebar", () => {
+  it("lists What's new in the Info group, before About", () => {
+    const info = SETTINGS_SECTIONS.filter((section) => section.group === "Info").map((section) => section.id);
+    expect(info).toEqual(["feedback", "whats-new", "about"]);
+  });
+
   it("says Appearance holds the escalation window, which guides point to", () => {
     const appearance = SETTINGS_SECTIONS.find((section) => section.id === "appearance");
     expect(appearance?.description).toBe("Theme, display, and escalation");

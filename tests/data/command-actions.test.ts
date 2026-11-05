@@ -12,6 +12,7 @@ function createMockHandlers(overrides?: Partial<CommandActionHandlers>): Command
     onOpenSettings: vi.fn(),
     onOpenHelp: vi.fn(),
     onSendFeedback: vi.fn(),
+    onOpenWhatsNew: vi.fn(),
     onViewDashboard: vi.fn(),
     onViewMatrix: vi.fn(),
     onViewArchive: vi.fn(),
@@ -46,6 +47,19 @@ describe('buildCommandActions', () => {
 
     action?.onExecute();
     expect(handlers.onSendFeedback).toHaveBeenCalled();
+  });
+
+  it('exposes a whats-new action in the settings section', () => {
+    const handlers = createMockHandlers();
+    const actions = buildCommandActions(handlers, [], defaultConditions);
+
+    const action = actions.find((a) => a.id === 'whats-new');
+    expect(action?.label).toBe("What's new");
+    expect(action?.section).toBe('settings');
+    expect(action?.keywords).toEqual(expect.arrayContaining(['release notes', 'changelog', 'update']));
+
+    action?.onExecute();
+    expect(handlers.onOpenWhatsNew).toHaveBeenCalled();
   });
 
   it('should include navigation actions', () => {

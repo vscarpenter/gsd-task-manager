@@ -57,9 +57,6 @@ test("backup-sidebar-path", async ({ page, matrix, proof }) => {
 });
 
 test("backup-import-palette", async ({ page, matrix: _matrix }) => {
-  // Known app bug, found 2026-11-02: the URL becomes /settings/#data but the page
-  // stays on Appearance. The assertion is correct. Remove this line with the fix.
-  test.fail(true, "palette navigation to /settings#data leaves the Appearance section showing");
   await page.keyboard.press("ControlOrMeta+k");
   await page.getByRole("option", { name: /Import tasks from JSON/ }).click();
 
