@@ -1,3 +1,17 @@
+# What's New (2026-11-05)
+
+Branch: `feat/whats-new` off `main` (`ddde6b8`). Non-trivial tier: two new cross-platform contracts. Spec `tasks/spec-whats-new.md`, approved by the owner on 2026-11-05. Parity: row G8, decision D-15, roadmap phase 6, and `parity/whats-new.md` in the GSD Project.
+
+## Resuming From Here
+
+- [x] `1e4893e` contracts and logic: `lib/whats-new/whats-new.json` (web, Apple, and Android notes), `whats-new-corpus.json` (21 cases), `decideWhatsNew`, `releasesFor`, and the per-device last-seen store.
+- [x] `92a05f1` fix: client-side links to `/settings#<section>` open that section. This was the palette bug from 2026-11-02; verify-gsd `backup-import-palette` drops its `test.fail()`.
+- [x] Surfaces: Settings › What's new, the matrix line (`MatrixBriefing` now holds the intro and the cue, which also shortened the matrix function), the palette entry, `tests/e2e/whats-new.spec.ts`. Web 14.7.0 with its own notes entry.
+- [x] Verify: unit 4,252 plus the new suites (only `docker-migrations` fails, for want of the `sqlite3` CLI in the cloud container), typecheck, lint, shape, knip. In a production export: the adhoc verify-gsd journey (5 of 5), `backup-import-palette`, and 35 Chromium e2e specs including the new 5. Coverage on changed files 84 to 100%.
+- **Next:** owner reviews the PR; CI runs Firefox and WebKit. Then Apple and Android from the briefs in `parity/whats-new.md`.
+- **Verification caveat:** the cloud container can't reach Google Fonts or the Playwright CDN, so the local export was built with `next build --webpack` and a mocked Newsreader response, with Chromium 1243 standing in for 1248. Nothing about that is committed; CI builds the normal way.
+- **Assumptions:** "existing user" means at least one task once IndexedDB loads. A device that has never recorded a version and has tasks sees the newest notable release once. Every Apple or Android release now adds its notes to `whats-new.json` here first.
+
 # Lost reminders (2026-11-03)
 
 Branch: `fix/lost-reminders` off `main` (`ba2229d`). Standard tier: two lib files and their tests, plus one shared corpus case. Not pushed. A TLA+ statechart of one task's web reminder found two ways a reminder never shows, and both replayed against the real code.

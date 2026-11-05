@@ -31,8 +31,7 @@ import { deriveMatrixView } from "./matrix-view";
 import { useSmartViews } from "./use-smart-views";
 import { useTaskHighlight } from "./use-task-highlight";
 import { useMatrixWindowEvents } from "./use-matrix-window-events";
-import { MatrixIntro } from "./matrix-intro";
-import { deriveIntroStats, introDateLabel, introMessage } from "./intro-copy";
+import { MatrixBriefing } from "./matrix-briefing";
 import { TaskDetailSheet } from "./task-detail-sheet";
 
 /**
@@ -308,18 +307,6 @@ export function MatrixSimplified() {
   };
 
   const activeDragTask = activeId ? all.find((t) => t.id === activeId) ?? null : null;
-  const activeScheduleCount = all.reduce(
-    (count, task) => count + (!task.completed && !task.urgent && task.important ? 1 : 0),
-    0
-  );
-  // Intro briefing: date + state reading render only after hydration so the
-  // prerendered static export never bakes in a build-time date or an empty-board
-  // message computed before IndexedDB has loaded.
-  const introReady = mounted && !isLoading;
-  const introStats = introReady
-    ? deriveIntroStats(all, new Date().toISOString().slice(0, 10))
-    : null;
-
   return (
     <DndContext
       sensors={sensors}
@@ -343,12 +330,7 @@ export function MatrixSimplified() {
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
       >
-        <MatrixIntro
-          dateLabel={mounted ? introDateLabel(new Date()) : null}
-          message={introStats ? introMessage(introStats) : null}
-          scheduleCount={mounted && !isLoading ? activeScheduleCount : null}
-          onFocusSchedule={() => focusQuadrant("q2")}
-        />
+        <MatrixBriefing tasks={all} mounted={mounted} isLoading={isLoading} onFocusSchedule={() => focusQuadrant("q2")} />
         <div
           data-testid="mobile-capture-dock"
           className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-20 bg-topbar py-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:relative md:bottom-auto md:left-auto md:right-auto md:-mx-9 md:mb-4 md:px-9 md:py-4"

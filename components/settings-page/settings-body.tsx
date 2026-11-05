@@ -18,6 +18,7 @@ import { TrashSettings } from "@/components/settings/trash-settings";
 import { DataManagement } from "@/components/settings/data-management";
 import { FeedbackSettings } from "@/components/settings/feedback-settings";
 import { AboutSection } from "@/components/settings/about-section";
+import { WhatsNewSection } from "@/components/settings/whats-new-section";
 
 import { SectionCard } from "./section-card";
 import {
@@ -36,6 +37,7 @@ const SELF_CONTAINED_SECTIONS: Partial<Record<SettingsSectionId, ComponentType>>
   bookmarklet: BookmarkletSettings,
   trash: TrashSettings,
   feedback: FeedbackSettings,
+  "whats-new": WhatsNewSection,
   about: AboutSection,
 };
 

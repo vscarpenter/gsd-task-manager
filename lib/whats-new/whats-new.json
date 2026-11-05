@@ -4,6 +4,21 @@
   "releases": [
     {
       "platform": "web",
+      "version": "14.7.0",
+      "date": "2026-11-05",
+      "notable": true,
+      "headline": "See what changed in GSD, right in Settings.",
+      "new": [
+        "Settings has a What's new section with the notes for every recent version, newest first. You can also open it from the command palette.",
+        "After an update with something new, one line under the matrix intro tells you what changed. Dismiss it and it stays gone."
+      ],
+      "improved": [],
+      "fixed": [
+        "Choosing Import tasks or Send feedback in the command palette now opens that section of Settings instead of Appearance."
+      ]
+    },
+    {
+      "platform": "web",
       "version": "14.6.2",
       "date": "2026-11-04",
       "notable": false,

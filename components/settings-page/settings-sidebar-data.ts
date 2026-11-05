@@ -1,5 +1,6 @@
 import {
   PaletteIcon,
+  ScrollTextIcon,
   BellIcon,
   BookmarkPlusIcon,
   CloudIcon,
@@ -22,6 +23,7 @@ export type SettingsSectionId =
   | "trash"
   | "data"
   | "feedback"
+  | "whats-new"
   | "about";
 
 export type SectionGroup = "Preferences" | "Data" | "Info";
@@ -44,6 +46,7 @@ export const SETTINGS_SECTIONS: SectionMeta[] = [
   { id: "trash", label: "Trash", icon: Trash2Icon, description: "Recover recently deleted tasks", group: "Data" },
   { id: "data", label: "Data & Storage", icon: DatabaseIcon, description: "Backup, import, and reset", group: "Data" },
   { id: "feedback", label: "Feedback", icon: MessageSquareIcon, description: "Tell me what to build next", group: "Info" },
+  { id: "whats-new", label: "What's new", icon: ScrollTextIcon, description: "Release notes for this version", group: "Info" },
   { id: "about", label: "About", icon: InfoIcon, description: "Version and project info", group: "Info" },
 ];
 
