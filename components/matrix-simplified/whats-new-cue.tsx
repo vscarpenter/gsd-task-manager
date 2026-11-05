@@ -13,8 +13,8 @@ import {
   runningWebVersion,
   subscribeLastSeenVersion,
 } from "@/lib/whats-new/last-seen";
+import { useWhatsNewReleases } from "@/lib/whats-new/load-releases";
 import { releasesFor, type WhatsNewRelease } from "@/lib/whats-new/releases";
-import content from "@/lib/whats-new/whats-new.json";
 
 // Underlined at rest, like the feedback nudge: beside muted text, hue alone
 // can't mark the link (WCAG 1.4.1).
@@ -35,24 +35,39 @@ interface CueContent {
   current: string;
 }
 
-/** Applies the shared rule once tasks have loaded, and records a new user's starting version. */
-function useWhatsNewCue(existingUser: boolean | null, releases: readonly WhatsNewRelease[]): CueContent | null {
+interface CueResult {
+  release: WhatsNewRelease | undefined;
+  current: string;
+  recordVersion: string | null;
+}
+
+/** The shared rule, once the notes and the task count are known. */
+function evaluateCue(
+  releases: readonly WhatsNewRelease[] | null,
+  existingUser: boolean | null,
+  lastSeen: string | null,
+): CueResult | null {
+  const current = runningWebVersion();
+  if (releases === null || existingUser === null || current === null) return null;
+  const web = releasesFor(releases, "web", current);
+  const decision = decideWhatsNew({ releases: web, currentVersion: current, lastSeenVersion: lastSeen, existingUser });
+  const release = decision.show ? web.find((r) => r.version === decision.headlineVersion) : undefined;
+  return { release, current, recordVersion: decision.recordVersion };
+}
+
+/** Applies the rule after hydration, and records a new user's starting version. */
+function useWhatsNewCue(existingUser: boolean | null, injected?: readonly WhatsNewRelease[]): CueContent | null {
   const hydrated = useIsHydrated();
   const lastSeen = useSyncExternalStore(subscribeLastSeenVersion, readLastSeenVersion, readServerLastSeen);
-  const current = runningWebVersion();
-  const web = releasesFor(releases, "web", current);
-  const ready = hydrated && existingUser !== null && current !== null;
-  const decision = ready
-    ? decideWhatsNew({ releases: web, currentVersion: current, lastSeenVersion: lastSeen, existingUser })
-    : null;
-  const recordNow = decision?.recordVersion ?? null;
+  const bundled = useWhatsNewReleases();
+  const result = hydrated ? evaluateCue(injected ?? bundled, existingUser, lastSeen) : null;
+  const recordNow = result?.recordVersion ?? null;
 
   useEffect(() => {
     if (recordNow) recordLastSeenVersion(recordNow);
   }, [recordNow]);
 
-  const release = decision?.show ? web.find((r) => r.version === decision.headlineVersion) : undefined;
-  return release && current ? { release, current } : null;
+  return result?.release ? { release: result.release, current: result.current } : null;
 }
 
 /**
@@ -61,7 +76,7 @@ function useWhatsNewCue(existingUser: boolean | null, releases: readonly WhatsNe
  * lib/whats-new/decide.ts and the shared corpus. Dismissing, following the link,
  * or opening Settings › What's new records the running version on this device.
  */
-export function WhatsNewCue({ existingUser, releases = content.releases as WhatsNewRelease[] }: WhatsNewCueProps) {
+export function WhatsNewCue({ existingUser, releases }: WhatsNewCueProps) {
   const cue = useWhatsNewCue(existingUser, releases);
   if (!cue) return null;
 

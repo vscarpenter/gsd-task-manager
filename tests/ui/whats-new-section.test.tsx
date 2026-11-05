@@ -54,6 +54,12 @@ describe("WhatsNewSection", () => {
     expect(readLastSeenVersion()).toBe("1.1.0");
   });
 
+  it("loads the bundled notes on its own when none are passed", async () => {
+    vi.stubEnv("NEXT_PUBLIC_BUILD_NUMBER", "14.7.0");
+    render(<WhatsNewSection />);
+    expect(await screen.findByRole("heading", { level: 3, name: "Version 14.7.0" })).toBeInTheDocument();
+  });
+
   it("says so when this build has no notes", () => {
     render(<WhatsNewSection releases={[]} />);
     expect(screen.getByText(/No release notes for this version yet/)).toBeInTheDocument();

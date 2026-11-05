@@ -2,8 +2,8 @@
 
 import { useEffect, useId } from "react";
 
-import content from "@/lib/whats-new/whats-new.json";
 import { recordLastSeenVersion, runningWebVersion } from "@/lib/whats-new/last-seen";
+import { useWhatsNewReleases } from "@/lib/whats-new/load-releases";
 import { releasesFor, type WhatsNewRelease } from "@/lib/whats-new/releases";
 
 const GROUPS = [
@@ -58,13 +58,17 @@ interface WhatsNewSectionProps {
  * Settings › What's new: the release history for this build, newest first.
  * Opening it counts as reading it, so the matrix stops offering the cue.
  */
-export function WhatsNewSection({ releases = content.releases as WhatsNewRelease[] }: WhatsNewSectionProps) {
+export function WhatsNewSection({ releases }: WhatsNewSectionProps) {
+  const bundled = useWhatsNewReleases();
+  const all = releases ?? bundled;
   const current = runningWebVersion();
-  const visible = releasesFor(releases, "web", current);
+  const visible = all ? releasesFor(all, "web", current) : [];
 
   useEffect(() => {
     if (current) recordLastSeenVersion(current);
   }, [current]);
+
+  if (all === null) return null;
 
   if (visible.length === 0) {
     return <p className="px-4 py-3.5 text-sm text-foreground-muted">No release notes for this version yet.</p>;
