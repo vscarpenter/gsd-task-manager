@@ -190,6 +190,11 @@ describe('Settings Components', () => {
       }
     });
 
+    it('no longer links the codebase analysis report', () => {
+      render(<AboutSection />);
+      expect(screen.queryByText(/Codebase Analysis Report/)).not.toBeInTheDocument();
+    });
+
     it('renders build date row', () => {
       render(<AboutSection />);
       expect(screen.getByText('Build')).toBeInTheDocument();

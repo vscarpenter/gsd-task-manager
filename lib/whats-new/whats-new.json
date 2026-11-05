@@ -179,6 +179,23 @@
     },
     {
       "platform": "apple",
+      "version": "3.8.0",
+      "date": "2026-11-05",
+      "notable": true,
+      "headline": "See what changed in GSD, right in the app.",
+      "new": [
+        "In Settings, About has a What's New screen with the notes for every recent version, newest first.",
+        "Open What's New from the command palette too, or on Mac from Help > What's New in GSD.",
+        "After an update with something new, one line under the capture bar tells you what changed. Dismiss it and it stays gone."
+      ],
+      "improved": [
+        "The Field Guide now covers due dates, reminders, escalating tasks, swipe actions, snooze, Undo, Trash, and Saved.",
+        "Onboarding's urgency arrow points at the urgent column."
+      ],
+      "fixed": []
+    },
+    {
+      "platform": "apple",
       "version": "3.7.0",
       "date": "2026-10-31",
       "notable": true,
