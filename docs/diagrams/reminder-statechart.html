@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Two ways a reminder went missing · GSD state machine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper: #f4f1e9; --paper-2: #ece7dc; --ink: #211e1a; --muted: #6e6760; --soft: #797368;
+      --rule: rgba(33,30,26,0.12); --rule-solid: #d8d1c1; --accent: #2c6680; --accent-tint: rgba(44,102,128,0.14);
+      --font-serif: 'Newsreader', ui-serif, 'New York', Georgia, serif;
+      --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+    }
+    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); padding: 3.5rem 2rem 3rem; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0.5rem 0; background: var(--paper); }
+    .eyebrow { font-family: var(--font-mono); font-size: 0.66rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+    .header { display: grid; grid-template-columns: 1.35fr 1fr; gap: 3rem; align-items: end; padding-bottom: 2rem; margin-bottom: 2.25rem; border-bottom: 1px solid var(--rule); }
+    .header .eyebrow { margin-bottom: 1rem; }
+    h1 { font-family: var(--font-serif); font-size: clamp(2.25rem, 3.4vw + 1rem, 3.5rem); font-weight: 500; letter-spacing: -0.025em; line-height: 1.02; }
+    h1 em { font-style: italic; font-weight: 400; color: var(--accent); }
+    .subtitle { font-size: 1rem; line-height: 1.6; color: var(--muted); max-width: 46ch; }
+    .stats { display: flex; gap: 2.25rem; margin-top: 1.25rem; }
+    .stat b { display: block; font-family: var(--font-serif); font-size: 2rem; font-weight: 500; line-height: 1; letter-spacing: -0.02em; }
+    .stat span { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--soft); }
+    .stat.fixed b { color: var(--accent); }
+    figure { margin-bottom: 2.25rem; }
+    figcaption { display: flex; justify-content: space-between; align-items: baseline; gap: 2rem; margin-bottom: 0.75rem; }
+    figcaption .what { font-family: var(--font-serif); font-size: 1.35rem; font-weight: 500; letter-spacing: -0.01em; }
+    figcaption .what em { font-style: italic; font-weight: 400; color: var(--muted); }
+    .frame { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+    .frame svg { width: 100%; display: block; }
+    .note { margin-top: 0.75rem; font-size: 0.875rem; line-height: 1.55; color: var(--muted); max-width: 80ch; }
+    .cards { display: grid; grid-template-columns: 1.1fr 1fr 0.9fr; gap: 1rem; margin-top: 0.5rem; }
+    .card { background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 1.25rem; }
+    .card .eyebrow { font-size: 0.55rem; margin-bottom: 0.5rem; }
+    .card-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.875rem; padding-bottom: 0.875rem; border-bottom: 1px solid rgba(33,30,26,0.08); }
+    .card-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+    .card-dot.accent { background: var(--accent); } .card-dot.ink { background: var(--ink); }
+    .card h3 { font-size: 0.9rem; font-weight: 600; }
+    .card p, .card li { color: var(--muted); font-size: 0.8125rem; line-height: 1.55; }
+    .card p + p { margin-top: 0.5rem; }
+    .card ul { list-style: none; }
+    .card li { padding-left: 1rem; position: relative; margin-bottom: 0.3rem; }
+    .card li::before { content: ''; position: absolute; left: 0; top: 0.7em; width: 6px; height: 1px; background: rgba(33,30,26,0.3); }
+    .card code { font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink); }
+    .footer { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid rgba(33,30,26,0.10); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; color: var(--soft); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+    @media (max-width: 860px) { .header, .cards { grid-template-columns: 1fr; } figcaption { flex-direction: column; gap: 0.25rem; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div>
+        <p class="eyebrow">State machine · TLA+ model · GSD web reminders</p>
+        <h1>Two ways a reminder went <em>missing</em></h1>
+      </div>
+      <div>
+        <p class="subtitle">TLC walked every path through the reminder checker, snoozes, and sync from a second device. Before the fix, two paths mark a reminder shown before its time comes, so it never shows.</p>
+        <div class="stats">
+          <div class="stat"><b>52</b><span>states before</span></div>
+          <div class="stat"><b>1</b><span>rule broken</span></div>
+          <div class="stat fixed"><b>6/6</b><span>rules hold after</span></div>
+        </div>
+      </div>
+    </header>
+
+    <figure>
+      <figcaption>
+        <span class="what">Before the fix <em>· two tide arrows into the bottom row</em></span>
+        <span class="eyebrow">52 states checked · one rule breaks</span>
+      </figcaption>
+      <div class="frame">
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="reminders-before-title reminders-before-desc">
+<title id="reminders-before-title">A task's reminder before fix/lost-reminders</title>
+<desc id="reminders-before-desc">State machine of a web reminder before the fix: a due date moved on another device, or a snooze that ends before the reminder time, marks the reminder shown too soon, so it is never shown.</desc>
+<defs>
+<pattern id="reminders-before-dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.9" fill="rgba(33,30,26,0.10)"/></pattern>
+<marker id="reminders-before-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6e6760"/></marker>
+<marker id="reminders-before-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2c6680"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f4f1e9"/>
+<rect width="100%" height="100%" fill="url(#reminders-before-dots)" opacity="0.6"/>
+<g transform="translate(16,0)">
+<!-- transitions -->
+<circle cx="112" cy="336" r="6" fill="#211e1a"/>
+<line x1="118" y1="336" x2="160" y2="336" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 208 312 L 208 192" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 360 352 L 512 352" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 360 136 L 512 136" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 360 168 L 400 168 A 8 8 0 0 1 408 176 L 408 224 A 8 8 0 0 0 416 232 L 584 232 A 8 8 0 0 1 592 240 L 592 312" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 304 112 L 304 92 A 8 8 0 0 1 312 84 L 956 84 A 8 8 0 0 1 964 92 L 964 112" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 552 192 L 552 224 A 8 8 0 0 0 552 240 L 552 264 A 8 8 0 0 1 544 272 L 328 272 A 8 8 0 0 0 320 280 L 320 312" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 672 192 L 672 312" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 712 152 L 780 152 A 8 8 0 0 1 788 160 L 788 464 A 8 8 0 0 0 796 472 L 904 472 A 8 8 0 0 1 912 480 L 912 512" fill="none" stroke="#2c6680" stroke-width="1.4" marker-end="url(#reminders-before-arrow-accent)"/>
+<path d="M 712 352 L 780 352 A 8 8 0 0 1 796 352 L 864 352" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 552 392 L 552 440 A 8 8 0 0 1 544 448 L 328 448 A 8 8 0 0 0 320 456 L 320 512" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 964 192 L 964 312" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 1064 368 L 1112 368 A 8 8 0 0 1 1120 376 L 1120 616 A 8 8 0 0 1 1112 624 L 96 624 A 8 8 0 0 1 88 616 L 88 376 A 8 8 0 0 1 96 368 L 160 368" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 1064 336 L 1096 336 A 8 8 0 0 0 1104 328 L 1104 56 A 8 8 0 0 0 1096 48 L 232 48 A 8 8 0 0 0 224 56 L 224 112" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 964 392 L 964 512" fill="none" stroke="#2c6680" stroke-width="1.4" marker-end="url(#reminders-before-arrow-accent)"/>
+<path d="M 864 552 L 712 552" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 512 552 L 360 552" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<path d="M 224 512 L 224 392" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<!-- labels -->
+<rect x="216" y="246" width="48" height="12" rx="2" fill="#f4f1e9"/>
+<text x="240" y="255" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SNOOZE</text>
+<rect x="400" y="328" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="436" y="337" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">TIME COMES</text>
+<rect x="400" y="112" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="436" y="121" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">ENDS EARLY</text>
+<rect x="452" y="208" width="80" height="12" rx="2" fill="#f4f1e9"/>
+<text x="492" y="217" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">CLEAR OR END</text>
+<rect x="576" y="60" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="612" y="69" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SNOOZE ENDS</text>
+<rect x="392" y="248" width="88" height="12" rx="2" fill="#f4f1e9"/>
+<text x="436" y="257" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">APP CLOSED 1H</text>
+<rect x="680" y="246" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="716" y="255" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">TIME COMES</text>
+<rect x="796" y="408" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="832" y="417" fill="#2c6680" font-size="8" font-weight="600" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SHOWN EARLY</text>
+<rect x="728" y="328" width="40" height="12" rx="2" fill="#f4f1e9"/>
+<text x="748" y="337" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SHOWN</text>
+<rect x="400" y="424" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="436" y="433" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">APP CLOSED</text>
+<rect x="972" y="246" width="40" height="12" rx="2" fill="#f4f1e9"/>
+<text x="992" y="255" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SHOWN</text>
+<rect x="560" y="600" width="88" height="12" rx="2" fill="#f4f1e9"/>
+<text x="604" y="609" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">DUE DATE LATER</text>
+<rect x="1112" y="216" width="48" height="12" rx="2" fill="#f4f1e9"/>
+<text x="1136" y="225" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SNOOZE</text>
+<rect x="972" y="440" width="80" height="12" rx="2" fill="#f4f1e9"/>
+<text x="1012" y="449" fill="#2c6680" font-size="8" font-weight="600" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">OTHER DEVICE</text>
+<rect x="752" y="528" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="788" y="537" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">TIME COMES</text>
+<rect x="400" y="528" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="436" y="537" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">HOUR PASSES</text>
+<rect x="128" y="446" width="88" height="12" rx="2" fill="#f4f1e9"/>
+<text x="172" y="455" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">DUE DATE LATER</text>
+<!-- states -->
+<rect x="160" y="112" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="160" y="112" width="200" height="80" rx="8" fill="rgba(110,103,96,0.10)" stroke="#797368" stroke-width="1"/>
+<text x="260" y="156" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Snoozed</text>
+<rect x="512" y="112" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="512" y="112" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="612" y="156" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Snooze over early</text>
+<rect x="864" y="112" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="864" y="112" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="964" y="156" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Due again after a snooze</text>
+<rect x="160" y="312" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="160" y="312" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="260" y="350" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Waiting</text>
+<text x="260" y="368" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">notificationSent false</text>
+<rect x="512" y="312" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="512" y="312" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="612" y="356" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Reminder due</text>
+<rect x="864" y="312" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="864" y="312" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="964" y="350" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Reminded</text>
+<text x="964" y="368" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">notificationSent true</text>
+<rect x="160" y="512" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="160" y="512" width="200" height="80" rx="8" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.34)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="260" y="556" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Hour over, never shown</text>
+<rect x="512" y="512" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="512" y="512" width="200" height="80" rx="8" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.34)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="612" y="550" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Due, but marked shown</text>
+<text x="612" y="568" fill="#211e1a" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">notificationSent true</text>
+<rect x="864" y="512" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="864" y="512" width="200" height="80" rx="8" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.34)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="964" y="550" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Waiting, marked shown</text>
+<text x="964" y="568" fill="#211e1a" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">notificationSent true</text>
+</g>
+<line x1="40" y1="652" x2="1240" y2="652" stroke="rgba(33,30,26,0.10)" stroke-width="0.8"/>
+<text x="40" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.14em">LEGEND</text>
+<circle cx="150" cy="669" r="6" fill="#211e1a"/>
+<text x="176" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">START</text>
+<line x1="244" y1="669" x2="272" y2="669" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-before-arrow)"/>
+<text x="284" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">TRANSITION</text>
+<line x1="380" y1="669" x2="408" y2="669" stroke="#2c6680" stroke-width="1.4" marker-end="url(#reminders-before-arrow-accent)"/>
+<text x="420" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">THE STEP THAT LOSES THE REMINDER</text>
+<rect x="640" y="661" width="28" height="16" rx="4" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.34)" stroke-dasharray="4,3"/>
+<text x="680" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">NO REMINDER COMING</text>
+<line x1="838" y1="659" x2="838" y2="679" stroke="#6e6760" stroke-width="1.2"/>
+<path d="M 824 669 L 830 669 A 8 8 0 0 1 846 669 L 852 669" fill="none" stroke="#6e6760" stroke-width="1.2"/>
+<text x="864" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">CROSSING, NOT A JOIN</text>
+</svg>
+      </div>
+      <p class="note">Both tide arrows end in a state that is still waiting but already marked shown. When the reminder time comes, the checker skips it, and the hour runs out.</p>
+    </figure>
+
+    <figure>
+      <figcaption>
+        <span class="what">After fix/lost-reminders <em>· both paths lead back to waiting</em></span>
+        <span class="eyebrow">41 states checked · every rule holds</span>
+      </figcaption>
+      <div class="frame">
+<svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="reminders-after-title reminders-after-desc">
+<title id="reminders-after-title">A task's reminder after fix/lost-reminders</title>
+<desc id="reminders-after-desc">State machine of a web reminder after the fix: a due date moved on any device resets the reminder, and a snooze that ends before the reminder time goes back to waiting.</desc>
+<defs>
+<pattern id="reminders-after-dots" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.9" fill="rgba(33,30,26,0.10)"/></pattern>
+<marker id="reminders-after-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6e6760"/></marker>
+<marker id="reminders-after-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2c6680"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f4f1e9"/>
+<rect width="100%" height="100%" fill="url(#reminders-after-dots)" opacity="0.6"/>
+<g transform="translate(16,0)">
+<!-- transitions -->
+<circle cx="112" cy="336" r="6" fill="#211e1a"/>
+<line x1="118" y1="336" x2="160" y2="336" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 208 312 L 208 192" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 320 192 L 320 312" fill="none" stroke="#2c6680" stroke-width="1.4" marker-end="url(#reminders-after-arrow-accent)"/>
+<path d="M 360 352 L 512 352" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 360 168 L 604 168 A 8 8 0 0 1 612 176 L 612 312" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 360 136 L 864 136" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 964 192 L 964 312" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 712 352 L 864 352" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 552 392 L 552 440 A 8 8 0 0 1 544 448 L 328 448 A 8 8 0 0 0 320 456 L 320 512" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 224 512 L 224 392" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<path d="M 1064 368 L 1112 368 A 8 8 0 0 1 1120 376 L 1120 616 A 8 8 0 0 1 1112 624 L 96 624 A 8 8 0 0 1 88 616 L 88 376 A 8 8 0 0 1 96 368 L 160 368" fill="none" stroke="#2c6680" stroke-width="1.4" marker-end="url(#reminders-after-arrow-accent)"/>
+<path d="M 1064 336 L 1096 336 A 8 8 0 0 0 1104 328 L 1104 56 A 8 8 0 0 0 1096 48 L 232 48 A 8 8 0 0 0 224 56 L 224 112" fill="none" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<!-- labels -->
+<rect x="152" y="246" width="48" height="12" rx="2" fill="#f4f1e9"/>
+<text x="176" y="255" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SNOOZE</text>
+<rect x="328" y="246" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="364" y="255" fill="#2c6680" font-size="8" font-weight="600" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">ENDS EARLY</text>
+<rect x="400" y="328" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="436" y="337" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">TIME COMES</text>
+<rect x="620" y="246" width="80" height="12" rx="2" fill="#f4f1e9"/>
+<text x="660" y="255" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">CLEAR OR END</text>
+<rect x="576" y="112" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="612" y="121" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SNOOZE ENDS</text>
+<rect x="972" y="246" width="40" height="12" rx="2" fill="#f4f1e9"/>
+<text x="992" y="255" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SHOWN</text>
+<rect x="768" y="328" width="40" height="12" rx="2" fill="#f4f1e9"/>
+<text x="788" y="337" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SHOWN</text>
+<rect x="400" y="424" width="72" height="12" rx="2" fill="#f4f1e9"/>
+<text x="436" y="433" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">APP CLOSED</text>
+<rect x="128" y="436" width="88" height="24" rx="2" fill="#f4f1e9"/>
+<text x="172" y="445" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">DUE DATE LATER</text>
+<text x="172" y="457" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">ANY DEVICE</text>
+<rect x="560" y="588" width="88" height="24" rx="2" fill="#f4f1e9"/>
+<text x="604" y="597" fill="#2c6680" font-size="8" font-weight="600" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">DUE DATE LATER</text>
+<text x="604" y="609" fill="#2c6680" font-size="8" font-weight="600" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">ANY DEVICE</text>
+<rect x="1112" y="216" width="48" height="12" rx="2" fill="#f4f1e9"/>
+<text x="1136" y="225" fill="#797368" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.06em">SNOOZE</text>
+<!-- states -->
+<rect x="160" y="112" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="160" y="112" width="200" height="80" rx="8" fill="rgba(110,103,96,0.10)" stroke="#797368" stroke-width="1"/>
+<text x="260" y="156" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Snoozed</text>
+<rect x="864" y="112" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="864" y="112" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="964" y="156" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Due again after a snooze</text>
+<rect x="160" y="312" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="160" y="312" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="260" y="350" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Waiting</text>
+<text x="260" y="368" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">notificationSent false</text>
+<rect x="512" y="312" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="512" y="312" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="612" y="356" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Reminder due</text>
+<rect x="864" y="312" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="864" y="312" width="200" height="80" rx="8" fill="#ffffff" stroke="#211e1a" stroke-width="1"/>
+<text x="964" y="350" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Reminded</text>
+<text x="964" y="368" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">notificationSent true</text>
+<rect x="160" y="512" width="200" height="80" rx="8" fill="#f4f1e9"/>
+<rect x="160" y="512" width="200" height="80" rx="8" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.34)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="260" y="556" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Hour over, never shown</text>
+</g>
+<line x1="40" y1="652" x2="1240" y2="652" stroke="rgba(33,30,26,0.10)" stroke-width="0.8"/>
+<text x="40" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.14em">LEGEND</text>
+<circle cx="150" cy="669" r="6" fill="#211e1a"/>
+<text x="176" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">START</text>
+<line x1="244" y1="669" x2="272" y2="669" stroke="#6e6760" stroke-width="1.2" marker-end="url(#reminders-after-arrow)"/>
+<text x="284" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">TRANSITION</text>
+<line x1="380" y1="669" x2="408" y2="669" stroke="#2c6680" stroke-width="1.4" marker-end="url(#reminders-after-arrow-accent)"/>
+<text x="420" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">THE FIX: BACK TO WAITING</text>
+<rect x="596" y="661" width="28" height="16" rx="4" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.34)" stroke-dasharray="4,3"/>
+<text x="636" y="672" fill="#6e6760" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" letter-spacing="0.1em">NO REMINDER COMING</text>
+</svg>
+      </div>
+      <p class="note">The bottom row keeps one state, the reminder you missed with the app closed. A due date moved on any device joins the outer reset loop, and an early snooze end fires nothing.</p>
+    </figure>
+
+    <div class="cards">
+      <div class="card">
+        <p class="eyebrow">Bug 1 · sync</p>
+        <div class="card-header"><span class="card-dot accent"></span><h3>Another device moves the due date</h3></div>
+        <p>The reminder shows here, then another device moves the due date later. The pull kept this device's <code>notificationSent</code>, so the new reminder never came.</p>
+        <p>Now a pull that moves the due date resets it, the same way a local edit does.</p>
+      </div>
+      <div class="card">
+        <p class="eyebrow">Bug 2 · snooze</p>
+        <div class="card-header"><span class="card-dot accent"></span><h3>A snooze ends before the reminder time</h3></div>
+        <p>The checker fired when the snooze ended and marked the task shown, so the reminder at its own time never came.</p>
+        <p>Now an early snooze end fires nothing, and the reminder comes on time.</p>
+      </div>
+      <div class="card">
+        <p class="eyebrow">What TLC checked</p>
+        <div class="card-header"><span class="card-dot ink"></span><h3>Every rule holds after the fix</h3></div>
+        <ul>
+          <li>A due reminder still shows</li>
+          <li>A snooze brings it back</li>
+          <li>Each reminder shows once</li>
+          <li>No reminder before its time</li>
+          <li>Every state has a way out</li>
+          <li>Every value stays in its type</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>fix/lost-reminders · PR #669 · web 14.6.2</span>
+      <span>TLC 1.7.4 · redrawn from the /pstack:statechart output</span>
+    </div>
+  </div>
+</body>
+</html>
