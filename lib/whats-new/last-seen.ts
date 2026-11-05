@@ -13,10 +13,12 @@ let sessionCopy: string | null = null;
 
 export function readLastSeenVersion(): string | null {
   if (typeof window === "undefined") return null;
+  // Set only after a failed write, so it is newer than anything in storage.
+  if (sessionCopy !== null) return sessionCopy;
   try {
-    return window.localStorage.getItem(WHATS_NEW_LAST_SEEN_KEY) ?? sessionCopy;
+    return window.localStorage.getItem(WHATS_NEW_LAST_SEEN_KEY);
   } catch {
-    return sessionCopy;
+    return null;
   }
 }
 

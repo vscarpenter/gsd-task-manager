@@ -39,18 +39,27 @@ describe("What's New last-seen version", () => {
   });
 
   it("returns null when storage can't be read", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    vi.spyOn(window.localStorage, "getItem").mockImplementation(() => {
       throw new DOMException("denied", "SecurityError");
     });
     expect(readLastSeenVersion()).toBeNull();
   });
 
   it("keeps the record for this session when storage refuses writes", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(window.localStorage, "setItem").mockImplementation(() => {
       throw new DOMException("quota", "QuotaExceededError");
     });
     recordLastSeenVersion("14.9.0");
     expect(readLastSeenVersion()).toBe("14.9.0");
+  });
+
+  it("prefers the session copy over an older stored version after a failed write", () => {
+    recordLastSeenVersion("14.5.0");
+    vi.spyOn(window.localStorage, "setItem").mockImplementation(() => {
+      throw new DOMException("quota", "QuotaExceededError");
+    });
+    recordLastSeenVersion("14.7.0");
+    expect(readLastSeenVersion()).toBe("14.7.0");
   });
 
   it("reports the build number as the running web version", () => {
