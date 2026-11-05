@@ -29,7 +29,7 @@ Preconditions:
 - **Sidebar path.** Choose `Settings`, then `Data & Storage`. Run `gsd-verify drive backup -g backup-sidebar-path`. The URL ends in `#data`, and the `Export tasks` button shows.
 - **Export.** Add a task and choose `Export tasks`. Run `gsd-verify drive backup -g backup-export`. The file is named `gsd-tasks-*.json`, it holds the task, `archivedTasks`, and `deletedTasks`, and it has no `syncMetadata`, `deviceInfo`, `syncHistory`, or `syncQueue`.
 - **Export from the palette.** Press `⌘K` and choose `Export tasks as JSON`. Run `gsd-verify drive backup -g backup-export-palette`. A `gsd-tasks-*.json` download starts.
-- **Import from the palette.** Press `⌘K` and choose `Import tasks from JSON`. Run `gsd-verify drive backup -g backup-import-palette`. `/settings#data` should open with the Data & Storage heading showing. This is a known failure today, marked `test.fail()`. See Gotchas.
+- **Import from the palette.** Press `⌘K` and choose `Import tasks from JSON`. Run `gsd-verify drive backup -g backup-import-palette`. `/settings#data` opens with the Data & Storage heading showing. This failed before `feat/whats-new`; see Gotchas.
 - **Merge an iOS backup.** Add a task, import the iOS fixture, and choose `Merge Tasks`. Run `gsd-verify drive backup -g backup-import-ios-merge`. The matrix shows the existing task and `Ship the parity fixes`, and the store holds all three titles.
 - **Replace round trip.** Export, add another task, import the export, and choose `Replace Everything`. Run `gsd-verify drive backup -g backup-round-trip-replace`. Only the original task remains, on the matrix and in the store.
 - **Invalid file.** Import malformed JSON. Run `gsd-verify drive backup -g backup-import-invalid`. A toast says `Invalid JSON format`, no dialog opens, and the existing row is unchanged.
@@ -37,7 +37,7 @@ Preconditions:
 
 ## Gotchas
 
-- Known app bug, found 2026-11-02: `Import tasks from JSON` in the palette changes the URL to `/settings/#data` but the page stays on Appearance, so a user lands on the wrong section. `Send feedback` does the same with `#feedback`. A full load of either URL works. Both failed every attempt, from the matrix and from Settings. `backup-import-palette` keeps the correct assertion under `test.fail()`, so it goes red when the bug is fixed. Remove the marker then.
+- Fixed on `feat/whats-new` (2026-11-05): `Import tasks from JSON` and `Send feedback` in the palette changed the URL to `/settings/#data` or `/settings/#feedback` while the page stayed on Appearance. The App Router writes the URL after the new page renders, and pushState fires no event, so `useActiveSection` now reads the hash through `useSyncExternalStore`, which rechecks it after commit. `tests/ui/settings-active-section.test.tsx` pins it.
 - Replace runs at once while sync is off. Its `Delete and replace` confirmation only appears with sync on and live tasks at risk, so these journeys can't reach that step. Report it as unverified, and don't count `backup-round-trip-replace` as covering it.
 - Merging your own backup doubles your tasks, on purpose. The tasks are added again as copies, and the dialog says so.
 - The import button creates its file input on click. Wait for the `filechooser` event before clicking, as `chooseImportFile` does.
