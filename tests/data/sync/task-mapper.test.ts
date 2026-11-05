@@ -227,6 +227,43 @@ describe('task-mapper', () => {
       expect(result!.snoozedUntil).toBeUndefined();
     });
 
+    it('should reset device-local reminder state when the pull moves the due date', () => {
+      const existingLocal = buildLocalTask({
+        notificationSent: true,
+        lastNotificationAt: '2026-04-10T11:45:00.000Z',
+        snoozedUntil: '2026-04-10T12:30:00.000Z',
+      });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: '2026-04-12T12:00:00.000Z' }), existingLocal);
+      expect(result).toMatchObject({ dueDate: '2026-04-12T12:00:00.000Z', notificationSent: false });
+      expect(result!.lastNotificationAt).toBeUndefined();
+      expect(result!.snoozedUntil).toBeUndefined();
+    });
+
+    it('should reset device-local reminder state when the pull clears the due date', () => {
+      const existingLocal = buildLocalTask({ notificationSent: true });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: '' }), existingLocal);
+      expect(result!.dueDate).toBeUndefined();
+      expect(result!.notificationSent).toBe(false);
+    });
+
+    it('should keep device-local reminder state when neither copy has a due date', () => {
+      const existingLocal = buildLocalTask({ dueDate: undefined, notificationSent: true });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: '' }), existingLocal);
+      expect(result!.notificationSent).toBe(true);
+    });
+
+    it('should keep device-local reminder state when the due date string is unchanged, even unparseable', () => {
+      const existingLocal = buildLocalTask({ dueDate: 'not-a-date', notificationSent: true });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: 'not-a-date' }), existingLocal);
+      expect(result!.notificationSent).toBe(true);
+    });
+
+    it('should keep device-local reminder state when the pulled due date is the same instant written differently', () => {
+      const existingLocal = buildLocalTask({ notificationSent: true });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: '2026-04-10T12:00:00Z' }), existingLocal);
+      expect(result!.notificationSent).toBe(true);
+    });
+
     it('should return null for records missing required fields', () => {
       const pb = buildPBRecord({ task_id: '', title: '' });
       const result = pocketBaseToTaskRecord(pb);

@@ -187,6 +187,32 @@ const pbTaskRecordSchema = z.object({
   saved_at: z.union([z.literal(''), z.iso.datetime({ offset: true })]).default(''),
 });
 
+type LocalReminderState = Pick<TaskRecord, 'notificationSent' | 'lastNotificationAt' | 'snoozedUntil'>;
+
+/** Due dates compare as instants, since clients write the same time in different ISO forms. */
+function isSameDueInstant(local: string | undefined, remote: string | undefined): boolean {
+  // Equal strings first: an unparseable one would compare NaN to NaN and look moved.
+  if (local === remote) return true;
+  if (!local || !remote) return false;
+  return Date.parse(local) === Date.parse(remote);
+}
+
+/**
+ * This device's reminder state stays with the local copy, except when the pull
+ * moves the due date. A new due date is a new reminder, as a local edit makes it
+ * (updateTask), or a reminder already shown here would hide the new one.
+ */
+function localReminderState(existingLocal: TaskRecord | null | undefined, remoteDue: string | undefined): LocalReminderState {
+  if (!existingLocal || !isSameDueInstant(existingLocal.dueDate, remoteDue)) {
+    return { notificationSent: false, lastNotificationAt: undefined, snoozedUntil: undefined };
+  }
+  return {
+    notificationSent: existingLocal.notificationSent ?? false,
+    lastNotificationAt: existingLocal.lastNotificationAt,
+    snoozedUntil: existingLocal.snoozedUntil,
+  };
+}
+
 /**
  * Convert a PocketBase record to local TaskRecord format.
  * Validates the remote data with Zod before mapping to catch
@@ -195,6 +221,7 @@ const pbTaskRecordSchema = z.object({
  * Device-local fields (notificationSent, lastNotificationAt, snoozedUntil)
  * are preserved from the existing local record when available, since these
  * are per-device behavioral state that should not be overwritten by remote values.
+ * A pull that moves the due date resets them (see localReminderState).
  */
 export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: TaskRecord | null): TaskRecord | null {
   const parsed = pbTaskRecordSchema.safeParse(record);
@@ -226,14 +253,12 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
     subtasks: r.subtasks,
     dependencies: r.dependencies,
     notificationEnabled: r.notification_enabled,
-    notificationSent: existingLocal?.notificationSent ?? false,
     notifyBefore: r.notify_before ?? undefined,
-    lastNotificationAt: existingLocal?.lastNotificationAt,
     estimatedMinutes: r.estimated_minutes ?? undefined,
     timeSpent: r.time_spent,
     timeEntries: r.time_entries,
-    snoozedUntil: existingLocal?.snoozedUntil,
     savedAt: savedTimestampFromWire(r.saved_at),
+    ...localReminderState(existingLocal, r.due_date || undefined),
   };
 }
 

@@ -1,3 +1,20 @@
+# Lost reminders (2026-11-03)
+
+Branch: `fix/lost-reminders` off `main` (`ba2229d`). Standard tier: two lib files and their tests, plus one shared corpus case. Not pushed. A TLA+ statechart of one task's web reminder found two ways a reminder never shows, and both replayed against the real code.
+
+Owner decisions (2026-11-03): a pull that changes the due date resets the reminder, and a snooze that ends before the reminder time doesn't fire.
+
+## Resuming From Here
+
+- [x] `af771d4` pull path: `localReminderState` in `lib/sync/task-mapper.ts` resets the sent flag, last shown time, and snooze when the pulled due date is a different instant. Both the pull and realtime paths merge through it.
+- [x] `2e394cd` snooze path: `isReminderDue` and `reminderFireAt` ignore a snooze that ends before the reminder time. Due-time corpus v2 changes "a future snooze wins" and adds a case for a snooze that ends after.
+- [x] `6c9d807` web 14.6.2, because production serves 14.6.1.
+- [x] `e09d402` review fix: an unchanged due date string, even an unparseable one, keeps the reminder state. The `pb-sync-reviewer` pass found nothing else blocking.
+- [x] Verify: unit 4,111, typecheck, lint, quality:shape, knip, build, bundle budget. The fixed model holds every rule, including the new "no reminder before its time", and undoing either fix breaks it again.
+- **Next:** owner pushes and opens the PR.
+- **Follow-up, other repos:** iOS (`ReminderMath.swift:51`) and Android (`ReminderPlanner.kt:52-54`) still fire a snooze that ends before the reminder time, then mark it sent, so they carry bug 2. Their corpus copies are still v1. Each needs the v2 corpus and the matching change in its own session. Bug 1 wasn't checked on either.
+- **Not fixed, out of scope:** a pull that changes only `notifyBefore` keeps the sent flag, because PocketBase stores an unset offset as 0 and a reset would re-fire on unrelated edits. A snooze or completion that lands between the checker's read and its show still shows that reminder. Two open tabs can each show the same reminder.
+
 # verify-gsd skill (2026-11-02)
 
 Branch: `chore/verify-gsd-skill` off `main` (`1f261ac`). Standard tier: skill files and a helper, no app code. PR #667 is open at `3d0b8ef`, and the snapshot fix is committed on top of it but not pushed.
