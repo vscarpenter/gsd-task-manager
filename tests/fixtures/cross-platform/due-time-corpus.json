@@ -1,5 +1,5 @@
 {
-  "note": "Canonical due time of day behavior (GSD parity decision D-1). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/due-time-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/due-time-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/due-time-corpus.json, and every suite runs every case. The rule: a due date at local midnight in the current zone is all day, and any other time, down to the millisecond, is a time of day. Ops: classify reports the local date and, for a time of day, the 24-hour display time, which each client formats for its locale; an all-day task shows the label 'All day'. onDate moves a due date to a local date and keeps the time of day; a null due starts all day. atTime sets the time on the same local date, and a null time means all day. timedReminderFire is due minus notifyBefore (or defaultReminder when null), in elapsed minutes, for tasks with a time of day, with quiet hours off and now far before the fire time. Past-due handling differs by client and isn't pinned here. A local time inside a daylight-saving gap shifts forward by the length of the gap, and a time inside an overlap takes the first occurrence. allDayReminderFire applies when the task is all day in the current zone. An offset under a day fires at 09:00 local on the due day, and each whole day of offset moves that back one local day. A future snooze wins when it ends at or after the reminder time, and one that ends earlier leaves the reminder at its own time (owner decision, 2026-11-03). Quiet hours defer the fire to their end (half-open window), and a fire time that has passed fires nothing. Cases with a passed fire time sit at least two hours past it, because the instant at which a client stops firing differs by client. If behavior changes, change this file in all three repos and all three implementations together.",
+  "note": "Canonical due time of day behavior (GSD parity decision D-1). The web repo is the authority: gsd-taskmanager/tests/fixtures/cross-platform/due-time-corpus.json. Byte-identical copies belong at gsd-iosapp/GSDKit/Tests/GSDModelTests/Fixtures/due-time-corpus.json and gsd-android/core/model/src/test/resources/fixtures/cross-platform/due-time-corpus.json, and every suite runs every case. The rule: a due date at local midnight in the current zone is all day, and any other time, down to the millisecond, is a time of day. Ops: classify reports the local date and, for a time of day, the 24-hour display time, which each client formats for its locale; an all-day task shows the label 'All day'. onDate moves a due date to a local date and keeps the time of day; a null due starts all day. atTime sets the time on the same local date, and a null time means all day. timedReminderFire is due minus notifyBefore (or defaultReminder when null), in elapsed minutes, for tasks with a time of day, with quiet hours off and now far before the fire time. Past-due handling differs by client and isn't pinned here. A local time inside a daylight-saving gap shifts forward by the length of the gap, and a time inside an overlap takes the first occurrence. allDayReminderFire applies when the task is all day in the current zone. An offset under a day fires at 09:00 local on the due day, and each whole day of offset moves that back one local day. A future snooze wins when it ends at or after the reminder time, and one that ends earlier leaves the reminder at its own time (owner decision, 2026-11-03). Quiet hours defer the fire to their end (half-open window), and a fire time that has passed fires nothing. Cases with a passed fire time sit at least two hours past it, because the instant at which a client stops firing differs by client. If behavior changes, change this file in all three repos and all three implementations together. Daylight-saving cases outside the US use transitions that have already happened, because a government can cancel a future one at short notice: Cuba cancelled its November 1, 2026 fall-back on October 24, 2026, so the America/Havana cases now use November 2, 2025 and March 8, 2026.",
   "version": 2,
   "cases": [
     {
@@ -303,10 +303,10 @@
       "name": "a day with no midnight starts at 01:00, which reads as a time of day",
       "op": "classify",
       "zone": "America/Havana",
-      "due": "2027-03-14T05:00:00.000Z",
+      "due": "2026-03-08T05:00:00.000Z",
       "expect": {
         "allDay": false,
-        "localDate": "2027-03-14",
+        "localDate": "2026-03-08",
         "displayTime": "01:00"
       }
     },
@@ -314,10 +314,10 @@
       "name": "the first midnight on a day with two is all day",
       "op": "classify",
       "zone": "America/Havana",
-      "due": "2026-11-01T04:00:00.000Z",
+      "due": "2025-11-02T04:00:00.000Z",
       "expect": {
         "allDay": true,
-        "localDate": "2026-11-01",
+        "localDate": "2025-11-02",
         "displayTime": null
       }
     },
@@ -325,10 +325,10 @@
       "name": "the second midnight on a day with two is all day",
       "op": "classify",
       "zone": "America/Havana",
-      "due": "2026-11-01T05:00:00.000Z",
+      "due": "2025-11-02T05:00:00.000Z",
       "expect": {
         "allDay": true,
-        "localDate": "2026-11-01",
+        "localDate": "2025-11-02",
         "displayTime": null
       }
     },
@@ -336,10 +336,10 @@
       "name": "00:30 on a day with two midnights is a time of day",
       "op": "classify",
       "zone": "America/Havana",
-      "due": "2026-11-01T04:30:00.000Z",
+      "due": "2025-11-02T04:30:00.000Z",
       "expect": {
         "allDay": false,
-        "localDate": "2026-11-01",
+        "localDate": "2025-11-02",
         "displayTime": "00:30"
       }
     },
@@ -500,9 +500,9 @@
       "op": "onDate",
       "zone": "America/Havana",
       "due": null,
-      "date": "2027-03-14",
+      "date": "2026-03-08",
       "expect": {
-        "due": "2027-03-14T05:00:00.000Z"
+        "due": "2026-03-08T05:00:00.000Z"
       }
     },
     {
@@ -510,19 +510,19 @@
       "op": "onDate",
       "zone": "America/Havana",
       "due": null,
-      "date": "2026-11-01",
+      "date": "2025-11-02",
       "expect": {
-        "due": "2026-11-01T04:00:00.000Z"
+        "due": "2025-11-02T04:00:00.000Z"
       }
     },
     {
       "name": "moving off a day with no midnight keeps its 01:00",
       "op": "onDate",
       "zone": "America/Havana",
-      "due": "2027-03-14T05:00:00.000Z",
-      "date": "2027-03-15",
+      "due": "2026-03-08T05:00:00.000Z",
+      "date": "2026-03-09",
       "expect": {
-        "due": "2027-03-15T05:00:00.000Z"
+        "due": "2026-03-09T05:00:00.000Z"
       }
     },
     {
@@ -679,10 +679,10 @@
       "name": "clearing on a day with no midnight lands at 01:00",
       "op": "atTime",
       "zone": "America/Havana",
-      "due": "2027-03-14T16:00:00.000Z",
+      "due": "2026-03-08T16:00:00.000Z",
       "time": null,
       "expect": {
-        "due": "2027-03-14T05:00:00.000Z"
+        "due": "2026-03-08T05:00:00.000Z"
       }
     },
     {
@@ -1143,30 +1143,30 @@
       "name": "the first of two midnights fires at 09:00 that day",
       "op": "allDayReminderFire",
       "zone": "America/Havana",
-      "now": "2026-01-01T00:00:00.000Z",
-      "due": "2026-11-01T04:00:00.000Z",
+      "now": "2025-01-01T00:00:00.000Z",
+      "due": "2025-11-02T04:00:00.000Z",
       "notifyBefore": null,
       "defaultReminder": 15,
       "snoozedUntil": null,
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-11-01T14:00:00.000Z"
+        "fire": "2025-11-02T14:00:00.000Z"
       }
     },
     {
       "name": "the second of two midnights fires at 09:00 that day",
       "op": "allDayReminderFire",
       "zone": "America/Havana",
-      "now": "2026-01-01T00:00:00.000Z",
-      "due": "2026-11-01T05:00:00.000Z",
+      "now": "2025-01-01T00:00:00.000Z",
+      "due": "2025-11-02T05:00:00.000Z",
       "notifyBefore": null,
       "defaultReminder": 15,
       "snoozedUntil": null,
       "quietHoursStart": null,
       "quietHoursEnd": null,
       "expect": {
-        "fire": "2026-11-01T14:00:00.000Z"
+        "fire": "2025-11-02T14:00:00.000Z"
       }
     },
     {
