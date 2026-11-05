@@ -18,7 +18,6 @@ import { TrashSettings } from "@/components/settings/trash-settings";
 import { DataManagement } from "@/components/settings/data-management";
 import { FeedbackSettings } from "@/components/settings/feedback-settings";
 import { AboutSection } from "@/components/settings/about-section";
-import { WhatsNewSection } from "@/components/settings/whats-new-section";
 
 import { SectionCard } from "./section-card";
 import {
@@ -27,6 +26,10 @@ import {
 } from "./settings-sidebar-data";
 import type { SettingsData } from "./use-settings-data";
 import { useStorageSummary } from "./use-storage-summary";
+
+const WhatsNewSection = lazy(() =>
+  import("@/components/settings/whats-new-section").then((m) => ({ default: m.WhatsNewSection }))
+);
 
 const ImportDialog = lazy(() =>
   import("@/components/import-dialog").then((m) => ({ default: m.ImportDialog }))
@@ -181,7 +184,11 @@ export function SettingsBody({
             pendingSync={settings.pendingSync}
           />
         )}
-        {SelfContainedSection && <SelfContainedSection />}
+        {SelfContainedSection && (
+          <Suspense fallback={null}>
+            <SelfContainedSection />
+          </Suspense>
+        )}
       </SectionCard>
 
       {importDialogOpen && (

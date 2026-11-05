@@ -1,9 +1,14 @@
 "use client";
 
+import { lazy, Suspense } from "react";
+
 import type { TaskRecord } from "@/lib/types";
 import { deriveIntroStats, introDateLabel, introMessage } from "./intro-copy";
 import { MatrixIntro } from "./matrix-intro";
-import { WhatsNewCue } from "./whats-new-cue";
+
+// Never part of the first paint: it renders only after hydration and a loaded
+// task list, so its code stays off the matrix's first-load budget.
+const WhatsNewCue = lazy(() => import("./whats-new-cue").then((m) => ({ default: m.WhatsNewCue })));
 
 interface MatrixBriefingProps {
   tasks: TaskRecord[];
@@ -37,7 +42,9 @@ export function MatrixBriefing({ tasks, mounted, isLoading, onFocusSchedule }: M
         scheduleCount={introReady ? countActiveSchedule(tasks) : null}
         onFocusSchedule={onFocusSchedule}
       />
-      <WhatsNewCue existingUser={introReady ? tasks.length > 0 : null} />
+      <Suspense fallback={null}>
+        <WhatsNewCue existingUser={introReady ? tasks.length > 0 : null} />
+      </Suspense>
     </>
   );
 }
