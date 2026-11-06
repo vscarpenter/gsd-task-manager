@@ -179,6 +179,19 @@
     },
     {
       "platform": "apple",
+      "version": "3.9.0",
+      "date": "2026-11-06",
+      "notable": true,
+      "headline": "On iPad and Mac, wide windows show tasks in columns.",
+      "new": [
+        "On iPad and Mac, each quadrant lays its tasks out in columns when the window has room, so more of your list fits on screen.",
+        "To keep one list per quadrant, turn off Columns in the matrix toolbar."
+      ],
+      "improved": [],
+      "fixed": []
+    },
+    {
+      "platform": "apple",
       "version": "3.8.0",
       "date": "2026-11-05",
       "notable": true,
