@@ -4,6 +4,13 @@
 // policy checks and constants inside its own body.
 
 onRecordCreateRequest((e) => {
+  // status is the maintainer's triage marker. updateRule is null, so only a
+  // superuser can change it later; rejecting it on create stops an anonymous
+  // caller from filing feedback that already looks handled.
+  if (e.record.getString("status") !== "" && !e.hasSuperuserAuth()) {
+    throw new BadRequestError("Feedback status is set by the maintainer.");
+  }
+
   const settings = e.app.settings();
   const rateLimits = settings && settings.rateLimits;
   const logs = settings && settings.logs;
@@ -111,7 +118,7 @@ routerAdd(
     const recordCount = e.app.countRecords("feedback");
 
     return e.json(200, {
-      hookVersion: 1,
+      hookVersion: 2,
       ready: Boolean(rateLimitReady && logPolicyReady),
       accepting: Boolean(rateLimitReady && logPolicyReady && recordCount < 10000),
       rateLimit: { audience: "", maxRequests: 30, duration: 60 },

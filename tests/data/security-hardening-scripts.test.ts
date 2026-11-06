@@ -62,6 +62,17 @@ describe('security hardening scripts and workflows', () => {
     expect(script).not.toMatch(/"name":\s*"(?:owner|user|user_id|device_id|email|ip_address)"/);
   });
 
+  it('gives feedback a superuser-only triage status that requires the guarded hook', () => {
+    const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
+
+    expect(script).toMatch(
+      /"name": "status",\s*"type": "select",[^}]*"maxSelect": 1,[^}]*"values": \["new", "triaged", "done"\]/,
+    );
+    // Version 2 is the first hook that rejects a status on anonymous creates,
+    // so setup must refuse to reconcile against an older hook.
+    expect(script).toContain('assert data.get("hookVersion") == 2');
+  });
+
   it('makes a retried feedback submission idempotent', () => {
     const script = readRepoFile('scripts/setup-pocketbase-feedback-collection.sh');
 

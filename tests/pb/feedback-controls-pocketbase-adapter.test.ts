@@ -10,6 +10,14 @@ const source = readFileSync(
 
 class TestInternalServerError extends Error {}
 class TestTooManyRequestsError extends Error {}
+class TestBadRequestError extends Error {}
+
+function createRequest(status = '', superuser = false) {
+  return {
+    record: { getString: (field: string) => (field === 'status' ? status : '') },
+    hasSuperuserAuth: () => superuser,
+  };
+}
 
 function compliantSettings() {
   return {
@@ -74,6 +82,7 @@ function loadHooks(globalApp: Record<string, unknown> = {}) {
     $app: globalApp,
     InternalServerError: TestInternalServerError,
     TooManyRequestsError: TestTooManyRequestsError,
+    BadRequestError: TestBadRequestError,
   });
 
   return {
@@ -91,6 +100,7 @@ describe('PocketBase anonymous feedback controls', () => {
     const next = vi.fn();
 
     hooks.requestHandler()({
+      ...createRequest(),
       app: { settings: () => compliantSettings() },
       next,
     });
@@ -114,11 +124,39 @@ describe('PocketBase anonymous feedback controls', () => {
     for (const settings of unsafeSettings) {
       expect(() =>
         hooks.requestHandler()({
+          ...createRequest(),
           app: { settings: () => settings },
           next: vi.fn(),
         }),
       ).toThrow(TestInternalServerError);
     }
+  });
+
+  it('rejects a triage status sent by an anonymous caller', () => {
+    const hooks = loadHooks();
+    const next = vi.fn();
+
+    expect(() =>
+      hooks.requestHandler()({
+        ...createRequest('done'),
+        app: { settings: () => compliantSettings() },
+        next,
+      }),
+    ).toThrow(TestBadRequestError);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('lets a superuser create feedback with a triage status', () => {
+    const hooks = loadHooks();
+    const next = vi.fn();
+
+    hooks.requestHandler()({
+      ...createRequest('triaged', true),
+      app: { settings: () => compliantSettings() },
+      next,
+    });
+
+    expect(next).toHaveBeenCalledTimes(1);
   });
 
   it('checks and inserts under one transaction so concurrent creates cannot exceed quota', () => {
@@ -201,7 +239,7 @@ describe('PocketBase anonymous feedback controls', () => {
       middleware: hooks.superuserMiddleware,
     });
     expect(result).toMatchObject({
-      hookVersion: 1,
+      hookVersion: 2,
       ready: true,
       accepting: true,
       quotaLimit: 10000,

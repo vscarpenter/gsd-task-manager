@@ -436,7 +436,7 @@ describeSystem('PocketBase authenticated system boundary', () => {
     });
     expect(markerResponse.status).toBe(200);
     expect(await markerResponse.json()).toMatchObject({
-      hookVersion: 1,
+      hookVersion: 2,
       ready: true,
       accepting: true,
       quotaLimit: 10000,
@@ -471,6 +471,23 @@ describeSystem('PocketBase authenticated system boundary', () => {
 
     const stored = await admin.collection('feedback').getFullList();
     expect(stored.map((record) => record.submission_id)).toContain(submissionId);
+
+    // Triage status belongs to the maintainer: anonymous callers can neither
+    // pre-set it on create nor change it later, and a superuser can set it.
+    await expect(
+      anonymous.collection('feedback').create({
+        submission_id: submissionId + '-status',
+        status: 'done',
+      })
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(
+      anonymous.collection('feedback').update(created.id, { status: 'done' })
+    ).rejects.toMatchObject({ status: 403 });
+    const triaged = await admin.collection('feedback').update(created.id, { status: 'triaged' });
+    expect(triaged.status).toBe('triaged');
+    await expect(
+      admin.collection('feedback').update(created.id, { status: 'archived' })
+    ).rejects.toMatchObject({ status: 400 });
 
     // The setup intentionally enables PocketBase's global limiter, including
     // pre-existing auth rules. Disable it only in this ephemeral fixture so the
