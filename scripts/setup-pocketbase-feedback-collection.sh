@@ -89,7 +89,10 @@ fi
 
 # The server boundary mirrors lib/feedback/feedback-payload.ts. No owner, user,
 # device, email, or IP field is permitted. Creation starts disabled and remains
-# disabled after any setup failure.
+# disabled after any setup failure. status is the one exception to the client
+# payload: a superuser-only triage marker that the hook rejects on anonymous
+# creates. Add triage fields here, not in the admin UI; this PATCH replaces the
+# field list and drops anything defined only on the server.
 cat > "$COLLECTION_PAYLOAD_FILE" <<'ENDJSON'
 {
   "name": "feedback",
@@ -149,6 +152,14 @@ cat > "$COLLECTION_PAYLOAD_FILE" <<'ENDJSON'
       "required": false,
       "system": false,
       "options": { "min": null, "max": 50 }
+    },
+    {
+      "name": "status",
+      "type": "select",
+      "required": false,
+      "system": false,
+      "maxSelect": 1,
+      "values": ["new", "triaged", "done"]
     },
     {
       "name": "created",
@@ -235,7 +246,7 @@ import json
 import sys
 with open(sys.argv[1], encoding="utf-8") as handle:
     data = json.load(handle)
-assert data.get("hookVersion") == 1, "unexpected feedback hook version"
+assert data.get("hookVersion") == 2, "unexpected feedback hook version"
 assert data.get("quotaLimit") == int(sys.argv[2]), "unexpected feedback quota"
 assert data.get("retentionDays") == int(sys.argv[3]), "unexpected retention policy"
 PY
