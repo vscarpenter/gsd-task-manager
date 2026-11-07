@@ -92,7 +92,7 @@ describe("Backup envelope", () => {
 
     it("should_announce_the_new_envelope_version", async () => {
       await seedEveryStore();
-      expect((await exportTasks()).version).toBe("2.1.0");
+      expect((await exportTasks()).version).toBe("2.2.0");
     });
 
     it("should_never_include_device_local_or_account_stores", async () => {

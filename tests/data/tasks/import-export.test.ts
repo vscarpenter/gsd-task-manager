@@ -154,7 +154,7 @@ describe('Task Import/Export Operations', () => {
       expect(result).toHaveProperty('exportedAt');
       expect(result).toHaveProperty('version');
       expect(result.tasks).toHaveLength(2);
-      expect(result.version).toBe('2.1.0');
+      expect(result.version).toBe('2.2.0');
     });
 
     // Smart views were the only store emitted straight out of Dexie. A legacy
@@ -232,7 +232,7 @@ describe('Task Import/Export Operations', () => {
       const result = await exportTasks();
 
       expect(result.tasks).toEqual([]);
-      expect(result.version).toBe('2.1.0');
+      expect(result.version).toBe('2.2.0');
     });
 
     it('should skip invalid tasks instead of aborting the whole export', async () => {
@@ -647,7 +647,7 @@ describe('Task Import/Export Operations', () => {
 
       expect(parsed).toHaveProperty('tasks');
       expect(parsed.tasks).toHaveLength(2);
-      expect(parsed.version).toBe('2.1.0');
+      expect(parsed.version).toBe('2.2.0');
     });
 
     it('should format with indentation', async () => {
