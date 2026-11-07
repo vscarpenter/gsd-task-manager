@@ -610,7 +610,7 @@ Update an existing task. All fields except ID are optional. **Requires authentic
 - `subtasks` (optional): Replace all subtasks (objects with `{id, title, completed}`)
 - `recurrence` (optional): Change recurrence pattern
 - `dependencies` (optional): Replace all dependencies (validated for circular refs)
-- `completed` (optional): Mark as complete/incomplete. Doesn't create the next recurring instance; use `complete_task` for that. Refused for a Saved item.
+- `completed` (optional): Mark as complete/incomplete. Completing a recurring task also creates its next instance. Refused for a Saved item.
 - `notifyBefore`, `notificationEnabled`, `estimatedMinutes` (optional): Same as `create_task`
 - `dryRun` (optional): If true, validate and preview changes without saving (v0.6.0)
 
@@ -683,7 +683,7 @@ Update multiple tasks at once. Limited to 50 tasks per operation, and 10 per del
 **Parameters**:
 - `taskIds` (required): Array of task IDs to update (max 50, or 10 for `delete`)
 - `operation` (required): Operation object with `type` field
-  - `type: 'complete'` - Mark all as complete/incomplete (doesn't create next recurring instances; refused if any task is Saved)
+  - `type: 'complete'` - Mark all as complete/incomplete (completing a recurring task also creates its next instance; refused if any task is Saved)
     - `completed`: boolean
   - `type: 'move_quadrant'` - Move all to a quadrant
     - `urgent`: boolean

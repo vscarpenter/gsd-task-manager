@@ -322,10 +322,10 @@ describe('Tool Schemas', () => {
       });
     });
 
-    it('update_task and bulk_update_tasks say completing does not spawn the next recurring instance', () => {
-      expect(updateTaskTool.description).toMatch(/does not create the next instance of a recurring task/);
-      expect(props(updateTaskTool).completed.description).toMatch(/Does not create the next recurring instance/);
-      expect(bulkUpdateTasksTool.description).toMatch(/does not create the next instance of a recurring task/);
+    it('update_task and bulk_update_tasks say completing spawns the next recurring instance', () => {
+      expect(updateTaskTool.description).toMatch(/also creates its next instance/);
+      expect(props(updateTaskTool).completed.description).toMatch(/also creates its next instance/);
+      expect(bulkUpdateTasksTool.description).toMatch(/also creates the next instance of each recurring task/);
     });
 
     it('bulk_update_tasks says deletes skip Trash and are capped at 10', () => {

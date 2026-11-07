@@ -337,3 +337,35 @@ describe('completeTask with a recurring task', () => {
     expect(mocks.updateTaskInPBById).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('updateTask completion with a recurring task', () => {
+  const series = () => task('series', { recurrence: 'daily', dueDate: '2026-06-10T12:00:00.000Z' });
+
+  it('creates the next instance, as complete_task does', async () => {
+    mocks.fetchSinglePBTaskFresh.mockResolvedValue(freshRecord(series()));
+
+    const result = await updateTask(config, { id: 'series', completed: true });
+
+    expect(mocks.createTaskInPB).toHaveBeenCalledTimes(1);
+    const created = mocks.createTaskInPB.mock.calls[0][1] as Task;
+    expect(created.dueDate).toBe('2026-06-11T12:00:00.000Z');
+    expect(result.recurringInstance?.id).toBe(created.id);
+  });
+
+  it('creates nothing when an update leaves completion alone', async () => {
+    mocks.fetchSinglePBTaskFresh.mockResolvedValue(freshRecord(series()));
+
+    await updateTask(config, { id: 'series', title: 'Renamed' });
+
+    expect(mocks.createTaskInPB).not.toHaveBeenCalled();
+  });
+
+  it('previews the next instance on a dry run without saving it', async () => {
+    mocks.fetchSinglePBTaskFresh.mockResolvedValue(freshRecord(series()));
+
+    const result = await updateTask(config, { id: 'series', completed: true, dryRun: true });
+
+    expect(result.recurringInstance?.dueDate).toBe('2026-06-11T12:00:00.000Z');
+    expect(mocks.createTaskInPB).not.toHaveBeenCalled();
+  });
+});
