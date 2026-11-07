@@ -7,7 +7,6 @@
 
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
-import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { createLogger } from '@/lib/logger';
 import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, mapOverLocalCopy, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
@@ -15,6 +14,7 @@ import { classifyRemoteDeletion } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
 import { toTrashedRecord } from '@/lib/trash';
 import { savedPlacementBlocker } from '@/lib/tasks/saved-placement';
+import { unreadFieldsToCopy, type PullRow } from '@/lib/top-three';
 import type { TaskRecord } from '@/lib/types';
 import type { SyncQueueItem } from './types';
 
@@ -78,22 +78,35 @@ function acceptsRemoteVersion(remoteUpdatedAt: string, localUpdatedAt: string, m
 
 /**
  * During a backfill, a local copy that wins keeps its own version but takes the
- * fields its build never read. An empty savedAt means "never read" only on a
- * row stored before the contract that added saved_at; after it, the empty
- * value is a real Return. Returns the repaired row, or null to leave it alone.
+ * fields its build never read. Top three's rule decides which (C4-4); the engine
+ * then drops the savedAt half when the row can't be in Saved (S-WEB-02). A newer
+ * completion or running timer outranks an older Save, so the row stays in the
+ * matrix and its push clears saved_at. Returns the repaired row, or null.
  */
-export function copyUnreadFields(
+export function unreadFieldRepair(
   local: TaskRecord,
   remote: TaskRecord,
   storedContractVersion: number | undefined,
 ): TaskRecord | null {
-  const neverReadSavedAt = (storedContractVersion ?? 0) < SYNC_CONFIG.SAVED_AT_CONTRACT_VERSION;
-  if (!neverReadSavedAt || local.savedAt || !remote.savedAt) return null;
-  // A newer completion or running timer outranks an older Save. The row stays
-  // in the matrix and its push clears saved_at, rather than spreading a
-  // completed task in Saved.
-  if (savedPlacementBlocker(local)) return null;
-  return { ...local, savedAt: remote.savedAt };
+  const { action, row } = unreadFieldsToCopy(storedContractVersion ?? null, toPullRow(local), toPullRow(remote));
+  if (action !== 'copy-fields' || !row) return null;
+  const repaired: TaskRecord = {
+    ...local,
+    focusDate: row.focusDate ?? undefined,
+    focusRank: row.focusRank ?? undefined,
+    savedAt: savedPlacementBlocker(local) ? local.savedAt : row.savedAt ?? undefined,
+  };
+  const changed = repaired.focusDate !== local.focusDate || repaired.savedAt !== local.savedAt;
+  return changed ? repaired : null;
+}
+
+function toPullRow(task: TaskRecord): PullRow {
+  return {
+    updatedAt: task.updatedAt,
+    focusDate: task.focusDate ?? null,
+    focusRank: task.focusRank ?? null,
+    savedAt: task.savedAt ?? null,
+  };
 }
 
 /** PullOptions with its defaults applied, as the per-record merge uses them. */
@@ -115,7 +128,7 @@ async function repairUnreadFields(
   plan: BackfillPlan,
 ): Promise<void> {
   if (!local || !plan.mergeSameVersion) return;
-  const repaired = copyUnreadFields(local, remote, plan.storedContractVersion);
+  const repaired = unreadFieldRepair(local, remote, plan.storedContractVersion);
   if (repaired) await db.tasks.put(repaired);
 }
 
