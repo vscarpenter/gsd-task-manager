@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { buildCommandActions } from "@/lib/command-actions";
 
 import {
   useShellCommandHandlers,
@@ -22,6 +23,12 @@ vi.mock("next-themes", () => ({
   useTheme: () => themeState,
 }));
 
+const syncMock = vi.fn(async () => ({ status: "success" }));
+let syncState = { isEnabled: false, sync: syncMock };
+vi.mock("@/lib/hooks/use-sync", () => ({
+  useSync: () => syncState,
+}));
+
 const downloadBackupMock = vi.fn();
 const runBackupExportMock = vi.fn();
 vi.mock("@/lib/backup-download", () => ({
@@ -39,11 +46,46 @@ function navigateTo(pathname: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   themeState = { theme: "system", resolvedTheme: "dark", setTheme: setThemeMock };
+  syncState = { isEnabled: false, sync: syncMock };
   navigateTo("/");
 });
 
 afterEach(() => {
   navigateTo("/");
+});
+
+describe("useShellCommandHandlers: sync commands", () => {
+  const ids = (hook: ReturnType<typeof useShellCommandHandlers>) =>
+    buildCommandActions(hook.handlers, [], hook.conditions).map((action) => action.id);
+
+  it("hides the Sync commands while sync is off", () => {
+    const { result } = renderHook(() => useShellCommandHandlers());
+
+    expect(result.current.conditions.isSyncEnabled).toBe(false);
+    expect(ids(result.current)).not.toContain("sync-now");
+    expect(ids(result.current)).not.toContain("view-sync-history");
+  });
+
+  it("shows Sync now and View sync history once sync is on", () => {
+    syncState = { isEnabled: true, sync: syncMock };
+
+    const { result } = renderHook(() => useShellCommandHandlers());
+
+    expect(result.current.conditions.isSyncEnabled).toBe(true);
+    expect(ids(result.current)).toEqual(expect.arrayContaining(["sync-now", "view-sync-history"]));
+  });
+
+  it("Sync now runs a manual sync and View sync history opens the page", async () => {
+    syncState = { isEnabled: true, sync: syncMock };
+    const { result } = renderHook(() => useShellCommandHandlers());
+    const actions = buildCommandActions(result.current.handlers, [], result.current.conditions);
+
+    await actions.find((a) => a.id === "sync-now")?.onExecute();
+    actions.find((a) => a.id === "view-sync-history")?.onExecute();
+
+    expect(syncMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).toHaveBeenCalledWith("/sync-history");
+  });
 });
 
 describe("useShellCommandHandlers", () => {

@@ -7,6 +7,7 @@ import type { CommandActionHandlers } from "@/lib/command-actions";
 import type { FilterCriteria } from "@/lib/filters";
 import type { RedesignQuadrantKey } from "@/lib/quadrants";
 import { ROUTES } from "@/lib/routes";
+import { useSync } from "@/lib/hooks/use-sync";
 
 /**
  * Window event dispatched by the command palette when the user picks
@@ -60,6 +61,7 @@ interface ShellCommandResult {
 export function useShellCommandHandlers(): ShellCommandResult {
   const router = useRouter();
   const { theme, resolvedTheme, setTheme } = useTheme();
+  const { isEnabled: isSyncEnabled, sync } = useSync();
 
   const onSelectTask = (taskId: string, saved = false) => selectTaskInShell(router, taskId, saved);
 
@@ -97,6 +99,10 @@ export function useShellCommandHandlers(): ShellCommandResult {
     onViewDashboard: () => router.push("/dashboard"),
     onViewMatrix: () => router.push("/"),
     onViewArchive: () => router.push("/archive"),
+    onViewSyncHistory: () => router.push("/sync-history"),
+    onTriggerSync: async () => {
+      await sync();
+    },
     onViewSaved: () => router.push(ROUTES.SAVED),
     onApplySmartView: (criteria, viewId) => {
       if (typeof window === "undefined") return;
@@ -141,7 +147,7 @@ export function useShellCommandHandlers(): ShellCommandResult {
     shortcutHandlers,
     onSelectTask,
     conditions: {
-      isSyncEnabled: false,
+      isSyncEnabled,
     },
   };
 }
