@@ -3,7 +3,7 @@ import { createLogger } from "@/lib/logger";
 import { removeDependencyReferencesInTransaction } from "@/lib/tasks/dependencies";
 import { formatErrorMessage } from "@/lib/utils";
 import { toTrashedRecord } from "@/lib/trash";
-import { rememberForResurrect } from "@/lib/sync/resurrect-on-sight";
+import { rememberForResurrect } from "@/lib/sync/resurrect-ids";
 import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");

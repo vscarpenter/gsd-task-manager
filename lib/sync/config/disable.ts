@@ -8,7 +8,7 @@ import { getDb } from "@/lib/db";
 import { clearPocketBase } from "../pocketbase-client";
 import type { PBSyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
-import { rememberForResurrect, trashDeleteTaskIds } from "../resurrect-on-sight";
+import { rememberForResurrect, trashDeleteTaskIds } from "../resurrect-ids";
 import { createLogger } from "@/lib/logger";
 import { clearAppCaches } from "@/lib/browser-cache";
 

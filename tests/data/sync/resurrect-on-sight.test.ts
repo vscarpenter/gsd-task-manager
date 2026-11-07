@@ -37,13 +37,15 @@ vi.mock('@/lib/sync/notifications', () => ({
 
 import { fullSync } from '@/lib/sync/pb-sync-engine';
 import { disableSync } from '@/lib/sync/config';
-import { readRememberedTaskIds, rememberForResurrect, resurrectOnSight } from '@/lib/sync/resurrect-on-sight';
+import { readRememberedTaskIds, rememberForResurrect } from '@/lib/sync/resurrect-ids';
+import { resurrectOnSight } from '@/lib/sync/resurrect-on-sight';
 import { persistSyncConfig } from '@/components/sync/use-sync-auth-dialog';
 import { deleteTask } from '@/lib/tasks/crud';
 import { importTasks } from '@/lib/tasks';
 import { archiveTaskNow } from '@/lib/archive';
 import { wipeLocalData } from '@/lib/reset-local-data';
-import { toTrashedRecord } from '@/lib/trash';
+import { deleteFromTrashForever, emptyTrash, purgeExpiredTrash, restoreFromTrash, toTrashedRecord } from '@/lib/trash';
+import { restoreTask } from '@/lib/tasks/crud/restore';
 
 const CURRENT = SYNC_CONFIG.PULL_CURSOR_VERSION;
 /** A trash row from a delete made while signed out, after the server's last edit. */
@@ -93,6 +95,44 @@ describe('remembering', () => {
     await expect(remembered()).resolves.toEqual([]);
     await expect(getDb().archivedTasks.get('t-a')).resolves.toBeDefined();
     await expect(getDb().tasks.get('t-a')).resolves.toBeUndefined();
+  });
+
+  // S-WEB-05: an id matters only while its Trash row exists, so each way out forgets it.
+  describe('a Trash row that leaves takes its id with it', () => {
+    beforeEach(async () => {
+      await getDb().syncMetadata.put(signedOut(CURRENT));
+      await getDb().tasks.bulkAdd([localRow(SAVED), localRow(SAVED, { id: 't-b' })]);
+      await deleteTask('t-a');
+      await deleteTask('t-b');
+    });
+
+    it('restore from Trash', async () => {
+      await restoreFromTrash('t-a');
+      await expect(remembered()).resolves.toEqual(['t-b']);
+    });
+
+    it('undo after delete', async () => {
+      await restoreTask(localRow(SAVED));
+      await expect(remembered()).resolves.toEqual(['t-b']);
+    });
+
+    it('delete forever', async () => {
+      await deleteFromTrashForever('t-a');
+      await expect(remembered()).resolves.toEqual(['t-b']);
+    });
+
+    it('empty Trash', async () => {
+      await emptyTrash();
+      await expect(remembered()).resolves.toEqual([]);
+    });
+
+    it('the 30-day purge, which keeps a row still in its window', async () => {
+      await getDb().deletedTasks.update('t-a', { deletedAt: '2020-01-01T00:00:00.000Z' });
+
+      await purgeExpiredTrash();
+
+      await expect(remembered()).resolves.toEqual(['t-b']);
+    });
   });
 
   it('erasing local data forgets every remembered id', async () => {

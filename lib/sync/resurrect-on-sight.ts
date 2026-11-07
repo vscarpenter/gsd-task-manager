@@ -20,38 +20,9 @@ import {
 import { isPendingSyncQueueItem } from './queue';
 import { StaleSyncSessionError, assertSyncSessionCurrent } from './sync-session';
 import { getPocketBaseTaskId, pocketBaseToTaskRecord } from './task-mapper';
-import type { ResurrectOnSightRecord, SyncQueueItem } from './types';
+import { forgetForResurrect, readRememberedTaskIds } from './resurrect-ids';
 
 const logger = createLogger('SYNC_ENGINE');
-const RESURRECT_KEY = 'resurrect_on_sight';
-
-/**
- * Remember task ids whose delete never reached the server. Device-local: the row
- * never syncs, survives sign-out, and Erase all data clears it. Inside a caller's
- * transaction, the caller must scope db.syncMetadata.
- */
-export async function rememberForResurrect(taskIds: string[]): Promise<void> {
-  if (taskIds.length === 0) return;
-  const current = await readRememberedTaskIds();
-  await writeRemembered([...new Set([...current, ...taskIds])]);
-}
-
-export async function readRememberedTaskIds(): Promise<string[]> {
-  const row = (await getDb().syncMetadata.get(RESURRECT_KEY)) as ResurrectOnSightRecord | undefined;
-  return row?.taskIds ?? [];
-}
-
-/** A Trash delete carries no payload; an archive's delete carries the task and isn't remembered. */
-export function trashDeleteTaskIds(rows: SyncQueueItem[]): string[] {
-  return rows.filter((row) => row.operation === 'delete' && !row.payload).map((row) => row.taskId);
-}
-
-async function writeRemembered(taskIds: string[]): Promise<void> {
-  const db = getDb();
-  if (taskIds.length === 0) await db.syncMetadata.delete(RESURRECT_KEY);
-  else await db.syncMetadata.put({ key: RESURRECT_KEY, taskIds });
-}
-
 /**
  * After a completed pull, list the whole account once and bring back each remembered
  * task it still holds. Without a complete listing for this owner, nothing is
@@ -155,7 +126,5 @@ async function takeIfStrictlyNewer(record: RecordModel, local: TaskRecord): Prom
 
 /** Forget every id this run looked at, found or not, except the ones to retry. */
 async function forgetAllBut(processed: string[], keep: string[]): Promise<void> {
-  const forget = new Set(processed.filter((taskId) => !keep.includes(taskId)));
-  const current = await readRememberedTaskIds();
-  await writeRemembered(current.filter((taskId) => !forget.has(taskId)));
+  await forgetForResurrect(processed.filter((taskId) => !keep.includes(taskId)));
 }
