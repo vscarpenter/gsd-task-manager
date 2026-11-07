@@ -3,7 +3,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 
 import { getArchivedStorageStats } from "@/lib/archive";
-import { getTrashCount } from "@/lib/trash";
+import { getTrashStorageStats } from "@/lib/trash";
 import type { TaskRecord } from "@/lib/types";
 
 const BYTES_PER_KB = 1024;
@@ -14,23 +14,20 @@ export interface StorageSummary {
   completedTasks: number;
   archivedTasks: number;
   trashedTasks: number;
-  /** Live + archived. Trash is counted separately for the reset confirmation. */
+  /** Live, archived, and trashed: every record this device still holds. */
   totalTasks: number;
-  /** Footprint of both stores, in KB, to one decimal place. */
+  /** Footprint of all three stores, in KB, to one decimal place. */
   estimatedKb: string;
 }
 
 /**
- * Derive the Settings storage summary from live tasks plus the archive.
+ * Derive the Settings storage summary from live tasks, the archive, and Trash.
  *
- * Archived tasks are still this device's data and still die on "Reset
- * everything" — which sits two rows below this figure — so both the count and
- * the size have to describe the same set of records.
+ * Archived and trashed tasks are still this device's data and still die on
+ * "Reset everything", which sits two rows below this figure, so both the count
+ * and the size have to describe the same set of records.
  */
-export function useStorageSummary(tasks: TaskRecord[]): StorageSummary {
-  const archived = useLiveQuery(() => getArchivedStorageStats());
-  const trashed = useLiveQuery(() => getTrashCount());
-
+function countByState(tasks: TaskRecord[]) {
   let activeTasks = 0;
   let savedTasks = 0;
   let completedTasks = 0;
@@ -39,18 +36,21 @@ export function useStorageSummary(tasks: TaskRecord[]): StorageSummary {
     else if (task.completed) completedTasks += 1;
     else activeTasks += 1;
   }
+  return { activeTasks, savedTasks, completedTasks };
+}
 
-  const archivedTasks = archived?.count ?? 0;
-  const archivedBytes = archived?.bytes ?? 0;
-  const totalBytes = JSON.stringify(tasks).length + archivedBytes;
+export function useStorageSummary(tasks: TaskRecord[]): StorageSummary {
+  const archived = useLiveQuery(() => getArchivedStorageStats());
+  const trashed = useLiveQuery(() => getTrashStorageStats());
+  const [archivedTasks, archivedBytes] = [archived?.count ?? 0, archived?.bytes ?? 0];
+  const [trashedTasks, trashedBytes] = [trashed?.count ?? 0, trashed?.bytes ?? 0];
+  const totalBytes = JSON.stringify(tasks).length + archivedBytes + trashedBytes;
 
   return {
-    activeTasks,
-    savedTasks,
-    completedTasks,
+    ...countByState(tasks),
     archivedTasks,
-    trashedTasks: trashed ?? 0,
-    totalTasks: tasks.length + archivedTasks,
+    trashedTasks,
+    totalTasks: tasks.length + archivedTasks + trashedTasks,
     estimatedKb: (totalBytes / BYTES_PER_KB).toFixed(1),
   };
 }
