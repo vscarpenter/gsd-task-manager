@@ -42,6 +42,47 @@ describe("TodayStrip", () => {
     expect(screen.getAllByRole("button", { name: /Add to today/ })).toHaveLength(2);
   });
 
+  describe("?pickToday=1 from the end of the weekly sweep", () => {
+    afterEach(() => window.history.replaceState(null, "", "/"));
+
+    it("opens the suggestions without a click and clears the parameter", () => {
+      window.history.replaceState(null, "", "/?pickToday=1");
+
+      setup([q1("a"), q1("b")]);
+
+      expect(screen.getAllByRole("button", { name: /Add to today/ })).toHaveLength(2);
+      expect(window.location.search).toBe("");
+    });
+
+    it("keeps other parameters when it clears its own", () => {
+      window.history.replaceState(null, "", "/?pickToday=1&highlight=abc");
+
+      setup([q1("a")]);
+
+      expect(window.location.search).toBe("?highlight=abc");
+    });
+
+    it("clears the parameter and opens nothing when today is full", () => {
+      window.history.replaceState(null, "", "/?pickToday=1");
+
+      setup([
+        q1("a", { focusDate: TODAY, focusRank: 1 }),
+        q1("b", { focusDate: TODAY, focusRank: 2 }),
+        q1("c", { focusDate: TODAY, focusRank: 3 }),
+        q1("d"),
+      ]);
+
+      expect(screen.queryByRole("button", { name: /Add to today: Task d/ })).toBeNull();
+      expect(window.location.search).toBe("");
+    });
+
+    it("leaves the suggestions closed when the parameter is absent", () => {
+      setup([q1("a")]);
+
+      expect(screen.queryByRole("button", { name: /Add to today/ })).toBeNull();
+    });
+  });
+
   it("names the section and reads each row as first, second, or third", () => {
     setup([
       q1("a", { focusDate: TODAY, focusRank: 1 }),

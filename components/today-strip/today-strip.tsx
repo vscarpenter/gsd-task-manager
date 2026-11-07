@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TaskRecord } from "@/lib/types";
 import { MAX_PICKS } from "@/lib/top-three";
 import { addToToday, movePick, removeFromToday, reorderPicks, tidyPicks } from "@/lib/tasks/top-three-actions";
@@ -27,8 +27,31 @@ async function attempt(run: () => Promise<unknown>, action: string, message: str
   }
 }
 
-function FreeSlotOffers({ today, onAdd }: { today: TodayView; onAdd: (task: TaskRecord) => void }) {
-  const [open, setOpen] = useState(false);
+const PICK_TODAY_PARAM = "pickToday";
+
+/** True when the weekly sweep's end screen sent the person here to pick for today. */
+function wantsPickToday(): boolean {
+  return typeof window !== "undefined" && new URLSearchParams(window.location.search).has(PICK_TODAY_PARAM);
+}
+
+/** Drops the one-shot parameter and keeps the rest of the address. Safe to run twice. */
+function clearPickTodayParam(): void {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has(PICK_TODAY_PARAM)) return;
+  params.delete(PICK_TODAY_PARAM);
+  const query = params.toString();
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+}
+
+/** Whether the sweep asked for the suggestions. Read once, then cleared, so a StrictMode re-run keeps the request. */
+function usePickTodayRequest(): boolean {
+  const [requested] = useState(wantsPickToday);
+  useEffect(clearPickTodayParam, []);
+  return requested;
+}
+
+function FreeSlotOffers({ today, onAdd, startOpen }: { today: TodayView; onAdd: (task: TaskRecord) => void; startOpen: boolean }) {
+  const [open, setOpen] = useState(startOpen);
   return (
     <>
       <OfferList heading={today.carry.label} tasks={today.carry.tasks} onAdd={onAdd} />
@@ -59,6 +82,19 @@ function useTodayHandlers(tasks: TaskRecord[], now: Date, zone: string) {
   };
 }
 
+/** The status-region message, and a way to land focus on the heading after a row unmounts. */
+function useAnnouncer() {
+  const [status, setStatus] = useState("");
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const announce = (message: string, refocus = false) => {
+    setStatus(message);
+    if (refocus) headingRef.current?.focus();
+  };
+  const done = (ok: Promise<boolean>, message: string, refocus = false) =>
+    ok.then((worked) => worked && announce(message, refocus));
+  return { status, headingRef, announce, done };
+}
+
 /**
  * Today: up to three picks above the matrix (spec: tasks/spec-top-three.md section 4).
  * Quiet by design: it offers and never nags, and it never writes unless the person acts.
@@ -66,17 +102,9 @@ function useTodayHandlers(tasks: TaskRecord[], now: Date, zone: string) {
 export function TodayStrip({ tasks, onToggleComplete, onInspect }: TodayStripProps) {
   const today = useToday(tasks);
   const [tidyDismissed, setTidyDismissed] = useState(false);
-  const [status, setStatus] = useState("");
-  const headingRef = useRef<HTMLHeadingElement>(null);
+  const { status, headingRef, announce, done } = useAnnouncer();
+  const pickRequested = usePickTodayRequest();
   const act = useTodayHandlers(tasks, today.now, today.zone);
-
-  // A row that unmounts takes keyboard focus with it, so land on the heading.
-  const announce = (message: string, refocus = false) => {
-    setStatus(message);
-    if (refocus) headingRef.current?.focus();
-  };
-  const done = (ok: Promise<boolean>, message: string, refocus = false) =>
-    ok.then((worked) => worked && announce(message, refocus));
 
   return (
     <section
@@ -102,7 +130,7 @@ export function TodayStrip({ tasks, onToggleComplete, onInspect }: TodayStripPro
       {today.needsTidy && !tidyDismissed ? (
         <TidyOffer onTidy={() => done(act.tidy(), "Tidied today")} onDismiss={() => setTidyDismissed(true)} />
       ) : null}
-      {today.hasFreeSlot ? <FreeSlotOffers today={today} onAdd={(task) => done(act.add(task), `Added ${task.title} to today`)} /> : null}
+      {today.hasFreeSlot ? <FreeSlotOffers today={today} startOpen={pickRequested} onAdd={(task) => done(act.add(task), `Added ${task.title} to today`)} /> : null}
     </section>
   );
 }

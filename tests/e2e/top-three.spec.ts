@@ -34,6 +34,18 @@ test.describe("Today strip", () => {
     await expect(page.getByRole("region", { name: "Today, 1 of 3" })).toBeVisible();
   });
 
+  test("the sweep's end link opens the suggestions and clears the parameter", async ({ page }) => {
+    const matrix = new MatrixPage(page);
+    await matrix.goto();
+    await matrix.createTask("Plan the launch !!");
+
+    await page.goto("/?pickToday=1", { waitUntil: "domcontentloaded" });
+    await matrix.matrixGrid.waitFor({ state: "visible", timeout: 20000 });
+
+    await expect(page.getByTestId("today-strip").getByRole("button", { name: "Add to today: Plan the launch" })).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
   test("past midnight, yesterday's pick is offered and no longer counted", async ({ page }) => {
     await page.clock.install({ time: new Date("2026-11-08T10:00:00") });
     const matrix = new MatrixPage(page);
