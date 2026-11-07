@@ -14,7 +14,7 @@ import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/syn
 import { notifySyncSuccess, notifySyncError } from './notifications';
 import { isTransientSyncFailure, sanitizeSyncError, extractRetryAfterMs } from './error-categorizer';
 import { ensureValidAuth } from './pb-auth';
-import { getDeviceId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, readClientUpdatedAt } from './pb-sync-helpers';
+import { getDeviceId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, mapOverLocalCopy, readClientUpdatedAt } from './pb-sync-helpers';
 import { pushLocalChanges, type PushResult } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
 import { resurrectOnSight } from './resurrect-on-sight';
@@ -128,7 +128,7 @@ export async function applyRemoteChange(
     }
     const localTask = await db.tasks.get(remoteTask.id);
     if (await localCopyHolds(localTask, remoteTask, rawUpdatedAt)) return;
-    const mergedTask = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
+    const mergedTask = mapOverLocalCopy(record, remoteTask, localTask, archived, deleted);
     if (!mergedTask) return;
     if (archived) await db.archivedTasks.delete(remoteTask.id);
     if (deleted) await db.deletedTasks.delete(remoteTask.id);
