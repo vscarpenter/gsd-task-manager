@@ -81,7 +81,7 @@ Every action already exists. The sweep calls it and adds nothing to it.
 | Complete | `toggleCompleted` | `TaskStore.toggleComplete` | `TaskStore.setCompleted` |
 | New date, Add date | `updateTask` | `TaskStore.saveEdits` | `TaskStore.change` |
 | Mark urgent | F1's `handleMarkUrgent` (`components/matrix-simplified/task-actions.ts`, #638) | F1's `TaskActions.markUrgent` (`App/Matrix/TaskActions.swift`, #44) | F1's `TaskActionsViewModel.markUrgent` (`app/.../matrix/`, #38) |
-| Move to quadrant | `moveTaskToQuadrant` | `TaskStore.saveEdits` | `TaskStore.change` |
+| Move to quadrant | `moveTaskToQuadrant` | `TaskActions.move`, which calls `TaskStore.move` (`App/Matrix/TaskActions.swift:44`) | `TaskActionsViewModel.moveToQuadrant` (`app/.../matrix/TaskActionsViewModel.kt:127`) |
 | Save for later | `saveTaskForLater` | `TaskStore.moveToSaved` | `TaskStore.moveToSaved` |
 | Return to matrix | `returnSavedTask`, with its quadrant and due date choices | `TaskStore.returnToMatrix` | `TaskStore.returnToMatrix` |
 | Delete (to Trash) | `deleteTask` | `TaskStore.delete` | `TaskStore.delete` |
@@ -121,6 +121,8 @@ nextReminder(reminder, now, zone) -> instant | null
 The next occurrence of that weekday and local time strictly after `now`, or null when off. It keeps its wall-clock time across a clock change. A time inside a gap shifts forward by the gap, and a time inside an overlap takes the first occurrence.
 
 The notification text is fixed: "Weekly sweep" and "A few minutes to clear what's gone quiet." It carries no count, no task title, and no task content, and it fires whether or not cards exist, because a background task can't always compute them. It doesn't skip a week the user already swept, for the same reason. Quiet hours don't defer it, since the user chose the time.
+
+It's its own setting, and it doesn't depend on task reminders. Settings always shows it, and it fires whether task reminders are on or off, as far as the platform's notification permission allows. The user picked the time, so turning task reminders off doesn't silence it.
 
 | | Web | Apple | Android |
 |---|---|---|---|

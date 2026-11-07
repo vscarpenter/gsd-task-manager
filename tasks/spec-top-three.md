@@ -45,10 +45,12 @@ These are the only writes top three makes. Each one is an ordinary edit that bum
 |---|---|
 | Add to today | `focusDate` = today, `focusRank` = `nextRank`. Refused when `nextRank` is null |
 | Remove from today | Both fields cleared |
-| Move up or down | The two rows swap ranks |
+| Move up or down | The two rows swap ranks. Not offered while `needsTidy` is true; Tidy comes first |
 | Tidy (only when the user accepts the offer) | The first three get ranks 1, 2, and 3. Overflow rows get both fields cleared. Rows already correct aren't written |
 
 `nextRank` is the lowest rank from 1 to 3 that no current pick uses, or null when none is free.
+
+Why Move waits for Tidy: with a duplicate rank, a swap can write two equal ranks and move nothing. It can also let the moved row jump past another, because the conflict order falls back to `updatedAt`, which the swap itself bumps. The corpus has no move case, so each client's UI test pins this (section 12).
 
 Recurring spawns and duplicates start with neither field. On web and Android this needs an explicit clear, because both spread the source row (`lib/tasks/crud/toggle.ts` `buildRecurringInstance`, `lib/tasks/crud/duplicate.ts`, Android `RecurrenceEngine.kt:26`).
 
@@ -105,10 +107,12 @@ Keep it quiet: a short list above the matrix, not a new page. The matrix stays t
 | Carry-over | "From yesterday" or "From Friday" above the suggestions, only while a slot is free |
 | Conflict | "Two devices picked for today. Tidy up?" with Tidy and Not now. Not now writes nothing, and the offer returns next launch |
 | Card action | "Add to today" or "Remove from today", in the card menu. When today is full it reads "Today is full" and is disabled |
-| Order | Move up and Move down in the row's menu, plus drag on web using the existing `dnd-kit` setup |
+| Order | Move up and Move down in the row's menu. Web's rows have no menu, so web puts Move up and Move down on each row as inline buttons, plus drag using the existing `dnd-kit` setup. None of them shows while the Tidy offer is up (section 3.2) |
 | Accessible name | "Today, 2 of 3" on the section. Each row: its title, then "first", "second", or "third" |
 
 Copy never says missed, overdue from yesterday, unfinished, or failed, and shows no progress meter. The word on the offer is "From", because the task isn't late for being unpicked.
+
+The carry-over label is "From yesterday" for one day back and the weekday's name, as in "From Friday", for two to six. Seven days back, the weekday would match today's, so it reads "From a week ago". Those are the only labels. A date that doesn't parse never reaches the offer, because section 3.5 unsets it on read, so a guard for one needs no copy of its own.
 
 Web's card menu is `components/task-card/*`, and the Matrix screen and card are hotspots on every client. Land them through the sprint 2 hotspot table.
 
@@ -315,7 +319,7 @@ No agent does this: sprint rules bar `api.vinny.io`. It has to happen **before a
 2. The section 6 named tests, and the real-server run.
 3. Unit: spawn and duplicate carry neither field; Add to today is refused when full; each write in section 3.2 goes through the normal edit path and queues a push; a pick changes no other field.
 4. Round trip: backup and restore keep a pick; the new fixture imports on every client; an invalid pair becomes unset and keeps the task.
-5. UI: the section with and without picks; carry-over only while a slot is free; Not now writes nothing; the accessible names in section 4.
+5. UI: the section with and without picks; carry-over only while a slot is free; Not now writes nothing; the accessible names in section 4; no Move up, Move down, or drag while the Tidy offer is up; a pick seven days back reads "From a week ago".
 6. Widgets: section 9.
 7. MCP: the round trip, and `get_top_three` against the corpus.
 8. E2E on web: add a pick, reload, see it first; move the clock past midnight, see the offer and no pick.
