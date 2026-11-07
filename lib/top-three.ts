@@ -258,7 +258,7 @@ function isBelow(storedContract: number | null, version: number): boolean {
 }
 
 /** A locally newer row copies just the fields its build never read (spec section 6, C4-4). */
-function copyUnreadFields(storedContract: number | null, local: PullRow, remote: PullRow): PullMergeResult {
+export function unreadFieldsToCopy(storedContract: number | null, local: PullRow, remote: PullRow): PullMergeResult {
   const copyFocus = isBelow(storedContract, FOCUS_FIRST_READ) && local.focusDate === null && remote.focusDate !== null;
   const copySaved =
     isBelow(storedContract, SAVED_FIRST_READ) && local.savedAt === null && remote.savedAt !== null;
@@ -287,7 +287,7 @@ export function pullMerge({ storedContract, tombstoned, local, remote }: PullMer
   if (remote.updatedAt > local.updatedAt) {
     return { action: "take-remote", conflict: true, row: remote };
   }
-  if (remote.updatedAt < local.updatedAt) return copyUnreadFields(storedContract, local, remote);
+  if (remote.updatedAt < local.updatedAt) return unreadFieldsToCopy(storedContract, local, remote);
   return isBelow(storedContract, FOCUS_FIRST_READ)
     ? { action: "take-remote", conflict: false, row: remote }
     : { action: "none", conflict: false, row: local };
