@@ -73,14 +73,16 @@ class NotificationChecker {
 		if (!isNotificationSupported()) return;
 		if (checkNotificationPermission() !== "granted") return;
 
+		// The sweep reminder is its own setting: it fires whether task reminders are on or
+		// off, and quiet hours don't defer it, because the person picked its time.
+		await this.checkSweepReminder(new Date());
+
 		const settings = await getNotificationSettings();
 		if (!settings.enabled) {
 			// A badge left from before reminders were turned off would never clear.
 			await clearAppBadge();
 			return;
 		}
-		// Quiet hours don't defer the sweep reminder: the person picked its time.
-		await this.checkSweepReminder(new Date());
 		if (isInQuietHours(settings)) return;
 
 		const now = new Date();

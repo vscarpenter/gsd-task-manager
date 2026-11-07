@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { checkNotificationPermission, requestNotificationPermission } from "@/lib/notifications";
 import { readSweepReminder, writeSweepReminder } from "@/lib/preferences/weekly-sweep";
 import type { SweepReminder } from "@/lib/weekly-sweep";
+import { ROUTES } from "@/lib/routes";
 import { SettingsRow } from "./shared-components";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -58,6 +60,11 @@ export function SweepReminderRows() {
 
 	return (
 		<>
+			<SettingsRow label="Weekly sweep" description="A short pass through what needs a decision.">
+				<Link href={ROUTES.SWEEP} className="touch-target inline-flex items-center text-sm font-medium text-accent underline underline-offset-4">
+					Start weekly sweep
+				</Link>
+			</SettingsRow>
 			<SettingsRow
 				label="Weekly sweep reminder"
 				description="Works while GSD is open, within an hour after the time you pick. If GSD is closed then, it doesn't fire."

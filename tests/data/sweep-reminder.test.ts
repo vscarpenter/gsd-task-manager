@@ -65,6 +65,28 @@ describe("the weekly sweep reminder in the checker", () => {
     expect(notifications.showSweepReminder).toHaveBeenCalledTimes(1);
   });
 
+  it("fires whether task reminders are on or off, as long as permission allows", async () => {
+    const settings = vi.mocked(notifications.getNotificationSettings);
+    settings.mockResolvedValueOnce({
+      id: "settings", enabled: false, defaultReminder: 15, soundEnabled: true, permissionAsked: true, updatedAt: "2026-11-01T00:00:00.000Z",
+    });
+    writeSweepReminder({ enabled: true, weekday: 7, time: "10:00" });
+
+    await notificationChecker.checkAndNotify();
+
+    expect(notifications.showSweepReminder).toHaveBeenCalledTimes(1);
+    expect(notifications.showTaskNotification).not.toHaveBeenCalled();
+  });
+
+  it("doesn't fire without notification permission", async () => {
+    vi.mocked(notifications.checkNotificationPermission).mockReturnValueOnce("denied");
+    writeSweepReminder({ enabled: true, weekday: 7, time: "10:00" });
+
+    await notificationChecker.checkAndNotify();
+
+    expect(notifications.showSweepReminder).not.toHaveBeenCalled();
+  });
+
   it("fires once for an occurrence", async () => {
     writeSweepReminder({ enabled: true, weekday: 7, time: "10:00" });
 

@@ -12,6 +12,12 @@ vi.mock("@/lib/notifications", () => ({
 describe("SweepReminderRows", () => {
   beforeEach(() => localStorage.removeItem(SWEEP_REMINDER_KEY));
 
+  it("always offers a way to start the sweep", () => {
+    render(<SweepReminderRows />);
+
+    expect(screen.getByRole("link", { name: "Start weekly sweep" })).toHaveAttribute("href", "/sweep");
+  });
+
   it("starts off, and says what it does and doesn't do", () => {
     render(<SweepReminderRows />);
 
