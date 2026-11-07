@@ -62,6 +62,15 @@ function validateUpdatedDraft(
   return result.data;
 }
 
+/** A key present in `updates` wins, even as `undefined`; a key left out keeps the stored value. */
+function keepUnlessGiven<K extends "dueDate" | "estimatedMinutes" | "notifyBefore">(
+  updates: Partial<TaskDraft>,
+  existing: TaskRecord,
+  key: K
+): Partial<TaskDraft>[K] {
+  return key in updates ? updates[key] : existing[key];
+}
+
 /**
  * Merge existing task data with partial updates.
  *
@@ -80,18 +89,16 @@ function mergeTaskUpdates(
     description: updates.description ?? existing.description,
     urgent: updates.urgent ?? existing.urgent,
     important: updates.important ?? existing.important,
-    dueDate: "dueDate" in updates ? updates.dueDate : existing.dueDate,
+    dueDate: keepUnlessGiven(updates, existing, "dueDate"),
     recurrence: updates.recurrence ?? existing.recurrence,
     tags: updates.tags ?? existing.tags,
     subtasks: updates.subtasks ?? existing.subtasks,
     dependencies: updates.dependencies ?? existing.dependencies,
     // A write always stores a number: a cleared or legacy-null offset resolves to
     // this device's default (D-10). Off is notificationEnabled, not a missing offset.
-    notifyBefore:
-      ("notifyBefore" in updates ? updates.notifyBefore : existing.notifyBefore) ?? defaultReminder,
+    notifyBefore: keepUnlessGiven(updates, existing, "notifyBefore") ?? defaultReminder,
     notificationEnabled: updates.notificationEnabled ?? existing.notificationEnabled,
-    estimatedMinutes:
-      "estimatedMinutes" in updates ? updates.estimatedMinutes : existing.estimatedMinutes,
+    estimatedMinutes: keepUnlessGiven(updates, existing, "estimatedMinutes"),
   };
 }
 

@@ -47,13 +47,7 @@ export function NotificationSettingsSection({
 			{/* Reminder, sound, quiet hours - only meaningful while notifications fire */}
 			{settings.enabled && (
 				<>
-					<SettingsSelectRow
-						label="Default reminder"
-						description="For new tasks"
-						value={reminderLabel(settings.defaultReminder)}
-						options={reminderOptions(settings.defaultReminder)}
-						onChange={onDefaultReminderChange}
-					/>
+					<DefaultReminderRow value={settings.defaultReminder} onChange={onDefaultReminderChange} />
 					<SoundAndQuietHoursRows
 						settings={settings}
 						onSoundToggle={onSoundToggle}
@@ -107,6 +101,19 @@ function reminderLabel(defaultReminder: number): string {
 	return (
 		reminderOptions(defaultReminder).find((opt) => opt.value === defaultReminder.toString())?.label ??
 		offListLabel(defaultReminder)
+	);
+}
+
+/** The default offset for new tasks. Changing it never moves a task that already has one. */
+function DefaultReminderRow({ value, onChange }: { value: number; onChange: (value: string) => Promise<void> }) {
+	return (
+		<SettingsSelectRow
+			label="Default reminder"
+			description="For new tasks"
+			value={reminderLabel(value)}
+			options={reminderOptions(value)}
+			onChange={onChange}
+		/>
 	);
 }
 
