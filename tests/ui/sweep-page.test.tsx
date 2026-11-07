@@ -87,6 +87,40 @@ describe("SweepPage", () => {
     expect(readLastSwept()).not.toBeNull();
   });
 
+  describe("the end offer follows top three's free slot", () => {
+    const today = new Intl.DateTimeFormat("en-CA").format(new Date());
+    const pick = (id: string, rank: number) =>
+      createMockTask({ id, title: `Pick ${id}`, urgent: true, important: true, updatedAt: daysAgo(0), focusDate: today, focusRank: rank });
+
+    async function sweepToTheEnd(tasks: unknown[]) {
+      mocks.tasks = tasks;
+      const user = userEvent.setup();
+      render(<SweepPage />);
+      await user.click(screen.getByRole("button", { name: "Skip" }));
+    }
+
+    it("offers Pick today's top three while today has a free slot", async () => {
+      await sweepToTheEnd([overdue("a"), pick("p1", 1)]);
+
+      expect(screen.getByRole("heading", { name: "That's the sweep." })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Pick today's top three" })).toBeInTheDocument();
+    });
+
+    it("ends on That's the sweep alone when today is full", async () => {
+      await sweepToTheEnd([overdue("a"), pick("p1", 1), pick("p2", 2), pick("p3", 3)]);
+
+      expect(screen.getByRole("heading", { name: "That's the sweep." })).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "Pick today's top three" })).toBeNull();
+      expect(screen.getByRole("link", { name: "Back to the matrix" })).toBeInTheDocument();
+    });
+
+    it("counts a completed pick as a free slot again", async () => {
+      await sweepToTheEnd([overdue("a"), { ...pick("p1", 1), completed: true }, pick("p2", 2), pick("p3", 3)]);
+
+      expect(screen.getByRole("link", { name: "Pick today's top three" })).toBeInTheDocument();
+    });
+  });
+
   it("moves focus to the end screen heading so it is announced", async () => {
     const user = userEvent.setup();
     render(<SweepPage />);

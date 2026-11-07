@@ -9,6 +9,7 @@ import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
 import { readEscalationWindow } from "@/lib/preferences/escalation-window";
 import { useTasks } from "@/lib/use-tasks";
 import { ROUTES } from "@/lib/routes";
+import { nextRank } from "@/lib/top-three";
 import type { TaskRecord } from "@/lib/types";
 import {
   completeTask,
@@ -22,10 +23,13 @@ import {
 import { SweepCard, type SweepCardHandlers } from "./sweep-card";
 import { useSweepSession, type SweepSession } from "./use-sweep-session";
 
+/** The end offers top three's suggestions only while today has a free slot, the rule carry-over uses. */
+const hasFreeSlot = (tasks: TaskRecord[], now: Date, zone: string) => nextRank(tasks, now, zone) !== null;
+
 /** Where the end screen offers to go next: top three's suggestions, on a client where top three shipped. */
 const PICK_TODAY_HREF = { pathname: ROUTES.HOME, query: { pickToday: "1" } };
 
-function EndScreen({ onDone }: { onDone: () => void }) {
+function EndScreen({ onDone, canPickToday }: { onDone: () => void; canPickToday: boolean }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   // The card that had focus is gone, so land on the heading, which is how it gets announced.
   useEffect(() => headingRef.current?.focus(), []);
@@ -33,9 +37,11 @@ function EndScreen({ onDone }: { onDone: () => void }) {
     <div className="space-y-4 rounded-lg border border-border bg-card px-6 py-10 text-center">
       <h2 ref={headingRef} tabIndex={-1} className="text-h2 text-foreground">That&apos;s the sweep.</h2>
       <div className="flex flex-wrap justify-center gap-3">
-        <Link href={PICK_TODAY_HREF} onClick={onDone} className="btn btn-primary touch-target">
-          Pick today&apos;s top three
-        </Link>
+        {canPickToday ? (
+          <Link href={PICK_TODAY_HREF} onClick={onDone} className="btn btn-primary touch-target">
+            Pick today&apos;s top three
+          </Link>
+        ) : null}
         <Link href={ROUTES.HOME} onClick={onDone} className="btn btn-ghost touch-target">
           Back to the matrix
         </Link>
@@ -85,7 +91,7 @@ export default function SweepPage() {
         </p>
         {session.status === "loading" ? <p className="py-8 text-foreground-muted">Loading…</p> : null}
         {card && handlers ? <SweepCard key={card.task.id} task={card.task} reason={card.reason} handlers={handlers} /> : null}
-        {session.status === "end" ? <EndScreen onDone={session.done} /> : null}
+        {session.status === "end" ? <EndScreen onDone={session.done} canPickToday={hasFreeSlot(all, clock.now, clock.zone)} /> : null}
         {session.status === "card" ? (
           <div className="flex justify-end">
             <Button
