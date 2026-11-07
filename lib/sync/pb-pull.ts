@@ -14,6 +14,7 @@ import type { RecordModel } from 'pocketbase';
 import { classifyRemoteDeletion } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
 import { toTrashedRecord } from '@/lib/trash';
+import { savedPlacementBlocker } from '@/lib/tasks/saved-placement';
 import type { TaskRecord } from '@/lib/types';
 import type { SyncQueueItem } from './types';
 
@@ -88,17 +89,11 @@ export function copyUnreadFields(
 ): TaskRecord | null {
   const neverReadSavedAt = (storedContractVersion ?? 0) < SYNC_CONFIG.SAVED_AT_CONTRACT_VERSION;
   if (!neverReadSavedAt || local.savedAt || !remote.savedAt) return null;
-  if (!canHoldSavedPlacement(local)) return null;
+  // A newer completion or running timer outranks an older Save. The row stays
+  // in the matrix and its push clears saved_at, rather than spreading a
+  // completed task in Saved.
+  if (savedPlacementBlocker(local)) return null;
   return { ...local, savedAt: remote.savedAt };
-}
-
-/**
- * The same rule saveTaskForLater applies. A newer local completion or running
- * timer outranks an older Save, so the row stays in the matrix and its push
- * clears saved_at instead of spreading a completed Saved task.
- */
-function canHoldSavedPlacement(task: TaskRecord): boolean {
-  return !task.completed && !task.timeEntries?.some((entry) => !entry.endedAt);
 }
 
 /** PullOptions with its defaults applied, as the per-record merge uses them. */
