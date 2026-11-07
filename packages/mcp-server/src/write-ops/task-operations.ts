@@ -24,7 +24,7 @@ import {
 import { extractUrlsFromTitle, buildDescription } from '../text/capture-parser.js';
 import { ConflictError } from '../errors.js';
 import { getTaskCache } from '../cache.js';
-import { SCHEMA_LIMITS } from '../constants.js';
+import { DEFAULT_NOTIFY_BEFORE_MINUTES, SCHEMA_LIMITS } from '../constants.js';
 import { WriteRateLimiter } from './write-rate-limiter.js';
 import { cleanDependents, snapshotDependents, type CleanupOutcome } from './dependency-cleanup.js';
 
@@ -110,7 +110,7 @@ export async function createTask(
     subtasks: subtasksWithIds,
     recurrence: input.recurrence || 'none',
     dependencies: input.dependencies || [],
-    ...(input.notifyBefore !== undefined && { notifyBefore: input.notifyBefore }),
+    notifyBefore: input.notifyBefore ?? DEFAULT_NOTIFY_BEFORE_MINUTES,
     ...(input.notificationEnabled !== undefined && {
       notificationEnabled: input.notificationEnabled,
     }),

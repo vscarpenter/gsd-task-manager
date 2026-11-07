@@ -182,6 +182,27 @@ describe('createTask URL extraction', () => {
     );
   });
 
+  it('an MCP create with no offset writes 15, the default every client seeds', async () => {
+    const result = await createTask(config, {
+      title: 'No offset given',
+      urgent: false,
+      important: false,
+    });
+
+    expect(result.task.notifyBefore).toBe(15);
+  });
+
+  it('an MCP create keeps an explicit offset of 0, which fires at the due time', async () => {
+    const result = await createTask(config, {
+      title: 'At the due time',
+      urgent: false,
+      important: false,
+      notifyBefore: 0,
+    });
+
+    expect(result.task.notifyBefore).toBe(0);
+  });
+
   it('rejects missing dependency ids before persistence', async () => {
     const helpers = await import('../../write-ops/helpers.js');
 
