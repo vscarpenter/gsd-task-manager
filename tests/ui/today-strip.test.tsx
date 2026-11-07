@@ -127,6 +127,16 @@ describe("TodayStrip", () => {
     });
   });
 
+  it("shows an aside in its header row, so another entry doesn't cost a line of height", () => {
+    render(<TodayStrip tasks={[q1("a")]} onToggleComplete={vi.fn()} onInspect={vi.fn()} aside={<a href="/sweep">Weekly sweep</a>} />);
+
+    const heading = screen.getByRole("heading", { name: "Today" });
+    const link = screen.getByRole("link", { name: "Weekly sweep" });
+    expect(heading.parentElement).toContainElement(link);
+    // A sibling of the labelled region, so "Today, 1 of 3" doesn't swallow an unrelated link.
+    expect(screen.getByRole("region", { name: "Today, 0 of 3" })).not.toContainElement(link);
+  });
+
   it("names the section and reads each row as first, second, or third", () => {
     setup([
       q1("a", { focusDate: TODAY, focusRank: 1 }),

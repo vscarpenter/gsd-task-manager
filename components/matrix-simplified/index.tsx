@@ -340,7 +340,6 @@ export function MatrixSimplified() {
         >
           <CaptureBar onSubmit={(payload) => captureAndReveal(payload, (id) => highlightTaskById(id, { focus: false }))} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
         </div>
-        {mounted && !isLoading ? <SweepEntry tasks={all} /> : null}
         {smartViewsEnabled ? (
           <div className="mb-4">
             <SmartViewStrip
@@ -357,6 +356,7 @@ export function MatrixSimplified() {
             tasks={all}
             onToggleComplete={(task, completedNext) => handleToggle(task, completedNext, handleSuccess).then(() => {})}
             onInspect={handleInspectOpen}
+            aside={<SweepEntry tasks={all} />}
           />
         ) : null}
         <div data-testid="matrix-stage" className={MATRIX_STAGE_CLASS}>

@@ -14,6 +14,8 @@ import { useToday } from "./use-today";
 
 export interface TodayStripProps {
   tasks: TaskRecord[];
+  /** Shares the header row, right-aligned, so a quiet link costs no extra height above the matrix. */
+  aside?: React.ReactNode;
   onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
   onInspect: (task: TaskRecord) => void;
 }
@@ -103,7 +105,7 @@ function useAnnouncer() {
  * Today: up to three picks above the matrix (spec: tasks/spec-top-three.md section 4).
  * Quiet by design: it offers and never nags, and it never writes unless the person acts.
  */
-export function TodayStrip({ tasks, onToggleComplete, onInspect }: TodayStripProps) {
+export function TodayStrip({ tasks, aside, onToggleComplete, onInspect }: TodayStripProps) {
   const today = useToday(tasks);
   const tidyDismissed = useSyncExternalStore(tidyDismissal.subscribe, tidyDismissal.isDismissed, () => false);
   const { status, headingRef, announce, done } = useAnnouncer();
@@ -111,31 +113,32 @@ export function TodayStrip({ tasks, onToggleComplete, onInspect }: TodayStripPro
   const act = useTodayHandlers(tasks, today.now, today.zone);
 
   return (
-    <section
-      data-testid="today-strip"
-      aria-label={`Today, ${today.picks.length} of ${MAX_PICKS}`}
-      className="mb-4 space-y-2 rounded-lg border border-border bg-card p-3"
-    >
-      <h2 ref={headingRef} tabIndex={-1} className="font-display text-base font-semibold text-foreground">Today</h2>
+    <div data-testid="today-strip" className="mb-4 space-y-2 rounded-lg border border-border bg-card p-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 ref={headingRef} tabIndex={-1} className="font-display text-base font-semibold text-foreground">Today</h2>
+        {aside}
+      </div>
       <p role="status" data-testid="today-status" className="sr-only">{status}</p>
-      {today.picks.length > 0 ? (
-        <PickList
-          picks={today.picks}
-          locked={today.needsTidy}
-          onToggleComplete={async (task, completed) => {
-            await onToggleComplete(task, completed);
-            announce(`Completed ${task.title}`, true);
-          }}
-          onInspect={onInspect}
-          onMove={(task, direction) => done(act.move(task, direction), `Moved ${task.title} ${direction}`)}
-          onRemove={(task) => done(act.remove(task), `Removed ${task.title} from today`, true)}
-          onReorder={(ids) => done(act.reorder(ids), "Reordered today")}
-        />
-      ) : null}
-      {today.needsTidy && !tidyDismissed ? (
-        <TidyOffer onTidy={() => done(act.tidy(), "Tidied today")} onDismiss={tidyDismissal.dismiss} />
-      ) : null}
-      {today.hasFreeSlot ? <FreeSlotOffers today={today} startOpen={pickRequested} onAdd={(task) => done(act.add(task), `Added ${task.title} to today`)} /> : null}
-    </section>
+      <section aria-label={`Today, ${today.picks.length} of ${MAX_PICKS}`} className="space-y-2">
+        {today.picks.length > 0 ? (
+          <PickList
+            picks={today.picks}
+            locked={today.needsTidy}
+            onToggleComplete={async (task, completed) => {
+              await onToggleComplete(task, completed);
+              announce(`Completed ${task.title}`, true);
+            }}
+            onInspect={onInspect}
+            onMove={(task, direction) => done(act.move(task, direction), `Moved ${task.title} ${direction}`)}
+            onRemove={(task) => done(act.remove(task), `Removed ${task.title} from today`, true)}
+            onReorder={(ids) => done(act.reorder(ids), "Reordered today")}
+          />
+        ) : null}
+        {today.needsTidy && !tidyDismissed ? (
+          <TidyOffer onTidy={() => done(act.tidy(), "Tidied today")} onDismiss={tidyDismissal.dismiss} />
+        ) : null}
+        {today.hasFreeSlot ? <FreeSlotOffers today={today} startOpen={pickRequested} onAdd={(task) => done(act.add(task), `Added ${task.title} to today`)} /> : null}
+      </section>
+    </div>
   );
 }
