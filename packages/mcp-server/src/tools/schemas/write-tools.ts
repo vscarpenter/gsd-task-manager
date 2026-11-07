@@ -40,7 +40,7 @@ export const createTaskTool: Tool = {
         maxItems: SCHEMA_LIMITS.MAX_TAGS,
         items: { type: 'string', minLength: 1, maxLength: SCHEMA_LIMITS.TAG_MAX_LENGTH },
         description:
-          'Tags, lowercase, without a leading # (for example ["work", "project-alpha"]). The apps store tags this way, so "#work" would be a separate tag.',
+          'Tags, lowercase, without a leading # (for example ["work", "project-alpha"]). The apps store tags this way, so the server lowercases, trims, and strips a leading # for you, and drops repeats.',
       },
       subtasks: {
         type: 'array',

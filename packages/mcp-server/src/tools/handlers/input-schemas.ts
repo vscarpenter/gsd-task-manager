@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 import { SCHEMA_LIMITS } from '../../constants.js';
+import { normalizeTags } from '../../text/tags.js';
 
 const quadrantSchema = z.enum([
   'urgent-important',
@@ -30,7 +31,13 @@ const taskTitleSchema = z.string().min(1).max(SCHEMA_LIMITS.TASK_TITLE_MAX_LENGT
 const taskDescriptionSchema = z.string().max(SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH);
 const tagSchema = z.string().min(1).max(SCHEMA_LIMITS.TAG_MAX_LENGTH);
 const subtaskTitleSchema = z.string().min(1).max(SCHEMA_LIMITS.SUBTASK_TITLE_MAX_LENGTH);
-const tagsSchema = z.array(tagSchema).max(SCHEMA_LIMITS.MAX_TAGS);
+// Normalize first, then validate, so "#Work" and "work" are one tag and the limits
+// apply to what is stored.
+const tagsSchema = z
+  .array(z.string())
+  .transform(normalizeTags)
+  .pipe(z.array(tagSchema).max(SCHEMA_LIMITS.MAX_TAGS));
+const nonEmptyTagsSchema = tagsSchema.pipe(z.array(z.string()).min(1));
 const dependenciesSchema = z.array(idSchema).max(SCHEMA_LIMITS.MAX_DEPENDENCIES);
 
 export const listTasksArgsSchema = z.strictObject({
@@ -129,8 +136,8 @@ const bulkOperationSchema = z.discriminatedUnion('type', [
     urgent: z.boolean(),
     important: z.boolean(),
   }),
-  z.object({ type: z.literal('add_tags'), tags: tagsSchema.min(1) }),
-  z.object({ type: z.literal('remove_tags'), tags: tagsSchema.min(1) }),
+  z.object({ type: z.literal('add_tags'), tags: nonEmptyTagsSchema }),
+  z.object({ type: z.literal('remove_tags'), tags: nonEmptyTagsSchema }),
   z.object({
     type: z.literal('set_due_date'),
     dueDate: z.union([z.literal(''), z.iso.datetime({ offset: true })]).optional(),
