@@ -1,7 +1,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TodayStrip } from "@/components/today-strip/today-strip";
+import { tidyDismissal } from "@/lib/top-three-session";
+import { toast } from "sonner";
 import { createMockTask } from "@/tests/fixtures";
 
 const actions = vi.hoisted(() => ({
@@ -30,6 +32,7 @@ describe("TodayStrip", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(NOW);
     Object.values(actions).forEach((fn) => fn.mockClear());
+    tidyDismissal.reset();
   });
   afterEach(() => vi.useRealTimers());
 
@@ -80,6 +83,47 @@ describe("TodayStrip", () => {
       setup([q1("a")]);
 
       expect(screen.queryByRole("button", { name: /Add to today/ })).toBeNull();
+    });
+  });
+
+  it("says so when there is nothing to suggest", async () => {
+    const { user } = setup([createMockTask({ id: "a", title: "Task a", urgent: false, important: false })]);
+
+    await user.click(screen.getByRole("button", { name: "Pick up to three for today" }));
+
+    expect(screen.getByText("Nothing to suggest right now.")).toBeInTheDocument();
+  });
+
+  it("shows the card's due chip on a pick row", () => {
+    setup([q1("a", { focusDate: TODAY, focusRank: 1, dueDate: "2026-11-03T12:00:00.000Z" })]);
+
+    expect(within(screen.getByRole("listitem")).getByText(/overdue/)).toBeInTheDocument();
+  });
+
+  it("keeps Not now until the next launch, not just until the strip remounts", async () => {
+    const tasks = [q1("a", { focusDate: TODAY, focusRank: 1 }), q1("b", { focusDate: TODAY, focusRank: 1 })];
+    const first = setup(tasks);
+    await first.user.click(screen.getByRole("button", { name: "Not now" }));
+    cleanup();
+
+    setup(tasks);
+
+    expect(screen.queryByText("Two devices picked for today. Tidy up?")).toBeNull();
+  });
+
+  describe("a refused add", () => {
+    it("says Today is full, with no success toast and no announcement", async () => {
+      actions.addToToday.mockResolvedValueOnce("full");
+      const success = vi.spyOn(toast, "success");
+      const message = vi.spyOn(toast, "message");
+      const { user } = setup([q1("a"), q1("b", { focusDate: TODAY, focusRank: 1 })]);
+
+      await user.click(screen.getByRole("button", { name: "Pick up to three for today" }));
+      await user.click(screen.getByRole("button", { name: "Add to today: Task a" }));
+
+      expect(message).toHaveBeenCalledWith("Today is full", expect.anything());
+      expect(success).not.toHaveBeenCalled();
+      expect(screen.getByTestId("today-status")).toHaveTextContent("");
     });
   });
 

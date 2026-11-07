@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { TaskRecord } from "@/lib/types";
 import { MAX_PICKS } from "@/lib/top-three";
-import { addToToday, movePick, removeFromToday, reorderPicks, tidyPicks } from "@/lib/tasks/top-three-actions";
+import { movePick, removeFromToday, reorderPicks, tidyPicks } from "@/lib/tasks/top-three-actions";
+import { tidyDismissal } from "@/lib/top-three-session";
+import { addAndReport } from "./add-feedback";
 import { reportTaskMutationError } from "@/components/matrix-simplified/task-actions";
 import { OfferList, TidyOffer } from "./today-offers";
 import { PickList } from "./today-rows";
@@ -16,11 +18,10 @@ export interface TodayStripProps {
   onInspect: (task: TaskRecord) => void;
 }
 
-/** Runs a write and reports a failure the way every other task action does. */
+/** Runs a write and reports a failure the way every other task action does. Resolves true when the write took effect. */
 async function attempt(run: () => Promise<unknown>, action: string, message: string): Promise<boolean> {
   try {
-    await run();
-    return true;
+    return (await run()) !== false;
   } catch (error) {
     reportTaskMutationError(error, action, message);
     return false;
@@ -63,6 +64,9 @@ function FreeSlotOffers({ today, onAdd, startOpen }: { today: TodayView; onAdd: 
       >
         Pick up to three for today
       </button>
+      {open && today.suggestions.length === 0 ? (
+        <p className="text-small text-foreground-muted">Nothing to suggest right now.</p>
+      ) : null}
       {open ? <OfferList heading={null} tasks={today.suggestions} onAdd={onAdd} /> : null}
     </>
   );
@@ -71,7 +75,7 @@ function FreeSlotOffers({ today, onAdd, startOpen }: { today: TodayView; onAdd: 
 function useTodayHandlers(tasks: TaskRecord[], now: Date, zone: string) {
   return {
     add: (task: TaskRecord) =>
-      attempt(() => addToToday(task.id, tasks, now, zone), "add_to_today", "Couldn't add to today. Try again."),
+      attempt(() => addAndReport(task.id, tasks, now, zone), "add_to_today", "Couldn't add to today. Try again."),
     move: (task: TaskRecord, direction: "up" | "down") =>
       attempt(() => movePick(task.id, direction, tasks, now, zone), "move_pick", "Couldn't reorder today. Try again."),
     remove: (task: TaskRecord) =>
@@ -101,7 +105,7 @@ function useAnnouncer() {
  */
 export function TodayStrip({ tasks, onToggleComplete, onInspect }: TodayStripProps) {
   const today = useToday(tasks);
-  const [tidyDismissed, setTidyDismissed] = useState(false);
+  const tidyDismissed = useSyncExternalStore(tidyDismissal.subscribe, tidyDismissal.isDismissed, () => false);
   const { status, headingRef, announce, done } = useAnnouncer();
   const pickRequested = usePickTodayRequest();
   const act = useTodayHandlers(tasks, today.now, today.zone);
@@ -128,7 +132,7 @@ export function TodayStrip({ tasks, onToggleComplete, onInspect }: TodayStripPro
         />
       ) : null}
       {today.needsTidy && !tidyDismissed ? (
-        <TidyOffer onTidy={() => done(act.tidy(), "Tidied today")} onDismiss={() => setTidyDismissed(true)} />
+        <TidyOffer onTidy={() => done(act.tidy(), "Tidied today")} onDismiss={tidyDismissal.dismiss} />
       ) : null}
       {today.hasFreeSlot ? <FreeSlotOffers today={today} startOpen={pickRequested} onAdd={(task) => done(act.add(task), `Added ${task.title} to today`)} /> : null}
     </section>

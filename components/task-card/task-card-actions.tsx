@@ -1,8 +1,7 @@
 "use client";
 
-import { BookmarkIcon, SunIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon, ArrowRightLeftIcon, ArrowUpIcon } from "lucide-react";
-import { cn, formatRelative, isRepeatClick } from "@/lib/utils";
-import { DATE_CONFIG, TIME_MS } from "@/lib/constants";
+import { BookmarkIcon, SunIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, MoonIcon, ArrowRightLeftIcon, ArrowUpIcon } from "lucide-react";
+import { cn, isRepeatClick } from "@/lib/utils";
 import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -11,40 +10,13 @@ import { useEscalation } from "@/components/task-card/use-escalation";
 import { QUADRANT_INK, quadrantForTask, quadrants } from "@/lib/quadrants";
 import { SNOOZE_PRESETS } from "@/lib/snooze-presets";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
+import { DueChip } from "@/components/task-card/due-chip";
 import { useTodayMenu } from "@/components/today-strip/today-menu-context";
 
 const MARK_URGENT_HINT = {
   "urgent-important": "Moves to Do First",
   "urgent-not-important": "Moves to Delegate",
 } as const;
-
-/** True when a future due date is within 24h. Used to color-shift the clock glyph. */
-function isWithinDay(iso: string): boolean {
-  const due = new Date(iso).getTime();
-  const now = Date.now();
-  const diff = due - now;
-  return diff > 0 && diff < TIME_MS.DAY;
-}
-
-const SHORT_DATE = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, { month: "short", day: "numeric" });
-const DATE_WITH_YEAR = new Intl.DateTimeFormat(DATE_CONFIG.LOCALE, { month: "short", day: "numeric", year: "numeric" });
-
-/** Adds the year only when it differs, so a mistyped year shows on the card. */
-function formatOverdueDate(iso: string): string {
-  const date = new Date(iso);
-  const formatter = date.getFullYear() === new Date().getFullYear() ? SHORT_DATE : DATE_WITH_YEAR;
-  return formatter.format(date);
-}
-
-/**
- * "2d overdue · Aug 20". The date half is the point of moving this into the
- * footer: the old corner badge stated the age and hid the date it was measured
- * from, which is the one number a reader needs to reschedule.
- */
-function overdueLabel(days: number, dueDate?: string): string {
-  const age = `${days}d overdue`;
-  return dueDate ? `${age} · ${formatOverdueDate(dueDate)}` : age;
-}
 
 export interface TaskCardActionsProps {
   task: TaskRecord;
@@ -84,36 +56,7 @@ export function TaskCardActions({
       className="flex items-center justify-between gap-2 text-xs text-foreground-muted"
     >
       <div className="flex items-center gap-2">
-        {taskIsOverdue ? (
-          // Same anatomy as the "Due today" chip below, one row down the
-          // temperature scale, so the footer stays a single scan column
-          // instead of asking the eye to also check the card's corner.
-          <span
-            data-testid="task-card-overdue-chip"
-            className="flex items-center gap-1 rounded-full bg-status-overdue-muted px-[9px] py-0.5 font-semibold text-status-overdue-ink"
-          >
-            <AlertTriangleIcon className="h-3 w-3 shrink-0" aria-hidden />
-            {overdueLabel(overdueDays, task.dueDate)}
-          </span>
-        ) : taskIsDueToday ? (
-          // Due today reads as accent-semibold; the warning glyph is reserved
-          // for the overdue state. Text is --accent-d, not --accent: the base
-          // accent measures 4.53:1 on its own tint, too close to the floor.
-          <span className="flex items-center gap-1 rounded-full bg-accent-tint px-[9px] py-0.5 text-accent-d font-semibold">
-            <ClockIcon className="h-3 w-3" />
-            Due today
-          </span>
-        ) : task.dueDate ? (
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 truncate",
-              isWithinDay(task.dueDate) && "text-status-overdue-ink"
-            )}
-          >
-            <ClockIcon className="h-3 w-3 shrink-0" aria-hidden />
-            {formatRelative(task.dueDate)}
-          </span>
-        ) : null}
+        <DueChip task={task} taskIsOverdue={taskIsOverdue} taskIsDueToday={taskIsDueToday} overdueDays={overdueDays} />
         {task.recurrence !== "none" ? (
           <span
             className="flex items-center gap-1 text-accent"

@@ -5,6 +5,7 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
+import { DueChip, dueChipProps } from "@/components/task-card/due-chip";
 import type { TaskRecord } from "@/lib/types";
 
 const ORDINALS = ["first", "second", "third"] as const;
@@ -49,6 +50,9 @@ function PickRow({ task, index, count, onToggleComplete, onInspect, onMove, onRe
         {task.title}
         <span className="sr-only">, {ORDINALS[index]}</span>
       </button>
+      <span className="flex items-center text-xs text-foreground-muted">
+        <DueChip task={task} {...dueChipProps(task)} />
+      </span>
       <button type="button" className={iconButton} aria-label={`Move ${task.title} up`} aria-disabled={index === 0} onClick={() => index > 0 && onMove(task, "up")}>
         <ChevronUpIcon className="h-4 w-4" aria-hidden />
       </button>

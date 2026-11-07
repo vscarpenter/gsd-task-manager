@@ -3,7 +3,8 @@
 import { toast } from "sonner";
 import { createContext, useContext, type ReactNode } from "react";
 import type { TaskRecord } from "@/lib/types";
-import { addToToday, removeFromToday } from "@/lib/tasks/top-three-actions";
+import { removeFromToday } from "@/lib/tasks/top-three-actions";
+import { addAndReport } from "./add-feedback";
 import { reportTaskMutationError } from "@/components/matrix-simplified/task-actions";
 import { useToday } from "./use-today";
 
@@ -25,9 +26,9 @@ const TOAST_MS = 2500;
 
 async function attempt(run: () => Promise<unknown>, action: string, message: string, done: string): Promise<void> {
   try {
-    await run();
-    // Toasts are announced, and the card menu is often far from the strip.
-    toast.success(done, { duration: TOAST_MS });
+    // A refused add already said so, so it gets no success toast. Toasts are announced,
+    // and the card menu is often far from the strip.
+    if ((await run()) !== false) toast.success(done, { duration: TOAST_MS });
   } catch (error) {
     reportTaskMutationError(error, action, message);
   }
@@ -40,7 +41,7 @@ export function TodayMenuProvider({ tasks, children }: { tasks: TaskRecord[]; ch
   const menu: TodayMenu = {
     isPicked: (task) => pickedIds.has(task.id),
     isFull: !hasFreeSlot,
-    add: (task) => void attempt(() => addToToday(task.id, tasks, now, zone), "add_to_today", "Couldn't add to today. Try again.", "Added to today"),
+    add: (task) => void attempt(() => addAndReport(task.id, tasks, now, zone), "add_to_today", "Couldn't add to today. Try again.", "Added to today"),
     remove: (task) => void attempt(() => removeFromToday(task.id), "remove_from_today", "Couldn't remove that from today. Try again.", "Removed from today"),
   };
   return <TodayMenuContext.Provider value={menu}>{children}</TodayMenuContext.Provider>;
