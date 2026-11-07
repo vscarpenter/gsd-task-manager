@@ -208,16 +208,17 @@ describe('the step after the pull', () => {
     expect(fake.state.events).not.toContain('listing');
   });
 
-  // Reading 2 (section 8, owner item 26) isn't decided, so this follows Android today.
-  it('a remembered id with an archive row comes back active, as Android does', async () => {
+  // Reading 2 (section 8, owner item 26): the archive is the user's last act, so it stands.
+  it('a remembered id with an archive row stays archived', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '', title: 'From the account' })] });
     await getDb().archivedTasks.put({ ...localRow(SAVED, { completed: true }), archivedAt: NEWER });
     await rememberForResurrect(['t-a']);
 
     await fullSync('auto');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'From the account' });
-    await expect(getDb().archivedTasks.get('t-a')).resolves.toBeUndefined();
+    await expect(getDb().archivedTasks.get('t-a')).resolves.toBeDefined();
+    await expect(getDb().tasks.get('t-a')).resolves.toBeUndefined();
+    await expect(remembered()).resolves.toEqual([]);
   });
 });
 

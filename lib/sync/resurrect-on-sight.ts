@@ -109,12 +109,13 @@ async function resurrectOne(record: RecordModel): Promise<Outcome> {
   const local = await db.tasks.get(remote.id);
   if (local) return takeIfStrictlyNewer(record, local);
 
+  // An archive row stands: it's the user's last act here, and archiving while
+  // signed out keeps the archive too (spec rule 6, reading 2, owner item 26).
+  if (await db.archivedTasks.get(remote.id)) return 'nothing';
   const trashed = await db.deletedTasks.get(remote.id);
-  const archived = await db.archivedTasks.get(remote.id);
-  if (!trashed && !archived) return 'nothing';
-  if (trashed) await db.deletedTasks.delete(remote.id);
-  if (archived) await db.archivedTasks.delete(remote.id);
-  await db.tasks.put(pocketBaseToTaskRecord(record, trashed ?? archived) ?? remote);
+  if (!trashed) return 'nothing';
+  await db.deletedTasks.delete(remote.id);
+  await db.tasks.put(pocketBaseToTaskRecord(record, trashed) ?? remote);
   return 'restored';
 }
 
