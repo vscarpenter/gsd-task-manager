@@ -67,6 +67,17 @@ describe("notification checker on a real database", () => {
 		expect(vi.mocked(notifications.showTaskNotification).mock.calls[0][0].id).toBe("task-due");
 	});
 
+	it("a posted reminder doesn't reset staleness", async () => {
+		const stale = "2026-01-01T00:00:00.000Z";
+		await getDb().tasks.put(createMockTask({ id: "task-stale", dueDate: dueInMinutes(10), updatedAt: stale }));
+
+		await notificationChecker.checkAndNotify();
+
+		const row = await getDb().tasks.get("task-stale");
+		expect(row?.notificationSent).toBe(true);
+		expect(row?.updatedAt).toBe(stale);
+	});
+
 	it("ignores saved items for reminders and badges", async () => {
     await getDb().tasks.put(createMockTask({ id: "saved-due", dueDate: dueInMinutes(10), savedAt: new Date().toISOString() }));
     await notificationChecker.checkAndNotify();
