@@ -52,10 +52,9 @@ export interface PushResult {
 type QueuedTask = NonNullable<SyncQueueItem['payload']>;
 
 /**
- * The offset a push sends: the payload's, else the stored row's, else this
- * device's default (D-10). A legacy null never reaches the wire. The row counts
- * only when it is the same write as the payload; a newer row has its own queued
- * item that carries its own offset.
+ * The offset a push sends: the payload's, else the stored row's at any stamp, else
+ * this device's default (D-10). A legacy null never reaches the wire. Only the
+ * write-back below is guarded against a newer edit, because it writes to the row.
  */
 async function resolveNotifyBefore(
   payload: QueuedTask,
@@ -63,11 +62,10 @@ async function resolveNotifyBefore(
 ): Promise<{ task: QueuedTask; storeOnRow: boolean }> {
   if (typeof payload.notifyBefore === 'number') return { task: payload, storeOnRow: false };
   const row = await getDb().tasks.get(payload.id);
-  const sameWrite = row?.updatedAt === payload.updatedAt;
-  if (sameWrite && typeof row?.notifyBefore === 'number') {
+  if (typeof row?.notifyBefore === 'number') {
     return { task: { ...payload, notifyBefore: row.notifyBefore }, storeOnRow: false };
   }
-  return { task: { ...payload, notifyBefore: defaultReminder }, storeOnRow: sameWrite };
+  return { task: { ...payload, notifyBefore: defaultReminder }, storeOnRow: row?.updatedAt === payload.updatedAt };
 }
 
 /**
