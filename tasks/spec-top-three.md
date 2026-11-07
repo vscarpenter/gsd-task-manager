@@ -102,7 +102,7 @@ Keep it quiet: a short list above the matrix, not a new page. The matrix stays t
 | Section | "Today" above the matrix on web, and at the top of the Matrix screen on Apple and Android |
 | With picks | Rows in rank order, using the existing card's title, due chip, and complete control |
 | With no picks | One line: "Pick up to three for today", which opens the suggestions |
-| Suggestions | The first three from section 3.3, each with "Add to today" |
+| Suggestions | The first three from section 3.3, each with "Add to today". With none, one line: "Nothing to suggest right now." |
 | Carry-over | "From yesterday" or "From Friday" above the suggestions, only while a slot is free |
 | Conflict | "Two devices picked for today. Tidy up?" with Tidy and Not now. Not now writes nothing, and the offer returns next launch |
 | Card action | "Add to today" or "Remove from today", in the card menu. When today is full it reads "Today is full" and is disabled |
@@ -156,10 +156,10 @@ Saved showed that a same-version merge alone isn't enough (`S-AND-01`, `OWNER-DE
 
 **C4-4. A local copy that wins gets only the fields it never knew about.** During the backfill, the local copy wins when it's strictly newer than the remote, or when a queued write holds off a far-future remote (C4-2). In either case:
 - Copy `focusDate` and `focusRank` if the local pair is unset, the remote's is set, and the stored version is below 4. This copy needs no guard: completing or saving a task clears nothing (section 3.1), so a pick on a completed or Saved row is inert, and skipping the copy would let the push clear the server's pick.
-- Copy `savedAt` if the local value is null, the remote's is set, the stored version is below 3, and the row could be Saved, meaning it isn't completed and has no running time entry. Call each client's own check rather than restating it: web `saveTaskForLater` (`lib/tasks/saved.ts:14-17`), iOS `TaskStore.moveToSaved` (`GSDStore/TaskStore.swift:242-243`, inline today), and Android `SavedPlacement.canSave` (`core/model/.../SavedPlacement.kt:12`). When the check fails, the newer completion or timer wins, and the server ends with the task not Saved. A completed row that's also Saved would leave the matrix, never auto-archive, and spread to every client (S-WEB-02).
+- Copy `savedAt` if the local value is null, the remote's is set, the stored version is below 3, and the row could be Saved, meaning it isn't completed and has no running time entry. Call each client's own check rather than restating it: web `saveTaskForLater` (`lib/tasks/saved.ts:14-17`), iOS `SavedPlacement.canSave` (`GSDModel/SavedPlacement.swift`, which IOS-SAVED extracts from `TaskStore.moveToSaved`), and Android `SavedPlacement.canSave` (`core/model/.../SavedPlacement.kt:12`). When the check fails, the newer completion or timer wins, and the server ends with the task not Saved. A completed row that's also Saved would leave the matrix, never auto-archive, and spread to every client (S-WEB-02).
 - Keep `updatedAt` and every other field. Queue nothing. Don't count a conflict. Run this after the tombstone check, so archived and trashed rows stay untouched.
 - *Why the version gate matters:* a null field means "this build never heard of it" only on a build older than the field. On a contract 3 device, a null `savedAt` on a newer row is a real Return that may not have pushed yet. Android's current `backfill && lacksPlacement` (`core/sync/.../SyncEngine.kt:144`, `:214-216`) is right at contract 3, and at contract 4 it would un-return that task. Contract 4 replaces it with this gate and keeps its `localWriteWins` branch (`:143`) as the hold-off case above.
-- *What this doesn't fix:* a contract 3 web or iOS device can't repair `saved_at` this way. That's item 7, and it needs its own change.
+- *Item 7 comes first:* WEB-SAVED and IOS-SAVED build the `savedAt` half of this copy at contract 3 (sprint 2 Goal 0). Contract 4 then adds the focus pair on web and iOS.
 - *Accepted edge, early un-pick:* a pick and an un-pick on this device before the first sync finishes can come back as picked if another client has a pick for that task. Nothing is lost, and the user can remove it.
 - *Accepted edge, no stored version:* a missing version reads as older than every field, so `savedAt` is copied too. Two shipped paths give a build that knew Saved a missing or low version. A contract 3 iOS build forgets the version on sign-out (`SyncCursor.clear()`). Web's literal `pullCursorVersion: 2` (`use-sync-auth-dialog.ts:214`) stands on a shipped build until its first completed pull stamps the real value. So on those paths a Return that hasn't pushed, then an upgrade, comes back Saved. On iOS that also takes a sign-out and sign-in first. The copy still runs, because a missing version usually does mean an older build, and skipping it would clear `saved_at` for everyone. Nothing is lost, and the user can return the task again. C4-1's changes close both paths for later contracts.
 
@@ -169,7 +169,7 @@ Saved showed that a same-version merge alone isn't enough (`S-AND-01`, `OWNER-DE
 - *Web:* `upsertRemoteTask` sends the payload as is (`lib/sync/pb-push.ts:60`). Read the row at drain time.
 - *iOS:* `toWire(payload)` at `SyncEngine.swift:162` does the same. The new wire fields must be optional, so they can be omitted.
 - *Android:* extend what `push` already does for `savedAt` (`SyncEngine.kt:259-265`, and `sendSavedAt` at `WireMapper.kt:18`).
-- This is scoped to the focus fields. Leave `saved_at` for item 7.
+- `saved_at` follows the same rule. Android already sends it from the current row (`SyncEngine.kt:259-265`), and WEB-SAVED and IOS-SAVED do the same at contract 3.
 
 **C4-7. Ordinary pulls don't change.** Strictly newer wins and a same-version record is a no-op, so a local un-pick stays un-picked. Realtime keeps the same rule.
 
@@ -280,7 +280,7 @@ On 2026-10-31 I ran these on a throwaway PocketBase 0.40.4 with an empty hooks d
 
 The draft is `docker/pb_migration_drafts/1794844800_top_three.js.draft`. It isn't wired in: the Dockerfile copies only `pb_migrations` and `pb_fresh_migrations`, and the suffix keeps it from loading. It can't live in `pb_fresh_migrations`, because `tests/docker-migrations.test.ts:114-118` rejects a fresh-only file and `gsd_build_fresh_migrations` would ship any `.js` file there to new installs.
 
-Sprint 2 moves it to `docker/pb_migrations/` as a `.js` file with a then-current timestamp. It runs at container boot and needs no copy in `pb_fresh_migrations`. It also adds both fields to `scripts/setup-pocketbase-collections.sh`, with top-level validators rather than that script's `options` shape, and to `tests/fixtures/pinned-copies/pb-record-shape.json`.
+Sprint 2 moves it to `docker/pb_migrations/` as a `.js` file with a then-current timestamp. It runs at container boot and needs no copy in `pb_fresh_migrations`. It also adds both fields to `scripts/setup-pocketbase-collections.sh`, with top-level validators rather than that script's `options` shape. In `tests/fixtures/pinned-copies/pb-record-shape.json`, SPEC-2 adds them only to the server records that `fromRecord` reads. WEB-C4 adds them to `wireFields` and `expected`, along with both mappers' mapping, because the file pins the web and MCP mappers against one key list (S-WEB-04).
 
 ### Hosted: a manual step for Vinny
 
