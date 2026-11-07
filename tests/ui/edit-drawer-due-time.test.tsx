@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
@@ -104,7 +104,8 @@ describe("<EditDrawer> due time of day", () => {
 
   it("clearing the due date drops the time controls and the date", async () => {
     const onSubmit = open({ dueDate: localIso(4, 30, 15, 30) });
-    await user.click(screen.getByRole("button", { name: "None" }));
+    // The reminder field now has its own "None", so scope this to the due date presets.
+    await user.click(within(screen.getByRole("group", { name: /due date/i })).getByRole("button", { name: "None" }));
     expect(screen.queryByRole("switch", { name: /all day/i })).toBeNull();
     expect(await savedDueDate(onSubmit)).toBeUndefined();
   });
