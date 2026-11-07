@@ -73,7 +73,7 @@ export const createTaskTool: Tool = {
       notifyBefore: {
         type: 'integer',
         description:
-          'Minutes before due date to send a reminder notification (0 disables the reminder)',
+          'Minutes before due date to send a reminder notification (default 15). 0 reminds at the due time; to turn reminders off, set notificationEnabled: false',
         minimum: 0,
       },
       notificationEnabled: {
@@ -173,7 +173,7 @@ export const updateTaskTool: Tool = {
       },
       notifyBefore: {
         type: 'integer',
-        description: 'Minutes before due date to send a reminder (0 disables the reminder)',
+        description: 'Minutes before due date to send a reminder. 0 reminds at the due time; to turn reminders off, set notificationEnabled: false',
         minimum: 0,
       },
       notificationEnabled: {

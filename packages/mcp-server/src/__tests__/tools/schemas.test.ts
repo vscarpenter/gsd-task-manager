@@ -333,6 +333,15 @@ describe('Tool Schemas', () => {
       expect(props(bulkUpdateTasksTool).taskIds.description).toMatch(/10 for type=delete/);
     });
 
+    it('notifyBefore text says 0 fires at the due time and points to notificationEnabled for off', () => {
+      for (const tool of [createTaskTool, updateTaskTool]) {
+        const text = props(tool).notifyBefore.description;
+        expect(text).not.toMatch(/disables/i);
+        expect(text).toMatch(/0 .*at the due time/);
+        expect(text).toMatch(/notificationEnabled: false/);
+      }
+    });
+
     it('get_token_status lists the invalid status', () => {
       expect(getTokenStatusTool.description).toMatch(/invalid/);
     });
