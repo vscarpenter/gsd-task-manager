@@ -105,7 +105,8 @@ async function upsertRemoteTask(
   const pb = getPocketBase();
   const defaultReminder = await readDefaultReminder();
   const { task, storeOnRow } = await resolveNotifyBefore(payload!, defaultReminder);
-  const { saved_at: _queuedSavedAt, ...queued } = taskRecordToPocketBase(task, ownerId, deviceId, defaultReminder);
+  const { saved_at: _savedAt, focus_date: _focusDate, focus_rank: _focusRank, ...queued } =
+    taskRecordToPocketBase(task, ownerId, deviceId, defaultReminder);
   const current = await getDb().tasks.get(payload!.id);
   const pbData = { ...queued, ...placementToWire(current) };
 

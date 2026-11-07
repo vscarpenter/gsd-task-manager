@@ -12,7 +12,7 @@
     "due_date", "completed", "completed_at", "recurrence", "tags", "subtasks",
     "dependencies", "notification_enabled", "notification_sent", "notify_before",
     "last_notification_at", "estimated_minutes", "time_spent", "time_entries",
-    "snoozed_until", "saved_at", "client_updated_at", "client_created_at", "device_id"
+    "snoozed_until", "saved_at", "focus_date", "focus_rank", "client_updated_at", "client_created_at", "device_id"
   ],
   "toRecord": [
     {
@@ -40,6 +40,8 @@
         "timeEntries": [{ "id": "te-1", "startedAt": "2026-10-05T13:00:00.000Z", "endedAt": "2026-10-05T13:20:00.000Z", "notes": "first pass" }],
         "snoozedUntil": "2026-10-06T09:00:00.000Z",
         "savedAt": "2026-10-05T18:00:00.000Z",
+        "focusDate": "2026-10-05",
+        "focusRank": 2,
         "createdAt": "2026-10-01T12:00:00.000Z",
         "updatedAt": "2026-10-05T15:30:00.000Z"
       },
@@ -67,6 +69,8 @@
         "time_entries": [{ "id": "te-1", "startedAt": "2026-10-05T13:00:00.000Z", "endedAt": "2026-10-05T13:20:00.000Z", "notes": "first pass" }],
         "snoozed_until": "2026-10-06T09:00:00.000Z",
         "saved_at": "2026-10-05T18:00:00.000Z",
+        "focus_date": "2026-10-05",
+        "focus_rank": 2,
         "client_updated_at": "2026-10-05T15:30:00.000Z",
         "client_created_at": "2026-10-01T12:00:00.000Z",
         "device_id": "device_fixture_1"
@@ -111,6 +115,8 @@
         "time_entries": [],
         "snoozed_until": "",
         "saved_at": "",
+        "focus_date": "",
+        "focus_rank": 0,
         "client_updated_at": "2026-10-02T08:00:00.000Z",
         "client_created_at": "2026-10-02T08:00:00.000Z",
         "device_id": "device_fixture_1"
@@ -178,6 +184,8 @@
         "completed": true,
         "completedAt": "2026-10-05T15:30:00.000Z",
         "savedAt": "2026-10-05T18:00:00.000Z",
+        "focusDate": "2026-10-05",
+        "focusRank": 2,
         "recurrence": "weekly",
         "tags": ["work", "review"],
         "subtasks": [{ "id": "sub-1", "title": "Pull the metrics", "completed": true }],
@@ -240,6 +248,61 @@
         "device_id": "device_fixture_1",
         "created": "2026-10-02T08:00:01.000Z",
         "updated": "2026-10-02T08:00:01.000Z"
+      },
+      "expected": {
+        "id": "task-fixture-sparse",
+        "title": "Call the bank",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "completed": false,
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notificationEnabled": true,
+        "notificationSent": false,
+        "timeSpent": 0,
+        "timeEntries": [],
+        "createdAt": "2026-10-02T08:00:00.000Z",
+        "updatedAt": "2026-10-02T08:00:00.000Z"
+      }
+    },
+    {
+      "name": "an invalid focus pair becomes neither",
+      "record": {
+        "id": "pbrecfixture002",
+        "task_id": "task-fixture-sparse",
+        "owner": "owner_fixture_1",
+        "title": "Call the bank",
+        "description": "",
+        "urgent": false,
+        "important": true,
+        "quadrant": "not-urgent-important",
+        "due_date": "",
+        "completed": false,
+        "completed_at": "",
+        "recurrence": "none",
+        "tags": [],
+        "subtasks": [],
+        "dependencies": [],
+        "notification_enabled": true,
+        "notification_sent": false,
+        "notify_before": null,
+        "last_notification_at": "",
+        "estimated_minutes": null,
+        "time_spent": 0,
+        "time_entries": [],
+        "snoozed_until": "",
+        "saved_at": "",
+        "client_updated_at": "2026-10-02T08:00:00.000Z",
+        "client_created_at": "2026-10-02T08:00:00.000Z",
+        "device_id": "device_fixture_1",
+        "created": "2026-10-02T08:00:01.000Z",
+        "updated": "2026-10-02T08:00:01.000Z",
+        "focus_date": "2026-10-05",
+        "focus_rank": 4
       },
       "expected": {
         "id": "task-fixture-sparse",
