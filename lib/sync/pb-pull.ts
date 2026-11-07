@@ -7,6 +7,7 @@
 
 import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { createLogger } from '@/lib/logger';
 import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
@@ -28,6 +29,11 @@ export interface PullOptions {
    * older build never read (SYNC_CONFIG.PULL_CURSOR_VERSION).
    */
   mergeSameVersion?: boolean;
+  /**
+   * The pull contract the local rows were stored under, or undefined when an
+   * older build left none. It decides which empty fields mean "never read".
+   */
+  storedContractVersion?: number;
 }
 
 interface PreparedRemoteRecord {
@@ -69,10 +75,58 @@ function acceptsRemoteVersion(remoteUpdatedAt: string, localUpdatedAt: string, m
   return remote > local || (mergeSameVersion && remote === local);
 }
 
+/**
+ * During a backfill, a locally newer row keeps its own version but takes the
+ * fields its build never read. An empty savedAt means "never read" only on a
+ * row stored before the contract that added saved_at; after it, the empty
+ * value is a real Return. Returns the repaired row, or null to leave it alone.
+ */
+export function copyUnreadFields(
+  local: TaskRecord,
+  remote: TaskRecord,
+  storedContractVersion: number | undefined,
+): TaskRecord | null {
+  const neverReadSavedAt = (storedContractVersion ?? 0) < SYNC_CONFIG.SAVED_AT_CONTRACT_VERSION;
+  if (!neverReadSavedAt || local.savedAt || !remote.savedAt) return null;
+  if (!canHoldSavedPlacement(local)) return null;
+  return { ...local, savedAt: remote.savedAt };
+}
+
+/**
+ * The same rule saveTaskForLater applies. A newer local completion or running
+ * timer outranks an older Save, so the row stays in the matrix and its push
+ * clears saved_at instead of spreading a completed Saved task.
+ */
+function canHoldSavedPlacement(task: TaskRecord): boolean {
+  return !task.completed && !task.timeEntries?.some((entry) => !entry.endedAt);
+}
+
+/** PullOptions with its defaults applied, as the per-record merge uses them. */
+interface BackfillPlan {
+  mergeSameVersion: boolean;
+  storedContractVersion: number | undefined;
+}
+
+/**
+ * A locally newer row keeps its version. A backfill still repairs the fields
+ * its build never read. That's a repair, not a pull of the record, so it
+ * doesn't count as pulled and doesn't move the cursor.
+ */
+async function repairUnreadFields(
+  db: ReturnType<typeof getDb>,
+  local: TaskRecord | undefined,
+  remote: TaskRecord,
+  plan: BackfillPlan,
+): Promise<void> {
+  if (!local || !plan.mergeSameVersion) return;
+  const repaired = copyUnreadFields(local, remote, plan.storedContractVersion);
+  if (repaired) await db.tasks.put(repaired);
+}
+
 async function applyPreparedRecord(
   db: ReturnType<typeof getDb>,
   prepared: PreparedRemoteRecord,
-  mergeSameVersion: boolean,
+  plan: BackfillPlan,
 ): Promise<number> {
   const { record, remoteTask } = prepared;
   const rawUpdatedAt = readClientUpdatedAt(record);
@@ -84,8 +138,11 @@ async function applyPreparedRecord(
   const localTask = await db.tasks.get(remoteTask.id);
   const merged = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
   if (!merged) return 0;
-  const remoteWins = !localTask || acceptsRemoteVersion(merged.updatedAt, localTask.updatedAt, mergeSameVersion);
-  if (!remoteWins) return 0;
+  const remoteWins = !localTask || acceptsRemoteVersion(merged.updatedAt, localTask.updatedAt, plan.mergeSameVersion);
+  if (!remoteWins) {
+    await repairUnreadFields(db, localTask, remoteTask, plan);
+    return 0;
+  }
   if (archived) await db.archivedTasks.delete(remoteTask.id);
   if (deleted) await db.deletedTasks.delete(remoteTask.id);
   if (localTask) await db.tasks.put(merged);
@@ -98,7 +155,7 @@ async function applyPreparedRecord(
  * The fetch may have outlived a sign-out, so nothing is written unless
  * `ownerId` still owns the sync session inside the transaction.
  */
-async function applyRemoteRecords(records: RecordModel[], ownerId: string, mergeSameVersion: boolean): Promise<{
+async function applyRemoteRecords(records: RecordModel[], ownerId: string, plan: BackfillPlan): Promise<{
   pulledCount: number;
   skippedCount: number;
   appliedRecords: PreparedRemoteRecord[];
@@ -111,7 +168,7 @@ async function applyRemoteRecords(records: RecordModel[], ownerId: string, merge
     await assertSyncSessionCurrent(ownerId);
     for (const prepared of acceptedRecords) {
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- one atomic Dexie transaction preserves tombstone/live invariants
-      const applied = await applyPreparedRecord(db, prepared, mergeSameVersion);
+      const applied = await applyPreparedRecord(db, prepared, plan);
       pulledCount += applied;
       if (applied > 0) appliedRecords.push(prepared);
     }
@@ -158,7 +215,10 @@ export async function pullRemoteChanges(
     sort: 'client_updated_at,task_id,id',
   });
 
-  const { pulledCount, skippedCount, appliedRecords } = await applyRemoteRecords(records, ownerId, options.mergeSameVersion ?? false);
+  const { pulledCount, skippedCount, appliedRecords } = await applyRemoteRecords(records, ownerId, {
+    mergeSameVersion: options.mergeSameVersion ?? false,
+    storedContractVersion: options.storedContractVersion,
+  });
   if (skippedCount > 0) {
     logger.warn('Skipped invalid remote records during pull', { skippedCount });
   }

@@ -62,6 +62,13 @@ export const SYNC_CONFIG = {
    */
   PULL_CURSOR_VERSION: 3,
 
+  /**
+   * The first pull contract that read saved_at. Rows stored under an older
+   * one, or none, never heard of the field, so their empty savedAt says
+   * nothing and must not reach the server as "".
+   */
+  SAVED_AT_CONTRACT_VERSION: 3,
+
   /** Hard aggregate ceiling for any authoritative remote task scan. */
   MAX_REMOTE_TASKS: 10_000,
 

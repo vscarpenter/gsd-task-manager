@@ -7,7 +7,8 @@
 
 import { getPocketBase } from './pocketbase-client';
 import { getSyncQueue } from './queue';
-import { taskRecordToPocketBase } from './task-mapper';
+import { placementToWire, taskRecordToPocketBase } from './task-mapper';
+import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskEntry } from './pb-sync-helpers';
 import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
@@ -49,6 +50,7 @@ export interface PushResult {
 
 /**
  * Upsert a task to PocketBase. Creates if no remote record exists, updates otherwise.
+ * Placement comes from the current row (placementToWire), not the payload.
  */
 async function upsertRemoteTask(
   payload: SyncQueueItem['payload'],
@@ -57,7 +59,9 @@ async function upsertRemoteTask(
   deviceId: string,
 ): Promise<string> {
   const pb = getPocketBase();
-  const pbData = taskRecordToPocketBase(payload!, ownerId, deviceId);
+  const { saved_at: _queuedSavedAt, ...queued } = taskRecordToPocketBase(payload!, ownerId, deviceId);
+  const current = await getDb().tasks.get(payload!.id);
+  const pbData = { ...queued, ...placementToWire(current) };
 
   if (pbRecordId) {
     await pb.collection('tasks').update(pbRecordId, pbData);

@@ -15,7 +15,7 @@ import { notifySyncSuccess, notifySyncError } from './notifications';
 import { isTransientSyncFailure, sanitizeSyncError, extractRetryAfterMs } from './error-categorizer';
 import { ensureValidAuth } from './pb-auth';
 import { getDeviceId, isRemoteNewerThanArchive, readClientUpdatedAt } from './pb-sync-helpers';
-import { pushLocalChanges } from './pb-push';
+import { pushLocalChanges, type PushResult } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
 import { classifyRemoteDeletion } from './queue';
 import { StaleSyncSessionError, assertSyncSessionCurrent, getSessionOwner } from './sync-session';
@@ -133,6 +133,8 @@ interface SyncOutcomeContext {
 interface PullPlan {
   cursor: string | null;
   mergeSameVersion: boolean;
+  /** The contract the local rows were stored under; undefined when none was recorded. */
+  storedContractVersion: number | undefined;
 }
 
 /**
@@ -145,10 +147,38 @@ interface PullPlan {
  * mixing it with client_updated_at can permanently skip a slow-clock write.
  */
 function resolvePullCursor(config: PBSyncConfig | undefined): PullPlan {
-  if (config?.pullCursorVersion === SYNC_CONFIG.PULL_CURSOR_VERSION) {
-    return { cursor: config.lastClientUpdatedAt ?? null, mergeSameVersion: false };
+  const storedContractVersion = config?.pullCursorVersion;
+  if (storedContractVersion === SYNC_CONFIG.PULL_CURSOR_VERSION) {
+    return { cursor: config?.lastClientUpdatedAt ?? null, mergeSameVersion: false, storedContractVersion };
   }
-  return { cursor: null, mergeSameVersion: true };
+  return { cursor: null, mergeSameVersion: true, storedContractVersion };
+}
+
+interface SyncPasses {
+  pushResult: PushResult;
+  pullResult: Awaited<ReturnType<typeof pullRemoteChanges>>;
+}
+
+/**
+ * An ordinary sync pushes, then pulls. While a backfill is owed it pulls
+ * first, so a row an older build stored without a field is repaired before
+ * any push sends that field empty and clears it on the server. Returns null
+ * when the pull ran without a session; a backfill then pushes nothing.
+ */
+async function runSyncPasses(ownerId: string, plan: PullPlan): Promise<SyncPasses | null> {
+  const pull = () => pullRemoteChanges(plan.cursor, {
+    mergeSameVersion: plan.mergeSameVersion,
+    storedContractVersion: plan.storedContractVersion,
+  });
+  if (!plan.mergeSameVersion) {
+    const pushResult = await pushLocalChanges(ownerId);
+    const pullResult = await pull();
+    return pullResult.authenticated ? { pushResult, pullResult } : null;
+  }
+  const pullResult = await pull();
+  if (!pullResult.authenticated) return null;
+  const pushResult = await pushLocalChanges(ownerId);
+  return { pushResult, pullResult };
 }
 
 function cancelledSync(): PBSyncResult {
@@ -157,7 +187,8 @@ function cancelledSync(): PBSyncResult {
 }
 
 /**
- * Full sync: push local changes, then pull remote changes.
+ * Full sync: push local changes, then pull remote changes (pull first while a
+ * backfill is owed, see runSyncPasses).
  * Handles auth checks, cursor updates, partial failures, and error reporting.
  * A sync whose session ends partway through returns `cancelled` and leaves no
  * cursor, retry state, history row, or toast behind.
@@ -184,15 +215,14 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
     // react-doctor-disable-next-line react-doctor/async-parallel -- auth->push->pull ordering is required; not independent
     await ensureValidAuth();
 
-    const pushResult = await pushLocalChanges(ownerId);
-    const pull = resolvePullCursor(config);
-    const pullResult = await pullRemoteChanges(pull.cursor, { mergeSameVersion: pull.mergeSameVersion });
+    const passes = await runSyncPasses(ownerId, resolvePullCursor(config));
 
     // A pull that ran without a session fetched nothing, so reporting success
     // would claim a full sync that never happened.
-    if (!pullResult.authenticated) {
+    if (!passes) {
       return await reportAuthFailure(ctx);
     }
+    const { pushResult, pullResult } = passes;
 
     await updateSyncCursor(ownerId, pullResult.maxObservedTimestamp, pullResult.authenticated);
 
