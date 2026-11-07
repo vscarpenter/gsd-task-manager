@@ -78,8 +78,9 @@ export async function runTaskSyncTransaction<T>(
     "rw!",
     // `deletedTasks` is in scope for every task mutation because delete moves a
     // record into it and restore moves one out (ADR 0015); a narrower scope
-    // would make those two operations non-atomic.
-    [db.tasks, db.deletedTasks, db.syncQueue],
+    // would make those two operations non-atomic. `syncMetadata` is in scope so
+    // a delete made while signed out remembers its id in the same commit.
+    [db.tasks, db.deletedTasks, db.syncQueue, db.syncMetadata],
     () => mutation({ syncEnabled, enqueue })
   );
   if (didEnqueue) scheduleSyncAfterChange();

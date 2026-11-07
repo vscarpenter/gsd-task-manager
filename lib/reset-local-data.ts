@@ -10,7 +10,7 @@ import { getSyncConfig } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
 import { resetWeeklySweepState } from "@/lib/preferences/weekly-sweep";
 import { SYNC_CONFIG } from "@/lib/constants/sync";
-import type { DeviceInfo, PBSyncConfig } from "@/lib/sync/types";
+import type { DeviceInfo, PBSyncConfig, ResurrectOnSightRecord } from "@/lib/sync/types";
 
 const logger = createLogger("DB");
 
@@ -68,7 +68,7 @@ async function clearTables(db: GsdDatabase, cleared: string[]): Promise<void> {
 	});
 }
 
-function isPreservedSyncConfig(row: PBSyncConfig | DeviceInfo): boolean {
+function isPreservedSyncConfig(row: PBSyncConfig | DeviceInfo | ResurrectOnSightRecord): boolean {
 	return row.key === "sync_config" && row.userId === null;
 }
 

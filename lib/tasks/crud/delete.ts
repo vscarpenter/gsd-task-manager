@@ -3,6 +3,7 @@ import { createLogger } from "@/lib/logger";
 import { removeDependencyReferencesInTransaction } from "@/lib/tasks/dependencies";
 import { formatErrorMessage } from "@/lib/utils";
 import { toTrashedRecord } from "@/lib/trash";
+import { rememberForResurrect } from "@/lib/sync/resurrect-on-sight";
 import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -29,7 +30,10 @@ export async function deleteTask(id: string): Promise<void> {
       // `put`, never `add`: re-deleting a restored task must not raise a
       // ConstraintError and abort the surrounding transaction.
       await db.deletedTasks.put(toTrashedRecord(existing));
+      // Signed out, the server never hears about this delete. Remember the id, so
+      // the account's copy comes back after the next sign-in (resurrect on sight).
       if (syncEnabled) await enqueue("delete", id, null);
+      else await rememberForResurrect([id]);
       return existing;
     });
 

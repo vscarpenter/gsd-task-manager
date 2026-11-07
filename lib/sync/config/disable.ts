@@ -8,6 +8,7 @@ import { getDb } from "@/lib/db";
 import { clearPocketBase } from "../pocketbase-client";
 import type { PBSyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
+import { rememberForResurrect, trashDeleteTaskIds } from "../resurrect-on-sight";
 import { createLogger } from "@/lib/logger";
 import { clearAppCaches } from "@/lib/browser-cache";
 
@@ -46,8 +47,12 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
     key: "sync_config",
   });
 
-  // Clear sync queue
-  await db.syncQueue.clear();
+  // A Trash delete still queued now never reaches the server, so it counts as a
+  // signed-out delete: remember its id before the queue goes (resurrect on sight).
+  await db.transaction('rw', [db.syncQueue, db.syncMetadata], async () => {
+    await rememberForResurrect(trashDeleteTaskIds(await db.syncQueue.toArray()));
+    await db.syncQueue.clear();
+  });
 
   // Clear sync history — privacy on shared devices.
   await db.syncHistory.clear();

@@ -20,19 +20,32 @@ type Write = { op: 'create' | 'update'; body: Record<string, unknown> };
 
 const state = {
   records: new Map<string, ServerRow>(),
-  /** 'pull', 'index', 'update', and 'create', in the order they happened. */
+  /** 'pull', 'index', 'listing', 'update', 'create', and 'delete', in the order they happened. */
   events: [] as string[],
   writes: [] as Write[],
   failPull: false,
+  /** Fails a whole-account listing that isn't the pull or the index (resurrect on sight). */
+  failListing: false,
+  /** Answers updates with a 429, leaving the queued write pending. */
+  failUpdate: false,
+  /** Who auth-refresh says the session belongs to; null answers it with a 401. */
+  authRefreshUserId: 'user-1' as string | null,
 };
+
+/** The pull sorts by client_updated_at and the index asks for fields; anything else is a listing. */
+function listingKind(options?: { fields?: string; sort?: string }): string {
+  if (options?.fields) return 'index';
+  return options?.sort?.startsWith('client_updated_at') ? 'pull' : 'listing';
+}
 
 const taskIdIn = (filter: string): string | undefined => /task_id = "([^"]+)"/.exec(filter)?.[1];
 
 const tasks = {
-  getList: async (_page: number, _size: number, options?: { fields?: string }) => {
-    const kind = options?.fields ? 'index' : 'pull';
+  getList: async (_page: number, _size: number, options?: { fields?: string; sort?: string }) => {
+    const kind = listingKind(options);
     state.events.push(kind);
     if (kind === 'pull' && state.failPull) throw new Error('network down');
+    if (kind === 'listing' && state.failListing) throw new Error('network down');
     return [...state.records.values()].map((row) => ({ ...row }));
   },
   getFirstListItem: async (filter: string) => {
@@ -41,6 +54,7 @@ const tasks = {
     return { ...row };
   },
   update: async (id: string, body: Record<string, unknown>) => {
+    if (state.failUpdate) throw Object.assign(new Error('Too many requests'), { status: 429 });
     state.events.push('update');
     state.writes.push({ op: 'update', body });
     const merged = { ...state.records.get(id)!, ...body };
@@ -55,12 +69,18 @@ const tasks = {
     return row;
   },
   delete: async (id: string) => {
+    state.events.push('delete');
     state.records.delete(id);
     return true;
   },
 };
 
-const users = { authRefresh: async () => ({ record: { id: 'user-1' } }) };
+const users = {
+  authRefresh: async () => {
+    if (state.authRefreshUserId === null) throw Object.assign(new Error('Unauthorized'), { status: 401 });
+    return { record: { id: state.authRefreshUserId } };
+  },
+};
 
 export const fake = { state, pb: { collection: (name: string) => (name === 'users' ? users : tasks) } };
 
@@ -69,6 +89,9 @@ export async function resetFakeSync(): Promise<void> {
   state.events.length = 0;
   state.writes.length = 0;
   state.failPull = false;
+  state.failListing = false;
+  state.failUpdate = false;
+  state.authRefreshUserId = 'user-1';
   const db = getDb();
   await Promise.all(db.tables.map((table) => table.clear()));
 }
