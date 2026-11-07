@@ -26,6 +26,12 @@ export async function getTrashCount(): Promise<number> {
   return getDb().deletedTasks.count();
 }
 
+/** What Trash holds, for the Settings storage figure: how many rows and how many bytes they serialize to. */
+export async function getTrashStorageStats(): Promise<{ count: number; bytes: number }> {
+  const rows = await getDb().deletedTasks.toArray();
+  return { count: rows.length, bytes: JSON.stringify(rows).length };
+}
+
 /**
  * Return a trashed task to the board.
  *

@@ -586,6 +586,17 @@ describe('Settings Components', () => {
       expect(screen.getByText('Done:')).toBeInTheDocument();
     });
 
+    it('lists Trash in the breakdown when it holds tasks, so the breakdown adds up to the total', () => {
+      render(<DataManagement {...defaultProps} trashedTasks={2} totalTasks={10} />);
+      expect(screen.getByText('Trash:')).toBeInTheDocument();
+      expect(screen.getByText('10 tasks')).toBeInTheDocument();
+    });
+
+    it('leaves Trash out of the breakdown when it is empty', () => {
+      render(<DataManagement {...defaultProps} trashedTasks={0} />);
+      expect(screen.queryByText('Trash:')).not.toBeInTheDocument();
+    });
+
     it('renders export and import action rows', () => {
       render(<DataManagement {...defaultProps} />);
       expect(screen.getByText('Export tasks')).toBeInTheDocument();

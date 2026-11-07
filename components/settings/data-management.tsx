@@ -11,6 +11,7 @@ interface DataManagementProps {
 	completedTasks: number;
 	/** Auto-archived tasks. Counted in `totalTasks`, shown separately so the two rows agree. */
 	archivedTasks: number;
+	/** Trashed tasks. Also counted in `totalTasks`, and listed in the breakdown while there are any. */
 	trashedTasks?: number;
 	totalTasks: number;
 	estimatedSize: string;
@@ -24,8 +25,16 @@ interface DataManagementProps {
 
 type StorageSummaryRowsProps = Pick<
 	DataManagementProps,
-	"activeTasks" | "savedTasks" | "completedTasks" | "archivedTasks" | "totalTasks" | "estimatedSize"
+	"activeTasks" | "savedTasks" | "completedTasks" | "archivedTasks" | "trashedTasks" | "totalTasks" | "estimatedSize"
 >;
+
+function BreakdownCount({ label, count }: { label: string; count: number }) {
+	return (
+		<span className="text-foreground-muted">
+			{label}: <span className="font-medium text-foreground">{count}</span>
+		</span>
+	);
+}
 
 /**
  * The two read-only rows describing what this device is holding. Split out so
@@ -36,6 +45,7 @@ function StorageSummaryRows({
 	savedTasks = 0,
 	completedTasks,
 	archivedTasks,
+	trashedTasks = 0,
 	totalTasks,
 	estimatedSize,
 }: StorageSummaryRowsProps) {
@@ -50,20 +60,11 @@ function StorageSummaryRows({
 
 			<SettingsRow label="Tasks breakdown">
 				<div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-					<span className="text-foreground-muted">
-						Active: <span className="font-medium text-foreground">{activeTasks}</span>
-					</span>
-					{savedTasks > 0 && (
-						<span className="text-foreground-muted">
-							Saved: <span className="font-medium text-foreground">{savedTasks}</span>
-						</span>
-					)}
-					<span className="text-foreground-muted">
-						Done: <span className="font-medium text-foreground">{completedTasks}</span>
-					</span>
-					<span className="text-foreground-muted">
-						Archived: <span className="font-medium text-foreground">{archivedTasks}</span>
-					</span>
+					<BreakdownCount label="Active" count={activeTasks} />
+					{savedTasks > 0 && <BreakdownCount label="Saved" count={savedTasks} />}
+					<BreakdownCount label="Done" count={completedTasks} />
+					<BreakdownCount label="Archived" count={archivedTasks} />
+					{trashedTasks > 0 && <BreakdownCount label="Trash" count={trashedTasks} />}
 				</div>
 			</SettingsRow>
 		</>
