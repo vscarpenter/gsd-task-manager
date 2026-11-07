@@ -1,5 +1,9 @@
 import { z } from "@/lib/zod";
 import { SCHEMA_LIMITS } from "./constants/schema";
+import { MAX_PICKS } from "./top-three";
+
+/** A local calendar day as text. Top three never parses it through a time zone. */
+const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const quadrantIdSchema = z.enum([
 	"urgent-important",
@@ -66,6 +70,10 @@ export const taskDraftSchema = z.object({
 		(value) => value === 0 ? undefined : value,
 		z.number().int().min(1).max(10080).optional()
 	), // Max 7 days = 10080 minutes
+	// Top three (tasks/spec-top-three.md section 5). Set together or not at all;
+	// the import and pull boundaries turn an invalid pair into neither.
+	focusDate: z.string().regex(LOCAL_DATE_PATTERN).optional(),
+	focusRank: z.number().int().min(1).max(MAX_PICKS).optional(),
 });
 
 export const taskRecordSchema = taskDraftSchema

@@ -67,6 +67,8 @@ export interface TaskDraft {
   notifyBefore?: number;
   notificationEnabled?: boolean;
   estimatedMinutes?: number; // Estimated time to complete task
+  focusDate?: string;
+  focusRank?: number;
 }
 
 /**
