@@ -303,11 +303,11 @@ describe('Tool Schemas', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const props = (tool: { inputSchema: { properties?: unknown } }) => tool.inputSchema.properties as any;
 
-    it('read tools say Saved items are excluded, and get_task_stats says it counts them', () => {
+    it('read tools say Saved items are excluded, and get_task_stats says it leaves them out', () => {
       expect(listTasksTool.description).toMatch(/Saved items .*are excluded/);
       expect(getTaskTool.description).toMatch(/Saved items are excluded/);
       expect(searchTasksTool.description).toMatch(/Saved items excluded/);
-      expect(getTaskStatsTool.description).toMatch(/including Saved items/);
+      expect(getTaskStatsTool.description).toMatch(/Saved items are left out/);
     });
 
     it('tag descriptions teach lowercase tags without a leading #', () => {

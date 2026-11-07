@@ -19,7 +19,7 @@ export const getSyncStatusTool: Tool = {
 export const getTaskStatsTool: Tool = {
   name: 'get_task_stats',
   description:
-    'Get task counts: totalTasks, activeTasks (not completed), completedTasks, plus lastUpdated, oldestTask, and newestTask timestamps. Counts cover every task in the account, including Saved items, regardless of quadrant. Use list_tasks when you need the tasks themselves rather than counts.',
+    'Get task counts: totalTasks, activeTasks (not completed), completedTasks, plus lastUpdated, oldestTask, and newestTask timestamps. Counts cover every task in the account regardless of quadrant; Saved items are left out. Use list_tasks when you need the tasks themselves rather than counts.',
   inputSchema: {
     type: 'object',
     properties: {},
