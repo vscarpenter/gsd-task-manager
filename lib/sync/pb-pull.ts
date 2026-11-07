@@ -104,8 +104,9 @@ interface BackfillPlan {
 
 /**
  * A local copy that wins (strictly newer, or holding off a far-future remote)
- * keeps its version. A backfill still repairs the fields its build never read. That's a repair, not a pull of the record, so it
- * doesn't count as pulled and doesn't move the cursor.
+ * keeps its version. A backfill still repairs the fields its build never
+ * read. That's a repair, not a pull of the record, so it doesn't count as
+ * pulled and doesn't move the cursor.
  */
 async function repairUnreadFields(
   db: ReturnType<typeof getDb>,
