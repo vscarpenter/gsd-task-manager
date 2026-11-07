@@ -1,3 +1,4 @@
+import { SYNC_CONFIG } from "@/lib/constants/sync";
 import { daysUntilDue, evaluateEscalation } from "@/lib/escalation";
 import type { TaskRecord } from "@/lib/types";
 
@@ -50,8 +51,8 @@ export const MAX_PICKS = 3;
 const CARRY_OVER_DAYS = 7;
 const MS_PER_DAY = 86_400_000;
 /** First pull contract that reads each field; a stored version below it makes the field copyable. */
-const FOCUS_FIRST_READ = 4;
-const SAVED_FIRST_READ = 3;
+const FOCUS_FIRST_READ = SYNC_CONFIG.FOCUS_CONTRACT_VERSION;
+const SAVED_FIRST_READ = SYNC_CONFIG.SAVED_AT_CONTRACT_VERSION;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** The local calendar date of `now` in `zone`, as YYYY-MM-DD. */
