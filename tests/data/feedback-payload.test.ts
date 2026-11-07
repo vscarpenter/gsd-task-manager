@@ -89,6 +89,17 @@ describe("buildPayload", () => {
     expect(payload.votes).toEqual([ROADMAP_ITEMS[0].slug]);
   });
 
+  it("a stored vote for weekly-review isn't sent", () => {
+    // The sweep is what that item asked for, so it is retired. Never reuse the slug.
+    const payload = buildPayload(
+      fullDraft({ votes: [ROADMAP_ITEMS[0].slug, "weekly-review"] }),
+      BUILD_OPTIONS,
+    );
+
+    expect(payload.votes).toEqual([ROADMAP_ITEMS[0].slug]);
+    expect(ROADMAP_ITEMS.map((item) => item.slug)).not.toContain("weekly-review");
+  });
+
   it("never repeats a vote slug", () => {
     const slug = ROADMAP_ITEMS[0].slug;
     const payload = buildPayload(fullDraft({ votes: [slug, slug, slug] }), BUILD_OPTIONS);

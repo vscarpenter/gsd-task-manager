@@ -33,11 +33,6 @@ export const ROADMAP_ITEMS: readonly RoadmapItem[] = [
     description: "Save a set of tasks you create repeatedly and drop them in with one action.",
   },
   {
-    slug: "weekly-review",
-    label: "Guided weekly review",
-    description: "A short end-of-week pass over what moved, what stalled, and what to reclassify.",
-  },
-  {
     slug: "focus-timer",
     label: "Focus timer",
     description: "Start a timed run at a single task without leaving the matrix.",
