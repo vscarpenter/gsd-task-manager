@@ -79,7 +79,7 @@ vi.mock('@/lib/sync/notifications', () => ({
 }));
 
 import { fullSync } from '@/lib/sync/pb-sync-engine';
-import { copyUnreadFields } from '@/lib/sync/pb-pull';
+import { copyUnreadFields, pullRemoteChanges } from '@/lib/sync/pb-pull';
 import { disableSync } from '@/lib/sync/config';
 import { persistSyncConfig } from '@/components/sync/use-sync-auth-dialog';
 import { updateTask } from '@/lib/tasks/crud';
@@ -398,6 +398,21 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
     expect(sentEmptySavedAt()).toBe(false);
     expect(serverSavedAt()).toBe(SAVED);
     await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit', savedAt: SAVED });
+  });
+
+  // The hold-off is only for a pull-first backfill, and only for a write that will push.
+  it.each([
+    ['an ordinary pull with a pending write', { mergeSameVersion: false }, 'pending'],
+    ['a backfill whose queued write is retry-exhausted', { mergeSameVersion: true }, 'failed'],
+  ] as const)("%s doesn't hold off a far-future remote", async (_name, options, status) => {
+    const row = localRow(NEWER, { title: 'Local edit' });
+    await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), local: [row], queued: [row], server: [serverRow({ title: 'Edit from a fast clock', client_updated_at: FAR_FUTURE })] });
+    const [queued] = await getDb().syncQueue.toArray();
+    await getDb().syncQueue.update(queued.id, { status });
+
+    await pullRemoteChanges(null, options);
+
+    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Edit from a fast clock' });
   });
 
   it('a failed backfill pull pushes nothing and stamps nothing', async () => {
