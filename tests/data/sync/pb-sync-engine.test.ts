@@ -263,10 +263,11 @@ describe('pb-sync-engine', () => {
 
       expect(mockTasks.has('task-1')).toBe(true);
       expect(mockArchivedTasks.has('task-1')).toBe(false);
-      // syncMetadata is in scope so the session check commits with the writes.
+      // syncMetadata is in scope so the session check commits with the writes, and
+      // syncQueue so the far-future hold-off reads the queue in the same transaction.
       expect(mockDb.transaction).toHaveBeenCalledWith(
         'rw',
-        [mockDb.tasks, mockDb.archivedTasks, mockDb.deletedTasks, mockDb.syncMetadata],
+        [mockDb.tasks, mockDb.archivedTasks, mockDb.deletedTasks, mockDb.syncQueue, mockDb.syncMetadata],
         expect.any(Function)
       );
     });

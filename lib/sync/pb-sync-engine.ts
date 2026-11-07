@@ -14,7 +14,7 @@ import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/syn
 import { notifySyncSuccess, notifySyncError } from './notifications';
 import { isTransientSyncFailure, sanitizeSyncError, extractRetryAfterMs } from './error-categorizer';
 import { ensureValidAuth } from './pb-auth';
-import { getDeviceId, isRemoteNewerThanArchive, readClientUpdatedAt } from './pb-sync-helpers';
+import { getDeviceId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, readClientUpdatedAt } from './pb-sync-helpers';
 import { pushLocalChanges, type PushResult } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
 import { classifyRemoteDeletion } from './queue';
@@ -22,6 +22,7 @@ import { StaleSyncSessionError, assertSyncSessionCurrent, getSessionOwner } from
 import { toTrashedRecord } from '@/lib/trash';
 import type { PBSyncResult, PBSyncConfig } from './types';
 import type { RecordModel } from 'pocketbase';
+import type { TaskRecord } from '@/lib/types';
 
 // Re-export for backward compatibility
 export { pushLocalChanges } from './pb-push';
@@ -65,6 +66,25 @@ async function applyRemoteDeletion(taskId: string, ownerId: string): Promise<voi
 }
 
 /**
+ * Whether a realtime event leaves the local row alone. A create can name a task
+ * this device already has (edit-beats-delete re-creates the record), and the
+ * pull cursor may never fetch it again, so it follows the same strictly-newer
+ * rule as an update. A far-future remote over a pending write is held off.
+ */
+async function localCopyHolds(
+  localTask: TaskRecord | undefined,
+  remoteTask: TaskRecord,
+  rawUpdatedAt: string | undefined,
+): Promise<boolean> {
+  if (!localTask) return false;
+  if (await holdsOffFarFutureRemote(rawUpdatedAt, localTask.id)) {
+    logger.debug('Realtime change held off: far-future stamp over a pending local write', { taskId: localTask.id });
+    return true;
+  }
+  return new Date(remoteTask.updatedAt).getTime() <= new Date(localTask.updatedAt).getTime();
+}
+
+/**
  * Apply one realtime event. `ownerId` is the user signed in when the event
  * arrived, and the write lands only while that user still owns the sync session.
  */
@@ -91,7 +111,8 @@ export async function applyRemoteChange(
     return;
   }
 
-  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncMetadata], async () => {
+  // syncQueue is read for the far-future hold-off, inside the same transaction.
+  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncQueue, db.syncMetadata], async () => {
     await assertSyncSessionCurrent(ownerId);
     const rawUpdatedAt = readClientUpdatedAt(record);
     const archived = await db.archivedTasks.get(remoteTask.id);
@@ -105,11 +126,7 @@ export async function applyRemoteChange(
       return;
     }
     const localTask = await db.tasks.get(remoteTask.id);
-    // A create can name a task this device already has (edit-beats-delete
-    // re-creates the record), and the pull cursor may never fetch it again, so
-    // it follows the same strictly-newer rule as an update.
-    if (localTask &&
-        new Date(remoteTask.updatedAt).getTime() <= new Date(localTask.updatedAt).getTime()) return;
+    if (await localCopyHolds(localTask, remoteTask, rawUpdatedAt)) return;
     const mergedTask = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
     if (!mergedTask) return;
     if (archived) await db.archivedTasks.delete(remoteTask.id);

@@ -9,9 +9,9 @@ import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, isBeyondClockSkew, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
-import { classifyRemoteDeletion, isPendingSyncQueueItem } from './queue';
+import { classifyRemoteDeletion } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
 import { toTrashedRecord } from '@/lib/trash';
 import { savedPlacementBlocker } from '@/lib/tasks/saved-placement';
@@ -119,24 +119,6 @@ async function repairUnreadFields(
   if (repaired) await db.tasks.put(repaired);
 }
 
-/**
- * The native hold-off (S-AND-02), which web needs only where it pulls first:
- * the backfill. A far-future stamp clamps to now plus 5 minutes and looks
- * strictly newer than a queued local edit. That edit still pushes, because push
- * never loses to such a stamp, so taking the remote here would leave this
- * device on content no other device has.
- */
-async function holdsOffFarFuture(
-  db: ReturnType<typeof getDb>,
-  rawUpdatedAt: string | undefined,
-  taskId: string,
-  plan: BackfillPlan,
-): Promise<boolean> {
-  if (!plan.mergeSameVersion || !isBeyondClockSkew(rawUpdatedAt)) return false;
-  const rows = await db.syncQueue.where('taskId').equals(taskId).toArray();
-  return rows.some(isPendingSyncQueueItem);
-}
-
 async function remoteVersionWins(
   db: ReturnType<typeof getDb>,
   local: TaskRecord | undefined,
@@ -145,7 +127,7 @@ async function remoteVersionWins(
   plan: BackfillPlan,
 ): Promise<boolean> {
   if (!local) return true;
-  if (await holdsOffFarFuture(db, rawUpdatedAt, local.id, plan)) return false;
+  if (await holdsOffFarFutureRemote(rawUpdatedAt, local.id)) return false;
   return acceptsRemoteVersion(merged.updatedAt, local.updatedAt, plan.mergeSameVersion);
 }
 

@@ -7,6 +7,7 @@ import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import type { PBSyncConfig, RemoteTaskIndexEntry } from './types';
 import { getPocketBaseTaskIdentity } from './task-mapper';
+import { isPendingSyncQueueItem } from './queue';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { RecordModel } from 'pocketbase';
 
@@ -254,6 +255,20 @@ export function isBeyondClockSkew(iso: string | undefined, nowMs: number = Date.
   if (!iso) return false;
   const time = new Date(iso).getTime();
   return !Number.isNaN(time) && time > nowMs + SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS;
+}
+
+/**
+ * The native hold-off (S-AND-02), on every web apply path: pull and realtime. A
+ * far-future stamp clamps to now plus 5 minutes and looks strictly newer than a
+ * queued local edit. That edit still pushes, because push never loses to such a
+ * stamp, so taking the remote would leave this device on content no other device
+ * has. A push doesn't always drain the queue first (a 429, an unavailable index,
+ * a transient error). Call it inside a transaction that scopes db.syncQueue.
+ */
+export async function holdsOffFarFutureRemote(rawUpdatedAt: string | undefined, taskId: string): Promise<boolean> {
+  if (!isBeyondClockSkew(rawUpdatedAt)) return false;
+  const rows = await getDb().syncQueue.where('taskId').equals(taskId).toArray();
+  return rows.some(isPendingSyncQueueItem);
 }
 
 export function isRemoteNewerThanArchive(
