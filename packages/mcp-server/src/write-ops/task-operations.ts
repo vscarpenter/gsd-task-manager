@@ -272,6 +272,16 @@ export async function updateTask(
   return applyUpdate(config, input, true);
 }
 
+/**
+ * The successor of a recurring task this update completes. The transition comes from the
+ * stored task; recurrence and every other field come from the edited one, so completing
+ * with recurrence "none" ends the series and same-call edits reach the next instance.
+ */
+function nextInstanceFor(current: Task, updated: Task, input: UpdateTaskInput): Task | undefined {
+  const completes = completesRecurringTask({ ...updated, completed: current.completed }, input.completed);
+  return completes ? buildRecurringInstance(updated) : undefined;
+}
+
 async function applyUpdate(
   config: GsdConfig,
   input: UpdateTaskInput,
@@ -286,10 +296,9 @@ async function applyUpdate(
   const changes = describeTaskChanges(currentTask, input);
   const warnings = updateWarnings(input);
   const updatedTask = buildUpdatedTask(currentTask, input, changes);
-  const recurringInstance =
-    spawnRecurring && completesRecurringTask(currentTask, input.completed)
-      ? buildRecurringInstance(currentTask)
-      : undefined;
+  const recurringInstance = spawnRecurring
+    ? nextInstanceFor(currentTask, updatedTask, input)
+    : undefined;
 
   if (input.dryRun) {
     return {
