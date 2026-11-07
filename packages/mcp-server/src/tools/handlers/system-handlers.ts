@@ -87,7 +87,7 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
 function buildToolsHelpSection(): string {
   return `# GSD Task Manager MCP Server - Help
 
-## Available Tools (19 total)
+## Available Tools (20 total)
 
 ### Metadata & Status Tools
 - **get_sync_status** - Check PocketBase health and task count
@@ -98,6 +98,7 @@ function buildToolsHelpSection(): string {
 - **list_tasks** - List all tasks with optional filtering (quadrant, completed, tags)
 - **get_task** - Get a single task by ID
 - **search_tasks** - Search across titles, descriptions, tags, subtasks
+- **get_top_three** - Read-only: the user's picks for today and the first three suggestions
 
 Saved items (Move to Saved in the apps) are hidden from list, get, search, and analytics.
 

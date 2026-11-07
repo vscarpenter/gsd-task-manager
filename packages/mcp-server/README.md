@@ -830,7 +830,7 @@ packages/mcp-server/
 │   │   │   ├── write-handlers.ts
 │   │   │   ├── analytics-handlers.ts
 │   │   │   └── system-handlers.ts
-│   │   └── schemas/       # MCP tool schemas (19 tools)
+│   │   └── schemas/       # MCP tool schemas (20 tools)
 │   │       ├── index.ts
 │   │       ├── read-tools.ts     # 6 read tools
 │   │       ├── write-tools.ts    # 5 write tools

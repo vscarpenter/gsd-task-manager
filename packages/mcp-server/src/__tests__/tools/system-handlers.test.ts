@@ -85,10 +85,10 @@ describe('handleValidateConfig', () => {
 });
 
 describe('handleGetHelp tool list', () => {
-  it('counts 19 tools and does not mention list_devices', async () => {
+  it('counts 20 tools and does not mention list_devices', async () => {
     const text = responseText(await handleGetHelp({ topic: 'tools' }));
 
-    expect(text).toContain('Available Tools (19 total)');
+    expect(text).toContain('Available Tools (20 total)');
     expect(text).not.toContain('list_devices');
   });
 

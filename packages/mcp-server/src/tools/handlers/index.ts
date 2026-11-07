@@ -12,6 +12,7 @@ import {
   handleSearchTasks,
   handleGetTokenStatus,
 } from './read-handlers.js';
+import { handleGetTopThree } from './top-three-handler.js';
 import {
   handleGetProductivityMetrics,
   handleGetQuadrantAnalysis,
@@ -40,6 +41,7 @@ import {
 
 // Re-export all handlers
 export * from './read-handlers.js';
+export * from './top-three-handler.js';
 export * from './analytics-handlers.js';
 export * from './write-handlers.js';
 export * from './system-handlers.js';
@@ -67,6 +69,7 @@ const toolRegistry = {
   get_task: createToolRunner('get_task', handleGetTask),
   search_tasks: createToolRunner('search_tasks', handleSearchTasks),
   get_token_status: createToolRunner('get_token_status', (config) => handleGetTokenStatus(config)),
+  get_top_three: createToolRunner('get_top_three', handleGetTopThree),
   get_productivity_metrics: createToolRunner(
     'get_productivity_metrics',
     (config) => handleGetProductivityMetrics(config)
