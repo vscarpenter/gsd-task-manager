@@ -63,7 +63,7 @@ function validateUpdatedDraft(
 }
 
 /** A key present in `updates` wins, even as `undefined`; a key left out keeps the stored value. */
-function keepUnlessGiven<K extends "dueDate" | "estimatedMinutes" | "notifyBefore">(
+function keepUnlessGiven<K extends "dueDate" | "estimatedMinutes" | "notifyBefore" | "focusDate" | "focusRank">(
   updates: Partial<TaskDraft>,
   existing: TaskRecord,
   key: K
@@ -98,8 +98,8 @@ function mergeTaskUpdates(
     // this device's default (D-10). Off is notificationEnabled, not a missing offset.
     notifyBefore: keepUnlessGiven(updates, existing, "notifyBefore") ?? defaultReminder,
     notificationEnabled: updates.notificationEnabled ?? existing.notificationEnabled,
-    focusDate: "focusDate" in updates ? updates.focusDate : existing.focusDate,
-    focusRank: "focusRank" in updates ? updates.focusRank : existing.focusRank,
+    focusDate: keepUnlessGiven(updates, existing, "focusDate"),
+    focusRank: keepUnlessGiven(updates, existing, "focusRank"),
     estimatedMinutes: keepUnlessGiven(updates, existing, "estimatedMinutes"),
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookmarkIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon, ArrowRightLeftIcon, ArrowUpIcon } from "lucide-react";
+import { BookmarkIcon, SunIcon, PencilIcon, Trash2Icon, RepeatIcon, Share2Icon, CopyIcon, MoreHorizontalIcon, ClockIcon, AlertTriangleIcon, MoonIcon, ArrowRightLeftIcon, ArrowUpIcon } from "lucide-react";
 import { cn, formatRelative, isRepeatClick } from "@/lib/utils";
 import { DATE_CONFIG, TIME_MS } from "@/lib/constants";
 import { formatSnoozeRemaining, getRemainingSnoozeMinutes, isTaskSnoozed } from "@/lib/tasks";
@@ -11,6 +11,7 @@ import { useEscalation } from "@/components/task-card/use-escalation";
 import { QUADRANT_INK, quadrantForTask, quadrants } from "@/lib/quadrants";
 import { SNOOZE_PRESETS } from "@/lib/snooze-presets";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
+import { useTodayMenu } from "@/components/today-strip/today-menu-context";
 
 const MARK_URGENT_HINT = {
   "urgent-important": "Moves to Do First",
@@ -233,6 +234,7 @@ function CardMenu({ task, onDelete, onShare, onDuplicate, onSnooze, onClearSnooz
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <MarkUrgentMenuItem task={task} markUrgent={markUrgent} />
+        <TodayMenuItem task={task} />
         {onSave && !task.completed ? (
           <DropdownMenuItem data-testid="save-task-mobile" onClick={() => onSave(task)}>
             <BookmarkIcon className="mr-2 h-4 w-4" aria-hidden="true" />Move to Saved
@@ -280,6 +282,24 @@ function SnoozeSubmenu({ task, onSnooze, onClearSnooze }: { task: TaskRecord; on
         ) : null}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
+  );
+}
+
+/** Add to today, Remove from today, or a disabled "Today is full" (spec: tasks/spec-top-three.md section 4). */
+function TodayMenuItem({ task }: { task: TaskRecord }) {
+  const today = useTodayMenu();
+  if (!today || task.completed) return null;
+  if (today.isPicked(task)) {
+    return (
+      <DropdownMenuItem data-testid="remove-from-today" onClick={() => today.remove(task)}>
+        <SunIcon className="mr-2 h-4 w-4" aria-hidden="true" />Remove from today
+      </DropdownMenuItem>
+    );
+  }
+  return (
+    <DropdownMenuItem data-testid="add-to-today" disabled={today.isFull} onClick={() => today.add(task)}>
+      <SunIcon className="mr-2 h-4 w-4" aria-hidden="true" />{today.isFull ? "Today is full" : "Add to today"}
+    </DropdownMenuItem>
   );
 }
 
