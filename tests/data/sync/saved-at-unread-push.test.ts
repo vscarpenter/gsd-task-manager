@@ -420,14 +420,23 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
   });
 
   // Realtime applies the same strictly-newer test to a clamped stamp, so it splits the same way.
-  it('a realtime update with a pending write holds off a far-future remote', async () => {
+  it.each(['update', 'create'] as const)('a realtime %s with a pending write holds off a far-future remote', async (action) => {
     const row = localRow(NEWER, { title: 'Local edit' });
     const farFuture = serverRow({ title: 'Edit from a fast clock', client_updated_at: FAR_FUTURE });
     await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), local: [row], queued: [row] });
 
-    await applyRemoteChange('update', farFuture as unknown as RecordModel, 'user-1');
+    await applyRemoteChange(action, farFuture as unknown as RecordModel, 'user-1');
 
     await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit' });
+  });
+
+  it("a held-off record doesn't move the pull cursor", async () => {
+    const row = localRow(NEWER, { title: 'Local edit' });
+    await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), local: [row], queued: [row], server: [serverRow({ client_updated_at: FAR_FUTURE })] });
+
+    const result = await pullRemoteChanges(null, { mergeSameVersion: false });
+
+    expect(result).toMatchObject({ pulledCount: 0, maxObservedTimestamp: null });
   });
 
   it('a realtime update with nothing queued still takes a far-future remote', async () => {
