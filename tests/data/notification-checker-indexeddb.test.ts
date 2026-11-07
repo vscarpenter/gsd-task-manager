@@ -171,7 +171,7 @@ describe("notification checker on a real database", () => {
 			// A pull applies the other device's edit through the mapper's merge.
 			const movedDue = new Date(firstDue + 2 * 24 * 60 * MS_PER_MINUTE).toISOString();
 			const local = await getDb().tasks.get("t");
-			const remote = { ...taskRecordToPocketBase(local!, "owner", "other-device"), due_date: movedDue };
+			const remote = { ...taskRecordToPocketBase(local!, "owner", "other-device", 15), due_date: movedDue };
 			await getDb().tasks.put(pocketBaseToTaskRecord(remote as unknown as RecordModel, local)!);
 			at(Date.parse(movedDue) - 14 * MS_PER_MINUTE);
 			await notificationChecker.checkAndNotify();

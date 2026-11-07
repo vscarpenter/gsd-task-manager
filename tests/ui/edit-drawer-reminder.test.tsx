@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
@@ -48,9 +48,12 @@ describe("<EditDrawer> reminder", () => {
     // 15 / 30 / 60 / 120 / 1440 — the canonical set, matching Settings and the iOS
     // client's NotificationSettings.allowedReminders.
     render(<EditDrawer open task={baseTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
-    for (const label of ["Off", "15m", "30m", "1h", "2h", "1 day"]) {
-      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    // The due date field has its own "None", so look inside the reminder group.
+    const reminder = within(screen.getByRole("group", { name: /reminder/i }));
+    for (const label of ["None", "15m", "30m", "1h", "2h", "1 day"]) {
+      expect(reminder.getByRole("button", { name: label })).toBeInTheDocument();
     }
+    expect(reminder.queryByRole("button", { name: "Off" })).toBeNull();
   });
 
   it("submits the chosen reminder", async () => {
@@ -67,7 +70,7 @@ describe("<EditDrawer> reminder", () => {
     );
   });
 
-  it("submits notificationEnabled false when set to Off", async () => {
+  it("submits notificationEnabled false when set to None", async () => {
     const onSubmit = vi.fn();
     render(
       <EditDrawer
@@ -78,7 +81,7 @@ describe("<EditDrawer> reminder", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: "Off" }));
+    await user.click(within(screen.getByRole("group", { name: /reminder/i })).getByRole("button", { name: "None" }));
     await user.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -100,9 +103,9 @@ describe("<EditDrawer> reminder", () => {
     expect(screen.getByRole("button", { name: "1h" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("shows Off for a task with reminders disabled", () => {
+  it("shows None for a task with reminders disabled", () => {
     render(<EditDrawer open task={baseTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
-    expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(screen.getByRole("group", { name: /reminder/i })).getByRole("button", { name: "None" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("renders an off-list value from the iOS client rather than snapping it", () => {

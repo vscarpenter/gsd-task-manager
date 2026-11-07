@@ -1,5 +1,4 @@
 import { getDb } from "@/lib/db";
-import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
 import {
   archivedTaskRecordSchema,
@@ -13,6 +12,8 @@ import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { assertRawSmartViewBounds } from "@/lib/tasks/smart-view-import-bounds";
+import { readDefaultReminder } from "@/lib/notifications/default-reminder";
+import { regenerateConflictingIds, remapTaskReferences } from "@/lib/tasks/import-id-remap";
 
 /** Maximum number of tasks allowed in a single import to prevent storage DoS */
 const MAX_IMPORT_TASKS = 10_000;
@@ -200,73 +201,6 @@ async function buildBackup(): Promise<{ payload: ImportPayload; skippedCount: nu
  */
 export async function exportTasks(): Promise<ImportPayload> {
   return (await buildBackup()).payload;
-}
-
-/**
- * Regenerate IDs for tasks that conflict with existing IDs
- *
- * Prevents ID collisions when merging imported tasks with existing tasks.
- * Also regenerates subtask IDs to maintain consistency.
- */
-function regenerateConflictingIds(
-  tasks: TaskRecord[],
-  existingIds: Set<string>
-): { tasks: TaskRecord[]; idMap: Map<string, string> } {
-  const idMap = new Map<string, string>();
-
-  const updatedTasks = tasks.map(task => {
-    // If ID already exists, regenerate it
-    if (existingIds.has(task.id)) {
-      const newId = generateId();
-      idMap.set(task.id, newId);
-      return {
-        ...task,
-        id: newId,
-        // Also regenerate subtask IDs to avoid conflicts
-        subtasks: task.subtasks.map(subtask => ({
-          ...subtask,
-          id: generateId()
-        }))
-      };
-    }
-    return task;
-  });
-
-  return { tasks: updatedTasks, idMap };
-}
-
-/**
- * Update task references (dependencies, parentTaskId) after ID regeneration
- */
-function remapTaskReferences(
-  tasks: TaskRecord[],
-  idMap: Map<string, string>
-): TaskRecord[] {
-  if (idMap.size === 0) {
-    return tasks;
-  }
-
-  return tasks.map(task => {
-    const originalDeps = task.dependencies ?? [];
-    const updatedDependencies = originalDeps.map(depId => idMap.get(depId) ?? depId);
-    const updatedParentTaskId = task.parentTaskId ? (idMap.get(task.parentTaskId) ?? task.parentTaskId) : undefined;
-
-    const dependenciesChanged =
-      updatedDependencies.length !== originalDeps.length ||
-      updatedDependencies.some((depId, index) => depId !== originalDeps[index]);
-
-    const parentChanged = updatedParentTaskId !== task.parentTaskId;
-
-    if (!dependenciesChanged && !parentChanged) {
-      return task;
-    }
-
-    return {
-      ...task,
-      dependencies: updatedDependencies,
-      parentTaskId: updatedParentTaskId,
-    };
-  });
 }
 
 /** Resolve sync modules outside transaction to avoid detaching Dexie context */
@@ -488,6 +422,12 @@ function reportImportSkips(counts: {
   }
 }
 
+/** The default reminder this device will hold once the import finishes. */
+async function defaultInEffectAfter(parsed: SettingsBearingPayload, mode: "replace" | "merge"): Promise<number> {
+  const restored = mode === "replace" ? parsed.notificationSettings?.defaultReminder : undefined;
+  return restored ?? (await readDefaultReminder());
+}
+
 export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   assertRawSmartViewBounds(payload);
@@ -498,6 +438,15 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
   const parsed = result.data;
 
   assertWithinImportCap(parsed);
+
+  // A backup with no offset takes the default in effect once the import finishes, so the
+  // value is a number on every device (D-10). A Replace adopts the backup's settings, so
+  // that is the backup's default; a Merge keeps this device's. Old backups stay importable.
+  const defaultReminder = await defaultInEffectAfter(parsed, mode);
+  parsed.tasks = parsed.tasks.map((task) => ({
+    ...task,
+    notifyBefore: task.notifyBefore ?? defaultReminder,
+  }));
 
   const { syncEnabled, queue, scheduleSyncAfterChange } = await resolveSyncDeps();
 

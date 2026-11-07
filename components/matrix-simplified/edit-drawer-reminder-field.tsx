@@ -17,7 +17,7 @@ const REMINDER_OPTIONS: { value: number; label: string }[] = [
 
 /** "5m" / "45m" / "3h" / "2 days" — only used for a value this control does not list. */
 function offListLabel(minutes: number): string {
-  if (minutes === 0) return "At time";
+  if (minutes === 0) return "At due time";
   if (minutes < 60) return `${minutes}m`;
   if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
   const days = Math.round(minutes / 1440);
@@ -53,7 +53,7 @@ export function ReminderField({
     <Field label="Reminder" as="group">
       <div className="flex flex-wrap gap-1.5">
         <ReminderOption
-          label="Off"
+          label="None"
           active={minutes === null}
           onClick={() => onChange(null)}
         />

@@ -1,6 +1,7 @@
 import { buildDescription, extractUrlsFromTitle } from "@/lib/capture-parser";
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
+import { readDefaultReminder } from "@/lib/notifications/default-reminder";
 import { createLogger } from "@/lib/logger";
 import { resolveQuadrantId } from "@/lib/quadrants";
 import { taskDraftSchema } from "@/lib/schema";
@@ -25,6 +26,8 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
     ...input,
     title: cleanTitle,
     description: buildDescription(input.description ?? "", urls),
+    // The offset is always a number once stored (D-10); Off is notificationEnabled.
+    notifyBefore: input.notifyBefore ?? (await readDefaultReminder()),
   };
 
   const result = taskDraftSchema.safeParse(normalized);
