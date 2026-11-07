@@ -382,7 +382,7 @@ export function MatrixSimplified() {
             }}
             onDelete={handleDelete}
             onShare={handleShareOpen}
-            onSnooze={handleSnooze} onSave={(task) => handleSaveForLater(task, handleSuccess).then((saved) => { if (saved) captureInputRef.current?.focus(); })} onDuplicate={handleDuplicate} onClearSnooze={handleClearSnooze} onMoveTo={(task, quadrant) => handleMoveTo(task, quadrant, handleSuccess)} onMarkUrgent={(task) => handleMarkUrgent(task, handleSuccess)}
+            onSnooze={handleSnooze} onSave={(task) => handleSaveForLater(task, handleSuccess).then((saved) => { if (saved) captureInputRef.current?.focus(); })} onDuplicate={handleDuplicate} onClearSnooze={handleClearSnooze} onMoveTo={(task, quadrant) => handleMoveTo(task, quadrant, handleSuccess).then(() => {})} onMarkUrgent={(task) => handleMarkUrgent(task, handleSuccess).then(() => {})}
             onAddInQuadrant={handleAddInQuadrant}
             highlightedTaskId={highlightedTaskId}
             onTaskRef={handleTaskRef}

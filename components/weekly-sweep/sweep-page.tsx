@@ -63,9 +63,13 @@ function useSweepHandlers(session: SweepSession, task: TaskRecord | undefined): 
     onSave: () => run(() => saveForLater(task, handleSuccess)),
     onDelete: () => run(() => removeTask(task, handleSuccess)),
     onSkip: session.advance,
-    onSetDay: (day) => run(() => setDueDay(task, day, handleSuccess)),
+    onSetDay: (day) => run(() => setDueDay(task, day)),
     onMove: (quadrant) => run(() => moveToQuadrant(task, quadrant, handleSuccess)),
-    onReturn: (quadrant) => run(() => returnToMatrix(task, quadrant, handleSuccess)),
+    onReturn: async (quadrant, dueDate) => {
+      const returned = await returnToMatrix(task, quadrant, dueDate);
+      if (returned) session.advance();
+      return returned;
+    },
   };
 }
 

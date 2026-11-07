@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 import { getDb } from "@/lib/db";
 import {
   actionsFor,
@@ -49,22 +50,23 @@ describe("sweep actions call the paths that already exist", () => {
     expect((await getDb().tasks.get("t1"))?.completed).toBe(false);
   });
 
-  it("New date keeps a time of day already set, and Undo restores the old date", async () => {
+  it("New date keeps a time of day already set, with the matrix's own feedback and no new toast", async () => {
     const task = await seed({ dueDate: new Date("2026-11-01T15:30:00").toISOString() });
-    const r = recorder();
+    const success = vi.spyOn(toast, "success");
 
-    await setDueDay(task, "2026-11-12", r.offer);
+    await setDueDay(task, "2026-11-12");
 
     const moved = new Date((await getDb().tasks.get("t1"))!.dueDate!);
     expect([moved.getFullYear(), moved.getMonth() + 1, moved.getDate(), moved.getHours(), moved.getMinutes()]).toEqual([2026, 11, 12, 15, 30]);
-    await r.undo();
-    expect((await getDb().tasks.get("t1"))?.dueDate).toBe(task.dueDate);
+    // The edit path says "Task updated" and offers no Undo, so the sweep adds nothing of its own.
+    expect(success).toHaveBeenCalledWith("Task updated", expect.anything());
+    expect(success).not.toHaveBeenCalledWith("Due date changed", expect.anything());
   });
 
   it("Add date on an undated task makes it all day", async () => {
     const task = await seed({ dueDate: undefined });
 
-    await setDueDay(task, "2026-11-12", recorder().offer);
+    await setDueDay(task, "2026-11-12");
 
     const due = new Date((await getDb().tasks.get("t1"))!.dueDate!);
     expect([due.getHours(), due.getMinutes()]).toEqual([0, 0]);
@@ -101,11 +103,12 @@ describe("sweep actions call the paths that already exist", () => {
   it("Return to matrix puts a saved task back in the chosen quadrant", async () => {
     const task = await seed({ savedAt: "2026-09-01T00:00:00.000Z" });
 
-    expect(await returnToMatrix(task, "not-urgent-important", recorder().offer)).toBe(true);
+    expect(await returnToMatrix(task, "not-urgent-important", "2026-12-01T12:00:00.000Z")).toBe(true);
 
     const row = await getDb().tasks.get("t1");
     expect(row?.savedAt).toBeUndefined();
     expect(row?.quadrant).toBe("not-urgent-important");
+    expect(row?.dueDate).toBe("2026-12-01T12:00:00.000Z");
   });
 });
 

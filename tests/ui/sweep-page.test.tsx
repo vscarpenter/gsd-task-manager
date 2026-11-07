@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   setDueDay: vi.fn(async () => true),
   completeTask: vi.fn(async () => true),
+  returnToMatrix: vi.fn(async () => true),
 }));
 
 vi.mock("@/lib/use-tasks", () => ({ useTasks: () => ({ all: mocks.tasks, isLoading: false }) }));
@@ -21,6 +22,7 @@ vi.mock("@/components/weekly-sweep/sweep-actions", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/components/weekly-sweep/sweep-actions")>()),
   setDueDay: mocks.setDueDay,
   completeTask: mocks.completeTask,
+  returnToMatrix: mocks.returnToMatrix,
 }));
 
 const NOW = new Date();
@@ -72,7 +74,7 @@ describe("SweepPage", () => {
     await user.click(screen.getByRole("button", { name: "New date" }));
     await user.click(screen.getByRole("button", { name: "Next week" }));
 
-    expect(mocks.setDueDay).toHaveBeenCalledWith(expect.objectContaining({ id: "a" }), expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), expect.any(Function));
+    expect(mocks.setDueDay).toHaveBeenCalledWith(expect.objectContaining({ id: "a" }), expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
   });
 
   it("ends on That's the sweep with a way to pick today's top three, and stamps", async () => {
@@ -145,6 +147,56 @@ describe("SweepPage", () => {
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("group", { name: "Choose a new date" })).toBeNull();
     expect(trigger).toHaveFocus();
+  });
+
+  it("Mark urgent carries the matrix's hint, as an accessible description", () => {
+    mocks.tasks = [createMockTask({ id: "a", title: "Task a", dueDate: daysAgo(5), updatedAt: daysAgo(1), urgent: false, important: true })];
+
+    render(<SweepPage />);
+
+    const button = screen.getByRole("button", { name: "Mark urgent" });
+    expect(button).toHaveAccessibleDescription("Moves to Do First");
+  });
+
+  it("Mark urgent on a not-important task hints at Delegate", () => {
+    mocks.tasks = [createMockTask({ id: "a", title: "Task a", dueDate: daysAgo(5), updatedAt: daysAgo(1), urgent: false, important: false })];
+
+    render(<SweepPage />);
+
+    expect(screen.getByRole("button", { name: "Mark urgent" })).toHaveAccessibleDescription("Moves to Delegate");
+  });
+
+  describe("Return to matrix offers the Saved page's quadrant and due date choices", () => {
+    const saved = () => [createMockTask({ id: "s", title: "Saved one", savedAt: daysAgo(40), updatedAt: daysAgo(40), quadrant: "not-urgent-important", important: true })];
+
+    it("opens the same form, and returns with the chosen quadrant and due date", async () => {
+      mocks.tasks = saved();
+      const user = userEvent.setup();
+      render(<SweepPage />);
+
+      await user.click(screen.getByRole("button", { name: "Return to matrix" }));
+      await user.selectOptions(screen.getByLabelText("Quadrant"), "urgent-important");
+      await user.type(screen.getByLabelText(/Due date/), "2026-12-01");
+      await user.click(screen.getByRole("button", { name: "Add to matrix" }));
+
+      expect(mocks.returnToMatrix).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "s" }),
+        "urgent-important",
+        expect.stringContaining("2026-12-01")
+      );
+    });
+
+    it("Cancel closes the form without returning anything", async () => {
+      mocks.tasks = saved();
+      const user = userEvent.setup();
+      render(<SweepPage />);
+      await user.click(screen.getByRole("button", { name: "Return to matrix" }));
+
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(screen.queryByLabelText("Quadrant")).toBeNull();
+      expect(mocks.returnToMatrix).not.toHaveBeenCalled();
+    });
   });
 
   it("Done stamps this device and goes back to the matrix", async () => {

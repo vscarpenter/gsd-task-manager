@@ -31,7 +31,7 @@ async function saveNotes(task: TaskRecord, notes: string): Promise<boolean> {
   }
 }
 
-async function returnItem(task: TaskRecord, quadrant: QuadrantId, dueDate?: string): Promise<boolean> {
+export async function returnItem(task: TaskRecord, quadrant: QuadrantId, dueDate?: string): Promise<boolean> {
   try {
     await returnSavedTask(task.id, quadrant, dueDate);
     toast.success("Returned to matrix", { action: { label: "Undo", onClick: () => { void saveTaskForLater(task.id).catch(() => toast.error("Couldn't undo returning this item")); } } });

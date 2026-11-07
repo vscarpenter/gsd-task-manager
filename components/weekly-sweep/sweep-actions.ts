@@ -1,6 +1,8 @@
 import { deleteTask, restoreTask, updateTask } from "@/lib/tasks";
-import { returnSavedTask, saveTaskForLater } from "@/lib/tasks/saved";
+import { toast } from "sonner";
+import { TOAST_DURATION } from "@/lib/constants";
 import { onDate } from "@/lib/due-time";
+import { returnItem } from "@/components/saved/use-saved-actions";
 import { ErrorActions } from "@/lib/error-logger";
 import {
   handleMarkUrgent,
@@ -41,8 +43,7 @@ export async function completeTask(task: TaskRecord, offerUndo: OfferUndo): Prom
 }
 
 export async function markUrgent(task: TaskRecord, offerUndo: OfferUndo): Promise<boolean> {
-  await handleMarkUrgent(task, offerUndo);
-  return true;
+  return handleMarkUrgent(task, offerUndo);
 }
 
 export async function saveForLater(task: TaskRecord, offerUndo: OfferUndo): Promise<boolean> {
@@ -50,15 +51,17 @@ export async function saveForLater(task: TaskRecord, offerUndo: OfferUndo): Prom
 }
 
 export async function moveToQuadrant(task: TaskRecord, target: QuadrantId, offerUndo: OfferUndo): Promise<boolean> {
-  await handleMoveTo(task, target, offerUndo);
-  return true;
+  return handleMoveTo(task, target, offerUndo);
 }
 
-/** New date and Add date: an ordinary edit that keeps any time of day already set. */
-export async function setDueDay(task: TaskRecord, day: string, offerUndo: OfferUndo): Promise<boolean> {
+/**
+ * New date and Add date: an ordinary edit that keeps any time of day already set. It gives
+ * the feedback the matrix's edit path gives, "Task updated" with no Undo, and adds no toast.
+ */
+export async function setDueDay(task: TaskRecord, day: string): Promise<boolean> {
   try {
     await updateTask(task.id, { dueDate: onDate(task.dueDate, day) });
-    offerUndo("Due date changed", () => updateTask(task.id, { dueDate: task.dueDate }).then(() => {}));
+    toast.success("Task updated", { duration: TOAST_DURATION.SHORT });
     return true;
   } catch (error) {
     reportTaskMutationError(error, ErrorActions.UPDATE_TASK, "Couldn't change the due date", task.id);
@@ -77,13 +80,7 @@ export async function removeTask(task: TaskRecord, offerUndo: OfferUndo): Promis
   }
 }
 
-export async function returnToMatrix(task: TaskRecord, quadrant: QuadrantId, offerUndo: OfferUndo): Promise<boolean> {
-  try {
-    await returnSavedTask(task.id, quadrant, task.dueDate);
-    offerUndo("Returned to matrix", () => saveTaskForLater(task.id).then(() => {}));
-    return true;
-  } catch (error) {
-    reportTaskMutationError(error, "return_saved", "Couldn't return this item to the matrix", task.id);
-    return false;
-  }
+/** Return to matrix: the Saved page's own flow, with its quadrant and due date choices, toast, and Undo. */
+export async function returnToMatrix(task: TaskRecord, quadrant: QuadrantId, dueDate?: string): Promise<boolean> {
+  return returnItem(task, quadrant, dueDate);
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { DUE_PRESETS, resolveDuePreset } from "@/lib/due-date-presets";
 import { formatRelative } from "@/lib/utils";
 import { quadrantForTask, quadrants } from "@/lib/quadrants";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
 import { actionsFor, type SweepActionId, type SweepReason } from "./sweep-actions";
+import { SweepReturnForm } from "./sweep-return-form";
 
 const REASON_LINES: Record<SweepReason, string> = {
   overdue: "Due date passed",
@@ -35,7 +36,7 @@ export interface SweepCardHandlers {
   onSkip: () => void;
   onSetDay: (day: string) => void;
   onMove: (quadrant: QuadrantId) => void;
-  onReturn: (quadrant: QuadrantId) => void;
+  onReturn: (quadrant: QuadrantId, dueDate?: string) => Promise<boolean>;
 }
 
 type Panel = "date" | "move" | "return" | null;
@@ -80,6 +81,18 @@ interface SweepCardProps {
   handlers: SweepCardHandlers;
 }
 
+/** Mark urgent with F1's hint, the line the matrix's menu shows under it: where the task will land. */
+function MarkUrgentLabel({ task }: { task: TaskRecord }) {
+  return (
+    <span className="flex flex-col items-start">
+      Mark urgent
+      <span id={`sweep-hint-${task.id}`} className="text-xs font-normal text-foreground-muted">
+        {task.important ? "Moves to Do First" : "Moves to Delegate"}
+      </span>
+    </span>
+  );
+}
+
 /** Runs a card action, or opens the panel an action needs. */
 function runAction(id: SweepActionId, handlers: SweepCardHandlers, openPanel: (panel: Exclude<Panel, null>) => void): void {
   const panel = PANEL_OF[id];
@@ -109,7 +122,20 @@ function PanelArea({ panel, task, handlers, onClose }: PanelAreaProps) {
     <div ref={ref} role="group" aria-label={PANEL_LABELS[panel]} onKeyDown={(event) => event.key === "Escape" && onClose()}>
       {panel === "date" ? <DateChoices onPick={handlers.onSetDay} /> : null}
       {panel === "move" ? <QuadrantChoices current={task.quadrant} onPick={handlers.onMove} /> : null}
-      {panel === "return" ? <QuadrantChoices onPick={handlers.onReturn} /> : null}
+      {panel === "return" ? <SweepReturnForm task={task} onReturn={handlers.onReturn} onCancel={onClose} /> : null}
+    </div>
+  );
+}
+
+function CardHeading({ task, reason, titleRef }: { task: TaskRecord; reason: SweepReason; titleRef: RefObject<HTMLHeadingElement | null> }) {
+  return (
+    <div>
+      <h2 id={`sweep-title-${task.id}`} ref={titleRef} tabIndex={-1} className="text-h2 text-foreground">{task.title}</h2>
+      <p className="mt-1 text-small text-foreground-muted">
+        {quadrantForTask(task.urgent, task.important).title}
+        {task.dueDate ? ` · ${formatRelative(task.dueDate)}` : ""}
+      </p>
+      <p className="mt-2 text-small font-medium text-foreground">{REASON_LINES[reason]}</p>
     </div>
   );
 }
@@ -130,26 +156,21 @@ export function SweepCard({ task, reason, handlers }: SweepCardProps) {
 
   return (
     <article aria-labelledby={`sweep-title-${task.id}`} className="space-y-4 rounded-lg border border-border bg-card p-5 sm:p-7">
-      <div>
-        <h2 id={`sweep-title-${task.id}`} ref={titleRef} tabIndex={-1} className="text-h2 text-foreground">{task.title}</h2>
-        <p className="mt-1 text-small text-foreground-muted">
-          {quadrantForTask(task.urgent, task.important).title}
-          {task.dueDate ? ` · ${formatRelative(task.dueDate)}` : ""}
-        </p>
-        <p className="mt-2 text-small font-medium text-foreground">{REASON_LINES[reason]}</p>
-      </div>
+      <CardHeading task={task} reason={reason} titleRef={titleRef} />
       <div className="flex flex-wrap gap-2">
         {actionsFor(reason, task).map((id) => (
           <Button
             key={id}
             variant={id === "delete" ? "destructive" : id === "skip" ? "ghost" : "subtle"}
             aria-expanded={PANEL_OF[id] ? panel === PANEL_OF[id] : undefined}
+            aria-label={id === "mark-urgent" ? "Mark urgent" : undefined}
+            aria-describedby={id === "mark-urgent" ? `sweep-hint-${task.id}` : undefined}
             onClick={(event) => {
               triggerRef.current = event.currentTarget;
               runAction(id, handlers, setPanel);
             }}
           >
-            {label(id)}
+            {id === "mark-urgent" ? <MarkUrgentLabel task={task} /> : label(id)}
           </Button>
         ))}
       </div>
