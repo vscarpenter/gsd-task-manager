@@ -262,5 +262,14 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
   };
 }
 
+/**
+ * The placement a push sends, read from the row as it is now rather than the
+ * queued payload, which can predate this build reading saved_at. A row that's
+ * no longer in `tasks` sends no key, so the server keeps its own value.
+ */
+export function placementToWire(current: TaskRecord | undefined): Pick<Partial<PBTaskRecord>, 'saved_at'> {
+  return current ? { saved_at: savedTimestampToWire(current.savedAt) } : {};
+}
+
 function savedTimestampToWire(savedAt?: string): string { return savedAt ?? ""; }
 function savedTimestampFromWire(savedAt: string): string | undefined { return savedAt || undefined; }

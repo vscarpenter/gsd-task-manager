@@ -5,7 +5,6 @@
  */
 
 import { getDb } from "@/lib/db";
-import { SYNC_CONFIG } from "@/lib/constants/sync";
 import { clearPocketBase } from "../pocketbase-client";
 import type { PBSyncConfig } from "../types";
 import { getSyncConfig } from "./get-set";
@@ -34,7 +33,9 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
     provider: null,
     lastSyncAt: null,
     lastClientUpdatedAt: null,
-    pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
+    // The local rows stay, so the contract they were pulled under stays with
+    // them. Only a completed pull may stamp a newer one (ADR 0019).
+    pullCursorVersion: current.pullCursorVersion,
     lastServerUpdatedAt: null,
     lastSuccessfulSyncAt: null,
     consecutiveFailures: 0,

@@ -211,7 +211,10 @@ function buildSyncConfig(
     provider: authState.provider,
     lastSyncAt: null,
     lastClientUpdatedAt: null,
-    pullCursorVersion: 2,
+    // Only a completed pull may stamp the contract. A literal value here would
+    // tell the next sync either that a backfill is owed when it isn't, or that
+    // it isn't when it is (ADR 0019).
+    pullCursorVersion: existingConfig?.pullCursorVersion,
     lastServerUpdatedAt: null,
     lastSuccessfulSyncAt: null,
     consecutiveFailures: 0,
@@ -225,7 +228,7 @@ function buildSyncConfig(
 }
 
 /** Persist sync config to IndexedDB after successful OAuth */
-async function persistSyncConfig(authState: AuthState) {
+export async function persistSyncConfig(authState: AuthState) {
   // Every sync is fenced to the config's userId, so a config without one would
   // cancel each sync without saying why. Refuse to enable it instead.
   if (!authState.userId) {
