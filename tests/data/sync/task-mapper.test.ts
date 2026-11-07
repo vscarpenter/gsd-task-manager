@@ -24,6 +24,8 @@ vi.mock('@/lib/logger', () => ({
   createLogger: () => mockLogger,
 }));
 
+const DEVICE_DEFAULT = 15;
+
 function buildLocalTask(overrides?: Partial<TaskRecord>): TaskRecord {
   return {
     id: 'task-123',
@@ -108,7 +110,7 @@ describe('task-mapper', () => {
   describe('taskRecordToPocketBase', () => {
     it('should map camelCase local fields to snake_case PB fields', () => {
       const local = buildLocalTask();
-      const result = taskRecordToPocketBase(local, 'user-1', 'device-1');
+      const result = taskRecordToPocketBase(local, 'user-1', 'device-1', DEVICE_DEFAULT);
 
       expect(result.task_id).toBe('task-123');
       expect(result.owner).toBe('user-1');
@@ -139,17 +141,31 @@ describe('task-mapper', () => {
         snoozedUntil: undefined,
         tags: undefined,
       });
-      const result = taskRecordToPocketBase(local, 'user-1', 'device-1');
+      const result = taskRecordToPocketBase(local, 'user-1', 'device-1', DEVICE_DEFAULT);
 
       expect(result.due_date).toBe('');
       expect(result.completed_at).toBe('');
-      expect(result.notify_before).toBeNull();
+      expect(result.notify_before).toBe(DEVICE_DEFAULT);
       expect(result.last_notification_at).toBe('');
       expect(result.estimated_minutes).toBeNull();
       expect(result.time_spent).toBe(0);
       expect(result.time_entries).toEqual([]);
       expect(result.snoozed_until).toBe('');
       expect(result.tags).toEqual([]);
+    });
+
+    it('the wire never carries a null offset', () => {
+      const local = buildLocalTask({ notifyBefore: undefined });
+      const result = taskRecordToPocketBase(local, 'user-1', 'device-1', 40);
+
+      expect(result.notify_before).toBe(40);
+    });
+
+    it('a zero offset stays zero on the wire', () => {
+      const local = buildLocalTask({ notifyBefore: 0 });
+      const result = taskRecordToPocketBase(local, 'user-1', 'device-1', 40);
+
+      expect(result.notify_before).toBe(0);
     });
 
     it('should preserve array fields', () => {
@@ -161,7 +177,7 @@ describe('task-mapper', () => {
           { id: 's2', title: 'Sub 2', completed: false },
         ],
       });
-      const result = taskRecordToPocketBase(local, 'user-1', 'device-1');
+      const result = taskRecordToPocketBase(local, 'user-1', 'device-1', DEVICE_DEFAULT);
 
       expect(result.tags).toEqual(['urgent', 'bug']);
       expect(result.dependencies).toEqual(['dep-1', 'dep-2']);

@@ -49,6 +49,7 @@ export function NotificationSettingsSection({
 				<>
 					<SettingsSelectRow
 						label="Default reminder"
+						description="For new tasks"
 						value={reminderLabel(settings.defaultReminder)}
 						options={reminderOptions(settings.defaultReminder)}
 						onChange={onDefaultReminderChange}

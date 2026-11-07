@@ -13,6 +13,7 @@ import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { assertRawSmartViewBounds } from "@/lib/tasks/smart-view-import-bounds";
+import { readDefaultReminder } from "@/lib/notifications/default-reminder";
 
 /** Maximum number of tasks allowed in a single import to prevent storage DoS */
 const MAX_IMPORT_TASKS = 10_000;
@@ -498,6 +499,14 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
   const parsed = result.data;
 
   assertWithinImportCap(parsed);
+
+  // A backup with no offset takes this device's default, so the value is a number
+  // on every device (D-10). The import schema keeps the field optional for old backups.
+  const defaultReminder = await readDefaultReminder();
+  parsed.tasks = parsed.tasks.map((task) => ({
+    ...task,
+    notifyBefore: task.notifyBefore ?? defaultReminder,
+  }));
 
   const { syncEnabled, queue, scheduleSyncAfterChange } = await resolveSyncDeps();
 

@@ -3,7 +3,9 @@ import { createTask } from "@/lib/tasks/crud/create";
 import { taskValidationMessage, TaskValidationError } from "@/lib/tasks/crud/validation-error";
 import type { TaskDraft } from "@/lib/types";
 
-vi.mock("@/lib/db", () => ({ getDb: () => ({ tasks: { add: vi.fn() } }) }));
+vi.mock("@/lib/db", () => ({
+  getDb: () => ({ tasks: { add: vi.fn() }, notificationSettings: { get: vi.fn() } }),
+}));
 vi.mock("@/lib/tasks/crud/helpers", () => ({
   runTaskSyncTransaction: (mutation: (context: unknown) => Promise<unknown>) =>
     mutation({ syncEnabled: false, enqueue: vi.fn() }),

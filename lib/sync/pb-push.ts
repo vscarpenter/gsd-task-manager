@@ -5,6 +5,8 @@
  * Pre-fetches remote task index for efficient lookups and throttles requests.
  */
 
+import { getDb } from '@/lib/db';
+import { readDefaultReminder } from '@/lib/notifications/default-reminder';
 import { getPocketBase } from './pocketbase-client';
 import { getSyncQueue } from './queue';
 import { taskRecordToPocketBase } from './task-mapper';
@@ -48,6 +50,22 @@ export interface PushResult {
 }
 
 /**
+ * The offset a push sends: the payload's, else the stored row's, else this
+ * device's default (D-10). A legacy null therefore never reaches the wire.
+ */
+async function resolveNotifyBefore(
+  payload: NonNullable<SyncQueueItem['payload']>,
+): Promise<{ task: NonNullable<SyncQueueItem['payload']>; storeOnRow: boolean }> {
+  if (payload.notifyBefore !== undefined) return { task: payload, storeOnRow: false };
+  const row = await getDb().tasks.get(payload.id);
+  if (row?.notifyBefore !== undefined) {
+    return { task: { ...payload, notifyBefore: row.notifyBefore }, storeOnRow: false };
+  }
+  const notifyBefore = await readDefaultReminder();
+  return { task: { ...payload, notifyBefore }, storeOnRow: row !== undefined };
+}
+
+/**
  * Upsert a task to PocketBase. Creates if no remote record exists, updates otherwise.
  */
 async function upsertRemoteTask(
@@ -57,15 +75,20 @@ async function upsertRemoteTask(
   deviceId: string,
 ): Promise<string> {
   const pb = getPocketBase();
-  const pbData = taskRecordToPocketBase(payload!, ownerId, deviceId);
+  const { task, storeOnRow } = await resolveNotifyBefore(payload!);
+  const pbData = taskRecordToPocketBase(task, ownerId, deviceId, task.notifyBefore!);
 
-  if (pbRecordId) {
-    await pb.collection('tasks').update(pbRecordId, pbData);
-    return pbRecordId;
+  let recordId = pbRecordId;
+  if (recordId) {
+    await pb.collection('tasks').update(recordId, pbData);
+  } else {
+    recordId = (await pb.collection('tasks').create(pbData)).id;
   }
 
-  const created = await pb.collection('tasks').create(pbData);
-  return created.id;
+  // Settle the row so this device and the server agree. No stamp bump and nothing
+  // queued: other devices already hold this task at the same stamp.
+  if (storeOnRow) await getDb().tasks.update(task.id, { notifyBefore: task.notifyBefore });
+  return recordId;
 }
 
 /**

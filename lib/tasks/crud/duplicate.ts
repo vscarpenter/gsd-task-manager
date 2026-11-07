@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
+import { readDefaultReminder } from "@/lib/notifications/default-reminder";
 import type { TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./helpers";
@@ -13,10 +14,11 @@ const logger = createLogger("TASK_CRUD");
 export async function duplicateTask(id: string): Promise<TaskRecord> {
   try {
     const db = getDb();
+    const defaultReminder = await readDefaultReminder();
     const duplicate = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
       const original = await db.tasks.get(id);
       if (!original) throw new Error(`Task with id ${id} not found`);
-      const record = buildDuplicateRecord(original);
+      const record = buildDuplicateRecord(original, defaultReminder);
       await db.tasks.add(record);
       if (syncEnabled) await enqueue("create", record.id, record);
       return record;
@@ -35,13 +37,14 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
 /**
  * Build a duplicate task record with fresh metadata
  */
-function buildDuplicateRecord(original: TaskRecord): TaskRecord {
+function buildDuplicateRecord(original: TaskRecord, defaultReminder: number): TaskRecord {
   const now = isoNow();
 
   return {
     ...original,
     id: generateId(),
     title: `${original.title} (Copy)`,
+    notifyBefore: original.notifyBefore ?? defaultReminder,
     createdAt: now,
     updatedAt: now,
     completed: false,
