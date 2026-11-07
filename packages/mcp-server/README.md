@@ -573,7 +573,7 @@ Create a new task from structured fields; the quadrant is derived from `urgent` 
 - `subtasks` (optional): Array of subtask objects `{title, completed}`
 - `recurrence` (optional): `'none'` | `'daily'` | `'weekly'` | `'monthly'`
 - `dependencies` (optional): Array of task IDs that must be completed first
-- `notifyBefore` (optional): Minutes before the due date to remind you (0 turns off the reminder)
+- `notifyBefore` (optional): Minutes before the due date to remind you (default 15). `0` reminds at the due time. To turn reminders off, set `notificationEnabled: false`
 - `notificationEnabled` (optional): Whether reminders are on for this task (default: true)
 - `estimatedMinutes` (optional): Estimated time in whole minutes, 1-10080
 - `dryRun` (optional): If true, validate and preview without saving (v0.6.0)
