@@ -62,6 +62,9 @@ export const taskDraftSchema = z.object({
 	dependencies: z.array(z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH)).max(SCHEMA_LIMITS.MAX_DEPENDENCIES).default([]), // IDs of tasks that must be completed first
 	notifyBefore: z.number().int().min(0).optional(), // minutes before due date
 	notificationEnabled: z.boolean().default(true),
+	// Top three: the local YYYY-MM-DD a task is picked for, and its slot (spec-top-three.md 3.5).
+	focusDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+	focusRank: z.number().int().min(1).max(3).optional(),
 	estimatedMinutes: z.preprocess(
 		(value) => value === 0 ? undefined : value,
 		z.number().int().min(1).max(10080).optional()

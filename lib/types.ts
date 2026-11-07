@@ -66,6 +66,8 @@ export interface TaskDraft {
   dependencies?: string[];
   notifyBefore?: number;
   notificationEnabled?: boolean;
+  focusDate?: string;
+  focusRank?: number;
   estimatedMinutes?: number; // Estimated time to complete task
 }
 

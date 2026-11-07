@@ -98,6 +98,8 @@ function mergeTaskUpdates(
     // this device's default (D-10). Off is notificationEnabled, not a missing offset.
     notifyBefore: keepUnlessGiven(updates, existing, "notifyBefore") ?? defaultReminder,
     notificationEnabled: updates.notificationEnabled ?? existing.notificationEnabled,
+    focusDate: "focusDate" in updates ? updates.focusDate : existing.focusDate,
+    focusRank: "focusRank" in updates ? updates.focusRank : existing.focusRank,
     estimatedMinutes: keepUnlessGiven(updates, existing, "estimatedMinutes"),
   };
 }
