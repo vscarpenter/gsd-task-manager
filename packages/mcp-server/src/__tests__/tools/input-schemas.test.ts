@@ -3,6 +3,53 @@ import { SCHEMA_LIMITS } from '../../constants.js';
 import { validateToolArgs } from '../../tools/handlers/input-schemas.js';
 
 describe('validateToolArgs', () => {
+  describe('tag normalization', () => {
+    const tagsFor = (tool: 'create_task' | 'update_task', tags: string[]) => {
+      const base = tool === 'create_task' ? { title: 'T', urgent: false, important: false } : { id: 'task-1' };
+      return (validateToolArgs(tool, { ...base, tags }) as { tags: string[] }).tags;
+    };
+
+    it('lowercases, trims, and strips one leading # the way the clients do', () => {
+      expect(tagsFor('create_task', ['  #Work ', 'Project-Alpha'])).toEqual(['work', 'project-alpha']);
+    });
+
+    it('drops duplicates after normalizing and keeps first-seen order', () => {
+      expect(tagsFor('create_task', ['Work', '#work', 'home', 'WORK'])).toEqual(['work', 'home']);
+    });
+
+    it('drops tags that are empty once normalized', () => {
+      expect(tagsFor('create_task', ['#', '   ', 'ok'])).toEqual(['ok']);
+    });
+
+    it('counts duplicates once toward the 20 tag limit', () => {
+      const names = Array.from({ length: SCHEMA_LIMITS.MAX_TAGS }, (_, i) => `tag-${i}`);
+      expect(tagsFor('create_task', [...names, 'TAG-0'])).toHaveLength(SCHEMA_LIMITS.MAX_TAGS);
+    });
+
+    it('still rejects a tag over the length limit after normalizing', () => {
+      expect(() => tagsFor('create_task', ['#' + 'x'.repeat(SCHEMA_LIMITS.TAG_MAX_LENGTH + 1)])).toThrow(/tags/);
+    });
+
+    it('normalizes update_task tags', () => {
+      expect(tagsFor('update_task', ['#Errands'])).toEqual(['errands']);
+    });
+
+    it('normalizes the tags a list_tasks filter matches on', () => {
+      const parsed = validateToolArgs('list_tasks', { tags: ['#Work'] }) as { tags: string[] };
+      expect(parsed.tags).toEqual(['work']);
+    });
+
+    it('normalizes bulk add_tags and remove_tags', () => {
+      for (const type of ['add_tags', 'remove_tags']) {
+        const parsed = validateToolArgs('bulk_update_tasks', {
+          taskIds: ['task-1'],
+          operation: { type, tags: ['#Work'] },
+        }) as { operation: { tags: string[] } };
+        expect(parsed.operation.tags).toEqual(['work']);
+      }
+    });
+  });
+
   describe('update_task subtask ids', () => {
     const withSubtaskId = (id: string) => ({
       id: 'task-1',
