@@ -51,8 +51,17 @@ const TOMBSTONES = [
   }],
 ] as const;
 
+const BRING_BACK = [
+  ['a pull', () => fullSync('auto')],
+  ['a realtime change', () => applyRemoteChange('update', serverRow(EDITED) as unknown as RecordModel, 'user-1')],
+] as const;
+
 async function expectBackWithNoTombstone(expected: Partial<TaskRecord>): Promise<void> {
-  await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Edited elsewhere', ...expected });
+  const row = await getDb().tasks.get('t-a');
+  expect(row).toMatchObject({ title: 'Edited elsewhere', ...expected });
+  // Only the reminder fields come from the buried row. Its archive or Trash stamp stays behind.
+  expect(row).not.toHaveProperty('archivedAt');
+  expect(row).not.toHaveProperty('deletedAt');
   await expect(getDb().archivedTasks.get('t-a')).resolves.toBeUndefined();
   await expect(getDb().deletedTasks.get('t-a')).resolves.toBeUndefined();
 }
@@ -60,33 +69,23 @@ async function expectBackWithNoTombstone(expected: Partial<TaskRecord>): Promise
 beforeEach(async () => {
   vi.clearAllMocks();
   await resetFakeSync();
+  await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), server: [serverRow(EDITED)] });
 });
 
 describe.each(TOMBSTONES)('a task back from %s', (_name, bury) => {
-  it("a pull that brings it back keeps this device's reminder state", async () => {
-    await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), server: [serverRow(EDITED)] });
+  it.each(BRING_BACK)("%s that brings it back keeps this device's reminder state", async (_how, bringBack) => {
     await bury();
 
-    await fullSync('auto');
-
-    await expectBackWithNoTombstone(REMINDED);
-  });
-
-  it("a realtime change that brings it back keeps this device's reminder state", async () => {
-    await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION) });
-    await bury();
-
-    await applyRemoteChange('update', serverRow(EDITED) as unknown as RecordModel, 'user-1');
+    await bringBack();
 
     await expectBackWithNoTombstone(REMINDED);
   });
 
   // B-55 still applies through the mapper: a new due date is a new reminder.
-  it('a pull that moves its due date gets a fresh reminder', async () => {
-    await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), server: [serverRow(EDITED)] });
+  it.each(BRING_BACK)('%s that moves its due date gives it a fresh reminder', async (_how, bringBack) => {
     await bury({ dueDate: SAVED });
 
-    await fullSync('auto');
+    await bringBack();
 
     await expectBackWithNoTombstone({ notificationSent: false, lastNotificationAt: undefined, snoozedUntil: undefined });
   });
