@@ -9,9 +9,9 @@ import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, isBeyondClockSkew, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
-import { classifyRemoteDeletion } from './queue';
+import { classifyRemoteDeletion, isPendingSyncQueueItem } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
 import { toTrashedRecord } from '@/lib/trash';
 import { savedPlacementBlocker } from '@/lib/tasks/saved-placement';
@@ -77,7 +77,7 @@ function acceptsRemoteVersion(remoteUpdatedAt: string, localUpdatedAt: string, m
 }
 
 /**
- * During a backfill, a locally newer row keeps its own version but takes the
+ * During a backfill, a local copy that wins keeps its own version but takes the
  * fields its build never read. An empty savedAt means "never read" only on a
  * row stored before the contract that added saved_at; after it, the empty
  * value is a real Return. Returns the repaired row, or null to leave it alone.
@@ -103,8 +103,8 @@ interface BackfillPlan {
 }
 
 /**
- * A locally newer row keeps its version. A backfill still repairs the fields
- * its build never read. That's a repair, not a pull of the record, so it
+ * A local copy that wins (strictly newer, or holding off a far-future remote)
+ * keeps its version. A backfill still repairs the fields its build never read. That's a repair, not a pull of the record, so it
  * doesn't count as pulled and doesn't move the cursor.
  */
 async function repairUnreadFields(
@@ -116,6 +116,36 @@ async function repairUnreadFields(
   if (!local || !plan.mergeSameVersion) return;
   const repaired = copyUnreadFields(local, remote, plan.storedContractVersion);
   if (repaired) await db.tasks.put(repaired);
+}
+
+/**
+ * The native hold-off (S-AND-02), which web needs only where it pulls first:
+ * the backfill. A far-future stamp clamps to now plus 5 minutes and looks
+ * strictly newer than a queued local edit. That edit still pushes, because push
+ * never loses to such a stamp, so taking the remote here would leave this
+ * device on content no other device has.
+ */
+async function holdsOffFarFuture(
+  db: ReturnType<typeof getDb>,
+  rawUpdatedAt: string | undefined,
+  taskId: string,
+  plan: BackfillPlan,
+): Promise<boolean> {
+  if (!plan.mergeSameVersion || !isBeyondClockSkew(rawUpdatedAt)) return false;
+  const rows = await db.syncQueue.where('taskId').equals(taskId).toArray();
+  return rows.some(isPendingSyncQueueItem);
+}
+
+async function remoteVersionWins(
+  db: ReturnType<typeof getDb>,
+  local: TaskRecord | undefined,
+  merged: TaskRecord,
+  rawUpdatedAt: string | undefined,
+  plan: BackfillPlan,
+): Promise<boolean> {
+  if (!local) return true;
+  if (await holdsOffFarFuture(db, rawUpdatedAt, local.id, plan)) return false;
+  return acceptsRemoteVersion(merged.updatedAt, local.updatedAt, plan.mergeSameVersion);
 }
 
 async function applyPreparedRecord(
@@ -133,7 +163,7 @@ async function applyPreparedRecord(
   const localTask = await db.tasks.get(remoteTask.id);
   const merged = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
   if (!merged) return 0;
-  const remoteWins = !localTask || acceptsRemoteVersion(merged.updatedAt, localTask.updatedAt, plan.mergeSameVersion);
+  const remoteWins = await remoteVersionWins(db, localTask, merged, rawUpdatedAt, plan);
   if (!remoteWins) {
     await repairUnreadFields(db, localTask, remoteTask, plan);
     return 0;
@@ -159,7 +189,8 @@ async function applyRemoteRecords(records: RecordModel[], ownerId: string, plan:
   const acceptedRecords = prepareRemoteRecords(records);
   let pulledCount = 0;
   const appliedRecords: PreparedRemoteRecord[] = [];
-  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncMetadata], async () => {
+  // syncQueue is read for the far-future hold-off, inside the same transaction.
+  await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncQueue, db.syncMetadata], async () => {
     await assertSyncSessionCurrent(ownerId);
     for (const prepared of acceptedRecords) {
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- one atomic Dexie transaction preserves tombstone/live invariants

@@ -90,6 +90,8 @@ const CREATED = '2026-10-01T10:00:00.000Z';
 const SAVED = '2026-10-20T10:00:00.000Z';
 const OLDER = '2026-10-19T10:00:00.000Z';
 const NEWER = '2026-10-21T10:00:00.000Z';
+/** Past the skew ceiling: a device whose clock runs far ahead stamped it. */
+const FAR_FUTURE = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 const AUTH = { isLoggedIn: true, userId: 'user-1', email: 'one@example.com', provider: 'google' };
 
 function localRow(updatedAt: string, extra: Partial<TaskRecord> = {}): TaskRecord {
@@ -373,6 +375,29 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
 
     await expect(getDb().tasks.get('t-new')).resolves.toBeDefined();
     expect(fake.state.records.get('rec_t-new')?.title).toBe('Never pushed');
+  });
+
+  it('a pull-first backfill holds off a far-future remote with a queued edit', async () => {
+    const row = localRow(NEWER, { title: 'Local edit' });
+    const farFuture = serverRow({ title: 'Edit from a fast clock', client_updated_at: FAR_FUTURE, saved_at: '' });
+    await seed({ config: signedIn(), local: [row], queued: [row], server: [farFuture] });
+
+    await fullSync('auto');
+
+    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit', updatedAt: NEWER });
+    expect(fake.state.records.get('rec_a')).toMatchObject({ title: 'Local edit', client_updated_at: NEWER });
+  });
+
+  // S-SPEC-01. On WEB-SAVED the server's pick is its saved_at; WEB-C4 adds the focus pair.
+  it('a far-future remote with a queued edit keeps the server pick through the backfill', async () => {
+    const row = localRow(NEWER, { title: 'Local edit' });
+    await seed({ config: signedIn(), local: [row], queued: [row], server: [serverRow({ client_updated_at: FAR_FUTURE })] });
+
+    await fullSync('auto');
+
+    expect(sentEmptySavedAt()).toBe(false);
+    expect(serverSavedAt()).toBe(SAVED);
+    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit', savedAt: SAVED });
   });
 
   it('a failed backfill pull pushes nothing and stamps nothing', async () => {
