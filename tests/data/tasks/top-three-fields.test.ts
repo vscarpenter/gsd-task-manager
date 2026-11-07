@@ -38,6 +38,20 @@ describe("the schemas keep a pick", () => {
 	});
 });
 
+describe("a stored row with a bad pick still reads (spec section 3.5)", () => {
+	it.each([
+		["storedTaskRecordSchema", storedTaskRecordSchema],
+		["storedArchivedTaskRecordSchema", storedArchivedTaskRecordSchema],
+		["storedTrashedTaskRecordSchema", storedTrashedTaskRecordSchema],
+	])("%s keeps the task and reads no pick", (_name, schema) => {
+		const result = schema.safeParse({ ...STORED, focusDate: "2026-02-30", focusRank: 5 });
+
+		expect(result.success).toBe(true);
+		expect(result.data?.focusDate).toBeUndefined();
+		expect(result.data?.focusRank).toBeUndefined();
+	});
+});
+
 describe("the normal edit path writes and clears a pick", () => {
 	beforeEach(async () => {
 		await getDb().tasks.add(STORED);
@@ -77,6 +91,21 @@ describe("the normal edit path writes and clears a pick", () => {
 
 	it.each([0, 4, 1.5])("refuses rank %s", async (focusRank) => {
 		await expect(updateTask(STORED.id, { focusDate: PICK.focusDate, focusRank })).rejects.toThrow(/focusRank/);
+	});
+
+	it.each([
+		["a date alone", { focusDate: PICK.focusDate }],
+		["a rank alone", { focusRank: 1 }],
+	])("refuses half a pair: %s", async (_name, half) => {
+		await expect(updateTask(STORED.id, half)).rejects.toThrow(/focus/);
+	});
+
+	it("moves a picked row's rank without restating the date", async () => {
+		await updateTask(STORED.id, PICK);
+
+		await updateTask(STORED.id, { focusRank: 3 });
+
+		await expect(getDb().tasks.get(STORED.id)).resolves.toMatchObject({ focusDate: PICK.focusDate, focusRank: 3 });
 	});
 
 	it("refuses a date that isn't YYYY-MM-DD", async () => {

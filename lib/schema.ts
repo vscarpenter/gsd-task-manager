@@ -48,6 +48,15 @@ const focusRankSchema = z.number().int().min(1).max(MAX_FOCUS_RANK);
 const focusPairSchema = z.object({ focusDate: focusDateSchema, focusRank: focusRankSchema });
 
 /**
+ * Reading a stored row never drops it over a bad pick (spec section 3.5). A bad
+ * value reads as unset, and a lone field is inert because a pick needs both.
+ */
+const storedFocusFields = {
+	focusDate: focusDateSchema.optional().catch(undefined),
+	focusRank: focusRankSchema.optional().catch(undefined),
+};
+
+/**
  * At the import boundary, top three's pair counts only as a whole. Anything
  * else becomes neither field, so a bad pick never refuses the backup or costs
  * the task (tasks/spec-top-three.md section 7).
@@ -146,6 +155,7 @@ export const storedTaskRecordSchema = taskDraftSchema
 		snoozedUntil: z.iso.datetime({ offset: true }).optional(),
 		timeSpent: z.number().int().min(0).optional(),
 		timeEntries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
+		...storedFocusFields,
 	})
 	.strip();
 
