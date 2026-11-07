@@ -52,3 +52,32 @@ test.describe("Today strip", () => {
     await expect(page.getByTestId("today-strip").getByRole("button", { name: "Add to today: Plan the launch" })).toBeVisible();
   });
 });
+
+test.describe("Today strip at phone width", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("fits the screen with three picks and logs no errors", async ({ page, clearIndexedDB }) => {
+    void clearIndexedDB;
+    const errors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+    page.on("pageerror", (error) => errors.push(error.message));
+    const matrix = new MatrixPage(page);
+    await matrix.goto();
+    for (const title of ["Plan the launch with the whole team", "Book the venue", "Send the invites"]) {
+      await matrix.createTask(`${title} !!`);
+      const card = page.getByTestId("task-card").filter({ hasText: title });
+      await card.getByTestId("task-card-menu").click();
+      await page.getByRole("menuitem", { name: "Add to today" }).click();
+    }
+
+    const strip = page.getByTestId("today-strip");
+    await expect(page.getByRole("region", { name: "Today, 3 of 3" })).toBeVisible();
+    const overflows = await strip.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(overflows).toBe(false);
+    await expect(page.getByRole("menuitem")).toHaveCount(0);
+    await strip.screenshot({ path: process.env.TODAY_STRIP_SHOT ?? "test-results/today-strip-390.png" });
+    expect(errors).toEqual([]);
+  });
+});
