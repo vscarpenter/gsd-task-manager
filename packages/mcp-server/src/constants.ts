@@ -15,3 +15,6 @@ export const SCHEMA_LIMITS = {
   MAX_DEPENDENCIES: 50,
   MAX_BULK_TASKS: 50,
 } as const;
+
+/** Minutes before the due time a created task reminds, matching every client's seeded default (D-10). */
+export const DEFAULT_NOTIFY_BEFORE_MINUTES = 15;
