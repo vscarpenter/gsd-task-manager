@@ -396,7 +396,7 @@ describe('Settings Components', () => {
       );
       const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
       expect(select.value).toBe('0');
-      expect(select.selectedOptions[0]).toHaveTextContent('At time');
+      expect(select.selectedOptions[0]).toHaveTextContent('At due time');
     });
 
     it('hides default reminder select when notifications disabled', () => {

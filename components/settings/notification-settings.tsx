@@ -78,7 +78,7 @@ function unit(count: number, word: string): string {
  * reads "36 hours".
  */
 function offListLabel(minutes: number): string {
-	if (minutes === 0) return "At time";
+	if (minutes === 0) return "At due time";
 	if (minutes < 60 || minutes % 60 !== 0) return unit(minutes, "minute");
 	if (minutes < 1440 || minutes % 1440 !== 0) return unit(minutes / 60, "hour");
 	return unit(minutes / 1440, "day");
