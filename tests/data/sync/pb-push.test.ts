@@ -705,3 +705,68 @@ describe('pushLocalChanges notify_before drain (D-10)', () => {
     expect(await db.syncQueue.count()).toBe(0);
   });
 });
+
+describe('pushLocalChanges notify_before drain races (D-10)', () => {
+  const STAMP = '2026-05-18T12:00:00.000Z';
+  const NEWER = '2026-05-18T13:00:00.000Z';
+
+  async function seed(rowPatch: Partial<TaskRecord>, payloadPatch: Partial<TaskRecord> = {}) {
+    const db = getDb();
+    await db.syncQueue.clear();
+    await db.tasks.clear();
+    await db.notificationSettings.put({
+      id: 'settings',
+      enabled: true,
+      defaultReminder: 45,
+      soundEnabled: true,
+      permissionAsked: false,
+      updatedAt: STAMP,
+    });
+    const payload = { ...makeTask('t1', STAMP), ...payloadPatch };
+    await db.tasks.put({ ...makeTask('t1', STAMP), ...rowPatch });
+    await getSyncQueue().enqueue('create', 't1', payload);
+    fetchRemoteTaskEntryMock.mockResolvedValue({ entry: null, fetchSucceeded: true });
+    return db;
+  }
+
+  function mockCreate(onCreate?: () => Promise<void>) {
+    const createSpy = vi.fn(async () => {
+      await onCreate?.();
+      return { id: 'rec-1' };
+    });
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: createSpy, update: vi.fn(), delete: vi.fn() }),
+    });
+    return createSpy;
+  }
+
+  it('a payload that carries null still pushes a number', async () => {
+    await seed({}, { notifyBefore: null as unknown as undefined });
+    const createSpy = mockCreate();
+
+    await pushLocalChanges('user-1');
+
+    expect(createSpy.mock.calls[0]?.[0]).toMatchObject({ notify_before: 45 });
+  });
+
+  it("a newer edit's offset is not mixed into an older payload", async () => {
+    await seed({ notifyBefore: 60, updatedAt: NEWER });
+    const createSpy = mockCreate();
+
+    await pushLocalChanges('user-1');
+
+    expect(createSpy.mock.calls[0]?.[0]).toMatchObject({ notify_before: 45 });
+    expect((await getDb().tasks.get('t1'))?.notifyBefore).toBe(60);
+  });
+
+  it('the write-back never overwrites an edit saved while the push was in flight', async () => {
+    const db = await seed({});
+    mockCreate(async () => {
+      await db.tasks.put({ ...makeTask('t1', NEWER), notifyBefore: 60 });
+    });
+
+    await pushLocalChanges('user-1');
+
+    expect((await db.tasks.get('t1'))?.notifyBefore).toBe(60);
+  });
+});
