@@ -59,6 +59,7 @@ function validateUpdatedDraft(
     const fields = result.error.issues.map((issue) => issue.path.join(".")).join(", ");
     throw TaskValidationError.fromZod(result.error, `invalid fields — ${fields}`);
   }
+  assertWholeFocusPair(result.data);
   return result.data;
 }
 
@@ -69,6 +70,13 @@ function keepUnlessGiven<K extends "dueDate" | "estimatedMinutes" | "notifyBefor
   key: K
 ): Partial<TaskDraft>[K] {
   return key in updates ? updates[key] : existing[key];
+}
+
+/** Top three's pair is set together or not at all; half a pair would reach the wire as rank 0. */
+function assertWholeFocusPair(draft: TaskDraft): void {
+  if ((draft.focusDate === undefined) === (draft.focusRank === undefined)) return;
+  const issues = [{ path: ["focusDate"], code: "custom" }, { path: ["focusRank"], code: "custom" }];
+  throw new TaskValidationError(issues, "invalid fields: focusDate and focusRank go together");
 }
 
 /**
