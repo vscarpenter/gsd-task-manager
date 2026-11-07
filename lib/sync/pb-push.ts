@@ -49,20 +49,49 @@ export interface PushResult {
   retryAfterMs?: number | null;
 }
 
+type QueuedTask = NonNullable<SyncQueueItem['payload']>;
+
 /**
  * The offset a push sends: the payload's, else the stored row's, else this
- * device's default (D-10). A legacy null therefore never reaches the wire.
+ * device's default (D-10). A legacy null never reaches the wire. The row counts
+ * only when it is the same write as the payload; a newer row has its own queued
+ * item that carries its own offset.
  */
 async function resolveNotifyBefore(
-  payload: NonNullable<SyncQueueItem['payload']>,
-): Promise<{ task: NonNullable<SyncQueueItem['payload']>; storeOnRow: boolean }> {
-  if (payload.notifyBefore !== undefined) return { task: payload, storeOnRow: false };
+  payload: QueuedTask,
+  defaultReminder: number,
+): Promise<{ task: QueuedTask; storeOnRow: boolean }> {
+  if (typeof payload.notifyBefore === 'number') return { task: payload, storeOnRow: false };
   const row = await getDb().tasks.get(payload.id);
-  if (row?.notifyBefore !== undefined) {
+  const sameWrite = row?.updatedAt === payload.updatedAt;
+  if (sameWrite && typeof row?.notifyBefore === 'number') {
     return { task: { ...payload, notifyBefore: row.notifyBefore }, storeOnRow: false };
   }
-  const notifyBefore = await readDefaultReminder();
-  return { task: { ...payload, notifyBefore }, storeOnRow: row !== undefined };
+  return { task: { ...payload, notifyBefore: defaultReminder }, storeOnRow: sameWrite };
+}
+
+/**
+ * Store the resolved number on the row so this device and the server agree. No
+ * stamp bump and nothing queued: other devices already hold this task at the same
+ * stamp. Guarded in one transaction, so an edit saved while the push was in
+ * flight is never overwritten. The server already has the number, so a local
+ * failure here is logged and does not fail the push.
+ */
+async function settleRowOffset(task: QueuedTask): Promise<void> {
+  const db = getDb();
+  try {
+    await db.transaction('rw', db.tasks, async () => {
+      const row = await db.tasks.get(task.id);
+      if (row && row.notifyBefore === undefined && row.updatedAt === task.updatedAt) {
+        await db.tasks.update(task.id, { notifyBefore: task.notifyBefore });
+      }
+    });
+  } catch (error) {
+    logger.warn('Could not store the resolved reminder offset on the row', {
+      taskId: task.id,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 }
 
 /**
@@ -75,8 +104,9 @@ async function upsertRemoteTask(
   deviceId: string,
 ): Promise<string> {
   const pb = getPocketBase();
-  const { task, storeOnRow } = await resolveNotifyBefore(payload!);
-  const pbData = taskRecordToPocketBase(task, ownerId, deviceId, task.notifyBefore!);
+  const defaultReminder = await readDefaultReminder();
+  const { task, storeOnRow } = await resolveNotifyBefore(payload!, defaultReminder);
+  const pbData = taskRecordToPocketBase(task, ownerId, deviceId, defaultReminder);
 
   let recordId = pbRecordId;
   if (recordId) {
@@ -85,9 +115,7 @@ async function upsertRemoteTask(
     recordId = (await pb.collection('tasks').create(pbData)).id;
   }
 
-  // Settle the row so this device and the server agree. No stamp bump and nothing
-  // queued: other devices already hold this task at the same stamp.
-  if (storeOnRow) await getDb().tasks.update(task.id, { notifyBefore: task.notifyBefore });
+  if (storeOnRow) await settleRowOffset(task);
   return recordId;
 }
 
