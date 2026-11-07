@@ -32,6 +32,20 @@ describe("deriveToday", () => {
     expect(view.carry.label).toBe("From Friday");
   });
 
+  it("reads From a week ago for a pick seven days back, where the weekday would match today's", () => {
+    const view = deriveToday([q1("old", { focusDate: "2026-11-01", focusRank: 1 })], NOW, 2, ZONE);
+
+    expect(view.carry.label).toBe("From a week ago");
+  });
+
+  it("keeps the weekday for two to six days back", () => {
+    for (const [date, label] of [["2026-11-06", "From Friday"], ["2026-11-02", "From Monday"]]) {
+      const view = deriveToday([q1("old", { focusDate: date, focusRank: 1 })], NOW, 2, ZONE);
+
+      expect(view.carry.label).toBe(label);
+    }
+  });
+
   it("hides carry-over when today is full", () => {
     const tasks = [
       q1("a", { focusDate: "2026-11-08", focusRank: 1 }),

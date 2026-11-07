@@ -25,9 +25,24 @@ interface RowProps extends TodayRowHandlers {
   task: TaskRecord;
   index: number;
   count: number;
+  /** No reordering while the Tidy offer is up: Tidy comes first, so there is no Move or drag. */
+  locked: boolean;
 }
 
-function PickRow({ task, index, count, onToggleComplete, onInspect, onMove, onRemove }: RowProps) {
+function MoveButtons({ task, index, count, onMove }: Pick<RowProps, "task" | "index" | "count" | "onMove">) {
+  return (
+    <>
+      <button type="button" className={iconButton} aria-label={`Move ${task.title} up`} aria-disabled={index === 0} onClick={() => index > 0 && onMove(task, "up")}>
+        <ChevronUpIcon className="h-4 w-4" aria-hidden />
+      </button>
+      <button type="button" className={iconButton} aria-label={`Move ${task.title} down`} aria-disabled={index === count - 1} onClick={() => index < count - 1 && onMove(task, "down")}>
+        <ChevronDownIcon className="h-4 w-4" aria-hidden />
+      </button>
+    </>
+  );
+}
+
+function PickRow({ task, index, count, locked, onToggleComplete, onInspect, onMove, onRemove }: RowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   return (
     <li
@@ -35,9 +50,11 @@ function PickRow({ task, index, count, onToggleComplete, onInspect, onMove, onRe
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : undefined }}
       className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5"
     >
-      <button type="button" className={cn(iconButton, "cursor-grab touch-none")} aria-label={`Reorder ${task.title}`} {...attributes} {...listeners}>
-        <GripVerticalIcon className="h-4 w-4" aria-hidden />
-      </button>
+      {locked ? null : (
+        <button type="button" className={cn(iconButton, "cursor-grab touch-none")} aria-label={`Reorder ${task.title}`} {...attributes} {...listeners}>
+          <GripVerticalIcon className="h-4 w-4" aria-hidden />
+        </button>
+      )}
       <button
         type="button"
         className={iconButton}
@@ -53,12 +70,7 @@ function PickRow({ task, index, count, onToggleComplete, onInspect, onMove, onRe
       <span className="flex items-center text-xs text-foreground-muted">
         <DueChip task={task} {...dueChipProps(task)} />
       </span>
-      <button type="button" className={iconButton} aria-label={`Move ${task.title} up`} aria-disabled={index === 0} onClick={() => index > 0 && onMove(task, "up")}>
-        <ChevronUpIcon className="h-4 w-4" aria-hidden />
-      </button>
-      <button type="button" className={iconButton} aria-label={`Move ${task.title} down`} aria-disabled={index === count - 1} onClick={() => index < count - 1 && onMove(task, "down")}>
-        <ChevronDownIcon className="h-4 w-4" aria-hidden />
-      </button>
+      {locked ? null : <MoveButtons task={task} index={index} count={count} onMove={onMove} />}
       <button type="button" className={iconButton} aria-label={`Remove ${task.title} from today`} onClick={() => onRemove(task)}>
         <XIcon className="h-4 w-4" aria-hidden />
       </button>
@@ -69,6 +81,7 @@ function PickRow({ task, index, count, onToggleComplete, onInspect, onMove, onRe
 interface PickListProps extends TodayRowHandlers {
   picks: TaskRecord[];
   onReorder: (orderedIds: string[]) => void;
+  locked: boolean;
 }
 
 const REORDER_INSTRUCTIONS =
@@ -90,7 +103,7 @@ function reorderAnnouncements(picks: TaskRecord[]) {
 }
 
 /** Its own DndContext, so reordering today's list never reaches the matrix's quadrant drops. */
-export function PickList({ picks, onReorder, ...handlers }: PickListProps) {
+export function PickList({ picks, onReorder, locked, ...handlers }: PickListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: POINTER_DISTANCE_PX } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -110,7 +123,7 @@ export function PickList({ picks, onReorder, ...handlers }: PickListProps) {
       <SortableContext items={picks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
         <ol className="space-y-1">
           {picks.map((task, index) => (
-            <PickRow key={task.id} task={task} index={index} count={picks.length} {...handlers} />
+            <PickRow key={task.id} task={task} index={index} count={picks.length} locked={locked} {...handlers} />
           ))}
         </ol>
       </SortableContext>

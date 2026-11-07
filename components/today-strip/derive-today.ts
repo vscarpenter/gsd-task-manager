@@ -3,6 +3,7 @@ import type { TaskRecord } from "@/lib/types";
 
 const MAX_SUGGESTIONS = 3;
 const MS_PER_DAY = 86_400_000;
+const WEEK_DAYS = 7;
 
 export interface TodayView {
   picks: TaskRecord[];
@@ -12,10 +13,14 @@ export interface TodayView {
   suggestions: TaskRecord[];
 }
 
-/** "From yesterday", or "From Friday" when the pick date is older. */
+/**
+ * "From yesterday", "From Friday" for two to six days back, and "From a week ago" for
+ * seven, where the weekday would match today's and read as today.
+ */
 function carryLabel(fromDate: string, today: string): string {
   const days = (Date.parse(today) - Date.parse(fromDate)) / MS_PER_DAY;
   if (days === 1) return "From yesterday";
+  if (days >= WEEK_DAYS) return "From a week ago";
   const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "UTC" }).format(
     new Date(fromDate)
   );

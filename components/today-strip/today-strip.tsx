@@ -121,6 +121,7 @@ export function TodayStrip({ tasks, onToggleComplete, onInspect }: TodayStripPro
       {today.picks.length > 0 ? (
         <PickList
           picks={today.picks}
+          locked={today.needsTidy}
           onToggleComplete={async (task, completed) => {
             await onToggleComplete(task, completed);
             announce(`Completed ${task.title}`, true);

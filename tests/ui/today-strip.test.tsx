@@ -190,6 +190,44 @@ describe("TodayStrip", () => {
     expect(actions.tidyPicks).toHaveBeenCalledTimes(1);
   });
 
+  describe("while the Tidy offer is up", () => {
+    const duplicates = () => [
+      q1("a", { focusDate: TODAY, focusRank: 1 }),
+      q1("b", { focusDate: TODAY, focusRank: 1 }),
+    ];
+
+    it("offers no Move up, Move down, or drag handle, because Tidy comes first", () => {
+      setup(duplicates());
+
+      expect(screen.getByText("Two devices picked for today. Tidy up?")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Move .* (up|down)$/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Reorder / })).toBeNull();
+    });
+
+    it("keeps them locked after Not now, since the ranks are still doubled", async () => {
+      const { user } = setup(duplicates());
+
+      await user.click(screen.getByRole("button", { name: "Not now" }));
+
+      expect(screen.queryByRole("button", { name: /^Move .* (up|down)$/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Reorder / })).toBeNull();
+    });
+
+    it("still lets the person complete or remove a pick", () => {
+      setup(duplicates());
+
+      expect(screen.getAllByRole("button", { name: /^Mark .* as complete$/ })).toHaveLength(2);
+      expect(screen.getAllByRole("button", { name: /^Remove .* from today$/ })).toHaveLength(2);
+    });
+
+    it("brings the controls back once the ranks are clean", () => {
+      setup([q1("a", { focusDate: TODAY, focusRank: 1 }), q1("b", { focusDate: TODAY, focusRank: 2 })]);
+
+      expect(screen.getByRole("button", { name: "Move Task a down" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Reorder Task a" })).toBeInTheDocument();
+    });
+  });
+
   it("moves a pick down and removes it from the row", async () => {
     const { user } = setup([
       q1("a", { focusDate: TODAY, focusRank: 1 }),
