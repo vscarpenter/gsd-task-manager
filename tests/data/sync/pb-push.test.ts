@@ -749,14 +749,24 @@ describe('pushLocalChanges notify_before drain races (D-10)', () => {
     expect(createSpy.mock.calls[0]?.[0]).toMatchObject({ notify_before: 45 });
   });
 
-  it("a newer edit's offset is not mixed into an older payload", async () => {
+  it("a payload with no offset takes the current row's number, at any stamp", async () => {
     await seed({ notifyBefore: 60, updatedAt: NEWER });
     const createSpy = mockCreate();
 
     await pushLocalChanges('user-1');
 
-    expect(createSpy.mock.calls[0]?.[0]).toMatchObject({ notify_before: 45 });
+    expect(createSpy.mock.calls[0]?.[0]).toMatchObject({ notify_before: 60 });
     expect((await getDb().tasks.get('t1'))?.notifyBefore).toBe(60);
+  });
+
+  it("the write-back still leaves a newer row alone when the row has no number", async () => {
+    await seed({ updatedAt: NEWER });
+    const createSpy = mockCreate();
+
+    await pushLocalChanges('user-1');
+
+    expect(createSpy.mock.calls[0]?.[0]).toMatchObject({ notify_before: 45 });
+    expect((await getDb().tasks.get('t1'))?.notifyBefore).toBeUndefined();
   });
 
   it('the write-back never overwrites an edit saved while the push was in flight', async () => {

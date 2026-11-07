@@ -56,6 +56,45 @@ describe("notify_before is always a number (D-10, web)", () => {
     expect((await getDb().tasks.get("imported"))?.notifyBefore).toBe(DEVICE_DEFAULT);
   });
 
+  it("a Replace import gives a missing offset the backup's default, which is in effect once it finishes", async () => {
+    const task = createMockTask({ id: "imported", notifyBefore: undefined });
+
+    await importTasks(
+      {
+        tasks: [task],
+        exportedAt: new Date().toISOString(),
+        version: "2.1.0",
+        notificationSettings: {
+          id: "settings", enabled: true, defaultReminder: 90, soundEnabled: true, permissionAsked: true,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+      "replace"
+    );
+
+    expect((await getDb().notificationSettings.get("settings"))?.defaultReminder).toBe(90);
+    expect((await getDb().tasks.get("imported"))?.notifyBefore).toBe(90);
+  });
+
+  it("a Merge import keeps this device's default, since merging adopts no settings", async () => {
+    const task = createMockTask({ id: "merged", notifyBefore: undefined });
+
+    await importTasks(
+      {
+        tasks: [task],
+        exportedAt: new Date().toISOString(),
+        version: "2.1.0",
+        notificationSettings: {
+          id: "settings", enabled: true, defaultReminder: 90, soundEnabled: true, permissionAsked: true,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+      "merge"
+    );
+
+    expect((await getDb().tasks.get("merged"))?.notifyBefore).toBe(DEVICE_DEFAULT);
+  });
+
   it("changing the default doesn't move an existing number", async () => {
     const created = await createTask(createMockTaskDraft({ notifyBefore: undefined }));
     await setDefaultReminder(5);

@@ -422,6 +422,12 @@ function reportImportSkips(counts: {
   }
 }
 
+/** The default reminder this device will hold once the import finishes. */
+async function defaultInEffectAfter(parsed: SettingsBearingPayload, mode: "replace" | "merge"): Promise<number> {
+  const restored = mode === "replace" ? parsed.notificationSettings?.defaultReminder : undefined;
+  return restored ?? (await readDefaultReminder());
+}
+
 export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   assertRawSmartViewBounds(payload);
@@ -433,9 +439,10 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
 
   assertWithinImportCap(parsed);
 
-  // A backup with no offset takes this device's default, so the value is a number
-  // on every device (D-10). The import schema keeps the field optional for old backups.
-  const defaultReminder = await readDefaultReminder();
+  // A backup with no offset takes the default in effect once the import finishes, so the
+  // value is a number on every device (D-10). A Replace adopts the backup's settings, so
+  // that is the backup's default; a Merge keeps this device's. Old backups stay importable.
+  const defaultReminder = await defaultInEffectAfter(parsed, mode);
   parsed.tasks = parsed.tasks.map((task) => ({
     ...task,
     notifyBefore: task.notifyBefore ?? defaultReminder,
