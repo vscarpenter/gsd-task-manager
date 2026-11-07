@@ -10,7 +10,7 @@ import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
 import {
-  AUTH, FAR_FUTURE, NEWER, SAVED, fake, localRow, resetFakeSync, seed, serverRow, signedIn, signedOut,
+  AUTH, FAR_FUTURE, NEWER, OLDER, SAVED, fake, localRow, resetFakeSync, seed, serverRow, signedIn, signedOut,
 } from './support/fake-pocketbase';
 
 const auth = vi.hoisted(() => ({ userId: 'user-1' as string | null }));
@@ -70,6 +70,16 @@ describe('remembering', () => {
 
     await expect(remembered()).resolves.toEqual(['t-a']);
     await expect(getSyncQueue().getPendingCount()).resolves.toBe(0);
+  });
+
+  // Sign-in rewrites the sync_config row from a fresh literal, so the ids need a key of their own.
+  it('sign-in keeps the remembered ids', async () => {
+    await seed({ config: signedOut(CURRENT), local: [localRow(SAVED)] });
+    await deleteTask('t-a');
+
+    await persistSyncConfig(AUTH);
+
+    await expect(remembered()).resolves.toEqual(['t-a']);
   });
 
   it('sign-out remembers the Trash deletes it clears from the queue', async () => {
@@ -155,6 +165,24 @@ describe('the step after the pull', () => {
     await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'From the account' });
     await expect(getDb().deletedTasks.get('t-a')).resolves.toBeUndefined();
     await expect(remembered()).resolves.toEqual([]);
+  });
+
+  // The server copy merges into the Trash row, as a pull merges into a live row. Reminder state
+  // is this device's own; time-entry notes ride the wire on web, so they arrive with the copy.
+  it("a resurrected task keeps this device's reminder state and time-entry notes", async () => {
+    const due = '2026-10-25T09:00:00.000Z';
+    const entry = { id: 'te-1', startedAt: OLDER, endedAt: SAVED, notes: 'first pass' };
+    const reminded = { notificationSent: true, lastNotificationAt: SAVED, snoozedUntil: NEWER };
+    await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '', due_date: due, time_entries: [entry] })] });
+    await getDb().deletedTasks.put({
+      ...toTrashedRecord(localRow(SAVED, { dueDate: due, timeEntries: [entry], ...reminded })),
+      deletedAt: NEWER,
+    });
+    await rememberForResurrect(['t-a']);
+
+    await fullSync('auto');
+
+    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ ...reminded, timeEntries: [entry] });
   });
 
   it('a remembered delete with no server copy keeps its Trash copy and is forgotten', async () => {
