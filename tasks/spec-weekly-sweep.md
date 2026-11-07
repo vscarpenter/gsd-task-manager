@@ -5,6 +5,7 @@
 **Contract:** `tests/fixtures/cross-platform/sweep-corpus.json` (74 cases, version 1). This repo is the authority; iOS and Android copy it byte-identical.
 **Matrix row:** F3.
 **Evidence:** code paths come from reading web `main` at `ed72ca3`, iOS `main`, and Android `feat/saved-parity`. Nothing here has run on a client.
+**Amended 2026-11-07 (sprint 2, SPEC-7):** the end offers "Pick today's top three" where top three has shipped (owner gate 5). Section 7 has the rule. No corpus or contract change.
 
 ## 1. Why
 
@@ -144,7 +145,7 @@ The tests hold on Apple and Android: `a task reminder resync keeps the sweep rem
 | Web Review page | Stays web-only (D-14). Adds a "Start weekly sweep" link near `ReviewPrompts`, shown always. Review's stats and prompts don't change, and native gets no Review page |
 | Card | The task's title, due chip, and quadrant, one reason line, and the actions |
 | Progress | "3 of 12". Position only, with no bar or percentage |
-| End | "That's the sweep." and a way back. No tally |
+| End | "That's the sweep." and a way back. No tally. Then "Pick today's top three" where top three has shipped (below) |
 | Setting | Settings › Notifications: "Weekly sweep reminder", with day and time |
 | Route | Web: `/sweep`. Apple and Android: a pushed screen |
 
@@ -155,6 +156,8 @@ The tests hold on Apple and Android: `a task reminder resync keeps the sweep rem
 | `stale` | No changes in 14 days or more |
 | `saved` | Saved over a month ago |
 | `undated-schedule` | No date yet |
+
+**The end offer.** After "That's the sweep.", a client where top three has shipped offers "Pick today's top three". It goes back to the matrix with the Today section's suggestions open (`tasks/spec-top-three.md` section 4). It shows only while today has a free slot, the same rule as top three's carry-over. When today is full, or top three hasn't shipped on that client, the end stays as above. It picks for today only, because top three writes only `focusDate` = today (top three section 3.2), so a Sunday sweep can't pick Monday. The offer writes nothing itself. Only "Add to today" does, and the stamping rule in section 4 doesn't change.
 
 The copy states facts and asks nothing of the reader. It never says behind, neglected, still, missed, or forgot, and never counts what's left beyond the position line.
 
@@ -199,7 +202,7 @@ The Matrix screen and card are hotspots on every client, so land through the spr
 2. Unit, on each client: reading and writing the two preferences; a reset clears both; an unknown stored reminder falls back to off; `a posted reminder doesn't reset staleness`; `a stored vote for weekly-review isn't sent`.
 3. Session, on each client: opening, skipping, and leaving write nothing to any task and queue no push; reaching the end stamps last swept; leaving doesn't; a task completed elsewhere mid-sweep is skipped.
 4. Each action on each card calls the existing path, and its Undo works.
-5. UI: the entry follows `entryShown`; Review links to the sweep on web; the accessible names and live region; no count outside the position line.
+5. UI: the entry follows `entryShown`; Review links to the sweep on web; the accessible names and live region; no count outside the position line. Where top three has shipped, the end offers "Pick today's top three" while today has a free slot, opens the suggestions, and leaves the offer out when today is full.
 6. Reminder: scheduling on and off on native, plus the two named tests in section 6. On web, firing inside and outside the 60-minute window.
 7. E2E on web: seed an overdue task, a stale Q4 task, and an undated Schedule task. Sweep them in order, complete one, skip one, and confirm the skipped task is unchanged.
 8. `verify-frontend-change` on web, and a simulator and emulator run on native, in two time zones.
