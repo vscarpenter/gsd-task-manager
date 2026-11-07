@@ -22,6 +22,9 @@ export const ROUTES = {
   /** Bookmarks and short notes outside the matrix */
   SAVED: '/saved' as Route,
 
+  /** The weekly sweep: one task at a time through what needs a decision */
+  SWEEP: '/sweep' as Route,
+
   /** Application settings */
   SETTINGS: '/settings' as Route,
 
@@ -43,6 +46,7 @@ export const ROUTE_VARIANTS = {
   HOME: ['/', '/index.html'] as const,
   DASHBOARD: ['/dashboard', '/dashboard/', '/dashboard.html'] as const,
   SAVED: ['/saved', '/saved/', '/saved.html'] as const,
+  SWEEP: ['/sweep', '/sweep/', '/sweep.html'] as const,
   SETTINGS: ['/settings', '/settings/', '/settings.html'] as const,
   ABOUT: ['/about', '/about/', '/about.html'] as const,
 } as const;

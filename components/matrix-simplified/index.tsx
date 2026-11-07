@@ -35,6 +35,7 @@ import { MatrixBriefing } from "./matrix-briefing";
 import { TaskDetailSheet } from "./task-detail-sheet";
 import { TodayStrip } from "@/components/today-strip/today-strip";
 import { TodayMenuProvider } from "@/components/today-strip/today-menu-context";
+import { SweepEntry } from "@/components/weekly-sweep/sweep-entry";
 
 /**
  * Client-only hydration gate. Returns `false` during the server render / first
@@ -339,6 +340,7 @@ export function MatrixSimplified() {
         >
           <CaptureBar onSubmit={(payload) => captureAndReveal(payload, (id) => highlightTaskById(id, { focus: false }))} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
         </div>
+        {mounted && !isLoading ? <SweepEntry tasks={all} /> : null}
         {smartViewsEnabled ? (
           <div className="mb-4">
             <SmartViewStrip

@@ -5,6 +5,7 @@
 // Display functions
 export {
   showTaskNotification,
+  showSweepReminder,
   showTestNotification
 } from "./display";
 

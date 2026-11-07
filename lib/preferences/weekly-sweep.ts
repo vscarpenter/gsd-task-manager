@@ -8,6 +8,8 @@ import type { SweepReminder } from "@/lib/weekly-sweep";
 
 export const SWEEP_LAST_SWEPT_KEY = "gsd:weekly-sweep-last-swept";
 export const SWEEP_REMINDER_KEY = "gsd:weekly-sweep-reminder";
+/** The occurrence the checker last notified for, so one occurrence fires once. */
+export const SWEEP_FIRED_KEY = "gsd:weekly-sweep-reminder-fired";
 
 /** What turning the reminder on starts at: Sunday 09:00. */
 export const DEFAULT_SWEEP_REMINDER: SweepReminder = { enabled: true, weekday: 7, time: "09:00" };
@@ -57,7 +59,16 @@ export function writeSweepReminder(reminder: SweepReminder): void {
   window.localStorage.setItem(SWEEP_REMINDER_KEY, JSON.stringify(reminder));
 }
 
+export function readSweepFired(): string | null {
+  return typeof window === "undefined" ? null : window.localStorage.getItem(SWEEP_FIRED_KEY);
+}
+
+export function markSweepFired(occurrence: Date): void {
+  window.localStorage.setItem(SWEEP_FIRED_KEY, occurrence.toISOString());
+}
+
 export function resetWeeklySweepState(): void {
   window.localStorage.removeItem(SWEEP_LAST_SWEPT_KEY);
   window.localStorage.removeItem(SWEEP_REMINDER_KEY);
+  window.localStorage.removeItem(SWEEP_FIRED_KEY);
 }

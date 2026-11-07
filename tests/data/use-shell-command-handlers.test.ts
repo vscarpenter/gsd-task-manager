@@ -196,6 +196,7 @@ describe("useShellCommandHandlers", () => {
     result.current.handlers.onViewMatrix();
     result.current.handlers.onViewArchive();
     result.current.handlers.onViewSaved();
+    result.current.handlers.onStartSweep();
 
     expect(pushMock.mock.calls.map((c) => c[0])).toEqual([
       "/settings#data",
@@ -204,6 +205,7 @@ describe("useShellCommandHandlers", () => {
       "/",
       "/archive",
       "/saved",
+      "/sweep",
     ]);
   });
 

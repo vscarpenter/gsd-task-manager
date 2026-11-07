@@ -246,6 +246,7 @@ function makeHandlers(): CommandActionHandlers {
     onViewMatrix: vi.fn(),
     onViewArchive: vi.fn(),
     onViewSaved: vi.fn(),
+    onStartSweep: vi.fn(),
     onApplySmartView: vi.fn(),
   };
 }

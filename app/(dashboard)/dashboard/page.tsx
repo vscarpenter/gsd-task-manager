@@ -25,6 +25,7 @@ import {
   VerdictSkeleton,
 } from "@/components/dashboard/dashboard-skeleton";
 import { ReviewPrompts } from "@/components/dashboard/review-prompts";
+import { SweepLink } from "@/components/weekly-sweep/sweep-link";
 import { FeedbackNudge } from "@/components/dashboard/feedback-nudge";
 import { Button } from "@/components/ui/button";
 import { OPEN_COMMAND_PALETTE_EVENT } from "@/lib/use-command-palette";
@@ -228,6 +229,9 @@ function DashboardEmpty({ onOpenMatrix }: { onOpenMatrix: () => void }): React.R
       <Button className="touch-target mt-6" onClick={onOpenMatrix}>
         Open matrix
       </Button>
+      <div className="mt-4">
+        <SweepLink />
+      </div>
     </div>
   );
 }
@@ -272,6 +276,7 @@ function DashboardContent({
       </div>
 
       <ReviewPrompts distribution={metrics.quadrantDistribution} />
+      <SweepLink />
 
       <div className="grid gap-6 *:min-w-0 lg:grid-cols-2">
         <UpcomingDeadlines tasks={tasks} onTaskClick={onDeadlineTaskClick} />

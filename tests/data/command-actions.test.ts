@@ -17,6 +17,7 @@ function createMockHandlers(overrides?: Partial<CommandActionHandlers>): Command
     onViewMatrix: vi.fn(),
     onViewArchive: vi.fn(),
     onViewSaved: vi.fn(),
+    onStartSweep: vi.fn(),
     onApplySmartView: vi.fn(),
     ...overrides,
   };
@@ -85,6 +86,20 @@ describe('buildCommandActions', () => {
 
     saved?.onExecute();
     expect(handlers.onViewSaved).toHaveBeenCalled();
+  });
+
+  it('offers a Start weekly sweep command that opens the sweep', () => {
+    const handlers = createMockHandlers();
+    const actions = buildCommandActions(handlers, [], defaultConditions);
+    const sweep = actions.find((action) => action.id === 'start-weekly-sweep');
+
+    expect(sweep?.label).toBe('Start weekly sweep');
+    expect(sweep?.section).toBe('navigation');
+    expect(sweep?.keywords).toEqual(expect.arrayContaining(['sweep', 'weekly', 'review']));
+    expect(sweep?.focusAfterExecute).toBe('handoff');
+
+    sweep?.onExecute();
+    expect(handlers.onStartSweep).toHaveBeenCalled();
   });
 
   it('names the help command after the Field Guide and keeps the old search terms', () => {

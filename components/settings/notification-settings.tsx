@@ -3,6 +3,7 @@
 import { Switch } from "@/components/ui/switch";
 import type { NotificationSettings } from "@/lib/types";
 import { SettingsRow, SettingsSelectRow } from "./shared-components";
+import { SweepReminderRows } from "./sweep-reminder-rows";
 
 interface NotificationSettingsProps {
 	settings: NotificationSettings | null;
@@ -168,6 +169,7 @@ function SoundAndQuietHoursRows({
 				onQuietHoursToggle={onQuietHoursToggle}
 				onQuietHoursChange={onQuietHoursChange}
 			/>
+			<SweepReminderRows />
 		</>
 	);
 }
