@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { SYNC_CONFIG } from '@/lib/constants/sync';
 import {
   getSyncConfig,
   updateSyncConfig,
@@ -208,6 +207,8 @@ describe('Sync Config', () => {
     });
 
     it('should disable sync and clear user fields', async () => {
+      const storedVersion = (await getSyncConfig())?.pullCursorVersion;
+
       await disableSync();
 
       const config = await getSyncConfig();
@@ -218,7 +219,8 @@ describe('Sync Config', () => {
       expect(config?.provider).toBeNull();
       expect(config?.lastSyncAt).toBeNull();
       expect(config?.lastClientUpdatedAt).toBeNull();
-      expect(config?.pullCursorVersion).toBe(SYNC_CONFIG.PULL_CURSOR_VERSION);
+      // Only a completed pull stamps a contract, so sign-out keeps the stored one.
+      expect(config?.pullCursorVersion).toBe(storedVersion);
       expect(config?.lastServerUpdatedAt).toBeNull();
       expect(config?.consecutiveFailures).toBe(0);
       expect(config?.lastFailureAt).toBeNull();
