@@ -1,9 +1,6 @@
 /// <reference path="../pb_data/types.d.ts" />
-// DRAFT. NOT WIRED IN. Spec: tasks/spec-top-three.md section 10.
-//
-// This file does nothing where it sits: the .draft suffix and this folder keep it out of the
-// Docker image and every migration set. Sprint 2 moves it to docker/pb_migrations/ as a .js file
-// with a then-current timestamp, for self-hosted Docker installs only.
+// Top three's two fields, for self-hosted Docker installs only. Spec: tasks/spec-top-three.md
+// section 10. Fresh installs get it too: the fresh set copies every file here.
 //
 // The hosted service at api.vinny.io doesn't run this directory (ADR 0016). Vinny applies the same
 // two fields there by hand, using the steps in the spec. Never point the hosted binary at
