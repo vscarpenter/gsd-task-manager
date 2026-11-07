@@ -23,6 +23,14 @@ closed them at contract 3, and this change carries the same rules to the focus p
 version is missing or below that, and only a completed pull stamps one. Sign-in and sign-out
 keep whatever is stored (C4-1, C4-3).
 
+This narrows ADR 0019, which backfilled whenever the stored version differed from the
+build's. A version above the build's means a newer build stamped it, for example a newer
+tab beside an older cached bundle. Its rows already hold every field this build reads, so a
+backfill there only costs a full listing on every sync. The write side doesn't change: a
+completed pull stamps this build's own version, never the highest one seen. When an older
+bundle rewrites rows without a newer field, its lower stamp is what makes the newer tab
+backfill and repair them.
+
 While a backfill is owed, `fullSync` pulls, then pushes. A pull that fails or comes back
 unauthenticated pushes nothing and stamps nothing (C4-2). On that pull, a remote stamped past
 the skew ceiling doesn't overwrite a row whose write is still queued, which matches iOS and

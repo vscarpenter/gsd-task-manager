@@ -72,6 +72,31 @@ describe('C4-1: the stored version alone decides', () => {
   });
 });
 
+// C4-1 reads "missing or below 4", so a newer build's stamp isn't a backfill (S-AND review,
+// finding 2). The write still stamps this build's own version: an older bundle's lower stamp
+// is what tells a newer tab that rows were rewritten without its newest field.
+describe('C4-1: a stored version above this build', () => {
+  const NEWER_BUILD = SYNC_CONFIG.PULL_CURSOR_VERSION + 1;
+
+  it("a stored version above this build's doesn't trigger a backfill", async () => {
+    await seed({ config: signedIn(NEWER_BUILD), local: [localRow(SAVED)], server: [pickedOnServer()] });
+
+    await fullSync('auto');
+
+    const row = await localTask();
+    expect(row?.focusDate).toBeUndefined();
+    expect(row?.focusRank).toBeUndefined();
+  });
+
+  it("a completed pull stamps this build's version, even over a higher one", async () => {
+    await seed({ config: signedIn(NEWER_BUILD), local: [localRow(SAVED)], server: [pickedOnServer()] });
+
+    await fullSync('auto');
+
+    await expect(storedVersion()).resolves.toBe(SYNC_CONFIG.PULL_CURSOR_VERSION);
+  });
+});
+
 describe('C4-4: a locally newer row gets only the fields it never knew about', () => {
   it('a locally newer row gets the server pick through the backfill', async () => {
     const row = localRow(NEWER, { title: 'Edited on contract 3' });

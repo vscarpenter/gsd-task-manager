@@ -166,10 +166,19 @@ interface PullPlan {
  */
 function resolvePullCursor(config: PBSyncConfig | undefined): PullPlan {
   const storedContractVersion = config?.pullCursorVersion;
-  if (storedContractVersion === SYNC_CONFIG.PULL_CURSOR_VERSION) {
+  if (!isBackfillOwed(storedContractVersion)) {
     return { cursor: config?.lastClientUpdatedAt ?? null, mergeSameVersion: false, storedContractVersion };
   }
   return { cursor: null, mergeSameVersion: true, storedContractVersion };
+}
+
+/**
+ * A backfill is owed when the stored contract is missing or below this build's
+ * (C4-1). A newer build's stamp isn't one: its rows already hold every field this
+ * build reads. ADR 0020 narrows ADR 0019's "differs" to this.
+ */
+function isBackfillOwed(storedContractVersion: number | undefined): boolean {
+  return storedContractVersion === undefined || storedContractVersion < SYNC_CONFIG.PULL_CURSOR_VERSION;
 }
 
 interface SyncPasses {
@@ -320,7 +329,9 @@ async function updateSyncCursor(ownerId: string, maxTimestamp: string | null, pu
       ...current,
       lastClientUpdatedAt: maxTimestamp ?? current.lastClientUpdatedAt ?? null,
       // Only a completed pull satisfies the contract; a backfill that did not
-      // run must run on the next sync.
+      // run must run on the next sync. Stamp this build's version, never the
+      // highest seen: an older bundle's lower stamp is what tells a newer tab
+      // that rows were rewritten without its newest field (ADR 0020).
       pullCursorVersion: pullCompleted ? SYNC_CONFIG.PULL_CURSOR_VERSION : current.pullCursorVersion,
       lastServerUpdatedAt: null,
       lastSuccessfulSyncAt: new Date().toISOString(),
