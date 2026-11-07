@@ -126,8 +126,10 @@ test("Saved works on a narrow screen in light and dark themes", async ({ page },
 
 
 test.describe("Saved offline", () => {
-  // Only this test deliberately disconnects the browser. These are its native network diagnostics.
-  test.use({ serviceWorkerEnabled: true, expectedConsoleErrors: /^(?:Failed to load resource: net::ERR_INTERNET_DISCONNECTED|Failed to load resource: WebKit encountered an internal error|Failed to preconnect to (?:http:\/\/127\.0\.0\.1:3100|https:\/\/api\.vinny\.io)\/\. Error: WebKit encountered an internal error)$/ });
+  // Only this test deliberately disconnects the browser. These are its native network diagnostics,
+  // plus the service worker's own "504 (Offline)" (public/sw.js offlineAssetResponse) for a chunk
+  // the offline /settings prefetch asks for before the cache holds it.
+  test.use({ serviceWorkerEnabled: true, expectedConsoleErrors: /^(?:Failed to load resource: net::ERR_INTERNET_DISCONNECTED|Failed to load resource: the server responded with a status of 504 \(Offline\)|Failed to load resource: WebKit encountered an internal error|Failed to preconnect to (?:http:\/\/127\.0\.0\.1:3100|https:\/\/api\.vinny\.io)\/\. Error: WebKit encountered an internal error)$/ });
   test("keeps saved notes available after an offline reload", async ({ page, baseURL }) => {
     test.skip(!baseURL?.includes(":3100"), "Requires the production service worker");
     const matrix = new MatrixPage(page);
