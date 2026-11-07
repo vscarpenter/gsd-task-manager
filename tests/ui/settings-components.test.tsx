@@ -343,6 +343,17 @@ describe('Settings Components', () => {
       expect(screen.getByText('Default reminder')).toBeInTheDocument();
     });
 
+    it('says the default reminder is for new tasks', () => {
+      render(
+        <NotificationSettingsSection
+          settings={enabledSettings}
+          onNotificationToggle={vi.fn()}
+          onDefaultReminderChange={vi.fn()}
+        />
+      );
+      expect(screen.getByText('For new tasks')).toBeInTheDocument();
+    });
+
     it('renders an off-list default reminder as stored instead of snapping it', () => {
       render(
         <NotificationSettingsSection

@@ -1,6 +1,7 @@
 import { buildDescription, extractUrlsFromTitle } from "@/lib/capture-parser";
 import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
+import { readDefaultReminder } from "@/lib/notifications/default-reminder";
 import { resolveQuadrantId } from "@/lib/quadrants";
 import { taskDraftSchema } from "@/lib/schema";
 import type { TaskDraft, TaskRecord } from "@/lib/types";
@@ -19,14 +20,15 @@ export async function updateTask(
 ): Promise<TaskRecord> {
   try {
     const db = getDb();
+    const defaultReminder = await readDefaultReminder();
     const nextRecord = await runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
       const existing = await db.tasks.get(id);
       if (!existing) {
         logger.warn("Task not found for update", { taskId: id });
         throw new Error(`Task ${id} not found`);
       }
-      const validated = validateUpdatedDraft(existing, updates);
-      const record = buildUpdatedRecord(existing, validated, updates);
+      const validated = validateUpdatedDraft(existing, updates, defaultReminder);
+      const record = buildUpdatedRecord(existing, validated, updates, defaultReminder);
       await db.tasks.put(record);
       if (syncEnabled) await enqueue("update", id, record);
       return record;
@@ -45,9 +47,10 @@ export async function updateTask(
 
 function validateUpdatedDraft(
   existing: TaskRecord,
-  updates: Partial<TaskDraft>
+  updates: Partial<TaskDraft>,
+  defaultReminder: number
 ): TaskDraft {
-  const nextDraft = mergeTaskUpdates(existing, updates);
+  const nextDraft = mergeTaskUpdates(existing, updates, defaultReminder);
   const { cleanTitle, urls } = extractUrlsFromTitle(nextDraft.title);
   nextDraft.title = cleanTitle;
   nextDraft.description = buildDescription(nextDraft.description, urls);
@@ -69,7 +72,8 @@ function validateUpdatedDraft(
  */
 function mergeTaskUpdates(
   existing: TaskRecord,
-  updates: Partial<TaskDraft>
+  updates: Partial<TaskDraft>,
+  defaultReminder: number
 ): TaskDraft {
   return {
     title: updates.title ?? existing.title,
@@ -81,7 +85,10 @@ function mergeTaskUpdates(
     tags: updates.tags ?? existing.tags,
     subtasks: updates.subtasks ?? existing.subtasks,
     dependencies: updates.dependencies ?? existing.dependencies,
-    notifyBefore: "notifyBefore" in updates ? updates.notifyBefore : existing.notifyBefore,
+    // A write always stores a number: a cleared or legacy-null offset resolves to
+    // this device's default (D-10). Off is notificationEnabled, not a missing offset.
+    notifyBefore:
+      ("notifyBefore" in updates ? updates.notifyBefore : existing.notifyBefore) ?? defaultReminder,
     notificationEnabled: updates.notificationEnabled ?? existing.notificationEnabled,
     estimatedMinutes:
       "estimatedMinutes" in updates ? updates.estimatedMinutes : existing.estimatedMinutes,
@@ -94,14 +101,18 @@ function mergeTaskUpdates(
 function buildUpdatedRecord(
   existing: TaskRecord,
   validated: TaskDraft,
-  updates: Partial<TaskDraft>
+  updates: Partial<TaskDraft>,
+  defaultReminder: number
 ): TaskRecord {
   // Clearing a field counts as a change too, so a cleared due date drops the old
   // snooze and sent flag along with it.
   const dueDateChanged =
     "dueDate" in updates && updates.dueDate !== existing.dueDate;
+  // Compare what each side fires at: resolving a legacy null to the default it
+  // already fired at isn't a moved reminder.
   const notifyBeforeChanged =
-    "notifyBefore" in updates && updates.notifyBefore !== existing.notifyBefore;
+    "notifyBefore" in updates &&
+    (updates.notifyBefore ?? defaultReminder) !== (existing.notifyBefore ?? defaultReminder);
 
   const notificationReset =
     dueDateChanged || notifyBeforeChanged

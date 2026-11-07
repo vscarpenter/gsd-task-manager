@@ -157,15 +157,21 @@ function displayedReminder(
   return task.notifyBefore ?? defaultReminder;
 }
 
-/** What a save writes: the stored pair while untouched, else the pick. */
-function savedReminder(
+/**
+ * What a save writes: the stored pair while untouched, else the pick. Off keeps the
+ * stored number and clears only the flag, so turning it back on restores the offset.
+ */
+export function savedReminder(
   task: TaskRecord | null | undefined,
   pick: ReminderPick
 ): Pick<EditDraft, "notifyBefore" | "notificationEnabled"> {
   if (task && pick === undefined) {
     return { notifyBefore: task.notifyBefore, notificationEnabled: task.notificationEnabled };
   }
-  return { notifyBefore: pick ?? undefined, notificationEnabled: typeof pick === "number" };
+  return {
+    notifyBefore: pick ?? task?.notifyBefore,
+    notificationEnabled: typeof pick === "number",
+  };
 }
 
 /**

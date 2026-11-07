@@ -46,6 +46,7 @@ export function SettingsRow({ label, description, state, children }: SettingsRow
 
 interface SettingsSelectRowProps {
 	label: string;
+	description?: string;
 	value: string;
 	options: { value: string; label: string }[];
 	onChange: (value: string) => void;
@@ -56,6 +57,7 @@ interface SettingsSelectRowProps {
  */
 export function SettingsSelectRow({
 	label,
+	description,
 	value,
 	options,
 	onChange,
@@ -63,7 +65,12 @@ export function SettingsSelectRow({
 	return (
 		<div className="relative">
 			<label className="flex items-center justify-between gap-4 px-4 py-3.5 min-h-[52px] cursor-pointer">
-				<span className="text-sm font-medium text-foreground">{label}</span>
+				<span className="min-w-0">
+					<span className="block text-sm font-medium text-foreground">{label}</span>
+					{description && (
+						<span className="block text-xs text-foreground-muted mt-0.5">{description}</span>
+					)}
+				</span>
 				<div className="flex items-center gap-1">
 					<select
 						aria-label={label}

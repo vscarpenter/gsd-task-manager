@@ -51,7 +51,7 @@ export interface PBTaskRecord {
   dependencies: string[];
   notification_enabled: boolean;
   notification_sent: boolean;
-  notify_before: number | null;
+  notify_before: number | null; // read side stays tolerant; writes always send a number
   last_notification_at: string;
   estimated_minutes: number | null;
   time_spent: number;
@@ -120,7 +120,8 @@ export function getPocketBaseRealtimeEnvelope(
 export function taskRecordToPocketBase(
   task: TaskRecord,
   ownerId: string,
-  deviceId: string
+  deviceId: string,
+  defaultNotifyBefore: number
 ): Partial<PBTaskRecord> {
   return {
     task_id: task.id,
@@ -139,7 +140,8 @@ export function taskRecordToPocketBase(
     dependencies: task.dependencies ?? [],
     notification_enabled: task.notificationEnabled ?? true,
     notification_sent: task.notificationSent ?? false,
-    notify_before: task.notifyBefore ?? null,
+    // PocketBase never stores a null number, so the wire always carries one (D-10).
+    notify_before: task.notifyBefore ?? defaultNotifyBefore,
     last_notification_at: task.lastNotificationAt ?? '',
     estimated_minutes: task.estimatedMinutes ?? null,
     time_spent: task.timeSpent ?? 0,

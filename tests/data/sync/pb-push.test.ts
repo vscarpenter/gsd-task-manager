@@ -661,3 +661,47 @@ describe('pushLocalChanges session binding', () => {
     await expect(pushLocalChanges('user-2')).rejects.toBeInstanceOf(StaleSyncSessionError);
   });
 });
+
+describe('pushLocalChanges notify_before drain (D-10)', () => {
+  const UPDATED_AT = '2026-05-18T12:00:00.000Z';
+
+  async function drainWithPayload(rowOffset: number | undefined) {
+    const db = getDb();
+    await db.syncQueue.clear();
+    await db.tasks.clear();
+    await db.notificationSettings.put({
+      id: 'settings',
+      enabled: true,
+      defaultReminder: 45,
+      soundEnabled: true,
+      permissionAsked: false,
+      updatedAt: UPDATED_AT,
+    });
+    const payload = makeTask('t1', UPDATED_AT);
+    await db.tasks.put({ ...payload, notifyBefore: rowOffset });
+    await getSyncQueue().enqueue('create', 't1', payload);
+    fetchRemoteTaskEntryMock.mockResolvedValue({ entry: null, fetchSucceeded: true });
+    const createSpy = vi.fn(async () => ({ id: 'rec-1' }));
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ create: createSpy, update: vi.fn(), delete: vi.fn() }),
+    });
+    await pushLocalChanges('user-1');
+    return { sent: createSpy.mock.calls[0]?.[0] as { notify_before: unknown }, db };
+  }
+
+  it('a queued null payload pushes the row number when the row has one', async () => {
+    const { sent } = await drainWithPayload(20);
+
+    expect(sent.notify_before).toBe(20);
+  });
+
+  it('a queued null payload pushes a number and stores it on the row, stamp unchanged', async () => {
+    const { sent, db } = await drainWithPayload(undefined);
+
+    const row = await db.tasks.get('t1');
+    expect(sent.notify_before).toBe(45);
+    expect(row?.notifyBefore).toBe(45);
+    expect(row?.updatedAt).toBe(UPDATED_AT);
+    expect(await db.syncQueue.count()).toBe(0);
+  });
+});
