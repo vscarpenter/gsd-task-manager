@@ -98,7 +98,7 @@ The parameter is plain text, compared as text. The client sends the stored strin
 | | Change |
 |---|---|
 | Server, hosted | Vinny sets `deleteRule` (section 3.1) in the admin UI, or with `scripts/update-pocketbase-tasks-schema.sh` and `PB_URL` set. A manual step, like the top three fields |
-| Server, scripts | `scripts/setup-pocketbase-collections.sh` (`deleteRule`, line 90) and `scripts/update-pocketbase-tasks-schema.sh` (`.deleteRule = owner_rule`, line 129) |
+| Server, scripts | `scripts/setup-pocketbase-collections.sh` (`deleteRule`, line 90) and `scripts/update-pocketbase-tasks-schema.sh` (`.deleteRule = owner_rule`, line 129). Both are hook-protected (`.claude/hooks/block-sensitive-files.sh:22`, owner item 25), so an agent can't edit them. A person makes these `deleteRule` edits, from a patch the build PR proves on scratch copies |
 | Server, self-hosted Docker | A migration in `docker/pb_migrations/` that sets the same rule, with `tests/docker-migrations.test.ts` |
 | Web | `lib/sync/pb-push.ts`: the delete branch, a raw-stamp read, and the CD-6 re-check. Pass the stamp through the SDK's `delete(id, { query })`, and let AC-2's test pin the `%2B` |
 | iOS | `GSDWire/PocketBaseTaskWrite.swift` (`deleteTask` takes the stamp; explicit `%2B`), `GSDSync/SyncEngine.swift` (raw stamp in the index; CD-6 on a 404) |
