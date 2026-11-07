@@ -8,6 +8,7 @@ import Dexie from "dexie";
 import { getDb } from "@/lib/db";
 import { getSyncConfig } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
+import { resetWeeklySweepState } from "@/lib/preferences/weekly-sweep";
 import { SYNC_CONFIG } from "@/lib/constants/sync";
 import type { DeviceInfo, PBSyncConfig } from "@/lib/sync/types";
 
@@ -123,6 +124,20 @@ async function deleteDatabase(db: GsdDatabase): Promise<void> {
  * clear and the database delete fail, and then errors name both.
  */
 export async function wipeLocalData(): Promise<LocalDataWipeResult> {
+	const result = await wipeIndexedDb();
+	// Per-device sweep state lives outside IndexedDB, so the table clear can't reach it.
+	try {
+		resetWeeklySweepState();
+	} catch (err) {
+		logger.error("Failed to clear weekly sweep state", err instanceof Error ? err : undefined, {
+			errorMessage: errorMessage(err),
+		});
+		return { ...result, errors: [...result.errors, `weekly sweep state: ${errorMessage(err)}`] };
+	}
+	return result;
+}
+
+async function wipeIndexedDb(): Promise<LocalDataWipeResult> {
 	const db = getDb();
 	const cleared: string[] = [];
 	const problem = await findWipeProblem(db, cleared);
