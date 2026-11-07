@@ -150,6 +150,9 @@ function buildRecurringInstance(existing: TaskRecord): TaskRecord {
     notificationSent: false,
     lastNotificationAt: undefined,
     snoozedUntil: undefined,
+    // A spawn starts unpicked (spec-top-three.md section 3.2).
+    focusDate: undefined,
+    focusRank: undefined,
   };
 }
 

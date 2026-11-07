@@ -53,5 +53,8 @@ function buildDuplicateRecord(original: TaskRecord, defaultReminder: number): Ta
     lastNotificationAt: undefined,
     snoozedUntil: undefined,
     archivedAt: undefined,
+    // A duplicate starts unpicked (spec-top-three.md section 3.2).
+    focusDate: undefined,
+    focusRank: undefined,
   };
 }

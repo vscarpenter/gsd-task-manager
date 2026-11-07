@@ -1,5 +1,9 @@
 import { z } from "@/lib/zod";
 import { SCHEMA_LIMITS } from "./constants/schema";
+import { MAX_PICKS } from "./top-three";
+
+/** A local calendar day as text. Top three never parses it through a time zone. */
+const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const quadrantIdSchema = z.enum([
 	"urgent-important",
@@ -62,9 +66,10 @@ export const taskDraftSchema = z.object({
 	dependencies: z.array(z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH)).max(SCHEMA_LIMITS.MAX_DEPENDENCIES).default([]), // IDs of tasks that must be completed first
 	notifyBefore: z.number().int().min(0).optional(), // minutes before due date
 	notificationEnabled: z.boolean().default(true),
-	// Top three: the local YYYY-MM-DD a task is picked for, and its slot (spec-top-three.md 3.5).
-	focusDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-	focusRank: z.number().int().min(1).max(3).optional(),
+	// Top three (tasks/spec-top-three.md section 5). Set together or not at all;
+	// the import and pull boundaries turn an invalid pair into neither.
+	focusDate: z.string().regex(LOCAL_DATE_PATTERN).optional(),
+	focusRank: z.number().int().min(1).max(MAX_PICKS).optional(),
 	estimatedMinutes: z.preprocess(
 		(value) => value === 0 ? undefined : value,
 		z.number().int().min(1).max(10080).optional()

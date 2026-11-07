@@ -77,7 +77,8 @@ function keepUnlessGiven<K extends "dueDate" | "estimatedMinutes" | "notifyBefor
  * A field left out of `updates` keeps its stored value. The optional fields the
  * editor can empty (due date, reminder offset, estimate) also clear when the key
  * is present with `undefined`, which is how the editor sends None or an empty
- * field. With `??` alone, a cleared field silently kept its old value.
+ * field. With `??` alone, a cleared field silently kept its old value. Top
+ * three's Remove from today clears its pair the same way.
  */
 function mergeTaskUpdates(
   existing: TaskRecord,
