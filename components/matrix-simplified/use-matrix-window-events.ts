@@ -32,13 +32,14 @@ export interface MatrixWindowEventsDeps {
 
 const ACTION_PARAM_KEYS = ["action", "title", "url", "tags"];
 
-/** Removes the one-shot action params from the address bar, keeping everything else. */
-function stripActionParams(
-  queryParams: URLSearchParams,
-  fragmentParams: URLSearchParams,
-  fromQuery: boolean,
-  fromFragment: boolean
-): void {
+/**
+ * Removes the one-shot action params from the address bar, keeping everything else. It reads
+ * the address as it is now, not as it was when the effect ran: another effect may have
+ * consumed its own params since, and rebuilding from the earlier snapshot would restore them.
+ */
+function stripActionParams(fromQuery: boolean, fromFragment: boolean): void {
+  const queryParams = new URLSearchParams(window.location.search);
+  const fragmentParams = new URLSearchParams(window.location.hash.slice(1));
   if (fromQuery) ACTION_PARAM_KEYS.forEach((key) => queryParams.delete(key));
   if (fromFragment) ACTION_PARAM_KEYS.forEach((key) => fragmentParams.delete(key));
   const nextQuery = queryParams.toString();
@@ -75,7 +76,7 @@ export function useMatrixWindowEvents({
     const isFragmentCapture = fragmentAction === "capture";
     if (!isNewTaskAction && !isLegacyCapture && !isFragmentCapture) return;
 
-    const cleanUrl = () => stripActionParams(queryParams, fragmentParams, isNewTaskAction || isLegacyCapture, isFragmentCapture);
+    const cleanUrl = () => stripActionParams(isNewTaskAction || isLegacyCapture, isFragmentCapture);
 
     if (isNewTaskAction && !isFragmentCapture) {
       // The URL is cleaned when the focus lands, not before. React StrictMode (development)
