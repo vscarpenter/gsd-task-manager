@@ -13,6 +13,7 @@ import { quadrantIdSchema, recurrenceTypeSchema, subtaskSchema, timeEntrySchema 
 import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { createLogger } from '@/lib/logger';
+import { fromWire, pushFocus, toWire } from '@/lib/top-three';
 
 const logger = createLogger('SYNC_PULL');
 
@@ -58,6 +59,8 @@ export interface PBTaskRecord {
   time_entries: TimeEntry[];
   snoozed_until: string;
   saved_at: string;
+  focus_date: string;
+  focus_rank: number;
   client_updated_at: string;
   client_created_at: string;
   device_id: string;
@@ -148,6 +151,7 @@ export function taskRecordToPocketBase(
     time_entries: task.timeEntries ?? [],
     snoozed_until: task.snoozedUntil ?? '',
     saved_at: savedTimestampToWire(task.savedAt),
+    ...toWire(task),
     client_updated_at: task.updatedAt,
     client_created_at: task.createdAt,
     device_id: deviceId,
@@ -187,6 +191,9 @@ const pbTaskRecordSchema = z.object({
   time_entries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
   snoozed_until: z.string().default(''),
   saved_at: z.union([z.literal(''), z.iso.datetime({ offset: true })]).default(''),
+  // Never rejects the record: fromWire turns a bad pair into neither field.
+  focus_date: z.string().catch(''),
+  focus_rank: z.number().catch(0),
 });
 
 type LocalReminderState = Pick<TaskRecord, 'notificationSent' | 'lastNotificationAt' | 'snoozedUntil'>;
@@ -260,17 +267,29 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
     timeSpent: r.time_spent,
     timeEntries: r.time_entries,
     savedAt: savedTimestampFromWire(r.saved_at),
+    ...focusFromWire(r),
     ...localReminderState(existingLocal, r.due_date || undefined),
   };
 }
 
+type PlacementWire = Pick<PBTaskRecord, 'saved_at' | 'focus_date' | 'focus_rank'>;
+
 /**
- * The placement a push sends, read from the row as it is now rather than the
- * queued payload, which can predate this build reading saved_at. A row that's
- * no longer in `tasks` sends no key, so the server keeps its own value.
+ * The placement a push sends: saved_at and top three's pair, read from the row
+ * as it is now rather than the queued payload, which can predate this build
+ * reading them (C4-6). A row that's no longer in `tasks` sends none of these
+ * keys, so the server keeps its own values.
  */
-export function placementToWire(current: TaskRecord | undefined): Pick<Partial<PBTaskRecord>, 'saved_at'> {
-  return current ? { saved_at: savedTimestampToWire(current.savedAt) } : {};
+export function placementToWire(current: TaskRecord | undefined): PlacementWire | Record<string, never> {
+  const focus = pushFocus(current ?? null);
+  if (!current || 'omit' in focus) return {};
+  return { saved_at: savedTimestampToWire(current.savedAt), ...focus };
+}
+
+/** An invalid pair becomes neither field, and the record is still kept (spec section 3.5). */
+function focusFromWire(wire: { focus_date: string; focus_rank: number }): Pick<TaskRecord, 'focusDate' | 'focusRank'> {
+  const { focusDate, focusRank } = fromWire(wire);
+  return focusDate !== null && focusRank !== null ? { focusDate, focusRank } : {};
 }
 
 function savedTimestampToWire(savedAt?: string): string { return savedAt ?? ""; }
