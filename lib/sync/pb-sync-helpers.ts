@@ -249,6 +249,13 @@ export function readClientUpdatedAt(record: RecordModel): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+/** A stamp past the skew ceiling: a fast clock or a forged value, never a newer edit. */
+export function isBeyondClockSkew(iso: string | undefined, nowMs: number = Date.now()): boolean {
+  if (!iso) return false;
+  const time = new Date(iso).getTime();
+  return !Number.isNaN(time) && time > nowMs + SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS;
+}
+
 export function isRemoteNewerThanArchive(
   remoteUpdatedAt: string | undefined,
   archivedAt: string | undefined,
