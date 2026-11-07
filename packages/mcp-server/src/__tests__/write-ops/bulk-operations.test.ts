@@ -669,3 +669,29 @@ describe('bulkUpdateTasks — complete spawns the next recurring instance', () =
     ]);
   });
 });
+
+describe('bulkUpdateTasks — top three picks', () => {
+  it.each([
+    [{ type: 'complete', completed: true } as const],
+    [{ type: 'move_quadrant', urgent: true, important: true } as const],
+    [{ type: 'add_tags', tags: ['work'] } as const],
+    [{ type: 'set_due_date', dueDate: '2026-05-01T00:00:00Z' } as const],
+  ])('operation %# keeps the pick', async (operation) => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const entry = makeSnapshotEntry('t1');
+    Object.assign(entry.record, { focus_date: '2026-11-04', focus_rank: 3 });
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(new Map([['t1', entry]]) as never);
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValue({
+      pbRecordId: entry.pbRecordId,
+      clientUpdatedAt: entry.clientUpdatedAt,
+      record: entry.record,
+    } as never);
+
+    await bulkUpdateTasks(config, ['t1'], operation);
+
+    expect(vi.mocked(helpers.updateTaskInPBById).mock.calls[0][2]).toMatchObject({
+      focusDate: '2026-11-04',
+      focusRank: 3,
+    });
+  });
+});
