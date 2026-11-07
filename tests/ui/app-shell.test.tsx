@@ -24,6 +24,10 @@ vi.mock("@/lib/use-view-transition", () => ({
   }),
 }));
 
+vi.mock("@/lib/hooks/use-sync", () => ({
+  useSync: () => ({ isEnabled: false, sync: vi.fn() }),
+}));
+
 vi.mock("@/lib/hooks/use-sync-status", () => ({
   useSyncStatus: () => ({ status: "idle", lastSyncedAt: null }),
 }));
