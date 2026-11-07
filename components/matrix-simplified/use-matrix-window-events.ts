@@ -30,6 +30,26 @@ export interface MatrixWindowEventsDeps {
   focusQuadrant: (quadrant: RedesignQuadrantKey) => void;
 }
 
+const ACTION_PARAM_KEYS = ["action", "title", "url", "tags"];
+
+/** Removes the one-shot action params from the address bar, keeping everything else. */
+function stripActionParams(
+  queryParams: URLSearchParams,
+  fragmentParams: URLSearchParams,
+  fromQuery: boolean,
+  fromFragment: boolean
+): void {
+  if (fromQuery) ACTION_PARAM_KEYS.forEach((key) => queryParams.delete(key));
+  if (fromFragment) ACTION_PARAM_KEYS.forEach((key) => fragmentParams.delete(key));
+  const nextQuery = queryParams.toString();
+  const nextFragment = fromFragment ? fragmentParams.toString() : window.location.hash.slice(1);
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${nextFragment ? `#${nextFragment}` : ""}`
+  );
+}
+
 export function useMatrixWindowEvents({
   searchInputRef,
   captureInputRef,
@@ -55,39 +75,27 @@ export function useMatrixWindowEvents({
     const isFragmentCapture = fragmentAction === "capture";
     if (!isNewTaskAction && !isLegacyCapture && !isFragmentCapture) return;
 
-    let focusTimer: ReturnType<typeof setTimeout> | undefined;
+    const cleanUrl = () => stripActionParams(queryParams, fragmentParams, isNewTaskAction || isLegacyCapture, isFragmentCapture);
+
     if (isNewTaskAction && !isFragmentCapture) {
-      focusTimer = setTimeout(() => captureInputRef.current?.focus(), UI_TIMING.FOCUS_DELAY_MS);
-    } else if (isFragmentCapture) {
+      // The URL is cleaned when the focus lands, not before. React StrictMode (development)
+      // tears this effect down and runs it again, and a URL cleaned on the first run left
+      // the second with nothing to act on, so the capture input never took focus.
+      const focusTimer = setTimeout(() => {
+        captureInputRef.current?.focus();
+        cleanUrl();
+      }, UI_TIMING.FOCUS_DELAY_MS);
+      return () => clearTimeout(focusTimer);
+    }
+
+    if (isFragmentCapture) {
       const draft = parseShareCaptureParams(fragmentParams);
       if (draft) {
         captureInputRef.current?.focus();
         openCreateDrawerEvent(draft);
       }
     }
-
-    if (isNewTaskAction || isLegacyCapture) {
-      ["action", "title", "url", "tags"].forEach((key) => queryParams.delete(key));
-    }
-    if (isFragmentCapture) {
-      ["action", "title", "url", "tags"].forEach((key) => fragmentParams.delete(key));
-    }
-
-    const nextQuery = queryParams.toString();
-    const nextFragment = isFragmentCapture
-      ? fragmentParams.toString()
-      : window.location.hash.slice(1);
-    window.history.replaceState(
-      window.history.state,
-      "",
-      `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${
-        nextFragment ? `#${nextFragment}` : ""
-      }`
-    );
-
-    return () => {
-      if (focusTimer) clearTimeout(focusTimer);
-    };
+    cleanUrl();
   }, [captureInputRef]);
 
   // Global "/" focuses search; "n" handled by CaptureBar; "?" opens help
