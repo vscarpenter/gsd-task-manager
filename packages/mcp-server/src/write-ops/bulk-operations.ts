@@ -12,6 +12,7 @@ import type { BulkOperation } from './types.js';
 import { listTasksFresh } from '../tools/list-tasks.js';
 import { getTaskCache } from '../cache.js';
 import { SCHEMA_LIMITS } from '../constants.js';
+import { normalizeTag } from '../text/tags.js';
 import { createMcpLogger } from '../utils/logger.js';
 import {
   deriveQuadrant,
@@ -58,7 +59,7 @@ function applyOperation(task: Task, operation: BulkOperation, now: string): Task
       return { ...task, tags: [...new Set([...task.tags, ...operation.tags])], updatedAt: now };
     case 'remove_tags': {
       const remove = new Set(operation.tags);
-      return { ...task, tags: task.tags.filter((tag) => !remove.has(tag)), updatedAt: now };
+      return { ...task, tags: task.tags.filter((tag) => !remove.has(normalizeTag(tag))), updatedAt: now };
     }
     case 'set_due_date':
       return applyDueDate(task, operation.dueDate, now);

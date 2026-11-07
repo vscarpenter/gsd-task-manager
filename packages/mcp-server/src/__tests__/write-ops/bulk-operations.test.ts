@@ -657,3 +657,22 @@ describe('bulkUpdateTasks — complete spawns the next recurring instance', () =
     ]);
   });
 });
+
+describe('bulkUpdateTasks — remove_tags against legacy stored tags', () => {
+  it('removes a tag stored un-normalized when the caller names it in any spelling', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const entry = makeSnapshotEntry('t1');
+    Object.assign(entry.record, { tags: ['#Work', 'home'] });
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(new Map([['t1', entry]]) as never);
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValue({
+      pbRecordId: entry.pbRecordId,
+      clientUpdatedAt: entry.clientUpdatedAt,
+      record: entry.record,
+    } as never);
+
+    // The handler normalizes the argument before it reaches the operation.
+    await bulkUpdateTasks(config, ['t1'], { type: 'remove_tags', tags: ['work'] });
+
+    expect(vi.mocked(helpers.updateTaskInPBById).mock.calls[0][2].tags).toEqual(['home']);
+  });
+});
