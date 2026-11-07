@@ -153,7 +153,7 @@ describe("Cross-platform backup — iOS to web", () => {
       const reExported = await exportTasks();
 
       // The iOS decoder requires fractional-seconds ISO-8601 on every date it reads.
-      expect(reExported.version).toBe("2.1.0");
+      expect(reExported.version).toBe("2.2.0");
       expect(reExported.exportedAt).toMatch(/\.\d{3}Z$/);
       for (const task of reExported.tasks) {
         expect(task.createdAt).toMatch(/\.\d{3}Z$/);
