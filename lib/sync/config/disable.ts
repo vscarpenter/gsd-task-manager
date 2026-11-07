@@ -26,36 +26,38 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
   const db = getDb();
   const localTaskOwnerUserId = current.localTaskOwnerUserId ?? current.userId ?? null;
 
-  await db.syncMetadata.put({
-    ...current,
-    enabled: false,
-    userId: null,
-    email: null,
-    provider: null,
-    lastSyncAt: null,
-    lastClientUpdatedAt: null,
-    // The local rows stay, so the contract they were pulled under stays with
-    // them. Only a completed pull may stamp a newer one (ADR 0019).
-    pullCursorVersion: current.pullCursorVersion,
-    lastServerUpdatedAt: null,
-    lastSuccessfulSyncAt: null,
-    consecutiveFailures: 0,
-    lastFailureAt: null,
-    lastFailureReason: null,
-    nextRetryAt: null,
-    localTaskOwnerUserId,
-    key: "sync_config",
-  });
+  // One transaction, the disabled config first: closing the tab partway must
+  // never leave Trash deletes queued and unremembered behind a signed-out config.
+  await db.transaction('rw', [db.syncMetadata, db.syncQueue, db.syncHistory], async () => {
+    await db.syncMetadata.put({
+      ...current,
+      enabled: false,
+      userId: null,
+      email: null,
+      provider: null,
+      lastSyncAt: null,
+      lastClientUpdatedAt: null,
+      // The local rows stay, so the contract they were pulled under stays with
+      // them. Only a completed pull may stamp a newer one (ADR 0019).
+      pullCursorVersion: current.pullCursorVersion,
+      lastServerUpdatedAt: null,
+      lastSuccessfulSyncAt: null,
+      consecutiveFailures: 0,
+      lastFailureAt: null,
+      lastFailureReason: null,
+      nextRetryAt: null,
+      localTaskOwnerUserId,
+      key: "sync_config",
+    });
 
-  // A Trash delete still queued now never reaches the server, so it counts as a
-  // signed-out delete: remember its id before the queue goes (resurrect on sight).
-  await db.transaction('rw', [db.syncQueue, db.syncMetadata], async () => {
+    // A Trash delete still queued now never reaches the server, so it counts as a
+    // signed-out delete: remember its id before the queue goes (resurrect on sight).
     await rememberForResurrect(trashDeleteTaskIds(await db.syncQueue.toArray()));
     await db.syncQueue.clear();
-  });
 
-  // Clear sync history — privacy on shared devices.
-  await db.syncHistory.clear();
+    // Clear sync history, for privacy on shared devices.
+    await db.syncHistory.clear();
+  });
 }
 
 async function clearBrowserCaches(): Promise<void> {

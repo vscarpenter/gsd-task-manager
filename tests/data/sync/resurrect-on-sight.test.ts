@@ -37,7 +37,7 @@ vi.mock('@/lib/sync/notifications', () => ({
 
 import { fullSync } from '@/lib/sync/pb-sync-engine';
 import { disableSync } from '@/lib/sync/config';
-import { readRememberedTaskIds, rememberForResurrect } from '@/lib/sync/resurrect-on-sight';
+import { readRememberedTaskIds, rememberForResurrect, resurrectOnSight } from '@/lib/sync/resurrect-on-sight';
 import { persistSyncConfig } from '@/components/sync/use-sync-auth-dialog';
 import { deleteTask } from '@/lib/tasks/crud';
 import { importTasks } from '@/lib/tasks';
@@ -198,6 +198,57 @@ describe('the step after the pull', () => {
 
     await expect(remembered()).resolves.toEqual([]);
     await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Restored and edited here' });
+  });
+
+  it("another account's session forgets no remembered delete", async () => {
+    await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
+    await getDb().deletedTasks.put(trashedHere());
+    await rememberForResurrect(['t-a']);
+    fake.state.authRefreshUserId = 'user-2';
+
+    await fullSync('auto');
+
+    await expect(remembered()).resolves.toEqual(['t-a']);
+  });
+
+  // pb-sync-reviewer: an unreadable record isn't a complete listing for that id (rule 5).
+  it('a remembered id whose server copy is unreadable stays for the next run', async () => {
+    await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '', title: '' })] });
+    await getDb().deletedTasks.put(trashedHere());
+    await rememberForResurrect(['t-a']);
+
+    await fullSync('auto');
+
+    await expect(remembered()).resolves.toEqual(['t-a']);
+    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
+  });
+
+  // pb-sync-reviewer: deleting it again while signed in is the user's latest act.
+  it('a remembered id with a pending delete stays in Trash and is kept', async () => {
+    await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
+    await getDb().deletedTasks.put(trashedHere());
+    await getSyncQueue().enqueue('delete', 't-a', null);
+    await rememberForResurrect(['t-a']);
+
+    await resurrectOnSight('user-1');
+
+    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
+    await expect(getDb().tasks.get('t-a')).resolves.toBeUndefined();
+    await expect(remembered()).resolves.toEqual(['t-a']);
+  });
+
+  // pb-sync-reviewer: the push already committed, so a failed step must not fail the sync.
+  it('a step that fails forgets nothing and leaves the sync successful', async () => {
+    await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
+    await getDb().deletedTasks.put(trashedHere());
+    await rememberForResurrect(['t-a']);
+    vi.spyOn(getDb().deletedTasks, 'delete').mockRejectedValueOnce(new Error('QuotaExceededError'));
+
+    const result = await fullSync('auto');
+
+    expect(result.status).toBe('success');
+    await expect(remembered()).resolves.toEqual(['t-a']);
+    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
   });
 
   it('nothing remembered means no extra listing', async () => {

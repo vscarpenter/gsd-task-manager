@@ -17,7 +17,8 @@ import {
   holdsOffFarFutureRemote,
   readClientUpdatedAt,
 } from './pb-sync-helpers';
-import { assertSyncSessionCurrent } from './sync-session';
+import { isPendingSyncQueueItem } from './queue';
+import { StaleSyncSessionError, assertSyncSessionCurrent } from './sync-session';
 import { getPocketBaseTaskId, pocketBaseToTaskRecord } from './task-mapper';
 import type { ResurrectOnSightRecord, SyncQueueItem } from './types';
 
@@ -63,16 +64,31 @@ export async function resurrectOnSight(ownerId: string): Promise<void> {
   if (!records) return;
 
   const byTaskId = new Map(records.map((record) => [getPocketBaseTaskId(record), record]));
+  try {
+    await applyResurrections(ownerId, remembered, byTaskId);
+  } catch (error) {
+    // The push already committed, so a failed step mustn't fail the sync. The
+    // transaction rolled back, so nothing was forgotten, and the next run retries.
+    if (error instanceof StaleSyncSessionError) throw error;
+    logger.error('Resurrect on sight failed; nothing forgotten', error instanceof Error ? error : undefined);
+  }
+}
+
+async function applyResurrections(
+  ownerId: string,
+  remembered: string[],
+  byTaskId: Map<string | null, RecordModel>,
+): Promise<void> {
   const db = getDb();
   await db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncQueue, db.syncMetadata], async () => {
     await assertSyncSessionCurrent(ownerId);
-    const heldOff: string[] = [];
+    const retry: string[] = [];
     for (const taskId of remembered) {
       const record = byTaskId.get(taskId);
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- one atomic Dexie transaction keeps the tombstone invariant
-      if (record && (await resurrectOne(record)) === 'held-off') heldOff.push(taskId);
+      if (record && (await resurrectOne(record)) === 'retry') retry.push(taskId);
     }
-    await forgetAllBut(remembered, heldOff);
+    await forgetAllBut(remembered, retry);
   });
 }
 
@@ -94,16 +110,15 @@ async function listAccount(ownerId: string): Promise<RecordModel[] | null> {
   }
 }
 
-type Outcome = 'restored' | 'kept-local' | 'held-off' | 'nothing';
+/** 'retry' keeps the id for the next run; every other outcome forgets it. */
+type Outcome = 'restored' | 'kept-local' | 'retry' | 'nothing';
 
-/**
- * Bring one remembered task back from the account's copy. A held-off far-future
- * remote waits for the next run, after this run's push has healed the record.
- */
+/** Bring one remembered task back from the account's copy. */
 async function resurrectOne(record: RecordModel): Promise<Outcome> {
   const remote = pocketBaseToTaskRecord(record, null);
-  if (!remote) return 'nothing';
-  if (await holdsOffFarFutureRemote(readClientUpdatedAt(record), remote.id)) return 'held-off';
+  // An unreadable copy isn't a complete listing for this id (rule 5).
+  if (!remote) return 'retry';
+  if (await waitsForThisDevice(record, remote.id)) return 'retry';
 
   const db = getDb();
   const local = await db.tasks.get(remote.id);
@@ -119,6 +134,17 @@ async function resurrectOne(record: RecordModel): Promise<Outcome> {
   return 'restored';
 }
 
+/**
+ * This device still has its own word pending: a far-future remote held off for a
+ * queued write, which waits until push heals the record, or a delete queued since
+ * the id was remembered, which is the user's latest act and will push.
+ */
+async function waitsForThisDevice(record: RecordModel, taskId: string): Promise<boolean> {
+  if (await holdsOffFarFutureRemote(readClientUpdatedAt(record), taskId)) return true;
+  const rows = await getDb().syncQueue.where('taskId').equals(taskId).toArray();
+  return rows.some((row) => row.operation === 'delete' && isPendingSyncQueueItem(row));
+}
+
 /** An active copy here (restored, or brought back by the pull) follows last-write-wins. */
 async function takeIfStrictlyNewer(record: RecordModel, local: TaskRecord): Promise<Outcome> {
   const merged = pocketBaseToTaskRecord(record, local);
@@ -127,7 +153,7 @@ async function takeIfStrictlyNewer(record: RecordModel, local: TaskRecord): Prom
   return 'restored';
 }
 
-/** Forget every id this run looked at, found or not, except the held-off ones. */
+/** Forget every id this run looked at, found or not, except the ones to retry. */
 async function forgetAllBut(processed: string[], keep: string[]): Promise<void> {
   const forget = new Set(processed.filter((taskId) => !keep.includes(taskId)));
   const current = await readRememberedTaskIds();
