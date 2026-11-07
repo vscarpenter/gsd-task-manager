@@ -434,3 +434,16 @@ describe('updateTask completion with a recurring task', () => {
     expect(mocks.createTaskInPB).not.toHaveBeenCalled();
   });
 });
+
+describe('top three picks through update_task', () => {
+  const picked = () => task('series', { focusDate: '2026-11-04', focusRank: 2 });
+
+  it('update_task keeps the pick on the record it writes', async () => {
+    mocks.fetchSinglePBTaskFresh.mockResolvedValue(freshRecord(picked()));
+
+    const result = await updateTask(config, { id: 'series', title: 'Renamed' });
+
+    expect(result.task).toMatchObject({ focusDate: '2026-11-04', focusRank: 2 });
+    expect(mocks.updateTaskInPBById.mock.calls[0][2]).toMatchObject({ focusDate: '2026-11-04', focusRank: 2 });
+  });
+});
