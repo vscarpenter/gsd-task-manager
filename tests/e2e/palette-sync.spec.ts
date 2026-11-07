@@ -40,7 +40,14 @@ async function openPaletteAndSearch(page: Page, query: string): Promise<void> {
 }
 
 test.describe("Command palette: Sync commands follow the real sync state", () => {
-  test.use({ expectedConsoleErrors: /Failed to load resource|ERR_FAILED|ERR_CONNECTION_REFUSED/ });
+  // The sync-on test cuts every request that leaves the app, and each browser words that
+  // differently: Chromium says "Failed to load resource ... ERR_FAILED", Firefox says "Cross-Origin
+  // Request Blocked" and "can't establish a connection ... /api/realtime", and the production CSP
+  // adds its own refusals. Only this suite expects them, and only because it cut the network.
+  test.use({
+    expectedConsoleErrors:
+      /Failed to load resource|ERR_FAILED|ERR_CONNECTION_REFUSED|Cross-Origin Request Blocked|establish a connection|Refused to connect|Content[- ]Security[- ]Policy|\/api\/realtime/,
+  });
 
   test.beforeEach(async ({ clearIndexedDB }) => {
     // Fixture seeds the launch flag and clears IndexedDB, so the first load lands on the matrix.
@@ -61,6 +68,11 @@ test.describe("Command palette: Sync commands follow the real sync state", () =>
     // never reach a hosted or local PocketBase, and expect the refusals that causes.
     const appOrigin = new URL(baseURL!).origin;
     await page.route((url) => url.origin !== appOrigin, (route) => route.abort());
+    // Belt and braces: nothing outside the app may ever answer.
+    const answeredOutsideApp: string[] = [];
+    page.on("response", (response) => {
+      if (new URL(response.url()).origin !== appOrigin) answeredOutsideApp.push(response.url());
+    });
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await waitForAppLoad(page);
     await enableSyncConfig(page);
@@ -70,5 +82,6 @@ test.describe("Command palette: Sync commands follow the real sync state", () =>
     await expect(page.getByRole("option", { name: /Sync now/ })).toBeVisible();
     await page.getByRole("option", { name: /View sync history/ }).click();
     await expect(page).toHaveURL(/\/sync-history\/?$/);
+    expect(answeredOutsideApp).toEqual([]);
   });
 });
