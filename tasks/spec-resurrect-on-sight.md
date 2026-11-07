@@ -23,7 +23,7 @@ The same on every client, stated by behavior. Each client's order differs (web p
 1. **A delete still unsent when a session starts never reaches the server.** That covers a Trash delete and a Replace import's deletes made while signed out. It also covers a delete made while signed in that was still queued at sign-out (section 8, item 1). A delete queued while the session was silently dead is a different case, out of scope pending D-2 (section 7).
 2. **The device remembers those task ids.** The list is device-local. It never syncs, it survives sign-out, and Erase all data clears it.
 3. **After the next completed pull, the device lists the whole account once.** For each remembered id in the listing:
-   - With a Trash row here, the Trash row goes and the server copy becomes an active task.
+   - With a Trash row here, the Trash row goes and the server copy becomes an active task. The server copy is merged into that Trash row, the way a pull merges into a live row, so this device's reminder state and time-entry detail survive.
    - With an active copy here (restored while signed out, or brought back by the pull), last-write-wins decides. The server copy replaces it only when strictly newer.
    - The far-future hold-off applies. A far-future stamp doesn't overwrite a task that has a queued write. Section 4 says when that can happen on web.
    - An archive row keeps the archive (section 8, item 2).
@@ -54,6 +54,7 @@ With no remembered ids, a run does exactly what it does today, with no extra lis
 
 - **Erase clears the list.** `LocalErase.eraseAll` clears the cursor but keeps `resurrectTaskIdsJson` (`LocalErase.kt:25`). Rule 2 says Erase all data clears it, so the same upsert clears that field too.
 - **A held-off id stays** (rule 4). The step skips it at `SyncEngine.kt:196` and forgets it at `:205` today. It keeps that id out of the forget.
+- **Merge into the Trash row** (rule 3). The step maps the wire record against the active row only (`SyncEngine.kt:194-195`), which a trashed task doesn't have, so it rebuilds from the wire. It maps against the Trash row instead.
 - **The tests section 6 owes,** marked "add" in the Android column.
 - **The archive row, only if Vinny accepts section 8 item 2.** `removeTombstone` (`:200`) clears either kind of row, and `SyncLocalStore` can't tell them apart today (`tombstoneAtMs` covers both). A small port method such as `isArchived(id)` lets the step skip an id with an archive row. That id is still forgotten.
 
@@ -67,7 +68,7 @@ Web pushes first, never queues while signed out, and clears the queue at sign-ou
 
 - **Remember in two places.** In `deleteTask` when sync isn't enabled. And in `disableSync`, just before it clears the queue (`disable.ts:48-49`): the task ids of `delete` rows with no payload. An archive's delete carries the task (`lib/archive.ts:122`, `:221`), so it's left out. Web needs no sign-in drop, because nothing is queued while signed out.
 - **Store** the ids device-local in `syncMetadata`. They must survive `resetSyncConfigState` (`disable.ts:25-46`, which spreads the current row). They must also work on a device that has never signed in and has no config row yet. `lib/reset-local-data.ts` clears them.
-- **The step** runs after the pull in `fullSync`. It uses the same bounded listing (`fetchBoundedRemoteTasks`) and session check (`confirmSessionIdentity`) the pull uses. A pull that comes back unauthenticated returns rather than throws (`pb-pull.ts:143`), so the step treats that as a failure and forgets nothing. A cancelled sync forgets nothing too.
+- **The step** runs after the pull in `fullSync`. It uses the same bounded listing (`fetchBoundedRemoteTasks`) and session check (`confirmSessionIdentity`) the pull uses. It maps the server copy over the Trash row with `pocketBaseToTaskRecord(record, trashed)`, as the pull does over a live row (`pb-pull.ts:85`). A pull that comes back unauthenticated returns rather than throws (`pb-pull.ts:143`), so the step treats that as a failure and forgets nothing. A cancelled sync forgets nothing too.
 - **The hold-off:** the step holds off a far-future remote while a write for that task is pending, the same rule WEB-HOLDOFF brings to every web pull. Web pushes first, so this fires only when this run's push left a write pending: a 429, an unavailable index, or an error. A held-off id stays for the next run (rule 4).
 - **Re-auth doesn't change.** Under an expired session, sync stays enabled, so `deleteTask` queues the delete instead of remembering it. A re-sign-in from the "Session expired" dialog skips `disableSync`, so that delete still pushes, as it does today (section 7).
 - **The order needs no change.** Push runs first, but remembered tasks are in Trash, so `populateFromExistingTasks` (`lib/sync/queue.ts:201-215`) doesn't seed them and nothing pushes for them. A task restored while signed out is active, so it's seeded and pushes first under the payload guard. Restore keeps its old `updatedAt` (`lib/trash.ts:53-54`), so the step keeps that copy unless the server's is strictly newer.
@@ -87,7 +88,7 @@ iOS pulls first, queues every mutation whatever the sign-in state, and keeps the
   - **No new state needed to tell them apart.** `SyncCoordinator.signedOut()` is the only caller of `resetCursor()` (`App/Sync/SyncCoordinator.swift:88`). A rejected token clears only the Keychain token and keeps the cursor (section 7). So at the sign-in moment, a nil cursor means a sign-out or a device that never synced, and the drop runs. A kept cursor means a re-sign-in after a rejected token, and it doesn't.
   - **The one case this misreads:** a token rejected before the session's first sync completed leaves the cursor nil. That re-sign-in counts as signed out, so a delete queued in that session comes back instead of pushing. That's Android's behavior today, and nothing is lost. Telling it apart exactly needs new state, such as a flag `signOut()` writes. A flag alone would miss people who signed out on an older build, so it would still need the cursor check. This spec takes the cursor check and names the edge for D-2.
 - **Store** the ids in App Group `UserDefaults`, beside the cursor. Sign-out keeps them, and Erase all data clears them.
-- **The step** goes in `sync()` after the pull (`SyncEngine.swift:362`) and before the push (`:366`). It uses the pull's fence, bounded listing, and far-future hold-off (`hasQueuedWriteHoldingOff`, `:164-167`). A remembered id with a Trash row comes back through `tombstones.resurrect`. A held-off id stays for the next run (rule 4). A thrown error forgets nothing.
+- **The step** goes in `sync()` after the pull (`SyncEngine.swift:362`) and before the push (`:366`). It uses the pull's fence, bounded listing, and far-future hold-off (`hasQueuedWriteHoldingOff`, `:164-167`). A remembered id with a Trash row comes back through `tombstones.resurrect`, with the record merged into that Trash row. `applyOverTombstone` passes `mergingInto: nil` today (`SyncEngine.swift:548`), which rebuilds from the wire and loses device-local fields. A held-off id stays for the next run (rule 4). A thrown error forgets nothing.
 - **`applyOverTombstone` doesn't change.** Its "a queued delete that push will still send wins" branch can't fire for a remembered id, because sign-in dropped that delete.
 
 ## 6. Named tests
@@ -98,6 +99,7 @@ Each client writes these where it keeps sync tests: web in `tests/data/sync/`, i
 |---|---|---|---|---|
 | `a remembered delete comes back when the account lists the task` | 3 | yes | yes | yes, exists |
 | `a remembered delete with no server copy keeps its Trash copy and is forgotten` | 3, 4 | yes | yes | yes, exists |
+| `a resurrected task keeps this device's reminder state and time-entry notes` | 3 | yes; the merge is on WEB-RESURRECT, add the test | add | add |
 | `a remembered id active again with a newer local edit keeps the local copy` | 3 | yes | yes | yes, exists |
 | `a dead session forgets no remembered delete` | 5 | yes | yes | yes, exists |
 | `an incomplete listing forgets no remembered delete` | 5 | yes | yes | add |
