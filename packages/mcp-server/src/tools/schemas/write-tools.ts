@@ -98,7 +98,7 @@ export const createTaskTool: Tool = {
 export const updateTaskTool: Tool = {
   name: 'update_task',
   description:
-    'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Setting completed=true does not create the next instance of a recurring task; use complete_task for that. Use dryRun=true to preview changes.',
+    'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Setting completed=true on a recurring task also creates its next instance, as complete_task does. Use dryRun=true to preview changes.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -169,7 +169,7 @@ export const updateTaskTool: Tool = {
       completed: {
         type: 'boolean',
         description:
-          'Mark as complete/incomplete. Does not create the next recurring instance; use complete_task for that.',
+          'Mark as complete/incomplete. Completing a recurring task also creates its next instance.',
       },
       notifyBefore: {
         type: 'integer',
@@ -247,7 +247,7 @@ export const deleteTaskTool: Tool = {
 export const bulkUpdateTasksTool: Tool = {
   name: 'bulk_update_tasks',
   description:
-    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation (10 for deletes) for safety. Bulk complete does not create the next instance of a recurring task; use complete_task for that. Deletes are permanent and skip the 30-day Trash on every client. Destructive deletes default to dryRun=true — pass dryRun=false explicitly to apply.',
+    'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation (10 for deletes) for safety. Bulk complete also creates the next instance of each recurring task it completes. Deletes are permanent and skip the 30-day Trash on every client. Destructive deletes default to dryRun=true — pass dryRun=false explicitly to apply.',
   inputSchema: {
     type: 'object',
     properties: {

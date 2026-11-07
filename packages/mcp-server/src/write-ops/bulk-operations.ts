@@ -19,8 +19,10 @@ import {
   fetchPBSnapshotForTasks,
   fetchSinglePBTaskFresh,
   updateTaskInPBById,
+  createTaskInPB,
   deleteTaskInPBById,
 } from './helpers.js';
+import { buildRecurringInstance, completesRecurringTask } from './recurrence.js';
 import { sanitizePocketBaseWriteError, WriteRateLimiter } from './write-rate-limiter.js';
 import { cleanDependents, snapshotDependents, type CleanupOutcome } from './dependency-cleanup.js';
 
@@ -94,7 +96,7 @@ interface BulkTaskInput {
 }
 
 type BulkTaskOutcome =
-  | { kind: 'updated'; taskId: string }
+  | { kind: 'updated'; taskId: string; spawnFailed?: boolean }
   | { kind: 'deleted'; taskId: string }
   | { kind: 'conflict'; taskId: string }
   | { kind: 'error'; taskId: string; message: string; rateLimited: boolean };
@@ -121,6 +123,31 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+/**
+ * Completing a recurring task creates its next instance, as complete_task does.
+ * The original is already saved as complete, so a failure here is reported
+ * rather than thrown. Returns false when the instance could not be saved.
+ */
+async function spawnNextInstance(
+  config: GsdConfig,
+  task: Task,
+  operation: BulkOperation,
+  ownerId: string,
+  deviceId: string
+): Promise<boolean> {
+  if (operation.type !== 'complete' || !completesRecurringTask(task, operation.completed)) return true;
+  try {
+    await createTaskInPB(config, buildRecurringInstance(task), ownerId, deviceId);
+    return true;
+  } catch (error) {
+    logger.warn('Next recurring instance could not be created', {
+      taskId: task.id,
+      code: sanitizePocketBaseWriteError(error).code,
+    });
+    return false;
+  }
+}
+
 async function processBulkTask(
   config: GsdConfig,
   input: BulkTaskInput,
@@ -144,7 +171,8 @@ async function processBulkTask(
         return { kind: 'deleted', taskId: task.id };
       }
       await updateTaskInPBById(config, preflight.pbRecordId, updated!, ownerId, deviceId);
-      return { kind: 'updated', taskId: task.id };
+      const spawnFailed = !(await spawnNextInstance(config, task, operation, ownerId, deviceId));
+      return { kind: 'updated', taskId: task.id, ...(spawnFailed && { spawnFailed }) };
     });
   } catch (error) {
     const safe = sanitizePocketBaseWriteError(error);
@@ -169,6 +197,11 @@ function summarizeOutcomes(outcomes: BulkTaskOutcome[]): Omit<BulkUpdateResult, 
   };
   for (const outcome of outcomes) {
     if (outcome.kind === 'updated') summary.updated++;
+    if (outcome.kind === 'updated' && outcome.spawnFailed) {
+      summary.errors.push(
+        `Task ${outcome.taskId}: completed, but the next recurring instance could not be created. Create it manually or mark the task incomplete and retry.`
+      );
+    }
     if (outcome.kind === 'deleted') summary.deleted++;
     if (outcome.kind === 'conflict') summary.conflicts.push(outcome.taskId);
     if (outcome.kind === 'error') {
