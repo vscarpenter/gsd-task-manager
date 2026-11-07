@@ -35,9 +35,11 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
   const pb = getPocketBase(config);
 
   try {
-    const allTasks = await pb.collection('tasks').getFullList<PBTask>({
-      fields: 'task_id,completed,client_created_at,client_updated_at',
+    const records = await pb.collection('tasks').getFullList<PBTask>({
+      fields: 'task_id,completed,saved_at,client_created_at,client_updated_at',
     });
+    // Saved items live outside the matrix, so every other read tool leaves them out too.
+    const allTasks = records.filter(t => !t.saved_at);
 
     const activeTasks = allTasks.filter(t => !t.completed);
     const completedTasks = allTasks.filter(t => t.completed);
