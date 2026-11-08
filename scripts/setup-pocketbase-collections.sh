@@ -293,6 +293,23 @@ cat > "$COLLECTION_PAYLOAD_FILE" <<'ENDJSON'
       "options": { "min": null, "max": 50 }
     },
     {
+      "name": "focus_date",
+      "type": "text",
+      "required": false,
+      "system": false,
+      "max": 10,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    {
+      "name": "focus_rank",
+      "type": "number",
+      "required": false,
+      "system": false,
+      "min": 0,
+      "max": 3,
+      "onlyInt": true
+    },
+    {
       "name": "snoozed_until",
       "type": "text",
       "required": false,
@@ -363,7 +380,7 @@ if echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); asser
   echo "==> Success! 'tasks' collection created (ID: $COLLECTION_ID)"
   echo ""
   echo "Collection has:"
-  echo "  - 25 fields matching PBTaskRecord schema"
+  echo "  - 28 fields matching PBTaskRecord schema"
   echo "  - API rules: authenticated users can only access their own tasks"
   echo "  - Indexes: owner, task_id+owner (unique), updated"
   echo ""
