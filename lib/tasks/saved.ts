@@ -3,6 +3,7 @@ import { quadrantIdSchema, taskDraftSchema } from "@/lib/schema";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./crud/helpers";
+import { savedPlacementBlocker } from "./saved-placement";
 
 /** Saving changes placement, never identity or completion. */
 export async function saveTaskForLater(id: string): Promise<TaskRecord> {
@@ -11,10 +12,8 @@ export async function saveTaskForLater(id: string): Promise<TaskRecord> {
     const task = await db.tasks.get(id);
     if (!task) throw new Error("Task not found");
     if (task.savedAt) return task;
-    if (task.completed) throw new Error("Completed tasks belong in Archive");
-    if (task.timeEntries?.some((entry) => !entry.endedAt)) {
-      throw new Error("Stop the timer before moving this task to Saved");
-    }
+    const blocker = savedPlacementBlocker(task);
+    if (blocker) throw new Error(blocker);
     const now = isoNow();
     const saved = { ...task, savedAt: now, updatedAt: now };
     await db.tasks.put(saved);

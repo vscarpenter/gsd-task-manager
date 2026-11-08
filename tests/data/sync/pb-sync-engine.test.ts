@@ -46,6 +46,8 @@ const SIGNED_IN_CONFIG: Record<string, unknown> = {
   key: 'sync_config',
   enabled: true,
   userId: 'user-1',
+  // Current contract, so these tests run the ordinary push-then-pull order.
+  pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
   lastSyncAt: null,
   lastSuccessfulSyncAt: null,
   consecutiveFailures: 0,

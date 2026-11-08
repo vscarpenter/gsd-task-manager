@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RecordModel } from 'pocketbase';
 import Dexie from 'dexie';
 import { getDb } from '@/lib/db';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { TaskRecord } from '@/lib/types';
 
@@ -23,7 +24,7 @@ vi.mock('@/lib/sync/pb-sync-helpers', async () => {
   };
 });
 
-import { pullRemoteChanges } from '@/lib/sync/pb-pull';
+import { pullRemoteChanges, type PullOptions } from '@/lib/sync/pb-pull';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
 import { StaleSyncSessionError } from '@/lib/sync/sync-session';
 import type { PBSyncConfig } from '@/lib/sync/types';
@@ -904,7 +905,7 @@ describe('pullRemoteChanges same-version backfill', () => {
     });
   });
 
-  function pullSavedRecord(clientUpdatedAt: string, options?: { mergeSameVersion: boolean }) {
+  function pullSavedRecord(clientUpdatedAt: string, options?: PullOptions) {
     const record = { ...pbRecord('t-saved', clientUpdatedAt), saved_at: stamp } as RecordModel;
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({ getList: vi.fn(async () => [record]) }),
@@ -924,8 +925,11 @@ describe('pullRemoteChanges same-version backfill', () => {
     });
   });
 
-  it('still keeps a strictly newer local task while backfilling', async () => {
-    const { pulledCount } = await pullSavedRecord('2026-10-26T23:29:40.273Z', { mergeSameVersion: true });
+  it('still keeps a strictly newer local task while backfilling from a contract that read saved_at', async () => {
+    const { pulledCount } = await pullSavedRecord('2026-10-26T23:29:40.273Z', {
+      mergeSameVersion: true,
+      storedContractVersion: SYNC_CONFIG.SAVED_AT_CONTRACT_VERSION,
+    });
 
     expect(pulledCount).toBe(0);
     const local = await getDb().tasks.get('t-saved');
