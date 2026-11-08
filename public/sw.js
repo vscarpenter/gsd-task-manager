@@ -24,6 +24,7 @@ const PRECACHE_PAGES = [
 	"/dashboard/",
 	"/saved/",
 	"/settings/",
+	"/sweep/",
 	"/sync-history/",
 ];
 

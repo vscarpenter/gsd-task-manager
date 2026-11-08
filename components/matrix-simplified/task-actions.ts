@@ -156,12 +156,14 @@ export async function handleMoveTo(
   task: TaskRecord,
   target: QuadrantId,
   offerUndo: (message: string, undo: () => Promise<void>) => void
-): Promise<void> {
+): Promise<boolean> {
   try {
     await moveTaskToQuadrant(task.id, target);
     offerUndo(`Moved to ${quadrants.find((q) => q.id === target)?.title}`, () => moveTaskToQuadrant(task.id, task.quadrant).then(() => {}));
+    return true;
   } catch (error) {
     reportTaskMutationError(error, "move_task", "Failed to move task", task.id);
+    return false;
   }
 }
 
@@ -181,13 +183,15 @@ export async function handleClearSnooze(taskId: string): Promise<void> {
 export async function handleMarkUrgent(
   task: TaskRecord,
   offerUndo: (message: string, undo: () => Promise<void>) => void
-): Promise<void> {
+): Promise<boolean> {
   try {
     const moved = await updateTask(task.id, { urgent: true });
     const destination = quadrantForTask(moved.urgent, moved.important).title;
     offerUndo(`Moved to ${destination}`, () => updateTask(task.id, { urgent: false }).then(() => {}));
+    return true;
   } catch (error) {
     reportTaskMutationError(error, ErrorActions.UPDATE_TASK, "Failed to mark task urgent", task.id);
+    return false;
   }
 }
 

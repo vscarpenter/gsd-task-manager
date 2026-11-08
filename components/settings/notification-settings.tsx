@@ -3,6 +3,7 @@
 import { Switch } from "@/components/ui/switch";
 import type { NotificationSettings } from "@/lib/types";
 import { SettingsRow, SettingsSelectRow } from "./shared-components";
+import { SweepReminderRows } from "./sweep-reminder-rows";
 
 interface NotificationSettingsProps {
 	settings: NotificationSettings | null;
@@ -46,16 +47,17 @@ export function NotificationSettingsSection({
 
 			{/* Reminder, sound, quiet hours - only meaningful while notifications fire */}
 			{settings.enabled && (
-				<>
-					<DefaultReminderRow value={settings.defaultReminder} onChange={onDefaultReminderChange} />
-					<SoundAndQuietHoursRows
-						settings={settings}
-						onSoundToggle={onSoundToggle}
-						onQuietHoursToggle={onQuietHoursToggle}
-						onQuietHoursChange={onQuietHoursChange}
-					/>
-				</>
+				<TaskReminderRows
+					settings={settings}
+					onDefaultReminderChange={onDefaultReminderChange}
+					onSoundToggle={onSoundToggle}
+					onQuietHoursToggle={onQuietHoursToggle}
+					onQuietHoursChange={onQuietHoursChange}
+				/>
 			)}
+
+			{/* Its own setting: always shown, and it fires whether or not task reminders are on */}
+			<SweepReminderRows />
 
 			{/* Permission Status Row */}
 			{"Notification" in window && (
@@ -114,6 +116,30 @@ function DefaultReminderRow({ value, onChange }: { value: number; onChange: (val
 			options={reminderOptions(value)}
 			onChange={onChange}
 		/>
+	);
+}
+
+/** The default offset, sound, and quiet hours: the settings that only matter while task reminders fire. */
+function TaskReminderRows({
+	settings,
+	onDefaultReminderChange,
+	onSoundToggle,
+	onQuietHoursToggle,
+	onQuietHoursChange,
+}: Pick<
+	NotificationSettingsProps,
+	"onDefaultReminderChange" | "onSoundToggle" | "onQuietHoursToggle" | "onQuietHoursChange"
+> & { settings: NotificationSettings }) {
+	return (
+		<>
+			<DefaultReminderRow value={settings.defaultReminder} onChange={onDefaultReminderChange} />
+			<SoundAndQuietHoursRows
+				settings={settings}
+				onSoundToggle={onSoundToggle}
+				onQuietHoursToggle={onQuietHoursToggle}
+				onQuietHoursChange={onQuietHoursChange}
+			/>
+		</>
 	);
 }
 

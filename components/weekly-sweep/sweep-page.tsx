@@ -1,0 +1,116 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/matrix-simplified/app-shell";
+import { Button } from "@/components/ui/button";
+import { useErrorHandlerWithUndo } from "@/lib/use-error-handler";
+import { readEscalationWindow } from "@/lib/preferences/escalation-window";
+import { useTasks } from "@/lib/use-tasks";
+import { ROUTES } from "@/lib/routes";
+import { nextRank } from "@/lib/top-three";
+import type { TaskRecord } from "@/lib/types";
+import {
+  completeTask,
+  markUrgent,
+  moveToQuadrant,
+  removeTask,
+  returnToMatrix,
+  saveForLater,
+  setDueDay,
+} from "./sweep-actions";
+import { SweepCard, type SweepCardHandlers } from "./sweep-card";
+import { useSweepSession, type SweepSession } from "./use-sweep-session";
+
+/** The end offers top three's suggestions only while today has a free slot, the rule carry-over uses. */
+const hasFreeSlot = (tasks: TaskRecord[], now: Date, zone: string) => nextRank(tasks, now, zone) !== null;
+
+/** Where the end screen offers to go next: top three's suggestions, on a client where top three shipped. */
+const PICK_TODAY_HREF = { pathname: ROUTES.HOME, query: { pickToday: "1" } };
+
+function EndScreen({ onDone, canPickToday }: { onDone: () => void; canPickToday: boolean }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  // The card that had focus is gone, so land on the heading, which is how it gets announced.
+  useEffect(() => headingRef.current?.focus(), []);
+  return (
+    <div className="space-y-4 rounded-lg border border-border bg-card px-6 py-10 text-center">
+      <h2 ref={headingRef} tabIndex={-1} className="text-h2 text-foreground">That&apos;s the sweep.</h2>
+      <div className="flex flex-wrap justify-center gap-3">
+        {canPickToday ? (
+          <Link href={PICK_TODAY_HREF} onClick={onDone} className="btn btn-primary touch-target">
+            Pick today&apos;s top three
+          </Link>
+        ) : null}
+        <Link href={ROUTES.HOME} onClick={onDone} className="btn btn-ghost touch-target">
+          Back to the matrix
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/** Each card action runs the path the matrix already uses, then moves on only when it worked. */
+function useSweepHandlers(session: SweepSession, task: TaskRecord | undefined): SweepCardHandlers | null {
+  const { handleSuccess } = useErrorHandlerWithUndo();
+  if (!task) return null;
+  const run = async (action: () => Promise<boolean>) => {
+    if (await action()) session.advance();
+  };
+  return {
+    onComplete: () => run(() => completeTask(task, handleSuccess)),
+    onMarkUrgent: () => run(() => markUrgent(task, handleSuccess)),
+    onSave: () => run(() => saveForLater(task, handleSuccess)),
+    onDelete: () => run(() => removeTask(task, handleSuccess)),
+    onSkip: session.advance,
+    onSetDay: (day) => run(() => setDueDay(task, day)),
+    onMove: (quadrant) => run(() => moveToQuadrant(task, quadrant, handleSuccess)),
+    onReturn: async (quadrant, dueDate) => {
+      const returned = await returnToMatrix(task, quadrant, dueDate);
+      if (returned) session.advance();
+      return returned;
+    },
+  };
+}
+
+/** The weekly sweep: one task at a time through what needs a decision (spec: tasks/spec-weekly-sweep.md). */
+export default function SweepPage() {
+  const router = useRouter();
+  // The session takes every active-store row: a Saved item is the sweep's "saved" card, and the hook keeps Saved out of `all`.
+  const { all, stored, isLoading } = useTasks();
+  // The clock and window are fixed when the sweep opens, as the cards are.
+  const [clock] = useState(() => ({
+    now: new Date(),
+    zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    windowDays: readEscalationWindow(),
+  }));
+  const session = useSweepSession(stored, isLoading, clock);
+  const { card } = session;
+  const handlers = useSweepHandlers(session, card?.task);
+
+  return (
+    <AppShell title="Weekly sweep">
+      <div className="mx-auto max-w-2xl space-y-4">
+        <p role="status" aria-live="polite" className="text-small text-foreground-muted">
+          {session.status === "card" ? session.position : ""}
+        </p>
+        {session.status === "loading" ? <p className="py-8 text-foreground-muted">Loading…</p> : null}
+        {card && handlers ? <SweepCard key={card.task.id} task={card.task} reason={card.reason} handlers={handlers} /> : null}
+        {session.status === "end" ? <EndScreen onDone={session.done} canPickToday={hasFreeSlot(all, clock.now, clock.zone)} /> : null}
+        {session.status === "card" ? (
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                session.done();
+                router.push(ROUTES.HOME);
+              }}
+            >
+              Done
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </AppShell>
+  );
+}

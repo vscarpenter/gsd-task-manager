@@ -35,6 +35,7 @@ import { MatrixBriefing } from "./matrix-briefing";
 import { TaskDetailSheet } from "./task-detail-sheet";
 import { TodayStrip } from "@/components/today-strip/today-strip";
 import { TodayMenuProvider } from "@/components/today-strip/today-menu-context";
+import { SweepEntry } from "@/components/weekly-sweep/sweep-entry";
 
 /**
  * Client-only hydration gate. Returns `false` during the server render / first
@@ -355,6 +356,7 @@ export function MatrixSimplified() {
             tasks={all}
             onToggleComplete={(task, completedNext) => handleToggle(task, completedNext, handleSuccess).then(() => {})}
             onInspect={handleInspectOpen}
+            aside={<SweepEntry tasks={stored} />}
           />
         ) : null}
         <div data-testid="matrix-stage" className={MATRIX_STAGE_CLASS}>
@@ -380,7 +382,7 @@ export function MatrixSimplified() {
             }}
             onDelete={handleDelete}
             onShare={handleShareOpen}
-            onSnooze={handleSnooze} onSave={(task) => handleSaveForLater(task, handleSuccess).then((saved) => { if (saved) captureInputRef.current?.focus(); })} onDuplicate={handleDuplicate} onClearSnooze={handleClearSnooze} onMoveTo={(task, quadrant) => handleMoveTo(task, quadrant, handleSuccess)} onMarkUrgent={(task) => handleMarkUrgent(task, handleSuccess)}
+            onSnooze={handleSnooze} onSave={(task) => handleSaveForLater(task, handleSuccess).then((saved) => { if (saved) captureInputRef.current?.focus(); })} onDuplicate={handleDuplicate} onClearSnooze={handleClearSnooze} onMoveTo={(task, quadrant) => handleMoveTo(task, quadrant, handleSuccess).then(() => {})} onMarkUrgent={(task) => handleMarkUrgent(task, handleSuccess).then(() => {})}
             onAddInQuadrant={handleAddInQuadrant}
             highlightedTaskId={highlightedTaskId}
             onTaskRef={handleTaskRef}

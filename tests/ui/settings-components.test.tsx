@@ -399,6 +399,18 @@ describe('Settings Components', () => {
       expect(select.selectedOptions[0]).toHaveTextContent('At due time');
     });
 
+    it('always shows the weekly sweep entry and reminder, even with task notifications off', () => {
+      render(
+        <NotificationSettingsSection
+          settings={{ ...enabledSettings, enabled: false }}
+          onNotificationToggle={vi.fn()}
+          onDefaultReminderChange={vi.fn()}
+        />
+      );
+      expect(screen.getByRole('switch', { name: 'Weekly sweep reminder' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Start weekly sweep' })).toHaveAttribute('href', '/sweep');
+    });
+
     it('hides default reminder select when notifications disabled', () => {
       render(
         <NotificationSettingsSection

@@ -172,6 +172,27 @@ export async function showTaskNotification(
 }
 
 /**
+ * The weekly sweep reminder. Fixed text: no count, no task title, no task content, because
+ * it fires whether or not any card exists (spec: tasks/spec-weekly-sweep.md section 6).
+ */
+export async function showSweepReminder(): Promise<boolean> {
+  if (!isNotificationSupported() || checkNotificationPermission() !== "granted") return false;
+  try {
+    const settings = await getNotificationSettings();
+    return await displayNotification("Weekly sweep", {
+      body: "A few minutes to clear what's gone quiet.",
+      icon: NOTIFICATION_ASSETS.ICON_192,
+      badge: NOTIFICATION_ASSETS.BADGE,
+      tag: "weekly-sweep",
+      silent: !settings.soundEnabled,
+    });
+  } catch (error) {
+    logger.error("Error showing the weekly sweep reminder", error instanceof Error ? error : new Error(String(error)));
+    return false;
+  }
+}
+
+/**
  * Test notification - shows a sample notification
  */
 export async function showTestNotification(): Promise<boolean> {

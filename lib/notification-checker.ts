@@ -6,6 +6,7 @@ import {
 	getNotificationSettings,
 	isInQuietHours,
 	showTaskNotification,
+	showSweepReminder,
 	checkNotificationPermission,
 	setAppBadge,
 	clearAppBadge,
@@ -15,6 +16,8 @@ import { isoNow } from "@/lib/utils";
 import { NOTIFICATION_TIMING, TIME_UTILS } from "@/lib/constants";
 import { createLogger } from "@/lib/logger";
 import { isResetPending } from "@/lib/reset-lock";
+import { markSweepFired, readSweepFired, readSweepReminder } from "@/lib/preferences/weekly-sweep";
+import { dueSweepOccurrence } from "@/lib/weekly-sweep";
 import { isReminderDue, reminderWindow, type QuietHours } from "@/lib/notifications/reminder-window";
 
 const logger = createLogger("NOTIFICATIONS");
@@ -70,6 +73,10 @@ class NotificationChecker {
 		if (!isNotificationSupported()) return;
 		if (checkNotificationPermission() !== "granted") return;
 
+		// The sweep reminder is its own setting: it fires whether task reminders are on or
+		// off, and quiet hours don't defer it, because the person picked its time.
+		await this.checkSweepReminder(new Date());
+
 		const settings = await getNotificationSettings();
 		if (!settings.enabled) {
 			// A badge left from before reminders were turned off would never clear.
@@ -100,6 +107,17 @@ class NotificationChecker {
 		);
 
 		await this.updateBadge();
+	}
+
+	/**
+	 * Notify for a weekly sweep occurrence from the last 60 minutes, once. It fires
+	 * whether or not any card exists and never skips a week the person already swept.
+	 */
+	private async checkSweepReminder(now: Date): Promise<void> {
+		const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		const occurrence = dueSweepOccurrence(readSweepReminder(), now, zone);
+		if (!occurrence || readSweepFired() === occurrence.toISOString()) return;
+		if (await showSweepReminder()) markSweepFired(occurrence);
 	}
 
 	/**

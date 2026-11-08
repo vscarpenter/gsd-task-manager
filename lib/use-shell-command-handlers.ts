@@ -104,6 +104,7 @@ export function useShellCommandHandlers(): ShellCommandResult {
       await sync();
     },
     onViewSaved: () => router.push(ROUTES.SAVED),
+    onStartSweep: () => router.push(ROUTES.SWEEP),
     onApplySmartView: (criteria, viewId) => {
       if (typeof window === "undefined") return;
       if (window.location.pathname === "/") {

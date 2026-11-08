@@ -174,6 +174,18 @@ function isoWeekday(dateAsUtc: number): number {
   return new Date(dateAsUtc).getUTCDay() || 7;
 }
 
+const REMINDER_WINDOW_MINUTES = 60;
+
+/**
+ * The reminder occurrence from the last 60 minutes, or null. The web checker only runs while
+ * the app is open, so an occurrence it didn't catch in that window doesn't fire later.
+ */
+export function dueSweepOccurrence(reminder: SweepReminder, now: Date, zone: string): Date | null {
+  const windowStart = new Date(now.getTime() - REMINDER_WINDOW_MINUTES * MS_PER_MINUTE);
+  const fire = nextReminder(reminder, windowStart, zone);
+  return fire && fire <= now ? fire : null;
+}
+
 /** The next occurrence strictly after `now`, or null when the reminder is off. */
 export function nextReminder(reminder: SweepReminder, now: Date, zone: string): Date | null {
   if (!reminder.enabled) return null;

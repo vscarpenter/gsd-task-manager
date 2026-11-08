@@ -41,6 +41,7 @@ export interface CommandActionHandlers {
   onViewMatrix: () => void;
   onViewArchive: () => void;
   onViewSaved: () => void;
+  onStartSweep: () => void;
   onViewSyncHistory?: () => void;
 
   // Smart views
@@ -205,6 +206,13 @@ function buildNavigationActions(handlers: CommandActionHandlers): CommandAction[
       onExecute: handlers.onViewDashboard,
       focusAfterExecute: 'handoff'
     },
+    ...buildHoldingPlaceActions(handlers)
+  ];
+}
+
+/** Archive, Saved, and the weekly sweep: the places that hold what isn't on the matrix right now. */
+function buildHoldingPlaceActions(handlers: CommandActionHandlers): CommandAction[] {
+  return [
     {
       id: 'view-archive',
       label: 'View archived tasks',
@@ -219,6 +227,14 @@ function buildNavigationActions(handlers: CommandActionHandlers): CommandAction[
       section: 'navigation',
       keywords: ['saved', 'bookmarks', 'later', 'reading', 'notes'],
       onExecute: handlers.onViewSaved,
+      focusAfterExecute: 'handoff'
+    },
+    {
+      id: 'start-weekly-sweep',
+      label: 'Start weekly sweep',
+      section: 'navigation',
+      keywords: ['sweep', 'weekly', 'review', 'clean up', 'triage'],
+      onExecute: handlers.onStartSweep,
       focusAfterExecute: 'handoff'
     }
   ];
