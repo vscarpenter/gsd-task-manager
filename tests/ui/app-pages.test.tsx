@@ -34,6 +34,7 @@ vi.mock('@/components/ui/tooltip', () => ({
 
 vi.mock('sonner', () => ({
   Toaster: () => <div data-testid="toaster" />,
+  useSonner: () => ({ toasts: [] }),
 }));
 
 vi.mock('@/components/pwa-register', () => ({
