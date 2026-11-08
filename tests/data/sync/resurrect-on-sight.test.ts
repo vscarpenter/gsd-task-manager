@@ -279,15 +279,15 @@ describe('the step after the pull', () => {
     await expect(remembered()).resolves.toEqual(['t-a']);
   });
 
-  // pb-sync-reviewer: an unreadable record isn't a complete listing for that id (rule 5).
-  it('a remembered id whose server copy is unreadable stays for the next run', async () => {
+  // Rule 4 forgets it, found or not, as Android does. Keeping it would list the account on every sync.
+  it('a remembered id whose server copy is unreadable keeps its Trash row and is forgotten', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '', title: '' })] });
     await getDb().deletedTasks.put(trashedHere());
     await rememberForResurrect(['t-a']);
 
     await fullSync('auto');
 
-    await expect(remembered()).resolves.toEqual(['t-a']);
+    await expect(remembered()).resolves.toEqual([]);
     await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
   });
 

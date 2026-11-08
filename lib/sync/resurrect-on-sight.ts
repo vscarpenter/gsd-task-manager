@@ -87,8 +87,9 @@ type Outcome = 'restored' | 'kept-local' | 'retry' | 'nothing';
 /** Bring one remembered task back from the account's copy. */
 async function resurrectOne(record: RecordModel): Promise<Outcome> {
   const remote = pocketBaseToTaskRecord(record, null);
-  // An unreadable copy isn't a complete listing for this id (rule 5).
-  if (!remote) return 'retry';
+  // Forgotten, found or not (rule 4), and the Trash row stays. A retry would list the account on
+  // every sync while the copy stays unreadable, and on web a reload brings any newer schema.
+  if (!remote) return 'nothing';
   if (await waitsForThisDevice(record, remote.id)) return 'retry';
 
   const db = getDb();
