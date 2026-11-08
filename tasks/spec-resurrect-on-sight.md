@@ -4,7 +4,7 @@
 **Decision:** Vinny, 2026-11-06: a task deleted while signed out reappears when the account lists it. Android's fix for parity backlog B-56 is the reference.
 **Contract:** none shared. No synced field, wire key, corpus, fixture, or server change. Each client keeps a device-local list of task ids.
 **Review:** S-AND reviewed it on 2026-11-07 (`sprint/reviews/680.md`), with the Lead's decisions folded in. Then the Lead, then Vinny. Section 8's two readings are owner item 26.
-**Evidence:** read, not run, on web `main` at `816a2b7`, iOS `main` at `4c4d44a`, and Android `main` at `8433a23`.
+**Evidence:** read, not run, on web `main` at `816a2b7`, iOS `main` at `4c4d44a`, and Android `main` at `8433a23`. Rule 3's queued delete (SPEC-3B) comes from S-AND's re-cut review (`sprint/reviews/WEB-RESURRECT-recut-by-S-AND.md`, A1), read on web #701 at `16203d9`, iOS `main` at `44acb1a`, and Android `main` at `32be900`.
 
 ## 1. Why
 
@@ -24,10 +24,14 @@ The same on every client, stated by behavior. Each client's order differs (web p
 2. **The device remembers those task ids.** The list is device-local. It never syncs, it survives sign-out, and Erase all data clears it.
 3. **After the next completed pull, the device lists the whole account once.** For each remembered id in the listing:
    - With a Trash row here, the Trash row goes and the server copy becomes an active task. The server copy is merged into that Trash row, the way a pull merges into a live row, so this device's reminder state and time-entry detail survive.
+   - With a queued delete for the task that will still push, the delete wins. The step doesn't bring the task back: the Trash row stays, and so does the id (rule 4). This is a task restored and trashed again while signed in, after a run kept its id (rules 4 and 5).
+     - **Why it matters:** the delete is the user's latest act, and skipping it isn't cosmetic. On iOS and Android, a step that brought the task back would let the push send the restore's create and then the delete. Reconciliation would then hard-delete the copy here, with no Trash row. The user's latest delete would lose its only recoverable copy.
+     - **A delete that will still push** is a pending one on every client, plus a failed one on a client that re-arms failed rows. iOS and Android do, and web doesn't, so web counts pending rows only. That's the hold-off's split (`HOLDOFF-FAILED-ROWS` in `sprint/parity-deltas.md`). Sections 3 to 5 cite each client.
+     - **"Since it was remembered" needs no timestamp.** No delete for a remembered id is still queued once it's remembered. Web remembers only with nothing queued or as it clears the queue, and iOS and Android drop every delete at sign-in. So any queued delete the step finds came later.
    - With an active copy here (restored while signed out, or brought back by the pull), last-write-wins decides. The server copy replaces it only when strictly newer.
    - The far-future hold-off applies. A far-future stamp doesn't overwrite a task that has a queued write. Section 4 says when that can happen on web.
    - An archive row keeps the archive (section 8, item 2).
-4. **Then the device forgets every remembered id, found or not, except one the hold-off skipped.** That id stays for the next run, after this run's push has healed the server record. Forgetting it would strand the Trash row here while the pushed edit stays active everywhere else. A task with no server copy keeps its Trash row, which is the only copy there is.
+4. **Then the device forgets every remembered id, found or not, except one the hold-off skipped or a queued delete kept.** Each stays for the next run. A held-off id waits for this run's push to heal the server record. Forgetting it would strand the Trash row here while the pushed edit stays active everywhere else. A delete-kept id waits for the push to send that delete, and then the next run finds no server copy and forgets it. If the delete stops counting first (a failed row on web), the next run brings the task back, as for any delete the server never heard. A task with no server copy keeps its Trash row, which is the only copy there is.
    - A device may also forget a remembered id once its Trash row leaves, through Restore, Delete forever, or the 30-day purge. That changes no outcome: with no Trash row, the ordinary pull handles the task, as the consequences below say. Web does this, because it remembers at delete time, on a device that may never sign in (S-WEB-05). iOS and Android don't need to.
 5. **Nothing is forgotten without a complete listing for the right account.** A dead session, a listing that fails or comes back incomplete, or a sign-out mid-run forgets nothing, and the next run tries again. A guest listing is empty, so the owner is confirmed before the listing counts.
 6. **An archive made while signed out stands.** Its delete is dropped without being remembered. The archive stays here, and the server copy stays active elsewhere, which is what web does today.
@@ -59,6 +63,8 @@ With no remembered ids, a run does exactly what it does today, with no extra lis
 - **The tests section 6 owes,** marked "add" in the Android column.
 - **The archive row, only if Vinny accepts section 8 item 2.** `removeTombstone` (`:200`) clears either kind of row, and `SyncLocalStore` can't tell them apart today (`tombstoneAtMs` covers both). A small port method such as `isArchived(id)` lets the step skip an id with an archive row. That id is still forgotten.
 
+**Android's next follow-up, AND-RESURRECT-2** (S-AND), adds rule 3's queued delete. The step has no check for one today. Its only queue check is the hold-off's `hasQueuedWrite`, which leaves deletes out on purpose (`core/sync/.../RemoteStamp.kt:32-33`, called at `SyncEngine.kt:203` on `main` `32be900`). The new check counts pending and failed `DELETE` rows, because `requeueFailed` re-arms a failed row on launch, network, foreground, and manual sync (`app/.../sync/SyncCoordinator.kt:88`, `:153`, `:166`, `:177`).
+
 ## 4. Web
 
 Web pushes first, never queues while signed out, and clears the queue at sign-out.
@@ -74,6 +80,7 @@ Web pushes first, never queues while signed out, and clears the queue at sign-ou
   - WEB-RESURRECT already does this, with the key `resurrect_on_sight` (`lib/sync/resurrect-ids.ts:10`).
 - **The step** runs after the pull in `fullSync`. It uses the same bounded listing (`fetchBoundedRemoteTasks`) and session check (`confirmSessionIdentity`) the pull uses. It maps the server copy over the Trash row with `pocketBaseToTaskRecord(record, trashed)`, as the pull does over a live row (`pb-pull.ts:85`). A pull that comes back unauthenticated returns rather than throws (`pb-pull.ts:143`), so the step treats that as a failure and forgets nothing. A cancelled sync forgets nothing too.
 - **The hold-off:** the step holds off a far-future remote while a write for that task is pending, the same rule WEB-HOLDOFF brings to every web pull. Web pushes first, so this fires only when this run's push left a write pending: a 429, an unavailable index, or an error. A held-off id stays for the next run (rule 4).
+- **A queued delete wins** (rule 3). The step keeps the Trash row and the id when the task has a pending `delete` row. Only a pending row counts: nothing re-arms a failed one (`lib/sync/queue.ts:28-30`), so it can never push. Web pushes first, so the step meets one only when this run's push left the delete pending, or the user trashed the task after the push. WEB-RESURRECT does this in `waitsForThisDevice` (#701).
 - **Re-auth doesn't change.** Under an expired session, sync stays enabled, so `deleteTask` queues the delete instead of remembering it. A re-sign-in from the "Session expired" dialog skips `disableSync`, so that delete still pushes, as it does today (section 7).
 - **The order needs no change.** Push runs first, but remembered tasks are in Trash, so `populateFromExistingTasks` (`lib/sync/queue.ts:201-215`) doesn't seed them and nothing pushes for them. A task restored while signed out is active, so it's seeded and pushes first under the payload guard. Restore keeps its old `updatedAt` (`lib/trash.ts:53-54`), so the step keeps that copy unless the server's is strictly newer.
 - **A Replace import already behaves.** It hard-deletes replaced tasks with no Trash row (`lib/tasks/import-export.ts:436-443`), so the ordinary full pull brings them back.
@@ -93,7 +100,8 @@ iOS pulls first, queues every mutation whatever the sign-in state, and keeps the
   - **The one case this misreads:** a token rejected before the session's first sync completed leaves the cursor nil. That re-sign-in counts as signed out, so a delete queued in that session comes back instead of pushing. That's Android's behavior today, and nothing is lost. Telling it apart exactly needs new state, such as a flag `signOut()` writes. A flag alone would miss people who signed out on an older build, so it would still need the cursor check. This spec takes the cursor check and names the edge for D-2.
 - **Store** the ids in App Group `UserDefaults` under their own key, beside the cursor. `SyncCursor.clear()` removes only the cursor's own keys (`GSDSync/SyncCursor.swift:62-65`), so sign-out keeps the ids. Erase all data clears them.
 - **The step** goes in `sync()` after the pull (`SyncEngine.swift:362`) and before the push (`:366`). It uses the pull's fence, bounded listing, and far-future hold-off (`hasQueuedWriteHoldingOff`, `:164-167`). A remembered id with a Trash row comes back through `tombstones.resurrect`, with the record merged into that Trash row. `applyOverTombstone` passes `mergingInto: nil` today (`SyncEngine.swift:548`), which rebuilds from the wire and loses device-local fields. A held-off id stays for the next run (rule 4). A thrown error forgets nothing.
-- **`applyOverTombstone` doesn't change.** Its "a queued delete that push will still send wins" branch can't fire for a remembered id, because sign-in dropped that delete.
+- **A queued delete wins** (rule 3). The step keeps the Trash row and the id when the task has a `.delete` item, pending or failed. A failed one counts because `requeueFailed` re-arms it (`SyncEngine.swift:355`), and `sync()` calls that on a manual, network, launch, or foreground run (`:405`). The pull already asks the same question over a Trash row (`deleteWillLand` in `applyOverTombstone`, `:601-605`). The step on `main` has no such check yet (`resurrectOnSight`, `:648-669`), so iOS needs the same port as Android's AND-RESURRECT-2.
+- **`applyOverTombstone` doesn't change.** Its "a queued delete that push will still send wins" branch can't fire for a signed-out delete, because sign-in dropped it. It can fire for a delete queued since, and rule 3 gives the step the same answer.
 
 ## 6. Named tests
 
@@ -108,6 +116,7 @@ Each client writes these where it keeps sync tests: web in `tests/data/sync/`, i
 | `a dead session forgets no remembered delete` | 5 | yes | yes | yes, exists |
 | `an incomplete listing forgets no remembered delete` | 5 | yes | yes | add |
 | `a held-off remembered id stays for the next run` | 4 | yes | yes | add |
+| `a remembered id with a pending delete stays in Trash and is kept` | 3, 4 | yes, on WEB-RESURRECT (#701) | add, and pin a failed delete too | add in AND-RESURRECT-2, and pin a failed delete too |
 | `nothing remembered means no extra listing` | 2 | yes | yes | yes, exists |
 | `erasing local data forgets every remembered id` | 2 | yes | yes | add |
 | `sign-in keeps the remembered ids` | 2 | yes | yes | add; holds today, because every `sync_metadata` write copies the row (`RoomSyncLocalStore.kt:58-68`) |
@@ -123,7 +132,7 @@ Each client writes these where it keeps sync tests: web in `tests/data/sync/`, i
 | `a Replace import made signed out deletes nothing on the server after the next sign-in` | 1 | yes, as a control | yes | yes, journey exists |
 | `a delete made while signed in still deletes on the server` | 7 | yes | yes | add |
 
-"Add" in the Android column is AND-RESURRECT-PARITY's work (section 3).
+"Add" in the Android column is AND-RESURRECT-PARITY's work, except where the cell names AND-RESURRECT-2 (section 3).
 
 **Real-server run, one per client,** on a hookless PocketBase 0.40.4 once local servers are allowed (OWNER-DECISIONS item 24). Delete a task while signed out, sign in, and show it back here and still on the server. On iOS, show the failure first: today the task disappears from the server.
 
