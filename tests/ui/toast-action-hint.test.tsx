@@ -3,7 +3,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { ThemedToaster } from "@/components/ui/themed-toaster";
 
-const HINT = "Press Alt+T, then Tab twice, to reach Undo.";
+const HINT = "Press Alt+T, then Tab until you reach Undo.";
 
 function showUndoToast(): string | number {
   return toast.success("Task completed", { duration: Infinity, action: { label: "Undo", onClick: () => {} } });

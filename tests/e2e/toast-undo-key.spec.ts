@@ -67,13 +67,18 @@ async function storedCompleted(page: Page, id: string): Promise<boolean | undefi
   );
 }
 
-/** The Sonner hotkey (Alt+T) focuses the toast list; two Tabs then reach Undo. */
+const MAX_TABS_TO_UNDO = 6;
+
+/** The Sonner hotkey (Alt+T) focuses the toast list. Each toast is a tab stop, so Tab until Undo. */
 async function reachUndoByKeyboard(page: Page): Promise<void> {
-  await expect(page.getByText("Press Alt+T, then Tab twice, to reach Undo.")).toBeAttached();
+  await expect(page.getByText("Press Alt+T, then Tab until you reach Undo.")).toBeAttached();
   await page.keyboard.press("Alt+KeyT");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Undo" })).toBeFocused();
+  const undo = page.getByRole("button", { name: "Undo" });
+  for (let tabs = 0; tabs < MAX_TABS_TO_UNDO; tabs++) {
+    await page.keyboard.press("Tab");
+    if (await undo.evaluate((el) => el === document.activeElement)) return;
+  }
+  await expect(undo).toBeFocused();
 }
 
 test.describe("Undo toast by keyboard", () => {
@@ -137,5 +142,26 @@ test.describe("Undo toast by keyboard", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByText("Sort the old photos")).toBeVisible();
     await expect(capture).toBeFocused();
+  });
+
+  test("matrix: Tab until Undo works when a toast without an action sits above it", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForAppLoad(page);
+    await seedTasks(page, [STALE_Q4, OVERDUE]);
+    await page.reload();
+    await waitForAppLoad(page);
+
+    const photos = page.getByTestId("task-card").filter({ hasText: "Sort the old photos" });
+    const invoice = page.getByTestId("task-card").filter({ hasText: "Send the invoice" });
+    await photos.getByRole("button", { name: "Mark as complete" }).focus();
+    await page.keyboard.press("Space");
+    await expect(page.getByText("Sort the old photos")).toBeHidden();
+    await invoice.getByRole("button", { name: "Duplicate task" }).click();
+    // Sonner lists the newest toast first, so this one has no action and sits above Undo.
+    await expect(page.getByText("Task duplicated")).toBeVisible();
+
+    await reachUndoByKeyboard(page);
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Sort the old photos")).toBeVisible();
   });
 });

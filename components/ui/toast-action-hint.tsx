@@ -31,7 +31,7 @@ export function ToastActionHint() {
 
   return (
     <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-      {label ? `Press ${TOAST_HOTKEY_LABEL}, then Tab twice, to reach ${label}.` : null}
+      {label ? `Press ${TOAST_HOTKEY_LABEL}, then Tab until you reach ${label}.` : null}
     </div>
   );
 }

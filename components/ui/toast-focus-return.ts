@@ -54,7 +54,8 @@ function createFocusReturn() {
   return { stop, remember, forget };
 }
 
-/** focus back to whatever had it before the hotkey, but only while
+/**
+ * Sonner hands focus back to whatever had it before the hotkey, but only while
  * that element still exists. Completing a task from its card removes the card,
  * so after Undo focus would drop to <body>. This returns it to the same
  * element when it's still there, and to the main region when it's gone.
