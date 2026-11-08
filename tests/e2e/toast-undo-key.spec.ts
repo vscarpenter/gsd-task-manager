@@ -50,6 +50,23 @@ const STALE_Q4: SeedTask = {
   createdAt: daysAgo(60), updatedAt: daysAgo(30),
 };
 
+/** Reads a stored task's `completed` flag straight from IndexedDB. */
+async function storedCompleted(page: Page, id: string): Promise<boolean | undefined> {
+  return page.evaluate(
+    (taskId) =>
+      new Promise<boolean | undefined>((resolve, reject) => {
+        const open = indexedDB.open("GsdTaskManager");
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const get = open.result.transaction("tasks").objectStore("tasks").get(taskId);
+          get.onerror = () => reject(get.error);
+          get.onsuccess = () => { open.result.close(); resolve(get.result?.completed); };
+        };
+      }),
+    id
+  );
+}
+
 /** The Sonner hotkey (Alt+T) focuses the toast list; two Tabs then reach Undo. */
 async function reachUndoByKeyboard(page: Page): Promise<void> {
   await expect(page.getByText("Press Alt+T, then Tab twice, to reach Undo.")).toBeAttached();
@@ -79,7 +96,8 @@ test.describe("Undo toast by keyboard", () => {
     await expect(page.getByRole("article", { name: "Sort the old photos" })).toBeVisible();
     await reachUndoByKeyboard(page);
     await page.keyboard.press("Enter");
-    // The sweep session moves on, so the proof is the task being open again in the matrix.
+    // The sweep session moves on, so the proof is the task being open again.
+    await expect.poll(() => storedCompleted(page, "toast-overdue")).toBe(false);
     await page.goto("/");
     await waitForAppLoad(page);
     await expect(page.getByText("Send the invoice")).toBeVisible();
