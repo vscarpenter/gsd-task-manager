@@ -25,6 +25,7 @@ vi.mock('../../write-ops/helpers.js', async () => {
     // Per-item preflight check just before each write.
     fetchSinglePBTaskFresh: vi.fn().mockResolvedValue(null),
     updateTaskInPBById: vi.fn().mockResolvedValue(undefined),
+    createTaskInPB: vi.fn().mockResolvedValue(undefined),
     updateTaskDependenciesInPBById: vi.fn().mockResolvedValue(undefined),
     deleteTaskInPBById: vi.fn().mockResolvedValue(undefined),
   };
@@ -602,5 +603,57 @@ describe('bulkUpdateTasks — Saved placement', () => {
     expect(preview).toMatchObject({ deleted: ids.length, errors: [], dryRun: true });
     const result = await bulkUpdateTasks(config, ids, { type: 'delete' }, { dryRun: false });
     expect(result).toMatchObject({ deleted: preview.deleted, errors: [], dryRun: false });
+  });
+});
+
+describe('bulkUpdateTasks — complete spawns the next recurring instance', () => {
+  async function seed(overrides: Record<string, unknown>) {
+    const helpers = await import('../../write-ops/helpers.js');
+    const entry = makeSnapshotEntry('series');
+    Object.assign(entry.record, overrides);
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(new Map([['series', entry]]) as never);
+    vi.mocked(helpers.fetchSinglePBTaskFresh).mockResolvedValue({
+      pbRecordId: entry.pbRecordId,
+      clientUpdatedAt: entry.clientUpdatedAt,
+      record: entry.record,
+    } as never);
+    return helpers;
+  }
+
+  const daily = { recurrence: 'daily', due_date: '2026-06-10T12:00:00.000Z' };
+
+  it('creates the next instance for a recurring task', async () => {
+    const helpers = await seed(daily);
+
+    const result = await bulkUpdateTasks(config, ['series'], { type: 'complete', completed: true });
+
+    expect(result).toMatchObject({ updated: 1, errors: [] });
+    expect(helpers.createTaskInPB).toHaveBeenCalledTimes(1);
+    const created = vi.mocked(helpers.createTaskInPB).mock.calls[0][1];
+    expect(created).toMatchObject({ completed: false, dueDate: '2026-06-11T12:00:00.000Z' });
+  });
+
+  it.each([
+    ['a one-off task', { recurrence: 'none' }, true],
+    ['marking incomplete', { ...daily, completed: true }, false],
+    ['a task that was already complete', { ...daily, completed: true }, true],
+  ])('creates nothing for %s', async (_label, overrides, completed) => {
+    const helpers = await seed(overrides);
+
+    await bulkUpdateTasks(config, ['series'], { type: 'complete', completed });
+
+    expect(helpers.createTaskInPB).not.toHaveBeenCalled();
+  });
+
+  it('reports the task as updated and names the failure when the next instance cannot be saved', async () => {
+    const helpers = await seed(daily);
+    vi.mocked(helpers.createTaskInPB).mockRejectedValueOnce(new Error('network down'));
+
+    const result = await bulkUpdateTasks(config, ['series'], { type: 'complete', completed: true });
+
+    expect(result.updated).toBe(1);
+    expect(result.errors).toEqual([
+      expect.stringMatching(/Task series: completed, but the next recurring instance could not be created/),
+    ]);
   });
 });
