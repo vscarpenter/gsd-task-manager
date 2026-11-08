@@ -98,5 +98,26 @@ test.describe("Undo toast by keyboard", () => {
     await reachUndoByKeyboard(page);
     await page.keyboard.press("Enter");
     await expect(page.getByText("Sort the old photos")).toBeVisible();
+    // The card that had focus is gone, so focus goes to the page's main region, not <body>.
+    await expect(page.locator("#main-content")).toBeFocused();
+  });
+
+  test("matrix: focus returns to the element that had it before Alt+T", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForAppLoad(page);
+    await seedTasks(page, [STALE_Q4]);
+    await page.reload();
+    await waitForAppLoad(page);
+
+    await page.getByRole("button", { name: "Mark as complete" }).focus();
+    await page.keyboard.press("Space");
+    await expect(page.getByText("Sort the old photos")).toBeHidden();
+    await page.keyboard.press("n");
+    const capture = page.getByRole("textbox", { name: "Add a task" });
+    await expect(capture).toBeFocused();
+    await reachUndoByKeyboard(page);
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Sort the old photos")).toBeVisible();
+    await expect(capture).toBeFocused();
   });
 });

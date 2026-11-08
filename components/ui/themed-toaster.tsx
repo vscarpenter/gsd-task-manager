@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { Toaster } from "sonner";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
 import { TOAST_HOTKEY, ToastActionHint } from "./toast-action-hint";
+import { useToastFocusReturn } from "./toast-focus-return";
 
 // Measured top-bar bottoms: 73px on desktop, 123px at 375px wide, where the
 // search field wraps to its own row. The toast sits just below them so it
@@ -14,6 +15,7 @@ const TOAST_MOBILE_TOP_OFFSET = 130;
 export function ThemedToaster() {
   const { resolvedTheme } = useTheme();
   const mounted = useIsHydrated();
+  useToastFocusReturn();
 
   const theme = mounted && (resolvedTheme === "dark" || resolvedTheme === "light")
     ? resolvedTheme
