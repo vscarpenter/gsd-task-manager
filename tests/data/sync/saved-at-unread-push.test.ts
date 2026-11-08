@@ -367,3 +367,36 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
     await expect(storedVersion()).resolves.toBeUndefined();
   });
 });
+
+// S-AND-02's real-order test. On web the hold-off matters only when the push didn't drain the queue
+// first, so the first run's push is rate-limited. Web has no conflict count: a no-op pull applies nothing.
+describe('far-future hold-off: the device converges (S-AND-02)', () => {
+  const serverTitle = (): unknown => fake.state.records.get('rec_a')?.title;
+  const localTitle = async (): Promise<string | undefined> => (await getDb().tasks.get('t-a'))?.title;
+  const cursor = async (): Promise<string | null | undefined> =>
+    ((await getDb().syncMetadata.get('sync_config')) as PBSyncConfig | undefined)?.lastClientUpdatedAt;
+
+  it('a held-off edit reaches the server on the next run, and that pull applies nothing', async () => {
+    const row = localRow(NEWER, { title: 'Local edit' });
+    await seed({
+      config: { ...signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), lastClientUpdatedAt: OLDER },
+      local: [row],
+      queued: [row],
+      server: [serverRow({ title: 'Edit from a fast clock', client_updated_at: FAR_FUTURE })],
+    });
+    const rateLimited = Object.assign(new Error('Too Many Requests'), { status: 429 });
+    const update = vi.spyOn(fake.pb.collection('tasks'), 'update').mockRejectedValueOnce(rateLimited);
+
+    await expect(fullSync('auto')).resolves.toMatchObject({ status: 'partial', pushedCount: 0, pulledCount: 0 });
+    expect(await localTitle()).toBe('Local edit');
+    expect(serverTitle()).toBe('Edit from a fast clock');
+    // The cursor moves only for a record applied here, so the held-off record is fetched again.
+    expect(await cursor()).toBe(OLDER);
+
+    await expect(fullSync('auto')).resolves.toMatchObject({ status: 'success', pushedCount: 1, pulledCount: 0 });
+    expect(await localTitle()).toBe('Local edit');
+    expect(serverTitle()).toBe('Local edit');
+    expect(await cursor()).toBe(OLDER);
+    update.mockRestore();
+  });
+});
