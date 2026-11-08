@@ -13,7 +13,13 @@ const mocks = vi.hoisted(() => ({
   returnToMatrix: vi.fn(async () => true),
 }));
 
-vi.mock("@/lib/use-tasks", () => ({ useTasks: () => ({ all: mocks.tasks, isLoading: false }) }));
+vi.mock("@/lib/use-tasks", () => ({
+  // Shaped like the real hook: `all` leaves Saved rows out, `stored` has every active-store row.
+  useTasks: () => {
+    const stored = mocks.tasks as { savedAt?: string }[];
+    return { all: stored.filter((task) => !task.savedAt), stored, isLoading: false };
+  },
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }), usePathname: () => "/sweep" }));
 vi.mock("@/components/matrix-simplified/app-shell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
@@ -168,6 +174,13 @@ describe("SweepPage", () => {
 
   describe("Return to matrix offers the Saved page's quadrant and due date choices", () => {
     const saved = () => [createMockTask({ id: "s", title: "Saved one", savedAt: daysAgo(40), updatedAt: daysAgo(40), quadrant: "not-urgent-important", important: true })];
+
+    it("reaches a Saved item, which the hook keeps out of all", () => {
+      mocks.tasks = saved();
+      render(<SweepPage />);
+
+      expect(screen.getByText("Saved over a month ago")).toBeInTheDocument();
+    });
 
     it("opens the same form, and returns with the chosen quadrant and due date", async () => {
       mocks.tasks = saved();

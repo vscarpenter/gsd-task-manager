@@ -356,7 +356,7 @@ export function MatrixSimplified() {
             tasks={all}
             onToggleComplete={(task, completedNext) => handleToggle(task, completedNext, handleSuccess).then(() => {})}
             onInspect={handleInspectOpen}
-            aside={<SweepEntry tasks={all} />}
+            aside={<SweepEntry tasks={stored} />}
           />
         ) : null}
         <div data-testid="matrix-stage" className={MATRIX_STAGE_CLASS}>

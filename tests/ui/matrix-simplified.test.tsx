@@ -5,8 +5,9 @@ import { renderToString } from "react-dom/server";
 import { introDateLabel } from "@/components/matrix-simplified/intro-copy";
 import type { TaskRecord } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
+import { SWEEP_LAST_SWEPT_KEY } from "@/lib/preferences/weekly-sweep";
 
-const tasksFixture = vi.hoisted(() => ({ current: [] as TaskRecord[], loading: false }));
+const tasksFixture = vi.hoisted(() => ({ current: [] as TaskRecord[], saved: [] as TaskRecord[], loading: false }));
 const smartViewsFixture = vi.hoisted(() => ({
   enabled: false,
   current: [] as SmartView[],
@@ -17,6 +18,8 @@ const logErrorSpy = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/use-tasks", () => ({
   useTasks: () => ({
     all: tasksFixture.current,
+    // Like the real hook: Saved rows are in `stored` and never in `all`.
+    stored: [...tasksFixture.current, ...tasksFixture.saved],
     byQuadrant: {
       "urgent-important": [],
       "not-urgent-important": [],
@@ -185,6 +188,7 @@ async function revealCompleted() {
 describe("<MatrixSimplified>", () => {
   beforeEach(() => {
     tasksFixture.current = [];
+    tasksFixture.saved = [];
     tasksFixture.loading = false;
     smartViewsFixture.enabled = false;
     smartViewsFixture.current = [];
@@ -543,6 +547,15 @@ describe("<MatrixSimplified>", () => {
     expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent(
       "Schedule · 2 tasks"
     );
+  });
+
+  it("offers the weekly sweep for a Saved item, which the hook keeps out of all", async () => {
+    localStorage.removeItem(SWEEP_LAST_SWEPT_KEY);
+    tasksFixture.saved = [makeTask({ id: "saved-old", savedAt: "2026-01-01T00:00:00.000Z" })];
+
+    render(<MatrixSimplified />);
+
+    expect(await screen.findByRole("link", { name: "Weekly sweep" })).toBeInTheDocument();
   });
 
   it("does not publish a false Q2 count while tasks are loading", () => {
@@ -1040,6 +1053,7 @@ describe("<MatrixSimplified> touch swipe actions", () => {
 
   beforeEach(() => {
     tasksFixture.current = [];
+    tasksFixture.saved = [];
     tasksFixture.loading = false;
     vi.mocked(snoozeTask).mockReset().mockResolvedValue(undefined as never);
     HTMLElement.prototype.getBoundingClientRect = () =>

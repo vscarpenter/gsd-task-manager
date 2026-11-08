@@ -76,14 +76,15 @@ function useSweepHandlers(session: SweepSession, task: TaskRecord | undefined): 
 /** The weekly sweep: one task at a time through what needs a decision (spec: tasks/spec-weekly-sweep.md). */
 export default function SweepPage() {
   const router = useRouter();
-  const { all, isLoading } = useTasks();
+  // The session takes every active-store row: a Saved item is the sweep's "saved" card, and the hook keeps Saved out of `all`.
+  const { all, stored, isLoading } = useTasks();
   // The clock and window are fixed when the sweep opens, as the cards are.
   const [clock] = useState(() => ({
     now: new Date(),
     zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     windowDays: readEscalationWindow(),
   }));
-  const session = useSweepSession(all, isLoading, clock);
+  const session = useSweepSession(stored, isLoading, clock);
   const { card } = session;
   const handlers = useSweepHandlers(session, card?.task);
 
