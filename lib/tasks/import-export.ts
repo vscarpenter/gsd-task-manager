@@ -22,7 +22,7 @@ const MAX_IMPORT_TASKS = 10_000;
 const MAX_IMPORT_SIZE_BYTES = 10 * 1024 * 1024;
 
 /** Envelope version written by this build. See docs/adr/0014. */
-const BACKUP_ENVELOPE_VERSION = "2.1.0";
+const BACKUP_ENVELOPE_VERSION = "2.2.0";
 
 function getUtf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
@@ -197,7 +197,7 @@ async function buildBackup(): Promise<{ payload: ImportPayload; skippedCount: nu
 }
 
 /**
- * Export every user-owned store as a structured payload (envelope 2.1.0).
+ * Export every user-owned store as a structured payload (envelope 2.2.0).
  */
 export async function exportTasks(): Promise<ImportPayload> {
   return (await buildBackup()).payload;

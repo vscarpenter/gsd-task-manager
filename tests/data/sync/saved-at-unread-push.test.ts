@@ -40,7 +40,7 @@ vi.mock('@/lib/sync/notifications', () => ({
 }));
 
 import { applyRemoteChange, fullSync } from '@/lib/sync/pb-sync-engine';
-import { copyUnreadFields, pullRemoteChanges } from '@/lib/sync/pb-pull';
+import { unreadFieldRepair, pullRemoteChanges } from '@/lib/sync/pb-pull';
 import { disableSync } from '@/lib/sync/config';
 import { persistSyncConfig } from '@/components/sync/use-sync-auth-dialog';
 import { updateTask } from '@/lib/tasks/crud';
@@ -147,36 +147,36 @@ describe('an upgrade from a build that never read saved_at', () => {
 });
 
 // Names follow the top three corpus's pullMerge cases for saved_at.
-describe('copyUnreadFields', () => {
+describe('unreadFieldRepair', () => {
   const newerLocal = localRow(NEWER);
   const savedRemote = localRow(SAVED, { savedAt: SAVED });
 
   it.each([undefined, 2])('copies saved_at onto a newer row stored under contract %s', (version) => {
-    expect(copyUnreadFields(newerLocal, savedRemote, version)).toEqual({ ...newerLocal, savedAt: SAVED });
+    expect(unreadFieldRepair(newerLocal, savedRemote, version)).toEqual({ ...newerLocal, savedAt: SAVED });
   });
 
   it("saved_at isn't copied at contract 3: a null there is a real Return", () => {
-    expect(copyUnreadFields(newerLocal, savedRemote, 3)).toBeNull();
+    expect(unreadFieldRepair(newerLocal, savedRemote, 3)).toBeNull();
   });
 
   it('a build older than Saved keeps a local savedAt', () => {
     const savedLocal = localRow(NEWER, { savedAt: NEWER });
-    expect(copyUnreadFields(savedLocal, savedRemote, 2)).toBeNull();
+    expect(unreadFieldRepair(savedLocal, savedRemote, 2)).toBeNull();
   });
 
   it('copies nothing when the remote has no saved_at', () => {
-    expect(copyUnreadFields(newerLocal, localRow(SAVED), 2)).toBeNull();
+    expect(unreadFieldRepair(newerLocal, localRow(SAVED), 2)).toBeNull();
   });
 
   // saveTaskForLater refuses both, so the copy would make a row no client can hold.
   it('a completed row stays out of Saved', () => {
     const completed = localRow(NEWER, { completed: true, completedAt: NEWER });
-    expect(copyUnreadFields(completed, savedRemote, 2)).toBeNull();
+    expect(unreadFieldRepair(completed, savedRemote, 2)).toBeNull();
   });
 
   it('a row with a running timer stays out of Saved', () => {
     const timing = localRow(NEWER, { timeEntries: [{ id: 'e1', startedAt: NEWER }] });
-    expect(copyUnreadFields(timing, savedRemote, 2)).toBeNull();
+    expect(unreadFieldRepair(timing, savedRemote, 2)).toBeNull();
   });
 });
 

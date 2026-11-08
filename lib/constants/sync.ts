@@ -58,9 +58,10 @@ export const SYNC_CONFIG = {
    * read a newly synced field: a config stamped with an older version pulls
    * everything once and merges same-version records, which backfills the
    * field onto rows an older build pulled and stored without it (ADR 0019).
-   * 2: client_updated_at became the only cursor. 3: saved_at.
+   * 2: client_updated_at became the only cursor. 3: saved_at. 4: focus_date
+   * and focus_rank (top three, ADR 0020).
    */
-  PULL_CURSOR_VERSION: 3,
+  PULL_CURSOR_VERSION: 4,
 
   /**
    * The first pull contract that read saved_at. Rows stored under an older
@@ -68,6 +69,9 @@ export const SYNC_CONFIG = {
    * nothing and must not reach the server as "".
    */
   SAVED_AT_CONTRACT_VERSION: 3,
+
+  /** The first pull contract that read top three's focus_date and focus_rank. */
+  FOCUS_CONTRACT_VERSION: 4,
 
   /** Hard aggregate ceiling for any authoritative remote task scan. */
   MAX_REMOTE_TASKS: 10_000,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { GsdConfig, Task } from '../../types.js';
+import { taskToPBFields, type GsdConfig, type Task } from '../../types.js';
 
 const mocks = vi.hoisted(() => ({
   fetchSinglePBTaskFresh: vi.fn(),
@@ -81,6 +81,8 @@ function freshRecord(local: Task, timestamp = local.updatedAt) {
       last_notification_at: '',
       snoozed_until: '',
       saved_at: local.savedAt ?? '',
+      focus_date: local.focusDate ?? '',
+      focus_rank: local.focusRank ?? 0,
       estimated_minutes: local.estimatedMinutes ?? 0,
       time_spent: 0,
       time_entries: [],
@@ -291,6 +293,16 @@ describe('completeTask with a recurring task', () => {
     expect(created.createdAt).toBe(created.updatedAt);
   });
 
+  // A spawn starts unpicked (spec-top-three.md section 3.2), as toggle.ts makes it on the web.
+  it('starts the next instance with no top three pick', async () => {
+    await complete(recurring('daily', '2026-06-10T12:00:00.000Z', { focusDate: '2026-06-10', focusRank: 2 }));
+
+    const created = mocks.createTaskInPB.mock.calls[0][1] as Task;
+    expect(created.focusDate).toBeUndefined();
+    expect(created.focusRank).toBeUndefined();
+    expect(taskToPBFields(created, 'owner-1', 'device-1')).toMatchObject({ focus_date: '', focus_rank: 0 });
+  });
+
   it('keeps an undated recurring instance undated', async () => {
     await complete(recurring('weekly'));
 
@@ -420,5 +432,18 @@ describe('updateTask completion with a recurring task', () => {
 
     expect(result.recurringInstance?.dueDate).toBe('2026-06-11T12:00:00.000Z');
     expect(mocks.createTaskInPB).not.toHaveBeenCalled();
+  });
+});
+
+describe('top three picks through update_task', () => {
+  const picked = () => task('series', { focusDate: '2026-11-04', focusRank: 2 });
+
+  it('update_task keeps the pick on the record it writes', async () => {
+    mocks.fetchSinglePBTaskFresh.mockResolvedValue(freshRecord(picked()));
+
+    const result = await updateTask(config, { id: 'series', title: 'Renamed' });
+
+    expect(result.task).toMatchObject({ focusDate: '2026-11-04', focusRank: 2 });
+    expect(mocks.updateTaskInPBById.mock.calls[0][2]).toMatchObject({ focusDate: '2026-11-04', focusRank: 2 });
   });
 });

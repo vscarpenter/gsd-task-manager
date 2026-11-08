@@ -27,13 +27,17 @@ function calculateNextDueDate(dueDate: string | undefined, recurrence: Task['rec
 /**
  * The instance completing a recurring task spawns. Mirrors buildRecurringInstance
  * in lib/tasks/crud/toggle.ts: everything carries over except the id, completion,
- * the due date, timestamps, subtask completion and the notification bookkeeping.
+ * the due date, timestamps, subtask completion, the notification bookkeeping and the
+ * top three pick, since a spawn starts unpicked (tasks/spec-top-three.md section 3.2).
  * The web's local-only `parentTaskId` has no PocketBase field, so it is not set.
  */
 export function buildRecurringInstance(completed: Task): Task {
   const now = new Date().toISOString();
   const nextDueDate = calculateNextDueDate(completed.dueDate, completed.recurrence);
-  const { dueDate: _dueDate, completedAt: _completedAt, lastNotificationAt: _last, snoozedUntil: _snoozed, ...carried } = completed;
+  const {
+    dueDate: _dueDate, completedAt: _completedAt, lastNotificationAt: _last, snoozedUntil: _snoozed,
+    focusDate: _focusDate, focusRank: _focusRank, ...carried
+  } = completed;
   return {
     ...carried,
     id: generateTaskId(),

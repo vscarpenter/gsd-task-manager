@@ -30,6 +30,49 @@ function deriveQuadrant(value: unknown): unknown {
 	return { ...record, quadrant };
 }
 
+/** Top three's slots (lib/top-three.ts MAX_PICKS), inlined to keep this module zod-only. */
+const MAX_FOCUS_RANK = 3;
+const LOCAL_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** A real calendar day as YYYY-MM-DD text. Top three never parses it through a time zone. */
+function isCalendarDay(text: string): boolean {
+	const match = LOCAL_DATE_PATTERN.exec(text);
+	if (!match) return false;
+	const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+	const check = new Date(Date.UTC(year, month - 1, day));
+	return check.getUTCFullYear() === year && check.getUTCMonth() === month - 1 && check.getUTCDate() === day;
+}
+
+const focusDateSchema = z.string().refine(isCalendarDay, "Expected a YYYY-MM-DD calendar day");
+const focusRankSchema = z.number().int().min(1).max(MAX_FOCUS_RANK);
+const focusPairSchema = z.object({ focusDate: focusDateSchema, focusRank: focusRankSchema });
+
+/**
+ * Reading a stored row never drops it over a bad pick (spec section 3.5). A bad
+ * value reads as unset, and a lone field is inert because a pick needs both.
+ */
+const storedFocusFields = {
+	focusDate: focusDateSchema.optional().catch(undefined),
+	focusRank: focusRankSchema.optional().catch(undefined),
+};
+
+/**
+ * At the import boundary, top three's pair counts only as a whole. Anything
+ * else becomes neither field, so a bad pick never refuses the backup or costs
+ * the task (tasks/spec-top-three.md section 7).
+ */
+function normalizeFocusPair(value: unknown): unknown {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+	const record = value as Record<string, unknown>;
+	if (!("focusDate" in record) && !("focusRank" in record)) return value;
+	if (focusPairSchema.safeParse(record).success) return value;
+	const { focusDate: _date, focusRank: _rank, ...rest } = record;
+	return rest;
+}
+
+/** Everything a payload from another client or an older build gets before validation. */
+const importBoundary = (value: unknown): unknown => normalizeFocusPair(deriveQuadrant(value));
+
 export const recurrenceTypeSchema = z.enum([
 	"none",
 	"daily",
@@ -62,9 +105,10 @@ export const taskDraftSchema = z.object({
 	dependencies: z.array(z.string().min(SCHEMA_LIMITS.ID_MIN_LENGTH)).max(SCHEMA_LIMITS.MAX_DEPENDENCIES).default([]), // IDs of tasks that must be completed first
 	notifyBefore: z.number().int().min(0).optional(), // minutes before due date
 	notificationEnabled: z.boolean().default(true),
-	// Top three: the local YYYY-MM-DD a task is picked for, and its slot (spec-top-three.md 3.5).
-	focusDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-	focusRank: z.number().int().min(1).max(3).optional(),
+	// Top three (tasks/spec-top-three.md section 5). Set together or not at all;
+	// the import and pull boundaries turn an invalid pair into neither.
+	focusDate: focusDateSchema.optional(),
+	focusRank: focusRankSchema.optional(),
 	estimatedMinutes: z.preprocess(
 		(value) => value === 0 ? undefined : value,
 		z.number().int().min(1).max(10080).optional()
@@ -111,6 +155,7 @@ export const storedTaskRecordSchema = taskDraftSchema
 		snoozedUntil: z.iso.datetime({ offset: true }).optional(),
 		timeSpent: z.number().int().min(0).optional(),
 		timeEntries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
+		...storedFocusFields,
 	})
 	.strip();
 
@@ -214,16 +259,16 @@ export const notificationSettingsSchema = z.object({
  * that store", which is different from an empty array.
  */
 export const importPayloadSchema = z.object({
-	// `deriveQuadrant` runs only here, at the import boundary, where a payload from another
-	// client arrives. Records read back from IndexedDB always carry the column.
-	tasks: z.array(z.preprocess(deriveQuadrant, storedTaskRecordSchema)),
+	// `importBoundary` runs only here, where a payload from another client arrives. Records
+	// read back from IndexedDB always carry the quadrant column and a whole pair or none.
+	tasks: z.array(z.preprocess(importBoundary, storedTaskRecordSchema)),
 	exportedAt: z.iso.datetime({ offset: true }),
 	// The web writes a semver string; the iOS client shipped an Int (1). Accept
 	// either and normalise to a string so downstream code has one type to read.
 	// Widening only — every payload that parsed before still parses (ADR 0014).
 	version: z.union([z.string(), z.number()]).transform(String),
-	archivedTasks: z.array(z.preprocess(deriveQuadrant, storedArchivedTaskRecordSchema)).optional(),
-	deletedTasks: z.array(z.preprocess(deriveQuadrant, storedTrashedTaskRecordSchema)).optional(),
+	archivedTasks: z.array(z.preprocess(importBoundary, storedArchivedTaskRecordSchema)).optional(),
+	deletedTasks: z.array(z.preprocess(importBoundary, storedTrashedTaskRecordSchema)).optional(),
 	// Deliberately unvalidated here. A smart view is one row of an optional
 	// store, and a legacy row this build cannot represent must not abort the
 	// tasks, archive, trash and settings travelling with it. `applySmartViews`

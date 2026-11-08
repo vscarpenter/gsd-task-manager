@@ -29,6 +29,8 @@ export interface PBTask {
   last_notification_at: string;
   snoozed_until: string;
   saved_at?: string;
+  focus_date?: string;
+  focus_rank?: number;
   estimated_minutes: number;
   time_spent: number;
   time_entries: Array<{ id: string; startedAt: string; endedAt?: string; notes?: string }>;
@@ -73,6 +75,9 @@ export interface Task {
   lastNotificationAt?: string;
   snoozedUntil?: string;
   savedAt?: string;
+  /** Top three: the local YYYY-MM-DD the task is picked for, and its slot 1 to 3. */
+  focusDate?: string;
+  focusRank?: number;
   estimatedMinutes?: number;
   timeSpent?: number;
   timeEntries?: Array<{ id: string; startedAt: string; endedAt?: string; notes?: string }>;
@@ -139,6 +144,7 @@ export function pbTaskToTask(pb: PBTask): Task {
     ...(pb.last_notification_at ? { lastNotificationAt: pb.last_notification_at } : {}),
     ...(pb.snoozed_until ? { snoozedUntil: pb.snoozed_until } : {}),
     ...savedPlacement(pb),
+    ...focusPick(pb),
     estimatedMinutes: pb.estimated_minutes ?? undefined,
     timeSpent: pb.time_spent ?? 0,
     timeEntries: pb.time_entries ?? [],
@@ -176,6 +182,7 @@ export function taskToPBFields(
     last_notification_at: task.lastNotificationAt ?? '',
     snoozed_until: task.snoozedUntil ?? '',
     saved_at: task.savedAt ?? '',
+    ...focusToWire(task),
     estimated_minutes: task.estimatedMinutes ?? 0,
     time_spent: task.timeSpent ?? 0,
     time_entries: task.timeEntries ?? [],
@@ -199,4 +206,32 @@ export function taskDependencyPatchToPBFields(
 
 function savedPlacement(pb: PBTask): { savedAt?: string } {
   return pb.saved_at ? { savedAt: pb.saved_at } : {};
+}
+
+const FOCUS_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const MAX_FOCUS_RANK = 3;
+
+/**
+ * Top three's pair, kept only when it's whole: a real calendar date and a rank
+ * from 1 to 3. Anything else becomes neither field, as on every client
+ * (tasks/spec-top-three.md section 3.5). The web's copy is lib/top-three.ts.
+ */
+function focusPick(pb: PBTask): { focusDate?: string; focusRank?: number } {
+  const date = pb.focus_date ?? '';
+  const rank = pb.focus_rank ?? 0;
+  const validRank = Number.isInteger(rank) && rank >= 1 && rank <= MAX_FOCUS_RANK;
+  return validRank && isCalendarDate(date) ? { focusDate: date, focusRank: rank } : {};
+}
+
+/** PocketBase never stores a null number, so an unset pair is "" and 0. */
+function focusToWire(task: Task): Pick<PBTask, 'focus_date' | 'focus_rank'> {
+  return { focus_date: task.focusDate ?? '', focus_rank: task.focusRank ?? 0 };
+}
+
+function isCalendarDate(text: string): boolean {
+  const match = FOCUS_DATE_PATTERN.exec(text);
+  if (!match) return false;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const check = new Date(Date.UTC(year, month - 1, day));
+  return check.getUTCFullYear() === year && check.getUTCMonth() === month - 1 && check.getUTCDate() === day;
 }
