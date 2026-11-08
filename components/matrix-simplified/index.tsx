@@ -33,6 +33,8 @@ import { useTaskHighlight } from "./use-task-highlight";
 import { useMatrixWindowEvents } from "./use-matrix-window-events";
 import { MatrixBriefing } from "./matrix-briefing";
 import { TaskDetailSheet } from "./task-detail-sheet";
+import { TodayStrip } from "@/components/today-strip/today-strip";
+import { TodayMenuProvider } from "@/components/today-strip/today-menu-context";
 
 /**
  * Client-only hydration gate. Returns `false` during the server render / first
@@ -347,6 +349,14 @@ export function MatrixSimplified() {
             />
           </div>
         ) : null}
+        <TodayMenuProvider tasks={all}>
+        {mounted && !isLoading ? (
+          <TodayStrip
+            tasks={all}
+            onToggleComplete={(task, completedNext) => handleToggle(task, completedNext, handleSuccess).then(() => {})}
+            onInspect={handleInspectOpen}
+          />
+        ) : null}
         <div data-testid="matrix-stage" className={MATRIX_STAGE_CLASS}>
         {isLoading ? (
           <MatrixGridSkeleton />
@@ -378,6 +388,7 @@ export function MatrixSimplified() {
           />
         )}
         </div>
+        </TodayMenuProvider>
       </AppShell>
 
       <ShareTaskDialog
