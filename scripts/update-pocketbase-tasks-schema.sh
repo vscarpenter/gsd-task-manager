@@ -122,6 +122,25 @@ echo "$CURRENT_COLLECTION" | jq '
       "max": 50
     }
   })
+  # Top three (tasks/spec-top-three.md section 10). Validators sit at the top level, because
+  # PocketBase 0.40.4 ignores an "options" block without an error and stores zeros.
+  | ensure_field({
+    "name": "focus_date",
+    "type": "text",
+    "required": false,
+    "system": false,
+    "max": 10,
+    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+  })
+  | ensure_field({
+    "name": "focus_rank",
+    "type": "number",
+    "required": false,
+    "system": false,
+    "min": 0,
+    "max": 3,
+    "onlyInt": true
+  })
   | .listRule = owner_rule
   | .viewRule = owner_rule
   | .createRule = owner_rule
@@ -155,12 +174,22 @@ echo "==> Verifying required fields..."
 FIELD_NAMES=$(echo "$RESPONSE" | jq -r '.fields[].name')
 UPDATE_RULE=$(echo "$RESPONSE" | jq -r '.updateRule // empty')
 
-for field in notification_sent last_notification_at snoozed_until; do
+for field in notification_sent last_notification_at snoozed_until focus_date focus_rank; do
   if ! grep -qx "$field" <<< "$FIELD_NAMES"; then
     echo "Error: Field verification failed for '$field'"
     exit 1
   fi
 done
+
+# A field can exist with its validators silently dropped, so read the top three ones back.
+if ! jq -e 'any(.fields[]; .name == "focus_date" and .max == 10 and .pattern == "^[0-9]{4}-[0-9]{2}-[0-9]{2}$")' >/dev/null <<< "$RESPONSE"; then
+  echo "Error: The server didn't store focus_date's validators (max 10, date pattern)"
+  exit 1
+fi
+if ! jq -e 'any(.fields[]; .name == "focus_rank" and .min == 0 and .max == 3 and .onlyInt == true)' >/dev/null <<< "$RESPONSE"; then
+  echo "Error: The server didn't store focus_rank's validators (min 0, max 3, whole numbers)"
+  exit 1
+fi
 
 if [[ "$UPDATE_RULE" != *"@request.body.owner:isset = false"* || "$UPDATE_RULE" != *"@request.body.owner = owner"* ]]; then
   echo "Error: Owner immutability rule was not applied"
@@ -173,5 +202,6 @@ echo "Verified fields:"
 echo "  - notification_sent"
 echo "  - last_notification_at"
 echo "  - snoozed_until"
+echo "  - focus_date and focus_rank, with their validators"
 echo "Verified rules:"
 echo "  - owner cannot be changed after create"
