@@ -47,3 +47,7 @@ If users hit `redirect_uri_mismatch` after a deploy:
 2. Confirm it matches the exact PocketBase origin used for auth — including trailing slash and `www` vs apex.
 3. Providers redirect to `<pocketbase-origin>/api/gsd/oauth-callback` (`docker/pb_hooks/oauth_web_redirect.pb.js`), which bounces to the app's `/auth/callback/` page with code and state in the URL fragment. PocketBase's `/api/oauth2-redirect` is disabled: its realtime flow hands a code to whichever client the state names.
 4. Production CloudFront rewrites must pass `/api/*` and `/_/*` through unchanged so OAuth callback/admin paths are never turned into static `index.html` lookups.
+
+## `notify_before` is always a number (D-10)
+
+PocketBase never stores a null number, and `0` means "at the due time". The push mapper takes the default as a parameter and sends `payload ?? current row ?? this device's default`, never null. Off is `notification_enabled: false` with the number kept. Reads keep `notifyBefore ?? default` for legacy null rows. Spec: `tasks/spec-notify-before.md`.

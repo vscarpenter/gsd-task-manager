@@ -47,10 +47,10 @@ describe("Saved task lifecycle", () => {
   it("retains saved state in validated backups and optional sync round trips", async () => {
     const task = await saveTaskForLater((await createTask(draft)).id);
     expect(taskRecordSchema.parse(task).savedAt).toBe(task.savedAt);
-    const wire = taskRecordToPocketBase(task, "owner", "device");
+    const wire = taskRecordToPocketBase(task, "owner", "device", 15);
     expect(wire.saved_at).toBe(task.savedAt);
     expect(pocketBaseToTaskRecord(wire as RecordModel)?.savedAt).toBe(task.savedAt);
-    expect(taskRecordToPocketBase({ ...task, savedAt: undefined }, "owner", "device").saved_at).toBe("");
+    expect(taskRecordToPocketBase({ ...task, savedAt: undefined }, "owner", "device", 15).saved_at).toBe("");
     const json = await exportToJson();
     await getDb().tasks.clear();
     await importFromJson(json, "replace");

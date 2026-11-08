@@ -117,9 +117,9 @@
       },
       "divergences": {
         "notify_before": {
-          "web": null,
+          "web": 15,
           "mcp": 0,
-          "note": "The web writes null and the MCP server writes 0. The web reminder checker reads null as 'use the default reminder' and 0 as 'remind at the due time' (lib/notification-checker.ts:110). MCP updates rewrite every field through this mapping, so an MCP edit to a web task with no notifyBefore moves its reminder to the due time. Not listed in brief §7."
+        "note": "The web mapper takes the device default as a parameter and writes it for a task with no offset (D-10); this test passes 15, the seeded default. The MCP server still writes 0 until MCP-D10 sets it to 15, at which point the copies agree and this entry moves into expected."
         },
         "estimated_minutes": {
           "web": null,

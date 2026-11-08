@@ -343,6 +343,17 @@ describe('Settings Components', () => {
       expect(screen.getByText('Default reminder')).toBeInTheDocument();
     });
 
+    it('says the default reminder is for new tasks', () => {
+      render(
+        <NotificationSettingsSection
+          settings={enabledSettings}
+          onNotificationToggle={vi.fn()}
+          onDefaultReminderChange={vi.fn()}
+        />
+      );
+      expect(screen.getByText('For new tasks')).toBeInTheDocument();
+    });
+
     it('renders an off-list default reminder as stored instead of snapping it', () => {
       render(
         <NotificationSettingsSection
@@ -385,7 +396,7 @@ describe('Settings Components', () => {
       );
       const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
       expect(select.value).toBe('0');
-      expect(select.selectedOptions[0]).toHaveTextContent('At time');
+      expect(select.selectedOptions[0]).toHaveTextContent('At due time');
     });
 
     it('hides default reminder select when notifications disabled', () => {

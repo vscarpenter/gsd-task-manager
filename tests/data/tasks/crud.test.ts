@@ -109,6 +109,7 @@ describe('Task CRUD Operations', () => {
         clear: vi.fn(),
         count: vi.fn().mockResolvedValue(0),
       },
+      notificationSettings: { get: vi.fn().mockResolvedValue(undefined) },
       syncQueue: {},
       transaction: vi.fn(async (_mode, _tables, callback) => callback()),
     };

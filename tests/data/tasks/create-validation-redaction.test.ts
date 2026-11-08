@@ -9,7 +9,7 @@ const { mockAdd, mockGetSyncContext, mockEnqueue } = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/db", () => ({
-  getDb: () => ({ tasks: { add: mockAdd } }),
+  getDb: () => ({ tasks: { add: mockAdd }, notificationSettings: { get: vi.fn() } }),
 }));
 
 vi.mock("@/lib/tasks/crud/helpers", () => ({

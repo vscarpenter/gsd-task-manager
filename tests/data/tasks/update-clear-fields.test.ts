@@ -71,10 +71,12 @@ describe("updateTask clearing optional fields (real DB)", () => {
     expect((await getDb().tasks.get(STORED.id))?.estimatedMinutes).toBeUndefined();
   });
 
-  it("clears the reminder offset when the editor turns the reminder off", async () => {
-    await updateTask(STORED.id, editorDraft({ notifyBefore: undefined, notificationEnabled: false }));
+  it("keeps the reminder offset when the editor turns the reminder off", async () => {
+    await updateTask(STORED.id, editorDraft({ notificationEnabled: false }));
 
-    expect((await getDb().tasks.get(STORED.id))?.notifyBefore).toBeUndefined();
+    const saved = await getDb().tasks.get(STORED.id);
+    expect(saved?.notifyBefore).toBe(STORED.notifyBefore);
+    expect(saved?.notificationEnabled).toBe(false);
   });
 
   it("keeps optional fields that a partial update leaves out", async () => {
@@ -110,7 +112,7 @@ describe("updateTask clearing optional fields (real DB)", () => {
 
     const [queued] = await getDb().syncQueue.toArray();
     expect(queued?.operation).toBe("update");
-    expect(taskRecordToPocketBase(queued!.payload!, "user-1", "device-1")).toMatchObject({
+    expect(taskRecordToPocketBase(queued!.payload!, "user-1", "device-1", 15)).toMatchObject({
       due_date: "",
       estimated_minutes: null,
     });

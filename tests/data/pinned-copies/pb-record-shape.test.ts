@@ -67,7 +67,7 @@ describe("pinned copy: PocketBase record shape (web)", () => {
   describe("task to record", () => {
     it.each(fixture.toRecord)("$name", (c) => {
       const task = c.task as unknown as TaskRecord;
-      const record = taskRecordToPocketBase(task, fixture.ownerId, fixture.deviceId);
+      const record = taskRecordToPocketBase(task, fixture.ownerId, fixture.deviceId, 15);
 
       expect(Object.keys(record).sort()).toEqual([...fixture.wireFields].sort());
       expect(record).toStrictEqual(expectedFor(c, "web"));
