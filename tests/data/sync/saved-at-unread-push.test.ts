@@ -13,6 +13,7 @@ import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { PBSyncConfig } from '@/lib/sync/types';
+import type { RecordModel } from 'pocketbase';
 import type { TaskRecord } from '@/lib/types';
 
 type ServerRow = Record<string, unknown> & { id: string; task_id: string };
@@ -78,7 +79,7 @@ vi.mock('@/lib/sync/notifications', () => ({
   notifySyncError: vi.fn(),
 }));
 
-import { fullSync } from '@/lib/sync/pb-sync-engine';
+import { applyRemoteChange, fullSync } from '@/lib/sync/pb-sync-engine';
 import { copyUnreadFields, pullRemoteChanges } from '@/lib/sync/pb-pull';
 import { disableSync } from '@/lib/sync/config';
 import { persistSyncConfig } from '@/components/sync/use-sync-auth-dialog';
@@ -400,19 +401,59 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
     await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit', savedAt: SAVED });
   });
 
-  // The hold-off is only for a pull-first backfill, and only for a write that will push.
-  it.each([
-    ['an ordinary pull with a pending write', { mergeSameVersion: false }, 'pending'],
-    ['a backfill whose queued write is retry-exhausted', { mergeSameVersion: true }, 'failed'],
-  ] as const)("%s doesn't hold off a far-future remote", async (_name, options, status) => {
+  // WEB-HOLDOFF (S-AND-02): a push doesn't always drain the queue (a 429, an unavailable index,
+  // a transient error), so every pull holds off while a write that will push is pending.
+  async function pullFarFutureOver(status: 'pending' | 'failed', options: { mergeSameVersion: boolean }) {
     const row = localRow(NEWER, { title: 'Local edit' });
     await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), local: [row], queued: [row], server: [serverRow({ title: 'Edit from a fast clock', client_updated_at: FAR_FUTURE })] });
     const [queued] = await getDb().syncQueue.toArray();
     await getDb().syncQueue.update(queued.id, { status });
-
     await pullRemoteChanges(null, options);
+    return (await getDb().tasks.get('t-a'))?.title;
+  }
+
+  it.each([
+    ['an ordinary pull', { mergeSameVersion: false }],
+    ['a backfill', { mergeSameVersion: true }],
+  ] as const)('%s with a pending write holds off a far-future remote', async (_name, options) => {
+    await expect(pullFarFutureOver('pending', options)).resolves.toBe('Local edit');
+  });
+
+  // Realtime applies the same strictly-newer test to a clamped stamp, so it splits the same way.
+  it.each(['update', 'create'] as const)('a realtime %s with a pending write holds off a far-future remote', async (action) => {
+    const row = localRow(NEWER, { title: 'Local edit' });
+    const farFuture = serverRow({ title: 'Edit from a fast clock', client_updated_at: FAR_FUTURE });
+    await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), local: [row], queued: [row] });
+
+    await applyRemoteChange(action, farFuture as unknown as RecordModel, 'user-1');
+
+    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit' });
+  });
+
+  it("a held-off record doesn't move the pull cursor", async () => {
+    const row = localRow(NEWER, { title: 'Local edit' });
+    await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), local: [row], queued: [row], server: [serverRow({ client_updated_at: FAR_FUTURE })] });
+
+    const result = await pullRemoteChanges(null, { mergeSameVersion: false });
+
+    expect(result).toMatchObject({ pulledCount: 0, maxObservedTimestamp: null });
+  });
+
+  it('a realtime update with nothing queued still takes a far-future remote', async () => {
+    const farFuture = serverRow({ title: 'Edit from a fast clock', client_updated_at: FAR_FUTURE });
+    await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION), local: [localRow(NEWER, { title: 'Local edit' })] });
+
+    await applyRemoteChange('update', farFuture as unknown as RecordModel, 'user-1');
 
     await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Edit from a fast clock' });
+  });
+
+  // A retry-exhausted write never pushes, so holding off for it would split the device for good.
+  it.each([
+    ['an ordinary pull', { mergeSameVersion: false }],
+    ['a backfill', { mergeSameVersion: true }],
+  ] as const)("%s whose queued write is retry-exhausted doesn't hold off a far-future remote", async (_name, options) => {
+    await expect(pullFarFutureOver('failed', options)).resolves.toBe('Edit from a fast clock');
   });
 
   it('a failed backfill pull pushes nothing and stamps nothing', async () => {

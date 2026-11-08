@@ -20,6 +20,7 @@ paths:
 
 - **Protocol**: last-write-wins (LWW) using `client_updated_at`; remote wins if newer.
 - **Cursor contract**: `client_updated_at` is both the LWW authority and pull query field. Advance `lastClientUpdatedAt` only from records actually committed locally, clamp future values to now, subtract a 30-second overlap, and query the next pull with `>=`. The LWW ceiling in `task-mapper.ts` stays at now + 5 minutes. The cursor clamp is tighter, so a fast clock can't lift the next pull's lower bound past real time. `SYNC_CONFIG.PULL_CURSOR_VERSION` (3) is the pull contract. A config stamped with an older version, or none, pulls everything once with `mergeSameVersion`, so a newly synced field reaches rows an older build already pulled and stored without it; ordinary pulls keep the strictly-newer rule. Bump the constant, and the iOS `SyncCursor.contractVersion`, whenever a build is the first to read a new synced field (ADR 0019).
+- **Far-future hold-off**: a remote stamp past the skew ceiling never overwrites a row that has a pending queued write, on pull or realtime (`holdsOffFarFutureRemote` in `pb-sync-helpers.ts`). The clamp makes such a stamp look newer, but push still sends the local edit, so applying it would split this device from every other one (S-AND-02, WEB-HOLDOFF).
 - **Realtime**: PocketBase SSE auto-reconnects; periodic sync runs as safety net.
 - **Echo filtering**: skip own-device changes via `device_id` comparison.
 - **Auth**: PocketBase SDK auto-stores tokens in localStorage and auto-refreshes.
