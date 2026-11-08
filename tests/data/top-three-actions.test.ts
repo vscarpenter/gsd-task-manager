@@ -35,6 +35,8 @@ describe("top three writes (spec section 3.2)", () => {
   });
 
   it("add to today leaves every other field alone", async () => {
+    // A row with no reminder offset gets the device default on any write (D-10), so give it one.
+    await getDb().tasks.update("a", { notifyBefore: 15 });
     const original = (await getDb().tasks.get("a"))!;
 
     await addToToday("a", await all(), NOW, ZONE);
