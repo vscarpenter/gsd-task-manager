@@ -146,6 +146,9 @@ export const bulkUpdateTasksArgsSchema = z.strictObject({
 
 export const emptyArgsSchema = z.strictObject({});
 
+const timeZoneSchema = z.string().min(1).max(64);
+export const getTopThreeArgsSchema = z.strictObject({ timeZone: timeZoneSchema.optional() });
+
 /**
  * Exhaustive map of tool-name → Zod schema. The dispatcher registry is keyed
  * by this object so a tool cannot be added to one boundary without the other.
@@ -157,6 +160,7 @@ export const toolArgSchemas = {
   get_task: getTaskArgsSchema,
   search_tasks: searchTasksArgsSchema,
   get_token_status: emptyArgsSchema,
+  get_top_three: getTopThreeArgsSchema,
   get_productivity_metrics: emptyArgsSchema,
   get_quadrant_analysis: emptyArgsSchema,
   get_tag_analytics: getTagAnalyticsArgsSchema,

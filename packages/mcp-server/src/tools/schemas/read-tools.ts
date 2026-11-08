@@ -103,6 +103,23 @@ export const getTokenStatusTool: Tool = {
   },
 };
 
+export const getTopThreeTool: Tool = {
+  name: 'get_top_three',
+  description:
+    "Read-only. Report the user's top three for today: picks (up to three tasks the user chose for today, in rank order), needsTidy (true when two picks share a rank or there are more than three), and suggestions (the first three tasks GSD would offer: overdue Do First, then Schedule or Eliminate tasks due within two days, then Do First tasks with a due date, then the rest of Do First). Each task is a full task object. Today is the local date in timeZone, an optional IANA name that defaults to this machine's zone. An agent cannot pick for the user: there is no write tool, and the choice is the user's own. Picks only appear once the user has made them in an app.",
+  inputSchema: {
+    type: 'object',
+    properties: {
+      timeZone: {
+        type: 'string',
+        description: 'IANA time zone that decides which day is today, for example America/Chicago. Defaults to the system zone.',
+        maxLength: 64,
+      },
+    },
+    required: [],
+  },
+};
+
 export const readTools: Tool[] = [
   getSyncStatusTool,
   getTaskStatsTool,
@@ -110,4 +127,5 @@ export const readTools: Tool[] = [
   getTaskTool,
   searchTasksTool,
   getTokenStatusTool,
+  getTopThreeTool,
 ];
