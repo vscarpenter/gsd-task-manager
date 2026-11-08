@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { pbTaskToTask, type GsdConfig, type PBTask, type Task } from '../../types.js';
+import { pbTaskToTask, taskToPBFields, type GsdConfig, type PBTask, type Task } from '../../types.js';
 
 const { mockBulkInfo } = vi.hoisted(() => ({ mockBulkInfo: vi.fn() }));
 
@@ -631,6 +631,18 @@ describe('bulkUpdateTasks — complete spawns the next recurring instance', () =
     expect(helpers.createTaskInPB).toHaveBeenCalledTimes(1);
     const created = vi.mocked(helpers.createTaskInPB).mock.calls[0][1];
     expect(created).toMatchObject({ completed: false, dueDate: '2026-06-11T12:00:00.000Z' });
+  });
+
+  // A spawn starts unpicked (spec-top-three.md section 3.2), as toggle.ts makes it on the web.
+  it('starts the next instance with no top three pick', async () => {
+    const helpers = await seed({ ...daily, focus_date: '2026-06-10', focus_rank: 2 });
+
+    await bulkUpdateTasks(config, ['series'], { type: 'complete', completed: true });
+
+    const created = vi.mocked(helpers.createTaskInPB).mock.calls[0][1];
+    expect(created.focusDate).toBeUndefined();
+    expect(created.focusRank).toBeUndefined();
+    expect(taskToPBFields(created, 'owner-1', 'device-1')).toMatchObject({ focus_date: '', focus_rank: 0 });
   });
 
   it.each([
