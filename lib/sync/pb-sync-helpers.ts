@@ -6,7 +6,8 @@ import { getPocketBase, getCurrentUserId } from './pocketbase-client';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import type { PBSyncConfig, RemoteTaskIndexEntry } from './types';
-import { getPocketBaseTaskIdentity } from './task-mapper';
+import type { TaskRecord } from '@/lib/types';
+import { getPocketBaseTaskIdentity, pocketBaseToTaskRecord } from './task-mapper';
 import { isPendingSyncQueueItem } from './queue';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { RecordModel } from 'pocketbase';
@@ -284,4 +285,18 @@ export function isRemoteNewerThanArchive(
   // Comparing the clamped "now + 5 min" value would resurrect the tombstone.
   if (remoteTime > nowMs + SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS) return false;
   return remoteTime > archivedTime;
+}
+
+/**
+ * Map a pulled record over this device's copy of the task, wherever it lives: the live row,
+ * or the archive or Trash row a newer remote edit brings back. Device-local fields survive
+ * either way (S-IOS-02). With no copy here, `remoteTask` is the record mapped on its own.
+ */
+export function mapOverLocalCopy(
+  record: RecordModel,
+  remoteTask: TaskRecord,
+  ...localCopies: (TaskRecord | undefined)[]
+): TaskRecord | null {
+  const localCopy = localCopies.find((copy) => copy !== undefined);
+  return localCopy ? pocketBaseToTaskRecord(record, localCopy) : remoteTask;
 }

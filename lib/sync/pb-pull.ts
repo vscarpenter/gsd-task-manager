@@ -9,7 +9,7 @@ import { pocketBaseToTaskRecord } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { createLogger } from '@/lib/logger';
-import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
+import { escapeFilterValue, getCurrentUserId, fetchRemoteTaskIndex, confirmSessionIdentity, assertSafeRecordId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, mapOverLocalCopy, fetchBoundedRemoteTasks, readClientUpdatedAt } from './pb-sync-helpers';
 import type { RecordModel } from 'pocketbase';
 import { classifyRemoteDeletion } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
@@ -144,7 +144,7 @@ async function applyPreparedRecord(
   if (deleted && !isRemoteNewerThanArchive(rawUpdatedAt, deleted.deletedAt)) return 0;
 
   const localTask = await db.tasks.get(remoteTask.id);
-  const merged = localTask ? pocketBaseToTaskRecord(record, localTask) : remoteTask;
+  const merged = mapOverLocalCopy(record, remoteTask, localTask, archived, deleted);
   if (!merged) return 0;
   const remoteWins = await remoteVersionWins(db, localTask, merged, rawUpdatedAt, plan);
   if (!remoteWins) {

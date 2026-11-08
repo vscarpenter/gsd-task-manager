@@ -37,8 +37,8 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `restoreTask` | `lib/archive.ts` | One transaction, clears the archived row |
 | `archiveTaskNow` | `lib/archive.ts` | One transaction, idempotent `put` |
 | `reinstateArchivedTask` | `lib/archive.ts` | Writes only when the id is absent |
-| `applyRemoteRecords` | `lib/sync/pb-pull.ts` | Archive guard, un-archives on a newer edit; session check first, with `syncMetadata` in scope |
-| `applyRemoteChange` | `lib/sync/pb-sync-engine.ts` | Same guard, realtime path; session check first, with `syncMetadata` in scope |
+| `applyRemoteRecords` | `lib/sync/pb-pull.ts` | Archive guard, un-archives on a newer edit and maps it over the archive or Trash row (`mapOverLocalCopy`), so this device's reminder state survives; session check first, with `syncMetadata` in scope |
+| `applyRemoteChange` | `lib/sync/pb-sync-engine.ts` | Same guard and merge, realtime path; session check first, with `syncMetadata` in scope |
 | Migration v15 | `lib/db.ts` | Deletes only duplicates that stay archivable |
 | `applyArchivedTasks` | `lib/tasks/import-export.ts` | Idempotent `put`; live copy wins on a contradictory payload; absent key ≠ delete |
 | `deleteTask` | `lib/tasks/crud/delete.ts` | Moves live → `deletedTasks` in one transaction; idempotent `put` |
