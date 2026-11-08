@@ -18,7 +18,14 @@ import { duplicateTask, toggleCompleted, updateTask } from "@/lib/tasks";
 import { createMockTask } from "@/tests/fixtures";
 
 const PICK = { focusDate: "2026-11-07", focusRank: 2 };
-const STORED = createMockTask({ id: "pick-1", createdAt: "2026-11-01T10:00:00.000Z", updatedAt: "2026-11-01T10:00:00.000Z" });
+// A row this build wrote stores its reminder offset, so a write keeps it (D-10). A legacy row
+// with none would take the default on any write, which isn't the pick's doing.
+const STORED = createMockTask({
+	id: "pick-1",
+	createdAt: "2026-11-01T10:00:00.000Z",
+	updatedAt: "2026-11-01T10:00:00.000Z",
+	notifyBefore: 30,
+});
 
 beforeEach(async () => {
 	const db = getDb();
