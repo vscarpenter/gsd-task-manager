@@ -12,6 +12,7 @@ import type {
   PBTask,
 } from '../types.js';
 import { pbTaskToTask } from '../types.js';
+import { normalizeTag } from '../text/tags.js';
 
 const logger = createMcpLogger('LIST_TASKS');
 
@@ -94,6 +95,12 @@ async function fetchTasks(config: GsdConfig): Promise<Task[]> {
   }
 }
 
+/** Stored tags may predate normalization, so compare their normalized form. */
+function matchesAnyTag(stored: string[], wanted: string[]): boolean {
+  const normalized = new Set(stored.map(normalizeTag));
+  return wanted.some((tag) => normalized.has(tag));
+}
+
 /**
  * Apply filters to tasks
  */
@@ -116,7 +123,7 @@ function applyTaskFilters(
     if (
       filters.tags &&
       filters.tags.length > 0 &&
-      !filters.tags.some((tag) => task.tags.includes(tag))
+      !matchesAnyTag(task.tags, filters.tags)
     ) {
       return false;
     }
