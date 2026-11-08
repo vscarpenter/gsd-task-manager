@@ -111,6 +111,12 @@ describe('Task CRUD Operations', () => {
       },
       notificationSettings: { get: vi.fn().mockResolvedValue(undefined) },
       syncQueue: {},
+      // A delete made while signed out remembers its id here (resurrect on sight).
+      syncMetadata: {
+        get: vi.fn().mockResolvedValue(undefined),
+        put: vi.fn(),
+        delete: vi.fn(),
+      },
       transaction: vi.fn(async (_mode, _tables, callback) => callback()),
     };
 

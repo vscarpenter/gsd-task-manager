@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { forgetForResurrect } from "@/lib/sync/resurrect-ids";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
 import { formatErrorMessage, isoNow } from "@/lib/utils";
@@ -51,7 +52,7 @@ export async function restoreFromTrash(taskId: string): Promise<void> {
   try {
     const restored = await db.transaction(
       "rw",
-      [db.tasks, db.deletedTasks, db.syncQueue],
+      [db.tasks, db.deletedTasks, db.syncQueue, db.syncMetadata],
       async () => {
         const trashed = await db.deletedTasks.get(taskId);
         if (!trashed) return null;
@@ -59,6 +60,7 @@ export async function restoreFromTrash(taskId: string): Promise<void> {
         const { deletedAt: _deletedAt, ...task } = trashed;
         await db.tasks.put(task as TaskRecord);
         await db.deletedTasks.delete(taskId);
+        await forgetForResurrect([taskId]);
         if (syncEnabled) await queue.enqueue("create", taskId, task as TaskRecord);
         return task as TaskRecord;
       }
@@ -79,17 +81,25 @@ export async function restoreFromTrash(taskId: string): Promise<void> {
 
 /** Remove a single trashed task for good. */
 export async function deleteFromTrashForever(taskId: string): Promise<void> {
-  await getDb().deletedTasks.delete(taskId);
+  const db = getDb();
+  await db.transaction("rw", [db.deletedTasks, db.syncMetadata], async () => {
+    await db.deletedTasks.delete(taskId);
+    await forgetForResurrect([taskId]);
+  });
   logger.info("Task permanently deleted from trash", { taskId });
 }
 
 /** Empty the trash. Returns how many records went. */
 export async function emptyTrash(): Promise<number> {
   const db = getDb();
-  const count = await db.deletedTasks.count();
-  await db.deletedTasks.clear();
-  logger.info("Trash emptied", { count });
-  return count;
+  const ids = await db.transaction("rw", [db.deletedTasks, db.syncMetadata], async () => {
+    const trashedIds = (await db.deletedTasks.toCollection().primaryKeys()) as string[];
+    await db.deletedTasks.clear();
+    await forgetForResurrect(trashedIds);
+    return trashedIds;
+  });
+  logger.info("Trash emptied", { count: ids.length });
+  return ids.length;
 }
 
 /**
@@ -106,13 +116,18 @@ export async function purgeExpiredTrash(): Promise<number> {
   // Compare instants, not strings: `deletedAt` may carry a timezone offset, and
   // an offset string sorts by wall clock, so it would expire hours early or late.
   // An unparseable value is NaN, which compares false, so the row is kept.
-  const expired = await db.deletedTasks
-    .filter((task) => typeof task.deletedAt === "string" && Date.parse(task.deletedAt) < cutoffMs)
-    .primaryKeys();
+  const expired = (await db.transaction("rw", [db.deletedTasks, db.syncMetadata], async () => {
+    const ids = await db.deletedTasks
+      .filter((task) => typeof task.deletedAt === "string" && Date.parse(task.deletedAt) < cutoffMs)
+      .primaryKeys();
+    if (ids.length === 0) return ids;
+    await db.deletedTasks.bulkDelete(ids as string[]);
+    await forgetForResurrect(ids as string[]);
+    return ids;
+  })) as string[];
 
   if (expired.length === 0) return 0;
 
-  await db.deletedTasks.bulkDelete(expired as string[]);
   logger.info("Purged expired trash", { count: expired.length, retentionDays: TRASH_RETENTION_DAYS });
   return expired.length;
 }

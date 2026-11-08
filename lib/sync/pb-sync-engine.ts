@@ -17,6 +17,7 @@ import { ensureValidAuth } from './pb-auth';
 import { getDeviceId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, readClientUpdatedAt } from './pb-sync-helpers';
 import { pushLocalChanges, type PushResult } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
+import { resurrectOnSight } from './resurrect-on-sight';
 import { classifyRemoteDeletion } from './queue';
 import { StaleSyncSessionError, assertSyncSessionCurrent, getSessionOwner } from './sync-session';
 import { toTrashedRecord } from '@/lib/trash';
@@ -240,6 +241,7 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
       return await reportAuthFailure(ctx);
     }
     const { pushResult, pullResult } = passes;
+    await resurrectOnSight(ownerId);
 
     await updateSyncCursor(ownerId, pullResult.maxObservedTimestamp, pullResult.authenticated);
 

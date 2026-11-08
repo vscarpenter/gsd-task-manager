@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db";
 import { createLogger } from "@/lib/logger";
 import { formatErrorMessage } from "@/lib/utils";
 import type { TaskRecord } from "@/lib/types";
+import { forgetForResurrect } from "@/lib/sync/resurrect-ids";
 import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
@@ -26,6 +27,7 @@ export async function restoreTask(task: TaskRecord): Promise<void> {
       // The record is in trash whenever this ran from the delete toast. Leaving
       // the row behind would put one id in two lifecycle tables (ADR 0013).
       await db.deletedTasks.delete(task.id);
+      await forgetForResurrect([task.id]);
       if (syncEnabled) await enqueue("create", task.id, task);
     });
 

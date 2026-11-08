@@ -100,6 +100,15 @@ export interface RemoteTaskIndexEntry {
 // Device info
 // ============================================================================
 
+/**
+ * Task ids whose delete never reached the server, kept for resurrect on sight
+ * (tasks/spec-resurrect-on-sight.md). Device-local; never synced.
+ */
+export interface ResurrectOnSightRecord {
+  key: 'resurrect_on_sight';
+  taskIds: string[];
+}
+
 export interface DeviceInfo {
   key: 'device_info';
   deviceId: string;

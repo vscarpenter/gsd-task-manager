@@ -14,60 +14,20 @@ import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { PBSyncConfig } from '@/lib/sync/types';
 import type { RecordModel } from 'pocketbase';
-import type { TaskRecord } from '@/lib/types';
+import {
+  AUTH, FAR_FUTURE, NEWER, OLDER, SAVED, fake, localRow, localTask, resetFakeSync, seed,
+  sentValue, serverField, serverRow, signedIn, signedOut, storedVersion,
+} from './support/fake-pocketbase';
 
-type ServerRow = Record<string, unknown> & { id: string; task_id: string };
-type Write = { op: 'create' | 'update'; body: Record<string, unknown> };
-
-const fake = vi.hoisted(() => {
-  const state = {
-    records: new Map<string, ServerRow>(),
-    events: [] as string[],
-    writes: [] as Write[],
-    failPull: false,
+vi.mock('@/lib/sync/pocketbase-client', async () => {
+  const { fake: server } = await import('./support/fake-pocketbase');
+  return {
+    getPocketBase: () => server.pb,
+    getCurrentUserId: () => 'user-1',
+    isAuthenticated: () => true,
+    clearPocketBase: vi.fn(),
   };
-  const taskIdIn = (filter: string): string | undefined => /task_id = "([^"]+)"/.exec(filter)?.[1];
-  const tasks = {
-    getList: async (_page: number, _size: number, options?: { fields?: string }) => {
-      const kind = options?.fields ? 'index' : 'pull';
-      state.events.push(kind);
-      if (kind === 'pull' && state.failPull) throw new Error('network down');
-      return [...state.records.values()].map((row) => ({ ...row }));
-    },
-    getFirstListItem: async (filter: string) => {
-      const row = [...state.records.values()].find((r) => r.task_id === taskIdIn(filter));
-      if (!row) throw Object.assign(new Error('not found'), { status: 404 });
-      return { ...row };
-    },
-    update: async (id: string, body: Record<string, unknown>) => {
-      state.events.push('update');
-      state.writes.push({ op: 'update', body });
-      const merged = { ...state.records.get(id)!, ...body };
-      state.records.set(id, merged);
-      return merged;
-    },
-    create: async (body: Record<string, unknown>) => {
-      state.events.push('create');
-      state.writes.push({ op: 'create', body });
-      const row = { ...body, id: `rec_${String(body.task_id)}` } as ServerRow;
-      state.records.set(row.id, row);
-      return row;
-    },
-    delete: async (id: string) => {
-      state.records.delete(id);
-      return true;
-    },
-  };
-  const users = { authRefresh: async () => ({ record: { id: 'user-1' } }) };
-  return { state, pb: { collection: (name: string) => (name === 'users' ? users : tasks) } };
 });
-
-vi.mock('@/lib/sync/pocketbase-client', () => ({
-  getPocketBase: () => fake.pb,
-  getCurrentUserId: () => 'user-1',
-  isAuthenticated: () => true,
-  clearPocketBase: vi.fn(),
-}));
 
 vi.mock('@/lib/sync/pb-auth', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/sync/pb-auth')>()),
@@ -86,77 +46,15 @@ import { persistSyncConfig } from '@/components/sync/use-sync-auth-dialog';
 import { updateTask } from '@/lib/tasks/crud';
 import { returnSavedTask } from '@/lib/tasks/saved';
 
-const CREATED = '2026-10-01T10:00:00.000Z';
-/** The Save another device made, and the server's version of the task. */
-const SAVED = '2026-10-20T10:00:00.000Z';
-const OLDER = '2026-10-19T10:00:00.000Z';
-const NEWER = '2026-10-21T10:00:00.000Z';
-/** Past the skew ceiling: a device whose clock runs far ahead stamped it. */
-const FAR_FUTURE = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-const AUTH = { isLoggedIn: true, userId: 'user-1', email: 'one@example.com', provider: 'google' };
-
-function localRow(updatedAt: string, extra: Partial<TaskRecord> = {}): TaskRecord {
-  return {
-    id: 't-a', title: 'Read later', description: '', urgent: false, important: true,
-    quadrant: 'not-urgent-important', completed: false, createdAt: CREATED, updatedAt,
-    recurrence: 'none', tags: [], subtasks: [], dependencies: [], notificationEnabled: true,
-    notificationSent: false, timeSpent: 0, timeEntries: [], ...extra,
-  };
-}
-
-function serverRow(overrides: Record<string, unknown> = {}): ServerRow {
-  return {
-    id: 'rec_a', collectionId: 'tasks', collectionName: 'tasks', task_id: 't-a', owner: 'user-1',
-    title: 'Read later', description: '', urgent: false, important: true,
-    quadrant: 'not-urgent-important', due_date: '', completed: false, completed_at: '',
-    recurrence: 'none', tags: [], subtasks: [], dependencies: [], notification_enabled: true,
-    notification_sent: false, notify_before: null, last_notification_at: '', estimated_minutes: null,
-    time_spent: 0, time_entries: [], snoozed_until: '', saved_at: SAVED, client_updated_at: SAVED,
-    client_created_at: CREATED, device_id: 'other-device', ...overrides,
-  };
-}
-
-/** A signed-in config. No version is what a build older than the contract left. */
-function signedIn(pullCursorVersion?: number): PBSyncConfig {
-  return {
-    key: 'sync_config', enabled: true, userId: 'user-1', deviceId: 'device-1',
-    deviceName: 'Test device', email: 'one@example.com', provider: 'google', lastSyncAt: null,
-    lastClientUpdatedAt: null, ...(pullCursorVersion === undefined ? {} : { pullCursorVersion }),
-    lastServerUpdatedAt: null, lastSuccessfulSyncAt: null, consecutiveFailures: 0,
-    lastFailureAt: null, lastFailureReason: null, nextRetryAt: null, localTaskOwnerUserId: 'user-1',
-  };
-}
-
 /** What a sign-out on a build older than Saved left behind: rows kept, version 2. */
-function signedOutOnPreSavedBuild(): PBSyncConfig {
-  return { ...signedIn(2), enabled: false, userId: null, email: null, provider: null };
-}
-
-async function seed(options: { config: PBSyncConfig; local?: TaskRecord[]; queued?: TaskRecord[]; server?: ServerRow[] }) {
-  const db = getDb();
-  await db.syncMetadata.put(options.config);
-  if (options.local?.length) await db.tasks.bulkAdd(options.local);
-  for (const payload of options.queued ?? []) {
-    // react-doctor-disable-next-line react-doctor/async-await-in-loop -- queue order follows insertion
-    await getSyncQueue().enqueue('update', payload.id, payload);
-  }
-  for (const row of options.server ?? []) fake.state.records.set(row.id, row);
-}
-
-const serverSavedAt = (): unknown => fake.state.records.get('rec_a')?.saved_at;
-const localSavedAt = async (): Promise<string | undefined> => (await getDb().tasks.get('t-a'))?.savedAt;
-const storedVersion = async (): Promise<number | undefined> =>
-  ((await getDb().syncMetadata.get('sync_config')) as PBSyncConfig | undefined)?.pullCursorVersion;
-const sentEmptySavedAt = (): boolean => fake.state.writes.some((w) => w.body.saved_at === '');
+const signedOutOnPreSavedBuild = (): PBSyncConfig => signedOut(2);
+const serverSavedAt = (): unknown => serverField('saved_at');
+const localSavedAt = async (): Promise<string | undefined> => (await localTask())?.savedAt;
+const sentEmptySavedAt = (): boolean => sentValue('saved_at', '');
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  fake.state.records.clear();
-  fake.state.events.length = 0;
-  fake.state.writes.length = 0;
-  fake.state.failPull = false;
-  const db = getDb();
-  await Promise.all(db.tables.map((table) => table.clear()));
+  await resetFakeSync();
 });
 
 describe('an upgrade from a build that never read saved_at', () => {

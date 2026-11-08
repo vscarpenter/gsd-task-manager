@@ -7,7 +7,7 @@ import type {
   AppPreferences,
 } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
-import type { SyncQueueItem, PBSyncConfig, DeviceInfo } from "@/lib/sync/types";
+import type { SyncQueueItem, PBSyncConfig, DeviceInfo, ResurrectOnSightRecord } from "@/lib/sync/types";
 import { registerDatabaseVersions } from "@/lib/db-migrations";
 
 class GsdDatabase extends Dexie {
@@ -18,7 +18,7 @@ class GsdDatabase extends Dexie {
   smartViews!: Table<SmartView, string>;
   notificationSettings!: Table<NotificationSettings, string>;
   syncQueue!: Table<SyncQueueItem, string>;
-  syncMetadata!: Table<PBSyncConfig | DeviceInfo, string>;
+  syncMetadata!: Table<PBSyncConfig | DeviceInfo | ResurrectOnSightRecord, string>;
   deviceInfo!: Table<DeviceInfo, string>;
   archiveSettings!: Table<ArchiveSettings, string>;
   syncHistory!: Table<SyncHistoryRecord, string>;
