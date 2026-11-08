@@ -1,6 +1,6 @@
 # Contract note: `notify_before` is always a number
 
-**Status:** decided, 2026-10-31. Sprint 2 builds it. Not implemented on any client.
+**Status:** decided, 2026-10-31. Sprint 2 merged it into each repo's `main`: web (#690, `955c63a`), iOS (gsd-iosapp #78, `22acaf0`), Android (gsd-android #75, `b531d30`), and MCP (#684, `84ea42a`).
 **Decision:** D-10, option 1 (`sprint/OWNER-DECISIONS.md` items 9 and 17). Evidence: `sprint/findings/D-10.md`.
 **No new field, no pull contract bump, no backup envelope change, no server change, no corpus.** The rule is one fallback expression, so each client's tests pin it (section 7).
 **Evidence:** code paths come from reading web, iOS, and Android `main` on 2026-10-31. Section 3's import row was rechecked against each `main` on 2026-11-08. The server behavior is S-AND's finding, run on PocketBase 0.40.4. Nothing here has run on a client.
