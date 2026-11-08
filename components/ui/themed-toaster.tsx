@@ -3,6 +3,7 @@
 import { useTheme } from "next-themes";
 import { Toaster } from "sonner";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
+import { TOAST_HOTKEY, ToastActionHint } from "./toast-action-hint";
 
 // Measured top-bar bottoms: 73px on desktop, 123px at 375px wide, where the
 // search field wraps to its own row. The toast sits just below them so it
@@ -19,12 +20,16 @@ export function ThemedToaster() {
     : "system";
 
   return (
-    <Toaster
-      richColors
-      position="top-center"
-      theme={theme}
-      offset={{ top: TOAST_TOP_OFFSET }}
-      mobileOffset={{ top: TOAST_MOBILE_TOP_OFFSET }}
-    />
+    <>
+      <Toaster
+        richColors
+        position="top-center"
+        theme={theme}
+        offset={{ top: TOAST_TOP_OFFSET }}
+        mobileOffset={{ top: TOAST_MOBILE_TOP_OFFSET }}
+        hotkey={TOAST_HOTKEY}
+      />
+      <ToastActionHint />
+    </>
   );
 }

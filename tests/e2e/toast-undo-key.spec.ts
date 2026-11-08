@@ -1,0 +1,102 @@
+import type { Page } from "@playwright/test";
+import { test, expect } from "./fixtures/test-fixtures";
+import { waitForAppLoad } from "./helpers/test-helpers";
+
+const DAY_MS = 86_400_000;
+const daysAgo = (days: number) => new Date(Date.now() - days * DAY_MS).toISOString();
+
+interface SeedTask {
+  id: string;
+  title: string;
+  urgent: boolean;
+  important: boolean;
+  quadrant: string;
+  createdAt: string;
+  updatedAt: string;
+  dueDate?: string;
+}
+
+/** Seeds tasks straight into IndexedDB after the app has opened the DB. */
+async function seedTasks(page: Page, tasks: SeedTask[]): Promise<void> {
+  await page.evaluate(
+    (rows) =>
+      new Promise<void>((resolve, reject) => {
+        const req = indexedDB.open("GsdTaskManager");
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction("tasks", "readwrite");
+          for (const row of rows) {
+            tx.objectStore("tasks").add({
+              description: "", completed: false, recurrence: "none", tags: [], subtasks: [], dependencies: [],
+              notificationEnabled: false, notificationSent: false, timeSpent: 0, timeEntries: [], ...row,
+            });
+          }
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror = () => { db.close(); reject(tx.error); };
+        };
+        req.onerror = () => reject(req.error);
+      }),
+    tasks
+  );
+}
+
+
+const OVERDUE: SeedTask = {
+  id: "toast-overdue", title: "Send the invoice", urgent: false, important: false, quadrant: "not-urgent-not-important",
+  createdAt: daysAgo(10), updatedAt: daysAgo(1), dueDate: daysAgo(3),
+};
+const STALE_Q4: SeedTask = {
+  id: "toast-stale", title: "Sort the old photos", urgent: false, important: false, quadrant: "not-urgent-not-important",
+  createdAt: daysAgo(60), updatedAt: daysAgo(30),
+};
+
+/** The Sonner hotkey (Alt+T) focuses the toast list; two Tabs then reach Undo. */
+async function reachUndoByKeyboard(page: Page): Promise<void> {
+  await expect(page.getByText("Press Alt+T, then Tab twice, to reach Undo.")).toBeAttached();
+  await page.keyboard.press("Alt+KeyT");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Undo" })).toBeFocused();
+}
+
+test.describe("Undo toast by keyboard", () => {
+  test.beforeEach(async ({ clearIndexedDB }) => {
+    // Requesting the fixture seeds the launch flag and clears IndexedDB.
+  });
+
+  test("sweep: Alt+T then Tab reaches Undo and restores the task", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForAppLoad(page);
+    await seedTasks(page, [STALE_Q4, OVERDUE]);
+    await page.reload();
+    await waitForAppLoad(page);
+    await page.goto("/dashboard/");
+    await page.getByRole("link", { name: "Start weekly sweep" }).click();
+    await expect(page.getByRole("article", { name: "Send the invoice" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Complete" }).focus();
+    await page.keyboard.press("Space");
+    await expect(page.getByRole("article", { name: "Sort the old photos" })).toBeVisible();
+    await reachUndoByKeyboard(page);
+    await page.keyboard.press("Enter");
+    // The sweep session moves on, so the proof is the task being open again in the matrix.
+    await page.goto("/");
+    await waitForAppLoad(page);
+    await expect(page.getByText("Send the invoice")).toBeVisible();
+  });
+
+  test("matrix: Alt+T then Tab reaches Undo and restores the task", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForAppLoad(page);
+    await seedTasks(page, [STALE_Q4]);
+    await page.reload();
+    await waitForAppLoad(page);
+
+    await page.getByRole("button", { name: "Mark as complete" }).focus();
+    await page.keyboard.press("Space");
+    await expect(page.getByText("Sort the old photos")).toBeHidden();
+    await reachUndoByKeyboard(page);
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Sort the old photos")).toBeVisible();
+  });
+});

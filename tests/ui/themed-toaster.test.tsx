@@ -11,6 +11,7 @@ vi.mock("next-themes", () => ({
 
 vi.mock("sonner", () => ({
   Toaster: (props: unknown) => toasterSpy(props),
+  useSonner: () => ({ toasts: [] }),
 }));
 
 describe("ThemedToaster", () => {
@@ -31,5 +32,11 @@ describe("ThemedToaster", () => {
       offset: { top: 80 },
       mobileOffset: { top: 130 },
     });
+  });
+
+  it("pins the toast hotkey to Alt+T, the key the screen-reader hint names", () => {
+    toasterSpy.mockClear();
+    render(<ThemedToaster />);
+    expect(toasterSpy.mock.calls.at(-1)?.[0]).toMatchObject({ hotkey: ["altKey", "KeyT"] });
   });
 });
