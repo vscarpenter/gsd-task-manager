@@ -4,6 +4,38 @@
   "releases": [
     {
       "platform": "web",
+      "version": "14.8.0",
+      "date": "2026-11-08",
+      "notable": true,
+      "headline": "Pick your top three for today, and sweep the matrix once a week.",
+      "new": [
+        "Today sits above the matrix. Pick up to three tasks from any quadrant, and put them in the order you plan to do them.",
+        "Choose Add to today from a task's card menu, or Pick up to three for today to see suggestions. GSD suggests and never picks for you.",
+        "Nothing rolls over by itself. A pick from an earlier day comes back as an offer, such as From yesterday, so you can add it again.",
+        "The weekly sweep walks you through tasks that need a decision, one at a time. Each card says why it's there, such as Due date passed or No date yet.",
+        "Each card offers the actions that fit, such as Complete, New date, or Save for later, with the usual Undo. Skip changes nothing.",
+        "Start a sweep from the command palette, Review, or Settings. When one is due, a Weekly sweep link shows above the matrix.",
+        "Settings can remind you to sweep on the day and time you pick, while GSD is open."
+      ],
+      "improved": [
+        "The reminder choices now read None and At due time, matching the other GSD apps.",
+        "Turning a task's reminder off and back on keeps the time you chose.",
+        "Settings says the default reminder is for new tasks, so changing it doesn't move reminders you've already set.",
+        "Screen readers now say how to reach Undo by keyboard: press Alt+T, then Tab until you reach it.",
+        "After you choose Undo from the keyboard, focus goes back to where you were."
+      ],
+      "fixed": [
+        "Tasks created on the web now remind you at the same time on every device. Before, your other devices could remind you at the due time instead.",
+        "A task you delete while signed out of sync no longer stays in Trash here when your other devices still have it. After you sign in, it comes back from your account.",
+        "A task that sync brings back from Archive or Trash no longer repeats a reminder you already saw.",
+        "Updating a browser that last ran GSD before Saved existed no longer moves your Saved items back to the matrix on other devices.",
+        "Sync keeps an edit that's still waiting to upload, even when another device's clock runs fast.",
+        "The command palette now shows Sync now and View sync history when sync is on.",
+        "The storage total in Settings now counts tasks in Trash, so it matches what Reset everything deletes."
+      ]
+    },
+    {
+      "platform": "web",
       "version": "14.7.0",
       "date": "2026-11-05",
       "notable": true,
