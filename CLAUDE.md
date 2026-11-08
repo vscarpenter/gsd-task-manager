@@ -44,7 +44,7 @@ Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work 
 ### Build & Deployment
 - `./scripts/deploy-cloudfront-function.sh` - Deploy CloudFront Function for SPA routing
 
-**CloudFront Edge Routing**: Required because S3 doesn't auto-serve `index.html` for directory paths. Run the deploy script after adding new App Router routes.
+**CloudFront Edge Routing**: S3 doesn't serve `index.html` for directory paths, so `cloudfront-function-url-rewrite.cjs` appends `/index.html` to every extensionless path. The rule is generic, so a new App Router route needs no function deploy. The app deploy uploads the route's `index.html`, and the route works. Run the script only when a function file changes; the `deploy-cloudfront-infra` workflow already does that on `main`. A manual run needs `CLOUDFRONT_DISTRIBUTION_ID` (production is `E1T6GDX0TQEP94`, as in `scripts/deploy-prod.sh`). A route whose page is missing returns the root page with a 200, so check a new route by its `<title>`, not its status code.
 
 ## Architecture
 
