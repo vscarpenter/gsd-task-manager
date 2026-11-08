@@ -42,6 +42,9 @@ export interface TaskRecord {
   snoozedUntil?: string;
   /** Set while an item lives in Saved instead of the active matrix. */
   savedAt?: string;
+  /** Top three: the local YYYY-MM-DD this task is picked for, and its slot 1 to 3 (spec-top-three.md). */
+  focusDate?: string;
+  focusRank?: number;
   // Archive field
   archivedAt?: string; // Timestamp when task was archived
   deletedAt?: string; // Timestamp when task was moved to trash (ADR 0015)
