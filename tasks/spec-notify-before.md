@@ -1,9 +1,9 @@
 # Contract note: `notify_before` is always a number
 
-**Status:** decided, 2026-10-31. Sprint 2 builds it. Not implemented on any client.
+**Status:** decided, 2026-10-31. Sprint 2 merged it into each repo's `main`: web (#690, `955c63a`), iOS (gsd-iosapp #78, `22acaf0`), Android (gsd-android #75, `b531d30`), and MCP (#684, `84ea42a`).
 **Decision:** D-10, option 1 (`sprint/OWNER-DECISIONS.md` items 9 and 17). Evidence: `sprint/findings/D-10.md`.
 **No new field, no pull contract bump, no backup envelope change, no server change, no corpus.** The rule is one fallback expression, so each client's tests pin it (section 7).
-**Evidence:** code paths come from reading web, iOS, and Android `main` on 2026-10-31. The server behavior is S-AND's finding, run on PocketBase 0.40.4. Nothing here has run on a client.
+**Evidence:** code paths come from reading web, iOS, and Android `main` on 2026-10-31. Section 3's import row was rechecked against each `main` on 2026-11-08. The server behavior is S-AND's finding, run on PocketBase 0.40.4. Nothing here has run on a client.
 
 ## 1. The problem
 
@@ -27,7 +27,7 @@ Nothing migrates at upgrade. A migration would write every row, and to reach oth
 | Local null, server `0` | The device that wrote it | Keeps firing its default through the read fallback, as it does today. The next write of that row resolves it and pushes, and other devices move from `0` to that number |
 | Local null, server holds an old value | iOS or Android, after clearing an offset | Same. The next write replaces the old value |
 | A queued payload with null, from before the upgrade | Any client | Rule 2 at drain. If the row was null too, store the number on the row with no stamp bump and nothing queued, so this device and the server agree |
-| A backup with no offset | Import | Rule 1 applies, with the default in effect once the import finishes. That's the backup's default whenever the import restores the backup's settings, and this device's otherwise. A Replace restores them on every client. A Merge restores them on iOS (`restoreCompanionStores`, `GSDStore/TaskStore.swift:1054`, for both modes) but not on web (`lib/tasks/import-export.ts:520`) or Android (`ImportApplier.kt:97-100`). A backup with no settings restores none. Whether the three should agree is backlog IMPORT-MERGE-SETTINGS. `notifyBefore` stays optional in the import schemas, so old backups still import |
+| A backup with no offset | Import | Rule 1 applies, with the default in effect once the import finishes. That's the backup's default whenever the import restores the backup's settings, and this device's otherwise. A Replace restores them on every client. A Merge restores them on iOS (`restoreCompanionStores`, `GSDStore/TaskStore.swift:1053`, called for both modes at `:1027` and `:1038`) but not on web (`lib/tasks/import-export.ts:469`) or Android (`ImportApplier.kt:49-53`). A backup with no settings restores none. Whether the three should agree is backlog IMPORT-MERGE-SETTINGS. `notifyBefore` stays optional in the import schemas, so old backups still import |
 | Archived and trashed rows in a backup | Import | Not resolved on import, on all three clients. Nothing schedules a reminder for them. Each one settles on its next write, like any stored row above |
 
 Reads keep `notifyBefore ?? default` for good: local null rows can outlive any one release. It's a data persistence exception, so the fallback isn't a shim to remove later. Pull is unchanged, and a pulled number replaces a local null only by the ordinary strictly-newer rule.
