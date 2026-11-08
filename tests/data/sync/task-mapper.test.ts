@@ -280,6 +280,25 @@ describe('task-mapper', () => {
       expect(result!.notificationSent).toBe(true);
     });
 
+    // WEB-PULL-PARENT: no PocketBase field carries the recurrence chain link.
+    it("should keep this device's parentTaskId, which never travels on the wire", () => {
+      const existingLocal = buildLocalTask({ recurrence: 'daily', parentTaskId: 'task-root' });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ recurrence: 'daily' }), existingLocal);
+      expect(result!.parentTaskId).toBe('task-root');
+    });
+
+    // A new due date resets the reminder (B-55), but the task is still in the same chain.
+    it('should keep parentTaskId when the pull moves the due date', () => {
+      const existingLocal = buildLocalTask({ parentTaskId: 'task-root', notificationSent: true });
+      const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: '2026-04-12T12:00:00.000Z' }), existingLocal);
+      expect(result).toMatchObject({ parentTaskId: 'task-root', notificationSent: false });
+    });
+
+    it('should leave parentTaskId unset when no existing local task', () => {
+      const result = pocketBaseToTaskRecord(buildPBRecord());
+      expect(result!.parentTaskId).toBeUndefined();
+    });
+
     it('should return null for records missing required fields', () => {
       const pb = buildPBRecord({ task_id: '', title: '' });
       const result = pocketBaseToTaskRecord(pb);

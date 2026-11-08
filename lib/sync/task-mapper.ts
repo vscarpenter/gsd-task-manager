@@ -231,6 +231,8 @@ function localReminderState(existingLocal: TaskRecord | null | undefined, remote
  * are preserved from the existing local record when available, since these
  * are per-device behavioral state that should not be overwritten by remote values.
  * A pull that moves the due date resets them (see localReminderState).
+ * parentTaskId, the recurrence chain link, has no wire field, so it always comes
+ * from the local record, whatever the due date does (WEB-PULL-PARENT).
  */
 export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: TaskRecord | null): TaskRecord | null {
   const parsed = pbTaskRecordSchema.safeParse(record);
@@ -269,6 +271,7 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
     savedAt: savedTimestampFromWire(r.saved_at),
     ...focusFromWire(r),
     ...localReminderState(existingLocal, r.due_date || undefined),
+    parentTaskId: existingLocal?.parentTaskId,
   };
 }
 

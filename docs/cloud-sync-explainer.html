@@ -816,7 +816,7 @@ async function handleRealtimeEvent(event) {
     <div class="alert is-warning">
       <div class="alert-body">
         <p class="alert-title">Device-local fields are not synced through</p>
-        <p><code>notificationSent</code>, <code>lastNotificationAt</code>, <code>snoozedUntil</code> are preserved from the existing local row when a remote update lands. Adding a new per-device field means editing <code>pocketBaseToTaskRecord</code> in <code>task-mapper.ts</code> — not just the schema.</p>
+        <p><code>notificationSent</code>, <code>lastNotificationAt</code>, <code>snoozedUntil</code>, and <code>parentTaskId</code> are preserved from the existing local row when a remote update lands. Adding a new per-device field means editing <code>pocketBaseToTaskRecord</code> in <code>task-mapper.ts</code> — not just the schema.</p>
       </div>
     </div>
 
