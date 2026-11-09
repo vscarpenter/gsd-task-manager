@@ -67,7 +67,7 @@ export const step = (action, from, to) => {
     case "Pulls": {
       const d = mover(from, to, ["phase"]);
       if (JSON.stringify(from.local[d]) !== JSON.stringify(to.local[d])) return `${d} pulls the server's copy`;
-      if (from.cursor[d] !== to.cursor[d]) return `${d} pulls another task's newer record`;
+      if (from.cursor[d] !== to.cursor[d]) return `${d} pulls, and its cursor moves ahead`;
       return `${d} pulls and gets nothing new`;
     }
     case "SyncFails":
