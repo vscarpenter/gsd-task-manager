@@ -1,0 +1,154 @@
+---
+name: verify-sync-session
+description: Model-checks, with TLA+ and TLC, which account each sync write lands in across sign-in, sign-out, switching accounts, Reset Everything, Sign out of all devices, and a second open tab, so a change can't upload one account's tasks into another account. Use when a change touches lib/sync/sync-session.ts, pb-sync-engine.ts (fullSync, runSyncPasses, applyRemoteChange), pb-push.ts (pushLocalChanges, resolvePushPrincipal), pb-pull.ts (pullRemoteChanges, applyRemoteRecords), pb-realtime.ts, pb-auth.ts (ensureValidAuth, refreshAuthOutcome), pocketbase-client.ts, sign-out-everywhere.ts, sync-coordinator.ts, queue.ts (getPending, populateFromExistingTasks), lib/sync/config/ (disableSync, updateSyncConfig), lib/reset-everything.ts, lib/reset-local-data.ts, lib/tasks/crud/helpers.ts (runTaskSyncTransaction), components/sync/use-sync-auth-dialog.ts (persistSyncConfig), the tasks API rules in scripts/setup-pocketbase-collections.sh, or any code that writes sync_config, the sync queue, or local task rows on behalf of a sync. Also use when adding a new sync write path.
+---
+
+# Verify the sync session
+
+A TLA+ model of the web app's sync session lives in `docs/formal/sync-session/`. TLC checks every order of the steps in the model. One tab runs a fullSync. Either tab can sign in, sign out, run Reset Everything, edit a task, or change Settings, and a realtime event can arrive. Each await in the code is a point where another step can run. A pass covers the model, not the whole app, so read "Bounds and what's left out" before you trust one.
+
+The promise comes from the header of `lib/sync/sync-session.ts`. A sync belongs to the account that was signed in when it started. Once sync is off or `sync_config` names another account, that sync writes nothing more. The model checks the harm that promise exists to prevent.
+
+## The rules
+
+Each rule is an INVARIANT in `SyncSession.tla`.
+
+| Rule | What the app promises | The harm when it breaks |
+|---|---|---|
+| `NoRecordInAnotherAccount` | No account's server copy ever holds a task or queued edit from another account. | One person's tasks show up in someone else's account, on every device that account uses. |
+| `DeviceHoldsOnlyTheSignedInAccount` | While sync is on for an account, this device holds only that account's tasks and queued edits. | The next push or sign-in uploads the other account's tasks into this one. |
+
+`TypeOK` keeps each variable in its range. It guards the model, not the app.
+
+## What the model found (2026-11-08)
+
+The code breaks both rules today. Each finding is a constant in `Gaps`, and each has its own config. Every path below was replayed against the real code, and the replay showed the task in the wrong account. None of them is fixed yet.
+
+1. **`push-reads-queue-unfenced`** (`GapPushQueue.cfg`). `pushLocalChanges` checks the SDK principal once, then reads the queue with no `assertSyncSessionCurrent`. TLC's path: you sign in as A, and a sync for A starts. You sign in as B in a dialog left open in another tab. `persistSyncConfig` switches to B, since the device holds no tasks yet. B's task arrives and you edit it. A second sign-in as A saves A's token before its own save refuses it. `resolvePushPrincipal` now passes for A, the push reads B's edit, and `upsertRemoteTask` creates it with `owner: A` under A's token. The server accepts it. A second replay found a way in with no stale dialog. The sync tab's `authRefresh` was in flight while the other tab signed out and signed in as B. Its late response then saved A's token over B's, because `clearPocketBase` only detaches the tab that calls it. The refresh runs on every sync in a token's last seven days.
+2. **`sign-out-reads-config-early`** (`GapSignOutRead.cfg`). `disableSync` calls `getSyncConfig()` before `resetSyncConfigState` opens its transaction, then writes the signed-out row from that copy. If A's sign-in saves in between, the row it writes keeps no `localTaskOwnerUserId`. A's task stays on the device with no owner recorded, so B can sign in. Then `populateFromExistingTasks` queues A's task, and B's push uploads it to B. It needs a Sign out click in a dialog that still shows an older session, within the moment A's sign-in takes to save.
+3. **`settings-writes-stale-config`** (`GapSettingsWrite.cfg`). `updateAutoSyncConfig` calls `updateSyncConfig`, which reads the row and puts `{...current, ...updates}` with no transaction. The gap config's path matches finding 2. The code config's shortest break runs the other way. Settings reads A's row while B's sign-in saves, then writes A's row back. B's task now sits on a device whose `sync_config` names A. The toggle shows only while that tab believes sync is on, and the window is one IndexedDB round trip.
+4. **`populate-after-sign-in`** (`GapPopulate.cfg`). `persistSyncConfig` commits its transaction, then `populateFromExistingTasks` reads `db.tasks` and enqueues each task with no session check. If Reset Everything erases local data between that read and the enqueues, A's task is queued into an empty device. B can then sign in, since the guard counts tasks and not queue rows, and B's push uploads A's task. The reset has to fit between a few IndexedDB round trips.
+
+`SyncSessionFixed.cfg` sets `Gaps = {}`, a model of the code with all four fixed. There the push reads the queue inside a fenced transaction, and both config writes read the row inside their own transaction. The sign-in transaction also queues the local tasks itself. Both rules hold there. The fixed model is a guess at the fixes, so when one lands, describe the code that shipped (see "Update the model").
+
+## Run the check
+
+```sh
+bash docs/formal/sync-session/check.sh
+```
+
+It runs nine configs through `scripts/tlc.sh`, which pins TLC 1.7.4 by hash and finds Java 21. The first run downloads the jar. The whole check takes about 25 seconds. It prints one line per config, which ends with what that config stands for, and exits 0 only when every line says `ok`:
+
+```
+ok       SyncSession.cfg          expected DeviceHoldsOnlyTheSignedInAccount  got DeviceHoldsOnlyTheSignedInAccount    100984 states   1s  (the code today: findings 1 to 4)
+ok       SyncSessionFixed.cfg     expected pass                               got pass                                 436860 states   5s  (the code with all four gaps fixed)
+ok       GapPushQueue.cfg         expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             168433 states   2s  (finding 1: push reads the queue unfenced)
+ok       GapSignOutRead.cfg       expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             234340 states   3s  (finding 2: sign-out reads sync_config early)
+ok       GapSettingsWrite.cfg     expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             493364 states   5s  (finding 3: Settings writes a stale sync_config)
+ok       GapPopulate.cfg          expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             403709 states   5s  (finding 4: populate runs after sign-in commits)
+ok       BrokenPullFence.cfg      expected DeviceHoldsOnlyTheSignedInAccount  got DeviceHoldsOnlyTheSignedInAccount      3794 states   0s  (broken: pull without the fence)
+ok       BrokenSignInGuard.cfg    expected DeviceHoldsOnlyTheSignedInAccount  got DeviceHoldsOnlyTheSignedInAccount      1537 states   1s  (broken: sign-in without the owner check)
+ok       BrokenPushPrincipal.cfg  expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount              68372 states   2s  (broken: push without the principal check)
+check.sh: every config matched
+```
+
+- `SyncSession.cfg` is the code as it is. It must break, and only through the four findings above. TLC stops at the first broken rule, so this line names one.
+- `SyncSessionFixed.cfg` must hold. A change that breaks a rule here is the signal this skill exists for.
+- Each `Gap*.cfg` turns on one finding and checks the server rule. Each must still break it.
+- Each `Broken*.cfg` starts from the fixed model and sets `Broken`, which removes one guard the code has today. The three are the pull's session check, the sign-in owner check, and the push principal check. Each must break the rule its line names, so each rule has been seen to fail.
+
+A `MISMATCH` line keeps TLC's output and prints the folder it's in. Rerun one config by hand with `bash scripts/tlc.sh docs/formal/sync-session/SyncSession.tla docs/formal/sync-session/<config>`.
+
+Read every result, pass or fail, with the pstack `/statechart` skill. Give it `view.mjs` as the view, and send its output to a scratch folder outside the repo. On a break it tells TLC's shortest path in plain words, such as "the push sends A's task to B's account". The model has far more than 500 states, so the chart only ever draws bug paths. After the first break, `/statechart` stops each run at 100,000 states, so with both rules in the config it can leave the second one unchecked. To read the server rule's path, give it a scratch copy of the config that lists only `TypeOK` and `NoRecordInAnotherAccount`.
+
+## When a change touches this code
+
+1. **See what changed.** Diff the covered code from the sync commit (below) to your working tree: `git diff dd32e08c -- lib/sync lib/reset-everything.ts lib/reset-local-data.ts lib/tasks/crud/helpers.ts components/sync/use-sync-auth-dialog.ts scripts/setup-pocketbase-collections.sh`. Then look for new writers: `rg -n "sync_config|syncQueue\.|enqueue\(|db\.tasks\.(put|add|bulkPut|bulkAdd)|authStore\.save" lib components app`, and compare each hit with the coverage record.
+2. **Run the check before you touch the model.** A pass here only says the old description still holds.
+3. **Map each change to a model action** through the coverage record. A change has no effect, or the model no longer describes the code, or the promise changed on purpose, or the promise may be broken. Decide from the model, not from the commit message.
+4. **Update `SyncSession.tla` from the code**, as "Update the model" says. Write the update before you rerun, and don't shape it by what passes.
+5. **Rerun the check and read the result with `/statechart`.** If a config stops matching, replay the path (next section). If everything matches, break the new code's guard once in the model, the way `Broken` does, and confirm a rule fails. A model that can't fail proves nothing.
+6. **Move the sync commit** only when every change is accounted for and the check matches.
+
+## Real bug or modeling error
+
+Replay the path against the real code before you call it either. Write a scratch Vitest file in `tests/data/sync/`, with one step per model action. Run it with `bun run test tests/data/sync/<file>.test.ts`, then `mv` it to a scratch folder outside the repo. Never commit a replay. Agents can't run `rm` here.
+
+Keep the SDK real and stub only `fetch` (`vi.stubGlobal('fetch', ...)`), with a fake server that applies the tasks rules from `scripts/setup-pocketbase-collections.sh`. List returns only `owner = auth` records, create needs `body.owner === auth`, and update and delete need the stored owner to match. Make tokens JWT-shaped with an `exp`, and read the caller from the raw `Authorization` header. Start from a `sync_config` row with `pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION`, as `pocketBaseSyncConfig` in `lib/db-migrations.ts` writes it. Without it, `fullSync` owes a backfill and pulls first. Build rows with `serverRow` from `tests/data/sync/support/fake-pocketbase.ts`.
+
+| Model action | What the replay does |
+|---|---|
+| `YouSignIn(t, x)` | `getPocketBase().authStore.save(token, { id: x })`, the save `authWithOAuth2Code` makes |
+| `SignInSaves`, `PopulateReads`, `PopulateWrites` | `await persistSyncConfig(authState)` from `components/sync/use-sync-auth-dialog.ts` |
+| `YouSignOut(t, FALSE)` and its three steps | `await disableSync()` |
+| `YouSignOut(t, TRUE)` through `ResetReloads` | `await resetEverything()` (the replay can't reload) |
+| `YouChangeAutoSync`, `AutoSyncSaves` | `await updateAutoSyncConfig(true, 5)` |
+| `YouEditTask`, `EditSaves` | `await updateTask(id, { title })` |
+| `EventArrives(x, r)`, `EventApplies` | capture `getCurrentUserId()`, then `await applyRemoteChange('create', record, thatUser)`, as `handleRealtimeEvent` does |
+| `SyncStarts` through `PullApplies` | `fullSync('auto')`, not awaited until its last step |
+| `RefreshSent`, `RefreshLands` | a token that expires within seven days, and a fake `auth-refresh` that waits on a promise you resolve: an answer saves the token, a thrown `TypeError` saves nothing |
+
+To land a step between a read and its write, wrap the next call of a Dexie table method. A `vi.spyOn(db.syncMetadata, 'get').mockImplementationOnce(...)` that awaits the real read, then a gate, holds `disableSync` or `updateSyncConfig` after its read. The same wrap on `db.tasks.toArray` holds `populateFromExistingTasks`. Install the spy right before the call, because the first call after it is the one it holds. For `"other"` tab steps that must not touch the sync tab's client, call `vi.resetModules()` and import a second copy of the modules. That gives the other tab its own `pbInstance` and Dexie connection over the same `localStorage` and IndexedDB. Call its `getPocketBase()` once first, as the app does on load, or its `clearPocketBase` has nothing to clear.
+
+- **Every step happens and the harm shows:** it's a bug. Find the commit that brought it in with `git log -L` on the changed function. Report the path in the code's words and the harm in one sentence. Don't weaken a rule or the model to make the check pass, and don't change product code unless the user asks.
+- **A step can't happen in the code:** the model is wrong. Fix the action so it matches the code, say what was wrong, and rerun. On 2026-11-08 a replay first failed only because its `sync_config` lacked `pullCursorVersion`. That showed the model had left out the backfill order, so `pullFirst` joined it.
+
+## Update the model
+
+- **The code changed shape.** Edit the action the coverage record names. A Dexie transaction is one action only when the code really runs it in one. An await between a read and a write, including a network call, is two actions.
+- **A new sync write path.** Any new code that writes task rows, queue rows, or `sync_config` for a sync is a new action. Fenced inside its transaction, it behaves like `PullApplies`. Unfenced, it's a gap, so add it to `AllGaps` with a `Gap*.cfg` and a `check.sh` line, and say how its fix would read the session.
+- **A finding gets fixed.** Rewrite the action to describe the code that shipped, delete that gap from `AllGaps`, `SyncSession.cfg`, and the `IF ... \in Gaps` branches, and delete its `Gap*.cfg` and `check.sh` line. Then check which rule `SyncSession.cfg` breaks first, or whether it passes. With every gap fixed, `SyncSession.cfg` must pass, and `SyncSessionFixed.cfg` can go.
+- **A new guard protects a rule.** Add a `BrokenGuards` value that undoes it, a `Broken*.cfg`, and a line in `check.sh`'s `expectations`.
+- **The promise changed on purpose.** Change a rule only with evidence: a spec, an ADR, an owner decision, or the tests and commit message of the change. Put the old wording, the new wording, and the evidence in the commit message and in the rule's comment.
+- **The chart changed.** If a new action or variable needs words on the chart, update `state()` and `step()` in `view.mjs`.
+- Keep the model update in its own commit, apart from any product fix.
+
+## Coverage record
+
+| Model part | File | Function |
+|---|---|---|
+| `SessionIs` | `lib/sync/sync-session.ts` | `assertSyncSessionCurrent`, `getSessionOwner` |
+| `LocalOwner` | `components/sync/use-sync-auth-dialog.ts`, `lib/sync/config/disable.ts` | `persistSyncConfig`, `resetSyncConfigState`: `localTaskOwnerUserId ?? userId ?? null` |
+| `SyncStarts`, `pullFirst`, `FirstPass` | `lib/sync/pb-sync-engine.ts` | `fullSync`, `resolvePullCursor`, `isBackfillOwed`, `runSyncPasses` |
+| | `lib/sync/sync-coordinator.ts` | `requestSync`: one fullSync at a time per tab, so one sync process per tab |
+| `TokenFresh`, `RefreshSent`, `RefreshLands`, `rt` | `lib/sync/pb-auth.ts` | `ensureValidAuth`, `refreshAuthOutcome` (`AUTH_REFRESH_THRESHOLD_SECONDS`) |
+| | `lib/sync/pocketbase-client.ts` | `getPocketBase`, `clearPocketBase`: the late save lands in a throwaway only in the tab that cleared |
+| | `pocketbase` SDK 0.28.1 | `RecordService.authResponse` saves unconditionally; `LocalAuthStore` reads the shared `pocketbase_auth` key on every access |
+| `PushStarts` | `lib/sync/pb-push.ts`, `lib/sync/queue.ts` | `pushLocalChanges`, `resolvePushPrincipal`, `getPending` |
+| `PushSends`, `PushEnds` | `lib/sync/pb-push.ts`, `lib/sync/pb-sync-helpers.ts` | `pushSingleItem`, `upsertRemoteTask` (`owner` from `taskRecordToPocketBase`), `fetchRemoteTaskEntry`; the loop's 429 `break` |
+| | `scripts/setup-pocketbase-collections.sh` | tasks `createRule`, `updateRule`, `deleteRule`: `owner = @request.auth.id` |
+| `PullFetches` | `lib/sync/pb-pull.ts`, `lib/sync/pb-sync-helpers.ts` | `pullRemoteChanges` (`getCurrentUserId`), `fetchBoundedRemoteTasks`; tasks `listRule` |
+| `PullApplies` | `lib/sync/pb-pull.ts` | `applyRemoteRecords` |
+| `EventArrives`, `EventApplies` | `lib/sync/pb-realtime.ts`, `lib/sync/pb-sync-engine.ts`, `lib/sync/sync-status-store.ts` | `handleRealtimeEvent`, `applyRemoteChange`; the store subscribes while sync is on |
+| `YouSignIn` | `lib/sync/pb-auth.ts` | `loginWithProvider`, `runCodeFlow` (`authWithOAuth2Code`) |
+| `SignInSaves` | `components/sync/use-sync-auth-dialog.ts` | `handleOAuthSuccess` (calls `clearPocketBase` on refusal), `persistSyncConfig`, `buildSyncConfig`, `loadSyncStatus` (reads the row only when the dialog opens) |
+| `PopulateReads`, `PopulateWrites` | `lib/sync/queue.ts`, `lib/sync/config/enable.ts` | `populateFromExistingTasks`, `enableSync` |
+| `YouSignOut`, `SignOutSaves`, `SignOutClearsToken` | `lib/sync/config/disable.ts`, `lib/sync/sign-out-everywhere.ts`, `components/sync/use-logout.ts` | `disableSync`, `resetSyncConfigState`, `signOutEverywhere`, `performLogout` |
+| `ResetWipes`, `ResetReloads` | `lib/reset-everything.ts`, `lib/reset-local-data.ts` | `resetEverything`, `clearLocalStorage`, `reloadAfterReset`, `wipeLocalData`, `clearTables`, `buildPreservedSyncMetadata` |
+| `YouChangeAutoSync`, `AutoSyncSaves` | `lib/sync/config/get-set.ts`, `components/settings/sync-settings.tsx` | `updateAutoSyncConfig`, `updateSyncConfig` |
+| `YouEditTask`, `EditSaves` | `lib/tasks/crud/helpers.ts`, `lib/tasks/crud/update.ts` | `runTaskSyncTransaction`, `updateTask`; every writer that enqueues through it behaves the same |
+| `Broken` values | `pb-pull.ts`, `use-sync-auth-dialog.ts`, `pb-push.ts` | `pull-skips-fence`, `sign-in-skips-owner-check`, and `push-skips-principal-check` each undo one guard above |
+
+These touch the same state, and the model leaves them out on purpose. `updateSyncCursor` and `writeSyncOutcome` (with `RetryManager` inside it) are fenced and keep `enabled`, `userId`, and `localTaskOwnerUserId`. `reconcileDeletedTasks` and `applyRemoteDeletion` only delete rows, and `resurrectOnSight` only restores rows already in Trash. `deleteRemoteAccountAndTasks` only deletes, through the token's own account. `lib/reset-lock.ts` locks the UI, and no sync path reads it. The archive, Trash, import, and MCP writers enqueue like `EditSaves`.
+
+## Sync commit
+
+**`dd32e08c`** (`chore(release): v14.8.0 (#712)`, on `main`), confirmed 2026-11-08. The model was written against it, and the branch that added it changed no covered code. Every finding above was replayed at this commit.
+
+Move this commit forward only after you've read every change to covered code since it, updated the model where needed, and seen the check match. If the check is blocked, leave the commit where it is and say so. Record a commit on `main`, because a squash merge drops branch commits.
+
+## Bounds and what's left out
+
+- **Two accounts, A and B, each with one task on the server.** A row, queue row, or record is named by the account its content came from. The device starts signed out, with no tasks.
+- **One fullSync, in the sync tab.** The other tab's own sync isn't modeled. Its writes are the same fenced actions, and realtime stands in for its pull. At most one sign-in, one sign-out or reset, one Settings change, one edit, and one realtime event are in flight at once.
+- **The UI can start anything at any time.** A dialog or Settings page left open from an earlier session can offer sign-in, Sign out, or the auto-sync toggle after another tab changed the session. That over-approximates the UI, so each finding above says what its path needs in practice.
+- **The tasks API rules are as the setup script writes them.** This skill didn't read the production collection's rules.
+- **Only fullSync's own `authRefresh` can land late.** `confirmSessionIdentity`, the dialog's `validateTokenAndRefresh`, and `deleteRemoteAccountAndTasks` send one too, with the same hazard. A failed refresh saves nothing. Expiry, revocation, and the 401 paths aren't modeled.
+- **Push rows are never dequeued in the model**, so a row can send again, and a pull fetches the account in one page.
+- **PocketBase's own filter on a realtime subscription is left out**, so any account's record can arrive. `handleRealtimeEvent` and the session check still apply.
+- **Not modeled:** deletes, Trash, archive, and their queue rows; the cursor fields and the backfill's merge rules; account deletion; the OAuth popup and PKCE handshake; iOS, Android, and the MCP server.
+
+## Related skills
+
+- `/statechart` (pstack): read every result of the check.
+- `/maintain-formal-verification-skill` (pstack): bring this model back in line after changes that skipped this skill.
