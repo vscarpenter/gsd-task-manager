@@ -63,6 +63,13 @@ export const step = (action, from, to) => {
       return KEEP_MOVES.has(`${a}|${action}`) ? "the due date moves later, here or on another device" : null;
     case "OtherDeviceMovesDueDate":
       return KEEP_MOVES.has(`${a}|${action}`) ? "the due date moves later, here or on another device" : null;
+    // These change only the stored offset, so they stay inside one label and draw no arrow.
+    case "YouSaveTask":
+      return "you edit the task";
+    case "PushStoresOffset":
+      return "sync stores the reminder offset";
+    case "OtherDeviceEditsTask":
+      return "another device edits the task";
     default:
       return action;
   }
