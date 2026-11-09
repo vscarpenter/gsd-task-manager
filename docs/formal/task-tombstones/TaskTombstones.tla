@@ -123,8 +123,8 @@ Enqueue(op, pay) ==
 
 \* The gap between a writer's getSyncConfig() and its transaction is a few
 \* microtasks, so only a sign-in or sign-out (from another tab) lands in it. Any
-\* other step there acts as if it came before the read: the transaction re-reads
-\* every row except the config.
+\* other step there has the same effect as one before the read, because the
+\* transaction re-reads every row except the config.
 Quiet == pend.act = "none"
 
 ---------------------------------------------------------------------------
@@ -167,7 +167,7 @@ CanStart(a) ==
     [] a = "restoreArchive" -> arc.has
     [] OTHER -> FALSE
 
-\* Both Undo toasts last 5 seconds (TOAST_DURATION.LONG). Here a toast's Undo
+\* An Undo toast lasts seconds (TOAST_DURATION.LONG is 5). Here a toast's Undo
 \* survives every background step and closes at your next explicit action.
 YouStart(a) ==
   /\ Quiet /\ CanStart(a)
