@@ -135,6 +135,8 @@ These touch the same state, and the model leaves them out on purpose. `updateSyn
 
 **`dd32e08c`** (`chore(release): v14.8.0 (#712)`, on `main`), confirmed 2026-11-08. The model was written against it, and the branch that added it changed no covered code. Every finding above was replayed at this commit.
 
+The same day, a dry run of this skill made `resetSyncConfigState` write `localTaskOwnerUserId: null`. The check still passed until `SignOutSaves` described that code. Then `SyncSessionFixed.cfg` broke `DeviceHoldsOnlyTheSignedInAccount`, and `BrokenPushPrincipal.cfg` broke it before its own rule. The replay showed B's sync pushing A's task into B's account. On the real code, the same replay stops at "Local tasks belong to a different sync account".
+
 Move this commit forward only after you've read every change to covered code since it, updated the model where needed, and seen the check match. If the check is blocked, leave the commit where it is and say so. Record a commit on `main`, because a squash merge drops branch commits.
 
 ## Bounds and what's left out
