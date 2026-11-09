@@ -60,6 +60,10 @@ sync.md
 !.claude/skills/verify-frontend-change/
 !.claude/skills/verify-gsd/
 .claude/skills/verify-gsd/journeys/adhoc/
+!.claude/skills/verify-reminders/
+!.claude/skills/verify-sync-convergence/
+!.claude/skills/verify-sync-session/
+!.claude/skills/verify-task-tombstones/
 !.claude/skills/claude-code-primitives/
 !.claude/skills/cleaning-up-merged-branches/
 
