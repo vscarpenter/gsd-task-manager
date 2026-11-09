@@ -42,7 +42,7 @@ All 6 configs match.
 
 `RemindersFixed.cfg` is the code as it is, and it must hold. Every other config must break the rule its line names. The two `Reminders*` configs are the code before #669. Each `Break*` config sets the `Break` constant in `RemindersFixed.tla`, which undoes one guard in the code, so each rule has been seen to fail. A `FAIL` line prints the `scripts/tlc.sh` command that reproduces it.
 
-Read every result, pass or fail, with the pstack `/statechart` skill. On a break, it tells TLC's shortest path as steps in plain words. On a pass, it draws how the task moves between states. Give it `view-fixed.mjs` as the view for `RemindersFixed.tla`, and send its output to a scratch folder outside the repo.
+Read every result, pass or fail, with the pstack `/statechart` skill. On a break, it tells TLC's shortest path as steps in plain words. On a pass, it draws how the task moves between states. Give it `view-fixed.mjs` as the view for `RemindersFixed.tla`, and send its output to a scratch folder outside the repo. The view hides steps to keep the passing chart readable, so on a break `/statechart` can refuse because a hidden step is on the bug path. Rerun it without the view to read the paths, then label that step in `view-fixed.mjs` if the chart should keep it.
 
 ## When a change touches this code
 
@@ -74,6 +74,7 @@ Run it with `bun run test tests/data/<file>.test.ts`, then `mv` it to a scratch 
 ## Update the model for an intended change
 
 - **The code changed shape.** Edit the action the coverage record names. One indivisible step in the code is one action in the model. A step that awaits between a read and a write is two steps. Add a variable only for stored state, or as a ghost that records what you've seen.
+- **Snooze states are relative to the current reminder time.** `isReminderDue` compares the snooze end with the fire time each time it runs (`fire < planned.fire`). So a step that moves the reminder later and keeps `snoozedUntil` turns an ended snooze into `"endedEarly"`, not `"endedOpen"`. Missing this produces a false early reminder.
 - **A new writer reaches the reminder fields.** Add an action for it, and a row in the coverage record.
 - **A new guard protects a rule.** Add a `Break` value that undoes it, a `Break*.cfg` that checks only that rule, and a line in `check.sh`'s `checks` list.
 - **The promise changed on purpose.** Change the rule only with evidence: a spec, an ADR, an owner decision, or the tests and commit message of the change. Put the old wording, the new wording, and the evidence in the commit message and in the rule's comment.
@@ -104,14 +105,14 @@ These write the same fields, and the model leaves them out on purpose. `createTa
 
 ## Sync commit
 
-**`dd32e08c`** (`chore(release): v14.8.0 (#712)`, on `main`), confirmed 2026-11-08. The model was first written at `ddde6b8c` (#670), right after the fix in `7d2af1c5` (#669). The 2026-11-08 pass read #683, #690, #696, #697, #703, and #708. Only #690 (D-10) changed what the model describes. Every write now stores the offset as a number, so `YouSaveTask`, `PushStoresOffset`, and `OtherDeviceEditsTask` joined the model.
+**`dd32e08c`** (`chore(release): v14.8.0 (#712)`, on `main`), confirmed 2026-11-08. The model was first written at `ddde6b8c` (#670), right after the fix in `7d2af1c5` (#669). The 2026-11-08 pass read #683, #690, #696, #697, #703, and #708. Only #690 (D-10) changed what the model describes. Every write now stores the offset as a number, so `YouSaveTask`, `PushStoresOffset`, and `OtherDeviceEditsTask` joined the model. The same day, a dry run of this skill undid the due-date check in `localReminderState`. Once the model described that code, `RemindersFixed.cfg` broke `DueReminderStillOwed`, and a replay showed the lost reminder in the real code.
 
 Move this commit forward only after you've read every change to covered code since it, updated the model where needed, and seen the check match. If the check is blocked, leave the commit where it is and say so. Record a commit on `main`, because a squash merge drops branch commits.
 
 ## Bounds and what's left out
 
 - **One task, one web device, plus "another device."** Time has three values: before the reminder time, the hour after it, and later. A due date or offset only moves later, and the device's default reminder never changes.
-- **The checker's read, show, and mark are one step.** The code awaits the settings read, the service worker, and `showNotification` in between. A snooze or completion in that gap still shows that reminder. Since #690, a write that stores a legacy null offset in that gap, from `updateTask` or `settleRowOffset`, makes `isSameReminder` skip the mark, so the reminder shows again a minute later. A replay on 2026-11-08 showed this against the real code; the model can't see it.
+- **The checker's read, show, and mark are one step.** The code awaits the settings read, the service worker, and `showNotification` in between. A snooze or completion in that gap still shows that reminder. Since #690, a write that stores a legacy null offset in that gap, from `updateTask` or `settleRowOffset`, makes `isSameReminder` skip the mark, so the reminder shows again a minute later. A replay of the `updateTask` case on 2026-11-08 showed this in the real code, and `settleRowOffset` writes the same field. The model can't see either.
 - **The offset's value isn't modeled.** A pull that changes only `notify_before` keeps the sent flag on purpose: a server `0` can still be an old null, and D-10 left the pull unchanged (`tasks/spec-notify-before.md` section 3). `OtherDeviceEditsTask` assumes the server's offset fires at the same time as this device's.
 - **The checker runs every minute while the app is open.** Since #697, `checkSweepReminder` reads `localStorage` before the task loop. If that read throws, no task reminder shows that minute.
 - **Not modeled:** the per-task reminder switch, the Settings switch, quiet hours (folded into the fire time), completion, Saved, archive, Trash, two open tabs showing the same reminder, and the weekly sweep reminder.
