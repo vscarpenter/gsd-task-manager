@@ -1,3 +1,19 @@
+# Formal verification skills and statecharts (2026-11-08)
+
+Branch: `chore/formal-verification-skills` off `main` (`dd32e08c`). Standard tier: verification files, project skills, and docs only, with no product code and no public contract. Not pushed. Page: https://claude.ai/artifact/7s4VdzPxDvBiR6WE6nZ6tn (private).
+
+## Resuming From Here
+
+- [x] `c539af3f` `scripts/tlc.sh`: TLC 1.7.4, sha256-pinned, cached in `~/.cache/gsd-tlc`, exit status passed through.
+- [x] Four verify skills, each with one `check.sh` and a sync commit of `dd32e08c`: `verify-sync-convergence` (11 configs, 80 s), `verify-task-tombstones` (14 configs, 75 s), `verify-sync-session` (9 configs, 25 s), `verify-reminders` (6 configs, 5 s; the model now covers #690). Each was proven on a scratch break to real code, then reverted.
+- [x] `docs/diagrams/task-lifecycle-model/`: user-flow statecharts of one task, plain and repeating.
+- [x] Verify: every `check.sh` matches on the merged branch; unit 4,798 with coverage; typecheck, lint, shape, knip.
+- **Findings, none fixed (owner decides):** 18, every one replayed against the real code. The page ranks them. Top five: an offline edit never reaches the other device (shared pull cursor); a restored task is lost everywhere after one failed delete push (`isStaleDelete`); Undo after a delete fails whenever you're signed in (plain-arrow Dexie scope in `runTaskSyncTransaction`, since #701, confirmed in Chrome); a late token refresh uploads one account's task into another; a retried edit re-creates a deleted task on the server.
+- **Owner decisions parked:** whether the two repeating-task behaviors are bugs (unchecking leaves two open copies; Undo puts a copy in Trash); `.claude/rules/archive-tombstone.md` rule 4 contradicts rule 1 for replace-mode import.
+- **Next:** owner reviews the page, pushes, and opens the PR; then pick fixes. A fix to a finding flips its config from "breaks" to "holds", so update that line in the skill's `check.sh` in the same change.
+- **Cleanup waiting on the owner:** four agent worktrees under `.claude/worktrees/agent-*` and their `worktree-agent-*` branches. Their commits are cherry-picked here.
+- **Assumptions:** the four subsystems were picked from the code by harm and test reach, because the request didn't name them. OAuth state binding was left out, since its check is one comparison.
+
 # What's New (2026-11-05)
 
 Branch: `feat/whats-new` off `main` (`ddde6b8`). Non-trivial tier: two new cross-platform contracts. Spec `tasks/spec-whats-new.md`, approved by the owner on 2026-11-05. Parity: row G8, decision D-15, roadmap phase 6, and `parity/whats-new.md` in the GSD Project.
