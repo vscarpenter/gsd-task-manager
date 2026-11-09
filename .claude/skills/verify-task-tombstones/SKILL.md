@@ -65,7 +65,9 @@ ok   Broken-reconcileSkipsQueue   expected NoLoss             got NoLoss        
 TLC output: /var/folders/.../task-tombstones.XXXXXX
 ```
 
-`TaskTombstones.cfg` is the code as it is. TLC stops at the first rule that breaks, which is `OneTable`. `Fixed.cfg` must hold. Each `Broken-*.cfg` sets the `Variant` constant on top of every fix, removing one guard the code has, so each rule has been seen to fail. `NewerEditWins` holds on the code as it is. The `Finding-*` configs show the other rules each failing on real paths.
+`TaskTombstones.cfg` is the code as it is. TLC stops at the first rule that breaks, which is `OneTable`. `Fixed.cfg` must hold. Each `Broken-*.cfg` sets the `Variant` constant on top of every fix, removing one guard the code has, so each rule has been seen to fail. `NewerEditWins` holds on the code as it is (3,020,211 states on 2026-11-08, checked alone). The `Finding-*` configs show the other rules each failing on real paths.
+
+A new break usually flips several lines at once, because TLC reports only the first rule it finds broken, and a short new path can come before a finding's longer one. Start from `Fixed`: it has every fix on, so its break is the new one.
 
 Read every result, pass or fail, with the pstack `/statechart` skill. On a break, it tells TLC's shortest path as steps in plain words. Give it `view.mjs` as the view, and send its output to a scratch folder outside the repo. The model is far over the chart's state budget, so the chart draws only the bug paths. For a passing config, it lists no path and draws no chart. Then name what you checked instead.
 
@@ -144,7 +146,7 @@ These write the same tables, and the model leaves them out on purpose. Migration
 
 ## Sync commit
 
-**`dd32e08c`** (`chore(release): v14.8.0 (#712)`, on `main`), confirmed 2026-11-08. The model was first written against it.
+**`dd32e08c`** (`chore(release): v14.8.0 (#712)`, on `main`), confirmed 2026-11-08. The model was first written against it. The same day, a dry run of this skill removed the `return` from the `protect` branch of `applyRemoteDeletion`. Once `RealtimeArrives` described that code, `Fixed.cfg` broke `NoLoss` in three steps: another device deletes the task, you edit it, and that delete arrives live. A replay showed the task gone from every side, and the check matched again once the change was dropped.
 
 Move this commit forward only after you've read every change to covered code since it, updated the model where needed, and seen the check match. If the check is blocked, leave the commit where it is and say so. Record a commit on `main`, because a squash merge drops branch commits.
 
