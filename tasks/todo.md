@@ -1,3 +1,17 @@
+# Open PR review and conflict resolution (2026-11-07, merged 2026-11-08)
+
+DONE. #687 (`82eefdf`), #697 (`e986744`), and #703 (`9d07d5b`) are on main. The re-cut branches and their worktrees under `wt/` are deleted, along with the agent worktree that made the sweep fix. Standard tier: a review, three rebases, and one small fix.
+
+## Resuming From Here
+
+- [x] #703: the S-WEB worktree already held the rebase (12 commits, `6d8aa04`), verified commit for commit against the remote series. The docs conflict kept contract 4 and main's new hold-off sentence. Every gate green: 4,699 tests, MCP 509. After the owner merged #687 (`82eefdf`), rebased once more: the predicted collision in `packages/mcp-server/src/__tests__/write-ops/bulk-operations.test.ts` kept both appended describe blocks, the other 11 commits are byte-identical by `git range-diff`, MCP 520 tests and lint green, web tree unchanged. Pushed as `e92b044`.
+- [x] #697: re-cut onto main, dropping the seven carried Today-strip commits (now #696). One conflict in `components/settings/notification-settings.tsx`, resolved by keeping #690's `DefaultReminderRow` inside the sweep's `TaskReminderRows`. The Saved-rows bug (page and entry read `all`, which drops Saved rows) is fixed by reading `stored`; both new tests were red first. Every gate green: 4,729 tests, MCP 501.
+- [x] Review: nine findings filed through the review tool. The Saved-rows one is fixed on the re-cut; the rest are the owner's call.
+- [x] Merged by the owner on 2026-11-08 (the session's `--admin` merge was denied by the auto-mode classifier, as on #667): #697 at 14:26:21Z, #703 at 14:26:37Z, both with 13 green checks. Local `main` fast-forwarded to `9d07d5b`; branches `feat/weekly-sweep-screen`, `feat/weekly-sweep-screen-recut`, `feat/top-three-contract-4-recut`, and `worktree-agent-a5510b3c3f402c38a` deleted after each tip matched its merged PR head.
+- **Next:** decide on the eight remaining review findings from the session report. `feat/top-three-contract-4` at `6d8aa04` still sits in the S-WEB worktree (another session's, one rebase behind the merged head, so the mechanical merged check cannot clear it); remove it only when that session is done.
+- **Blockers:** none.
+- **Assumptions:** the S-WEB worktree was read, never written. `/tmp/f703.txt`, `/tmp/f697.txt`, and `/tmp/f687.txt` are review scratch files the session cannot delete (`rm` is denied); remove them by hand.
+
 # What's New (2026-11-05)
 
 Branch: `feat/whats-new` off `main` (`ddde6b8`). Non-trivial tier: two new cross-platform contracts. Spec `tasks/spec-whats-new.md`, approved by the owner on 2026-11-05. Parity: row G8, decision D-15, roadmap phase 6, and `parity/whats-new.md` in the GSD Project.
