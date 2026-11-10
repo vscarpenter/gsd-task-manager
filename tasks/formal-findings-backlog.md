@@ -1,6 +1,6 @@
 # Fix backlog from the formal verification skills
 
-The four verify skills found these on web `main` at `dd32e08c` (v14.8.0) on 2026-11-08. Production serves 14.8.0, checked from `sw.js` on 2026-11-09, so every row is live. Each one was replayed in Vitest against the real code, and none is fixed. The rows use the parity backlog's format, so the Project session can paste them into `parity/backlog.md`.
+The four verify skills found these on web `main` at `dd32e08c` (v14.8.0) on 2026-11-08. Production serves 14.8.0, checked from `sw.js` on 2026-11-09, so every row is live. Each one was replayed in Vitest against the real code. `WEB-UNDO-SIGNED-IN` is fixed (see its row); the rest are open. The rows use the parity backlog's format, so the Project session can paste them into `parity/backlog.md`.
 
 P1 means a lost task, a lost edit, or a common action that fails, on a path people take every day. P2 means the same harm behind a less common setup (a failed push, two accounts, an import), or another account's data. P3 means a narrow timing window, an unusual clock, or an annoyance. Within a priority, rows are in the suggested fix order. A "(decision)" row needs Vinny's call before anyone fixes it.
 
@@ -9,6 +9,8 @@ Each row names the skill and config that show it. A fix flips that config's line
 ## P1
 
 ### `WEB-UNDO-SIGNED-IN` · P1 · Undo after a delete fails whenever you're signed in
+
+**Fixed 2026-11-10** on `claude/eloquent-mccarthy-p7ybod`: the scope in `runTaskSyncTransaction` is now `async`. `tests/data/tasks/restore-signed-in.test.ts` reproduces the failure under fake-indexeddb ("Transaction committed too early", red before the change, green after), so a Chrome probe is no longer the only evidence.
 
 `restoreTask` (`lib/tasks/crud/restore.ts:21`) throws Dexie's "Transaction committed too early" for a signed-in user. `runTaskSyncTransaction` (`lib/tasks/crud/helpers.ts:62`) passes a plain arrow as the transaction scope, so Dexie stops tracking the native awaits inside it. When `forgetForResurrect` returns early, the queue write runs in a transaction of its own. The task comes back here, but the toast says the Undo failed. Whether the restore still reaches the server wasn't checked. It started with #701 (`bf4ba13e`) and shipped in 14.8.0. A Chrome probe of the same writes, with the app's Dexie 4.4.6, failed 20 of 20 runs under a plain arrow and passed 20 of 20 under an `async` scope. The production app itself wasn't tried. Fix: make the scope `async`, with a red test under fake-indexeddb first. Evidence: `verify-task-tombstones` finding 7. It's outside the model, so no config flips.
 
