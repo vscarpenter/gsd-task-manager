@@ -436,3 +436,13 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **`toISOString().slice(0, 10)` is the UTC day, not today.** Due dates are local-midnight instants, so compare local days (`isOverdue`, `localDayOf`, `differenceInCalendarDays`). The suite now runs in UTC; a test that needs another zone sets `process.env.TZ` itself.
 - **Project hook paths are relative to the shell's directory.** A `cd packages/mcp-server` left the guards unreachable. Stay at the root and use absolute paths or `bun run --cwd`.
 - **knip runs without its export check**, so exports that only tests call build up unnoticed (LIB-36, SYNC-23, MCP-24 in the audit).
+
+## A refused token reads as a guest (2026-11-10, audit P1 item 2)
+
+- **An empty listing or a 404 is never proof on its own.** PocketBase drops a token it refuses and answers as it answers a guest: `tasks` lists as 200 with no items, every lookup 404s, and a create gets the createRule's 400. Only auth-refresh tells a refused session apart, with a 401. Before acting on an empty answer, ask it.
+- **The SDK's `authRefresh()` saves its answer; `pb.send` to the same route doesn't.** A saved answer can land after another tab signs in and put the old account's token back. A check that only needs the verdict should read it and drop it.
+- **`LocalAuthStore.token` re-reads localStorage on every access.** So "clear only if the shared key still holds the refused token" protects another tab's newer sign-in even before its storage event runs. A mutation probe that compared the in-memory token instead failed the cross-tab test.
+- **Never charge a queue row for the session's failure.** Rows retire at `MAX_RETRIES`, nothing re-arms them, and the next reconcile sends a retired row's task to Trash. A refused session stops the push and leaves every row as it was.
+- **On the web, only a 401 from auth-refresh is a refusal.** PocketBase's 403 there means another auth collection or a token that can't be refreshed, which OAuth tokens never are, so a 403 most likely comes from a proxy. Wiping the token for it signs the user out of a working session. `pb-sync-reviewer` caught this.
+- **`vi.spyOn(module, 'fn')` misses calls made inside that module.** The MCP conflict suite spied on `getPocketBase`, and the new `confirmUsersPrincipal` called the real one from inside `pocketbase-client.ts` and went to the network. Stub the new function too.
+- **A type probe that errors on its own config reports nothing useful.** Setting `types: ["vitest/globals"]` made tsc stop at TS2688 before checking a file, and a grep for the test files' names came back empty, which looked like a clean pass. Read the raw output once before trusting a filtered one.
