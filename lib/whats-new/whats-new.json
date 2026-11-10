@@ -239,6 +239,38 @@
     },
     {
       "platform": "apple",
+      "version": "4.0.0",
+      "date": "2026-11-10",
+      "notable": true,
+      "headline": "GSD on Apple Watch, your top three for today, and a weekly sweep.",
+      "new": [
+        "GSD has an Apple Watch app. Today and Do First open on your wrist, and a swipe completes a task.",
+        "Capture a task on the watch, then pick its quadrant.",
+        "Reminders on the watch have Complete and Snooze 1 hour buttons.",
+        "Widgets on the watch face show today's picks, Do First, or the next task due today. A Capture control opens a new task.",
+        "The watch gets your tasks straight from your iPhone, so it works with no account. When your iPhone is out of reach, the watch holds your changes until it can deliver them.",
+        "Today sits above the matrix. Pick up to three tasks from any quadrant, and put them in the order you plan to do them.",
+        "Choose Add to today from a task's menu, or Pick up to three for today to see suggestions. GSD suggests and never picks for you.",
+        "Nothing rolls over by itself. A pick from an earlier day comes back as an offer, so you can add it again.",
+        "Your picks show first in the Today's Focus widget and on Apple Watch. They sync to your other devices only when you're signed in.",
+        "The weekly sweep walks you through tasks that need a decision, one at a time. Each card says why it's there, such as Due date passed or No date yet.",
+        "Each card offers the actions that fit, such as Complete, New date, or Save for later. Skip changes nothing.",
+        "When a sweep is due, a Weekly sweep line shows above the matrix. You can start one from Settings anytime.",
+        "Settings can remind you to sweep each week on the day and time you pick."
+      ],
+      "improved": [
+        "Background refresh updates your reminders, so a change from another device doesn't wait until you open GSD.",
+        "Returning a Saved task to the matrix now offers All day."
+      ],
+      "fixed": [
+        "When another device moves a task's due date, this device reminds you at the new time.",
+        "Snoozing a task before its reminder time no longer drops the reminder.",
+        "A task you delete while signed out no longer disappears from your other devices after you sign in. If your account still has it, it comes back here.",
+        "The app icon badge no longer resets to zero when GSD opens."
+      ]
+    },
+    {
+      "platform": "apple",
       "version": "3.9.0",
       "date": "2026-11-06",
       "notable": true,
