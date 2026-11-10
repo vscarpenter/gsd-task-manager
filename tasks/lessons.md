@@ -436,3 +436,10 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **`toISOString().slice(0, 10)` is the UTC day, not today.** Due dates are local-midnight instants, so compare local days (`isOverdue`, `localDayOf`, `differenceInCalendarDays`). The suite now runs in UTC; a test that needs another zone sets `process.env.TZ` itself.
 - **Project hook paths are relative to the shell's directory.** A `cd packages/mcp-server` left the guards unreachable. Stay at the root and use absolute paths or `bun run --cwd`.
 - **knip runs without its export check**, so exports that only tests call build up unnoticed (LIB-36, SYNC-23, MCP-24 in the audit).
+
+## Docker publish and the vendored display font (2026-11-10)
+
+- **`next/font/google` can fail with the network up.** Turbopack 16.4.1 failed a local build with the CI error (`next/font/google queries have exactly one entry`, nine times) while `curl` reached Google Fonts, and the same build passed on retry. Vendoring the files removed the fetch, not just the outage.
+- **`next/font/local` takes one `unicode-range` per call.** Google ships a font as subset files, each with its own range. One call listing all three files without ranges let the latin file paint accented letters it lacks as a base letter plus a combining mark: 128 letters per weight changed. One call per file, joined by a shared `font-family` declaration, matched the old build pixel for pixel. next/font names a local family after its const, so the join breaks if that const is renamed; `tests/e2e/display-serif.spec.ts` catches it.
+- **`COPY --from=<image>` pulls the image for the target platform,** even inside a `FROM --platform=$BUILDPLATFORM` stage. Pin a build-platform tool with its own named stage. On the arm64 leg the implicit copy put an arm64 Bun in the amd64 builder (exit 126 without QEMU).
+- **An offline build check needs loopback.** `unshare -n` starts with `lo` down, and `next build` hung on its own workers' localhost traffic instead of failing. Bring `lo` up first (`ip` is not installed here; a five-line Python `SIOCSIFFLAGS` call works).
