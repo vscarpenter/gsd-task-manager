@@ -27,6 +27,7 @@ function inFlight(v) {
   if (["auth", "refreshing", "push"].includes(v.sp)) work.push(`a sync for ${v.owner} starting`);
   if (v.sp === "pull" && v.owner !== NONE) work.push(`a sync for ${v.owner} starting`);
   if (v.sp === "pushing") work.push(`a sync sending as ${v.pushOwner}`);
+  if (v.sp === "checking") work.push(`a sync for ${v.pushOwner} checking its session`);
   if (v.sp === "applying") work.push(`a sync saving ${v.pullOwner}'s tasks`);
   if (v.si === "persist") work.push(`${v.siWho}'s sign-in saving`);
   if (v.si === "popread" || v.si === "popwrite") work.push("sign-in queuing local tasks");
@@ -53,11 +54,19 @@ export const step = (action, from, to) => {
     case "SyncStarts":
       return `a sync for ${to.owner} starts`;
     case "TokenFresh":
-      return "the sync checks the token";
+      return to.sp === "idle" ? "the sync stops: no token, so it asks you to sign in" : "the sync checks the token";
     case "RefreshSent":
       return "the sync refreshes the token";
     case "RefreshLands":
+      if (to.sp === "idle") {
+        return to.tok !== from.tok ? "the server refuses the token, so the sync forgets it and asks you to sign in" : "the token refresh fails and the sync asks you to sign in";
+      }
       return to.tok !== from.tok ? `the token refresh lands and saves ${to.tok}'s token` : "the token refresh lands";
+    case "PushChecks":
+      return "the push checks its session before trusting a lookup that found nothing";
+    case "CheckLands":
+      if (to.sp === "pushing") return "the session check lets the push go on";
+      return to.tok !== from.tok ? "the server refuses the token, so the push forgets it and asks you to sign in" : "the session check stops the push";
     case "PushStarts":
       if (to.sp === "pushing") return `the push reads the queue as ${to.pushOwner}`;
       return to.sp === "idle" ? "the push stops: no session" : "the push finds no token";
