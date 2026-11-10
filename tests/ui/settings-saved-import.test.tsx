@@ -29,7 +29,7 @@ describe("Saved records in Settings", () => {
     expect(screen.getByText("Saved:")).toHaveTextContent("Saved: 1");
     fireEvent.click(screen.getByText("Reset everything"));
     expect(await screen.findByText(/1 task \(0 active, 0 completed, 1 saved\)/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Cancel", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     const createElement = document.createElement.bind(document);
     let fileInput: HTMLInputElement | undefined;

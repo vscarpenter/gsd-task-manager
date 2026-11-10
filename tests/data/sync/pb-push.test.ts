@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 vi.mock('@/lib/sync/pocketbase-client', () => ({
   getPocketBase: vi.fn(),
@@ -35,21 +36,16 @@ import { StaleSyncSessionError } from '@/lib/sync/sync-session';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
 
 function makeTask(id: string, updatedAt: string): TaskRecord {
-  return {
+  return createMockTask({
     id,
     title: 'T',
     description: '',
     urgent: false,
     important: false,
     quadrant: 'not-urgent-not-important',
-    completed: false,
     createdAt: updatedAt,
     updatedAt,
-    recurrence: 'none',
-    tags: [],
-    subtasks: [],
-    dependencies: [],
-  };
+  });
 }
 
 describe('pushLocalChanges LWW guard', () => {
@@ -681,12 +677,12 @@ describe('pushLocalChanges notify_before drain (D-10)', () => {
     await db.tasks.put({ ...payload, notifyBefore: rowOffset });
     await getSyncQueue().enqueue('create', 't1', payload);
     fetchRemoteTaskEntryMock.mockResolvedValue({ entry: null, fetchSucceeded: true });
-    const createSpy = vi.fn(async () => ({ id: 'rec-1' }));
+    const createSpy = vi.fn(async (_record: Record<string, unknown>) => ({ id: 'rec-1' }));
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({ create: createSpy, update: vi.fn(), delete: vi.fn() }),
     });
     await pushLocalChanges('user-1');
-    return { sent: createSpy.mock.calls[0]?.[0] as { notify_before: unknown }, db };
+    return { sent: createSpy.mock.calls[0]?.[0], db };
   }
 
   it('a queued null payload pushes the row number when the row has one', async () => {
@@ -730,7 +726,7 @@ describe('pushLocalChanges notify_before drain races (D-10)', () => {
   }
 
   function mockCreate(onCreate?: () => Promise<void>) {
-    const createSpy = vi.fn(async () => {
+    const createSpy = vi.fn(async (_record: Record<string, unknown>) => {
       await onCreate?.();
       return { id: 'rec-1' };
     });

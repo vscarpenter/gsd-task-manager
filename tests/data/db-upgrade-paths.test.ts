@@ -554,11 +554,11 @@ describe('db upgrade callbacks', () => {
     // vectorClock stripped from both tables.
     const task = await db.tasks.get('vc-task');
     expect(task).toBeDefined();
-    expect((task as Record<string, unknown>).vectorClock).toBeUndefined();
+    expect(Reflect.get(task ?? {}, 'vectorClock')).toBeUndefined();
 
     const archived = await db.archivedTasks.get('archived-vc');
     expect(archived).toBeDefined();
-    expect((archived as Record<string, unknown>).vectorClock).toBeUndefined();
+    expect(Reflect.get(archived ?? {}, 'vectorClock')).toBeUndefined();
 
     // syncQueue cleared.
     const queueSize = await db.syncQueue.count();

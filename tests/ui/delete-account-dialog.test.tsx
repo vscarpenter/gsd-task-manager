@@ -79,6 +79,7 @@ describe("DeleteAccountDialog", () => {
       clearedTables: ["tasks"],
       clearedLocalStorage: [],
       errors: ["IndexedDB: deletedTasks could not be cleared"],
+      failedSteps: ["local-data"],
     });
     render(<DeleteAccountDialog {...baseProps} />);
 

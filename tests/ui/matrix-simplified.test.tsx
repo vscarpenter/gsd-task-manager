@@ -51,12 +51,15 @@ function makeTask(overrides: Partial<TaskRecord> = {}): TaskRecord {
   };
 }
 
+// The first three defaults live in vi.fn(impl), so mockReset() in beforeEach
+// restores them. Unlike the real createTask, the default resolves undefined,
+// so a capture reveals no card unless a test supplies one.
 vi.mock("@/lib/tasks", () => ({
-  createTask: vi.fn().mockResolvedValue(undefined),
+  createTask: vi.fn(async () => undefined),
   // Returns { task, recurringInstance } so callers can undo the whole
   // completion, including the instance a recurring task spawns.
-  toggleCompleted: vi.fn().mockResolvedValue({ task: null, recurringInstance: null }),
-  updateTask: vi.fn().mockResolvedValue(undefined),
+  toggleCompleted: vi.fn(async () => ({ task: null, recurringInstance: null })),
+  updateTask: vi.fn(async () => undefined),
   deleteTask: vi.fn().mockResolvedValue(undefined),
   restoreTask: vi.fn().mockResolvedValue(undefined),
   snoozeTask: vi.fn().mockResolvedValue(undefined),
@@ -197,10 +200,10 @@ describe("<MatrixSimplified>", () => {
     if (!Element.prototype.scrollIntoView) {
       Element.prototype.scrollIntoView = vi.fn();
     }
-    vi.mocked(createTask).mockReset().mockResolvedValue(undefined);
+    vi.mocked(createTask).mockReset();
     vi.mocked(celebrateCompletion).mockClear();
-    vi.mocked(toggleCompleted).mockReset().mockResolvedValue({ task: null, recurringInstance: null });
-    vi.mocked(updateTask).mockReset().mockResolvedValue(undefined);
+    vi.mocked(toggleCompleted).mockReset();
+    vi.mocked(updateTask).mockReset();
     vi.mocked(deleteTask).mockReset().mockResolvedValue(undefined);
     vi.mocked(restoreTask).mockReset().mockResolvedValue(undefined);
     handleSuccessSpy.mockClear();
@@ -299,7 +302,7 @@ describe("<MatrixSimplified>", () => {
       let finishSave: () => void = () => undefined;
       vi.mocked(toggleCompleted).mockImplementation(
         () => new Promise((resolve) => {
-          finishSave = () => resolve({ task: null, recurringInstance: null });
+          finishSave = () => resolve({ task: makeTask({ id: "a", completed: true }), recurringInstance: null });
         })
       );
       tasksFixture.current = [makeTask({ id: "a", title: "Active alpha", completed: false })];

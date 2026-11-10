@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getDb } from '@/lib/db';
 import type { TaskRecord, QuadrantId } from '@/lib/types';
+import { createMockSyncConfig } from '@/tests/fixtures';
 
 describe('Database', () => {
   let db: ReturnType<typeof getDb>;
@@ -618,7 +619,6 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-2',
@@ -627,7 +627,6 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-3',
@@ -636,7 +635,6 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          notificationEnabled: true, notificationSent: false,
         },
       ]);
 
@@ -660,7 +658,6 @@ describe('Database', () => {
           timestamp: now + 2000,
           retryCount: 0,
           payload: null,
-          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-1',
@@ -669,7 +666,6 @@ describe('Database', () => {
           timestamp: now,
           retryCount: 0,
           payload: null,
-          notificationEnabled: true, notificationSent: false,
         },
         {
           id: 'queue-2',
@@ -678,7 +674,6 @@ describe('Database', () => {
           timestamp: now + 1000,
           retryCount: 0,
           payload: null,
-          notificationEnabled: true, notificationSent: false,
         },
       ]);
 
@@ -692,24 +687,7 @@ describe('Database', () => {
 
   describe('Sync Metadata Table', () => {
     it('should store sync config', async () => {
-      const syncConfig = {
-        key: 'sync_config' as const,
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-123',
-        deviceName: 'Test Device',
-        email: 'test@example.com',
-        token: 'token-123',
-        tokenExpiresAt: Date.now() + 86400000,
-        lastSyncAt: Date.now(),
-        notificationEnabled: true, notificationSent: false,
-        conflictStrategy: 'last_write_wins' as const,
-        serverUrl: 'https://api.example.com',
-        consecutiveFailures: 0,
-        lastFailureAt: null,
-        lastFailureReason: null,
-        nextRetryAt: null,
-      };
+      const syncConfig = createMockSyncConfig({ userId: 'user-123', deviceId: 'device-123' });
 
       await db.syncMetadata.put(syncConfig);
 
@@ -946,7 +924,6 @@ describe('Database', () => {
           timestamp: Date.now(),
           retryCount: 0,
           payload: task,
-          notificationEnabled: true, notificationSent: false,
         });
       });
 

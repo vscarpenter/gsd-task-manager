@@ -21,7 +21,8 @@ const ENC_KEY = "not-a-real-key".padEnd(32, "0");
  */
 function runEntrypoint(env: Record<string, string>): string {
   const result = spawnSync("bash", [SCRIPT], {
-    env: { PATH: "/usr/bin:/bin", HOME: tmpdir(), GSD_TASKS_ENC_KEY: ENC_KEY, ...env },
+    // Next's global ProcessEnv type requires NODE_ENV. The entrypoint never reads it.
+    env: { PATH: "/usr/bin:/bin", HOME: tmpdir(), NODE_ENV: "test", GSD_TASKS_ENC_KEY: ENC_KEY, ...env },
     encoding: "utf8",
   });
   return `${result.stdout ?? ""}${result.stderr ?? ""}`;

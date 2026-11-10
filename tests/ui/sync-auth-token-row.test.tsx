@@ -28,7 +28,7 @@ function clickCopy(): void {
 beforeEach(() => {
   vi.clearAllMocks();
   authStore = new BaseAuthStore();
-  authStore.save(tokenFor("first-account"), { id: "first-account", email: "test@example.com" });
+  authStore.save(tokenFor("first-account"), { id: "first-account", collectionId: "_pb_users_auth_", collectionName: "users", email: "test@example.com" });
   useStore(authStore);
   writeText = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -66,7 +66,7 @@ describe("SyncAuthTokenRow", () => {
   it("reads a refreshed token from the current account at click time", async () => {
     render(<SyncAuthTokenRow />);
     const replacement = tokenFor("second-account");
-    act(() => authStore.save(replacement, { id: "second-account" }));
+    act(() => authStore.save(replacement, { id: "second-account", collectionId: "_pb_users_auth_", collectionName: "users" }));
 
     clickCopy();
     await act(async () => {});

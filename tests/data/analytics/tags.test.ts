@@ -1,26 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { calculateTagStatistics } from '@/lib/analytics/tags';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 describe('Tag Analytics', () => {
-  const baseTask: TaskRecord = {
+  const baseTask = createMockTask({
     id: '1',
-    title: 'Test Task',
     description: '',
-    urgent: true,
-    important: true,
-    quadrant: 'urgent-important',
-    completed: false,
     dueDate: undefined,
-    recurrence: 'none',
-    tags: [],
-    subtasks: [],
-    dependencies: [],
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
     notifyBefore: 15,
-    notificationEnabled: true,
-  };
+  });
 
   describe('calculateTagStatistics', () => {
     it('should return empty array for tasks with no tags', () => {

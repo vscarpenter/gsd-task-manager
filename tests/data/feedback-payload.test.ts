@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { getDb } from "@/lib/db";
-import { createMockTask } from "@/tests/fixtures";
-import type { PBSyncConfig } from "@/lib/sync/types";
+import { createMockSyncConfig, createMockTask } from "@/tests/fixtures";
 import {
   buildPayload,
   isDraftEmpty,
@@ -60,16 +59,13 @@ describe("buildPayload", () => {
 
   it("carries no device, account, or token identifier", async () => {
     const db = getDb();
-    const syncConfig: PBSyncConfig = {
-      key: "sync_config",
-      enabled: true,
+    const syncConfig = createMockSyncConfig({
       userId: "pb_user_9f3a",
       deviceId: "device-uuid-4c2b",
       deviceName: "Vinny's laptop",
       email: null,
       provider: null,
-      lastSyncAt: null,
-    };
+    });
     await db.syncMetadata.add(syncConfig);
 
     const serialized = JSON.stringify(buildPayload(fullDraft(), BUILD_OPTIONS));

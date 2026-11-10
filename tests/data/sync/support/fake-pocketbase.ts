@@ -82,7 +82,14 @@ const users = {
   },
 };
 
-export const fake = { state, pb: { collection: (name: string) => (name === 'users' ? users : tasks) } };
+/** Each name answers with its own collection, so a test can spy on that collection's calls. */
+function collection(name: 'users'): typeof users;
+function collection(name: string): typeof tasks;
+function collection(name: string): typeof users | typeof tasks {
+  return name === 'users' ? users : tasks;
+}
+
+export const fake = { state, pb: { collection } };
 
 export async function resetFakeSync(): Promise<void> {
   state.records.clear();

@@ -55,7 +55,7 @@ describe("Playwright quality gates", () => {
   });
 
   it("warms every application route before parallel browser workers start", async () => {
-    const request = vi.fn(async () => new Response(null, { status: 200 }));
+    const request = vi.fn<typeof fetch>(async () => new Response(null, { status: 200 }));
 
     await warmE2ERoutes(request);
 

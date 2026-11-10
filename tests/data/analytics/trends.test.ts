@@ -1,26 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getCompletionTrend, getRecurrenceBreakdown } from '@/lib/analytics/trends';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 describe('Analytics Trends', () => {
-  const baseTask: TaskRecord = {
+  const baseTask = createMockTask({
     id: '1',
-    title: 'Test Task',
     description: '',
-    urgent: true,
-    important: true,
-    quadrant: 'urgent-important',
-    completed: false,
     dueDate: undefined,
-    recurrence: 'none',
-    tags: [],
-    subtasks: [],
-    dependencies: [],
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
     notifyBefore: 15,
-    notificationEnabled: true,
-  };
+  });
 
   beforeEach(() => {
     // Fix current time to 2025-01-15 12:00:00

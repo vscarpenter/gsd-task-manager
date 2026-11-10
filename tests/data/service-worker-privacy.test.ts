@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { resolve } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
 
 type WorkerListener = (event: Record<string, unknown>) => void;
 
@@ -12,7 +12,7 @@ interface WorkerHarness {
 		addAll: ReturnType<typeof vi.fn>;
 		put: ReturnType<typeof vi.fn>;
 		keys: ReturnType<typeof vi.fn>;
-		delete: ReturnType<typeof vi.fn>;
+		delete: Mock<(request: Request) => Promise<boolean>>;
 	};
 }
 
@@ -22,7 +22,7 @@ function createWorkerHarness(cachedRequests: Request[] = []): WorkerHarness {
 		addAll: vi.fn().mockResolvedValue(undefined),
 		put: vi.fn().mockResolvedValue(undefined),
 		keys: vi.fn().mockResolvedValue(cachedRequests),
-		delete: vi.fn().mockResolvedValue(true),
+		delete: vi.fn(async (_request: Request) => true),
 	};
 	const cacheStorage = {
 		open: vi.fn().mockResolvedValue(cache),

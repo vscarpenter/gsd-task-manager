@@ -307,6 +307,12 @@ describe('Settings Components', () => {
       permissionAsked: true,
       updatedAt: new Date().toISOString(),
     };
+    // Required handlers the tests outside 'sound and quiet hours' never call.
+    const soundAndQuietHandlers = {
+      onSoundToggle: vi.fn(),
+      onQuietHoursToggle: vi.fn(),
+      onQuietHoursChange: vi.fn(),
+    };
 
     it('renders loading state when settings is null', () => {
       render(
@@ -314,6 +320,7 @@ describe('Settings Components', () => {
           settings={null}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       expect(screen.getByText('Loading...')).toBeInTheDocument();
@@ -325,6 +332,7 @@ describe('Settings Components', () => {
           settings={enabledSettings}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       expect(screen.getByRole('switch', { name: 'Notifications' })).toBeInTheDocument();
@@ -338,6 +346,7 @@ describe('Settings Components', () => {
           settings={enabledSettings}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       expect(screen.getByText('Default reminder')).toBeInTheDocument();
@@ -349,6 +358,7 @@ describe('Settings Components', () => {
           settings={enabledSettings}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       expect(screen.getByText('For new tasks')).toBeInTheDocument();
@@ -360,6 +370,7 @@ describe('Settings Components', () => {
           settings={{ ...enabledSettings, defaultReminder: 45 }}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
@@ -379,6 +390,7 @@ describe('Settings Components', () => {
           settings={{ ...enabledSettings, defaultReminder: minutes }}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
@@ -392,6 +404,7 @@ describe('Settings Components', () => {
           settings={{ ...enabledSettings, defaultReminder: 0 }}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       const select = screen.getByLabelText('Default reminder') as HTMLSelectElement;
@@ -405,6 +418,7 @@ describe('Settings Components', () => {
           settings={{ ...enabledSettings, enabled: false }}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       expect(screen.getByRole('switch', { name: 'Weekly sweep reminder' })).toBeInTheDocument();
@@ -417,6 +431,7 @@ describe('Settings Components', () => {
           settings={{ ...enabledSettings, enabled: false }}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       expect(screen.queryByText('Default reminder')).not.toBeInTheDocument();
@@ -429,6 +444,7 @@ describe('Settings Components', () => {
           settings={enabledSettings}
           onNotificationToggle={onToggle}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       fireEvent.click(screen.getByRole('switch', { name: 'Notifications' }));
@@ -446,6 +462,7 @@ describe('Settings Components', () => {
           settings={enabledSettings}
           onNotificationToggle={vi.fn()}
           onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
         />
       );
       expect(screen.getByText('Granted')).toBeInTheDocument();
@@ -591,6 +608,7 @@ describe('Settings Components', () => {
     const defaultProps = {
       activeTasks: 5,
       completedTasks: 3,
+      archivedTasks: 0,
       totalTasks: 8,
       estimatedSize: '1.2',
       onExport: vi.fn().mockResolvedValue(true),
@@ -654,40 +672,43 @@ describe('Settings Components', () => {
   });
 
   describe('SyncSettings', () => {
+    // Required by the account-deletion row; no test here deletes the account.
+    const dangerZoneProps = { onExport: vi.fn().mockResolvedValue(true), onAccountDeleted: vi.fn() };
+
     it('renders auto-sync toggle after loading', async () => {
-      render(<SyncSettings onViewHistory={vi.fn()} />);
+      render(<SyncSettings onViewHistory={vi.fn()} {...dangerZoneProps} />);
       expect(await screen.findByText('Auto-sync')).toBeInTheDocument();
     });
 
     it('names the auto-sync switch for assistive tech', async () => {
-      render(<SyncSettings onViewHistory={vi.fn()} />);
+      render(<SyncSettings onViewHistory={vi.fn()} {...dangerZoneProps} />);
       expect(await screen.findByRole('switch', { name: 'Auto-sync' })).toBeInTheDocument();
     });
 
     it('shows sync interval select when auto-sync is enabled', async () => {
-      render(<SyncSettings onViewHistory={vi.fn()} />);
+      render(<SyncSettings onViewHistory={vi.fn()} {...dangerZoneProps} />);
       expect(await screen.findByText('Sync interval')).toBeInTheDocument();
     });
 
     it('shows smart triggers info when auto-sync is enabled', async () => {
-      render(<SyncSettings onViewHistory={vi.fn()} />);
+      render(<SyncSettings onViewHistory={vi.fn()} {...dangerZoneProps} />);
       expect(await screen.findByText('Smart triggers')).toBeInTheDocument();
     });
 
     it('renders sync history button', async () => {
-      render(<SyncSettings onViewHistory={vi.fn()} />);
+      render(<SyncSettings onViewHistory={vi.fn()} {...dangerZoneProps} />);
       expect(await screen.findByText('Sync history')).toBeInTheDocument();
     });
 
     it('clicking Sync history calls onViewHistory', async () => {
       const onViewHistory = vi.fn();
-      render(<SyncSettings onViewHistory={onViewHistory} />);
+      render(<SyncSettings onViewHistory={onViewHistory} {...dangerZoneProps} />);
       fireEvent.click(await screen.findByText('Sync history'));
       expect(onViewHistory).toHaveBeenCalled();
     });
 
     it('toggling auto-sync calls updateAutoSyncConfig with new value', async () => {
-      render(<SyncSettings onViewHistory={vi.fn()} />);
+      render(<SyncSettings onViewHistory={vi.fn()} {...dangerZoneProps} />);
       await screen.findByText('Auto-sync');
       await act(async () => {
         fireEvent.click(screen.getByRole('switch'));
@@ -697,7 +718,7 @@ describe('Settings Components', () => {
 
     it('hides sync interval when auto-sync is disabled', async () => {
       mockGetAutoSyncConfig.mockResolvedValue({ enabled: false, intervalMinutes: 5 });
-      render(<SyncSettings onViewHistory={vi.fn()} />);
+      render(<SyncSettings onViewHistory={vi.fn()} {...dangerZoneProps} />);
       await screen.findByText('Auto-sync');
       // auto-sync defaults on; the interval row hides once the async config
       // (enabled: false) loads, so wait for that state to settle.

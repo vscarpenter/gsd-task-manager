@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { calculateMetrics, getQuadrantPerformance } from '@/lib/analytics/metrics';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 // Mock date-fns to control time
 vi.mock('date-fns', async () => {
@@ -15,24 +16,14 @@ vi.mock('date-fns', async () => {
 });
 
 describe('Analytics Metrics', () => {
-  const baseTask: TaskRecord = {
+  const baseTask = createMockTask({
     id: '1',
-    title: 'Test Task',
     description: '',
-    urgent: true,
-    important: true,
-    quadrant: 'urgent-important',
-    completed: false,
     dueDate: undefined,
-    recurrence: 'none',
-    tags: [],
-    subtasks: [],
-    dependencies: [],
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
     notifyBefore: 15,
-    notificationEnabled: true,
-  };
+  });
 
   describe('calculateMetrics', () => {
     it('should return zero metrics for empty task list', () => {

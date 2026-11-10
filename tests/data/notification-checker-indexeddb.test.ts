@@ -13,6 +13,7 @@ import * as notifications from "@/lib/notifications";
 import { pocketBaseToTaskRecord, taskRecordToPocketBase } from "@/lib/sync/task-mapper";
 import { snoozeTask } from "@/lib/tasks";
 import { createMockTask } from "@/tests/fixtures";
+import type { NotificationSettings } from "@/lib/types";
 import type { RecordModel } from "pocketbase";
 
 vi.mock("@/lib/notifications", () => ({
@@ -32,7 +33,7 @@ vi.mock("@/lib/notifications", () => ({
 	clearAppBadge: vi.fn(async () => {}),
 }));
 
-const enabledSettings = {
+const enabledSettings: NotificationSettings = {
 	id: "settings",
 	enabled: true,
 	defaultReminder: 15,

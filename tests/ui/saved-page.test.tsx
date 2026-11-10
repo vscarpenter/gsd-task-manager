@@ -113,7 +113,13 @@ describe("Saved page", () => {
 
 });
 
+/** Sonner types a toast action as an Action or any ReactNode. */
+function isPressable(action: unknown): action is { onClick: () => void } {
+  return typeof action === "object" && action !== null && "onClick" in action && typeof action.onClick === "function";
+}
+
 function undoToast(message: string) {
-  const options = vi.mocked(toast.success).mock.calls.find(([title]) => title === message)?.[1];
-  (options?.action as { onClick: () => void }).onClick();
+  const action = vi.mocked(toast.success).mock.calls.find(([title]) => title === message)?.[1]?.action;
+  if (!isPressable(action)) throw new Error(`The "${message}" toast has no action to press`);
+  action.onClick();
 }

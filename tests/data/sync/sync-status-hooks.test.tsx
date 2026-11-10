@@ -134,9 +134,10 @@ describe('sync status hooks', () => {
 
   describe('lib/hooks/use-retry-countdown', () => {
     it('should_return_null_without_a_future_retry_time', async () => {
+      const initialProps: { nextRetryAt: number | null } = { nextRetryAt: null };
       const { result, rerender } = renderHook(
-        ({ nextRetryAt }: { nextRetryAt: number | null }) => useRetryCountdown(nextRetryAt),
-        { initialProps: { nextRetryAt: null } },
+        ({ nextRetryAt }) => useRetryCountdown(nextRetryAt),
+        { initialProps },
       );
       expect(result.current).toBeNull();
 

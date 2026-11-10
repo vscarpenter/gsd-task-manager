@@ -222,7 +222,7 @@ describe('Example: Complex Test Scenario', () => {
     
     // Simulate sync operation
     console.log('Starting sync...');
-    const response = await fetch(`${config.serverUrl}/sync`);
+    const response = await fetch(`https://api.example.com/sync/${config.deviceId}`);
     const result = await response.json();
     
     // Verify

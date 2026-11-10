@@ -640,7 +640,7 @@ describe('pb-sync-engine', () => {
   });
 
   describe('fullSync session fence', () => {
-    const PULLED_ONE = { pulledCount: 1, authenticated: true, maxObservedTimestamp: '2026-04-08T00:00:00.000Z' };
+    const PULLED_ONE = { pulledCount: 1, skippedCount: 0, authenticated: true, maxObservedTimestamp: '2026-04-08T00:00:00.000Z' };
 
     /** Sign out while the pull is in flight. */
     async function endSessionDuringPull(pullResult: typeof mockPullResult | typeof PULLED_ONE = PULLED_ONE): Promise<void> {

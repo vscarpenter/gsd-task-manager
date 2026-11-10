@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getDb } from '@/lib/db';
 import { SyncCoordinator } from '@/lib/sync/sync-coordinator';
 import type { PBSyncResult } from '@/lib/sync/types';
+import { createMockSyncConfig } from '@/tests/fixtures';
 
 // Mock the PocketBase sync engine
 const mockFullSync = vi.fn<(priority: 'user' | 'auto') => Promise<PBSyncResult>>();
@@ -43,20 +44,7 @@ describe('SyncCoordinator', () => {
     await db.open();
 
     // Initialize sync config with PBSyncConfig fields
-    await db.syncMetadata.add({
-      key: 'sync_config',
-      enabled: true,
-      userId: 'user1',
-      deviceId: 'device1',
-      deviceName: 'Test Device',
-      email: 'test@example.com',
-      provider: 'google',
-      lastSyncAt: null,
-      consecutiveFailures: 0,
-      lastFailureAt: null,
-      lastFailureReason: null,
-      nextRetryAt: null,
-    });
+    await db.syncMetadata.add(createMockSyncConfig({ userId: 'user1', deviceId: 'device1' }));
 
     // Clear any pending requests
     coordinator.cancelPending();
