@@ -35,6 +35,14 @@ import { pushLocalChanges } from '@/lib/sync/pb-push';
 import { StaleSyncSessionError } from '@/lib/sync/sync-session';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
 
+/** auth-refresh confirms user-1's session, which a push asks for before trusting a 404. */
+function confirmedSession() {
+  return {
+    authStore: { token: 'token-1', clear: vi.fn() },
+    send: vi.fn(async () => ({ record: { id: 'user-1' } })),
+  };
+}
+
 function makeTask(id: string, updatedAt: string): TaskRecord {
   return createMockTask({
     id,
@@ -679,6 +687,7 @@ describe('pushLocalChanges notify_before drain (D-10)', () => {
     fetchRemoteTaskEntryMock.mockResolvedValue({ entry: null, fetchSucceeded: true });
     const createSpy = vi.fn(async (_record: Record<string, unknown>) => ({ id: 'rec-1' }));
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: createSpy, update: vi.fn(), delete: vi.fn() }),
     });
     await pushLocalChanges('user-1');
@@ -731,6 +740,7 @@ describe('pushLocalChanges notify_before drain races (D-10)', () => {
       return { id: 'rec-1' };
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: createSpy, update: vi.fn(), delete: vi.fn() }),
     });
     return createSpy;

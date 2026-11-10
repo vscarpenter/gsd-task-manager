@@ -14,6 +14,51 @@ Branch: `claude/focused-heisenberg-0j5671` off `main` (`e94022a`). Non-trivial t
 - **Follow-ups, not done:** typecheck `tests/e2e` in its own program (one error today, a `.cjs` import); declare `taskToPBFields` as returning every client field so the delete test can drop its one cast (this changes the published MCP types); route the copied factories that still compile through `createMockTask`.
 - **Assumptions:** `tests/e2e` stays out of the Vitest program, because those files run under Playwright and shouldn't see Vitest globals. Tests may stub env variables, so the env test uses `vi.stubEnv` rather than dropping `env.d.ts`'s `readonly` guard.
 
+# A refused token reads as an empty account (2026-11-10)
+
+Branch: `claude/happy-franklin-1evhvh` off `main` (`e94022a`). Audit P1 item 2 (SYNC-3, SYNC-10, MCP-1) in `tasks/audit-2026-11-10.md`. Non-trivial tier (both clients, a shared helper, the sync session model); the request's goal and "done means" served as the approved spec.
+
+## Resuming From Here
+
+- [x] Web: a push acts on a 404 only after `confirmSessionIdentity`, which now posts to auth-refresh with `pb.send` and saves nothing. Creates ask once per push; a delete that found nothing asks after its own lookup. A refused session stops the push without charging rows. `fullSync` honors `ensureValidAuth()`, and every auth failure reads as one to the sync button (Re-login). A 401 forgets the refused token, so the dialog offers sign-in; only a 401 counts, never a 403.
+- [x] MCP: `confirmUsersPrincipal` before an empty listing or a 404 counts (`list_tasks`, update, complete, delete, bulk, `get_sync_status`, `get_task_stats`). A refusal resets `pbToken`, so the next call sends the configured token again.
+- [x] Red first: `tests/data/sync/refused-session.test.ts` (13, real push, pull, and auth against the fake server) and `packages/mcp-server/src/__tests__/refused-token.test.ts` (15, real tools against a faked SDK), plus unit cases in the helper, auth, engine, and teardown suites.
+- [x] `pb-sync-reviewer`: 0 blocking. Acted on the 403 finding. The multi-tab finding was a false positive (`LocalAuthStore.token` re-reads localStorage), now pinned by a test and a mutation probe. The offline-expired finding matched the old behavior.
+- [x] `verify-sync-session`: model updated (`TokenFresh`, `RefreshLands`, `ForgetRefused`, `PushChecks`, `CheckLands`), all nine configs match.
+- [x] Verify: unit 4,850 passed (356 files, `sqlite3` installed for `docker-migrations`), MCP 543 passed and 6 skipped (coverage 90.08% statements; `write-ops` 98.95/95.48/100/99.75 against 98/95/100/98). Typecheck, lint, shape (complexity debt 27 to 25, long functions 88 to 87), knip, and the MCP `tsc` build all pass. The e2e suite and a production build weren't run (no UI files changed).
+- **Next:** the owner reviews the PR. After it merges, move the verify-sync-session sync commit to the merge commit. Release notes and version bumps go with `/release`.
+- **Known, not fixed (reviewer, low):** a session revoked mid-push charges each remaining create one attempt; N already-gone deletes cost N auth-refresh calls; background syncs keep reporting the auth failure until sign-in; realtime stays subscribed as a guest; a lookup that fails with a non-404 status is still charged as "index unavailable".
+- **Blockers:** none.
+
+# Dependabot alert triage (2026-11-10)
+
+Branch: `claude/determined-feynman-y5mi5x` off `main` (`e94022a`). Standard tier: the two manifests, `bun.lock`, and guard tests, with the owner's request as the spec. It closes the dependency bullet in `tasks/audit-2026-11-10.md` (TOOL-16, TOOL-18).
+
+## Resuming From Here
+
+- [x] The six alerts (one high, four moderate, one low) are the six vite advisories for `>=8.3.0 <=8.3.2`. Dependabot read the root devDependency pin, 8.3.1, while the `>=8.3.1` override installed 8.3.6. No tool here reads alerts, so the match comes from the advisory database: only vite fits those counts, and `glob` would have made seven.
+- [x] `a48569b` pins vite, nanoid, postcss, Stagehand, and `@playwright/test` to the versions bun.lock installs.
+- [x] `c3ddca7` rimraf 6.1.4 pulls glob 14.0.4, which clears GHSA-3g3m-2fjr-6pw4.
+- [x] `b37feff` the edit drawer keeps its baseline in state. Babel 8 had hidden three `react-hooks/refs` warnings there.
+- [x] `f0175b4` overrides are exact pins only. Seven entries are gone, and four crossings move back to their dependents' majors. minimatch 11.0.5 stays as the one accepted crossing.
+- [x] Verify: `bun audit` finds nothing at any level, and so does the production scope. Unit 4,824 passed (coverage 90.95% statements), MCP 525. license:check, lint, typecheck, shape, and knip pass. bun 1.3.14 `--frozen-lockfile` leaves the lock unchanged. The edit drawer passed a live Chromium check against the previous build.
+- **Next:** the owner reviews the PR. After merge, the six vite alerts should close on GitHub's next scan of `main`; confirm on the Dependabot page. Releasing ships the edit drawer change, so bump web then.
+- **Accepted, not fixed:** minimatch 11.0.5 for the minimatch 3 plugins (see `tests/data/dependency-pins.test.ts`). The braces entry in `scripts/check-audit-results.cjs` now matches nothing, because the advisory feed no longer lists GHSA-vfj7-8cjw-p6xm. Its tests use it as the fixture, and it lapses on 2027-01-05.
+- **Lockfile:** write it with bun 1.4.4, then check it with bun 1.3.14 `--frozen-lockfile`. bun 1.3.14 drops the `libc` filters and a nested `@vitest/ui` copy that the current lock carries.
+
+# Docker publish: vendored Newsreader, native static export, job timeout (2026-11-10)
+
+Branch: `claude/zealous-ptolemy-877pnd` off `main` (`e94022a`). Audit P1 item 1 and TOOL-21 in `tasks/audit-2026-11-10.md`. Standard tier: the request gave the goal and the done criteria, and no public contract changes.
+
+## Resuming From Here
+
+- [x] Newsreader ships in `app/fonts/newsreader` with its OFL: the three files `next/font/google` downloaded, byte for byte. `app/layout.tsx` loads them with `next/font/local`, one call per file, because each file needs its own `unicode-range` and a call takes one. One call without the ranges changed the accents on 128 letters per weight (ź, ć, ā, and others).
+- [x] `docker/Dockerfile`: the builder and a new `bun` stage run on `$BUILDPLATFORM`; only the PocketBase download reads `TARGETARCH`.
+- [x] `publish-docker.yml`: `timeout-minutes: 30`. The slowest successful publish job of the last 30 runs took 11 minutes.
+- [x] Verify: `bun run build` passes with no network (network namespace, loopback only), and the old layout fails there. Pixel-identical before and after across 516 code points at weights 400, 500, and 600, and on the About hero in light and dark. Unit 4,825, e2e export 175 in Chromium, typecheck, lint, shape, knip, and quality:bundle (1 to 4 bytes per route). Docker: the arm64 builder runs natively, and one no-cache build of both platforms runs the static export once.
+- **Next:** the first publish run on `main` proves the whole multi-platform build. This sandbox blocks the Debian and Alpine package mirrors, so the PocketBase step and the Caddy stage were not built here.
+- **Known difference:** the fallback face shown until Newsreader loads now takes its metrics from the font file: `size-adjust` 104.8% instead of 105.48%.
+
 # Whole-repo audit (2026-11-10)
 
 Branch: `claude/eloquent-mccarthy-p7ybod` off `main` (`20dc641`). The audit was read-only; each fix is Standard tier, a few files with a red test first. Findings, fixes, and open items: `tasks/audit-2026-11-10.md`. Nothing pushed: the owner reviews first.

@@ -33,6 +33,13 @@ function workflowJob(workflow: string, job: string): string {
   return next === -1 ? body : body.slice(0, next + 1);
 }
 
+/** One named Dockerfile stage: what follows its `FROM `, up to the next FROM. */
+function dockerfileStage(dockerfile: string, name: string): string {
+  return (
+    dockerfile.split(/^FROM /m).find((stage) => stage.split("\n", 1)[0].endsWith(` AS ${name}`)) ?? ""
+  );
+}
+
 interface TypeScriptModule {
   createProgram?: unknown;
   version?: string;
@@ -197,8 +204,7 @@ describe("build configuration", () => {
   });
 
   it("puts node_modules/.bin on PATH before the Docker builder runs the static-export wrapper", () => {
-    const dockerfile = readFileSync("docker/Dockerfile", "utf8");
-    const builderStage = dockerfile.split(/^FROM /m)[1] ?? "";
+    const builderStage = dockerfileStage(readFileSync("docker/Dockerfile", "utf8"), "builder");
     const pathIndex = builderStage.indexOf('ENV PATH="/app/node_modules/.bin:$PATH"');
     const wrapperIndex = builderStage.indexOf("bash scripts/build-static-export.sh");
 
@@ -212,20 +218,43 @@ describe("build configuration", () => {
 
   it("runs the Docker builder on real Node and copies in only the Bun binary", () => {
     const dockerfile = readFileSync("docker/Dockerfile", "utf8");
-    const builderStage = dockerfile.split(/^FROM /m)[1] ?? "";
+    const builderStage = dockerfileStage(dockerfile, "builder");
     const bunCopyIndex = builderStage.search(
-      /^COPY --from=oven\/bun:1@sha256:[0-9a-f]{64} \/usr\/local\/bin\/bun \/usr\/local\/bin\/bun$/m,
+      /^COPY --from=bun \/usr\/local\/bin\/bun \/usr\/local\/bin\/bun$/m,
     );
     const installIndex = builderStage.indexOf("bun install --frozen-lockfile");
 
     // The oven/bun image puts a `node` symlink to Bun on PATH. `next build` ran
     // on Bun there, and Bun 1.3.14 crashed after the build finished. A Debian
     // node:24 base keeps `node` real, and the copied Bun binary only runs the install.
+    expect(dockerfileStage(dockerfile, "bun")).toMatch(
+      /^(?:--platform=\S+ )?oven\/bun:1@sha256:[0-9a-f]{64} AS bun$/m,
+    );
     expect(builderStage).toMatch(
-      /^node:24(?:-(?:bookworm|trixie))?(?:-slim)?@sha256:[0-9a-f]{64} AS builder$/m,
+      /^(?:--platform=\S+ )?node:24(?:-(?:bookworm|trixie))?(?:-slim)?@sha256:[0-9a-f]{64} AS builder$/m,
     );
     expect(bunCopyIndex).toBeGreaterThan(-1);
     expect(bunCopyIndex).toBeLessThan(installIndex);
+  });
+
+  // publish-docker.yml builds linux/amd64 and linux/arm64 images. The static
+  // export is the same on every CPU, so it builds once, natively, on the build
+  // machine instead of again under QEMU for arm64 (TOOL-21). Bun needs the same
+  // pin: COPY --from=<image> pulls the image for the target platform, which
+  // would put an arm64 Bun in the native builder.
+  it("builds the Docker static export once, with Bun and Node for the build platform", () => {
+    const dockerfile = readFileSync("docker/Dockerfile", "utf8");
+
+    expect(dockerfileStage(dockerfile, "bun")).toMatch(/^--platform=\$BUILDPLATFORM /);
+    expect(dockerfileStage(dockerfile, "builder")).toMatch(/^--platform=\$BUILDPLATFORM /);
+  });
+
+  // Only the PocketBase binary depends on the image's CPU.
+  it("downloads PocketBase for each Docker image's target architecture", () => {
+    const builderStage = dockerfileStage(readFileSync("docker/Dockerfile", "utf8"), "builder");
+
+    expect(builderStage).toMatch(/^ARG TARGETARCH$/m);
+    expect(builderStage).toContain("pocketbase_${POCKETBASE_VERSION}_linux_${TARGETARCH}.zip");
   });
 
   it("keeps root coverage thresholds blocking in CI and SonarCloud", () => {

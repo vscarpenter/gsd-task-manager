@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import type { GsdConfig, PBTask } from '../types.js';
 import { pbTaskSnapshotFields, taskDependencyPatchToPBFields, taskToPBFields } from '../types.js';
 import type { Task } from '../types.js';
-import { getPocketBase, requireUsersPrincipal } from '../pocketbase-client.js';
+import { confirmUsersPrincipal, getPocketBase, requireUsersPrincipal } from '../pocketbase-client.js';
 import { getTaskCache } from '../cache.js';
 
 /** Maximum allowed length for filter values, mirroring lib/sync/pb-sync-helpers.ts. */
@@ -99,6 +99,16 @@ export async function deleteTaskInPB(
 }
 
 /**
+ * A refused token reads as a guest, and a guest gets a 404 for every record,
+ * so a 404 means "not found" only once the token is confirmed.
+ */
+async function isConfirmedNotFound(config: GsdConfig, error: unknown): Promise<boolean> {
+  if ((error as { status?: unknown } | null)?.status !== 404) return false;
+  await confirmUsersPrincipal(config);
+  return true;
+}
+
+/**
  * Find PocketBase record ID by client-side task_id
  */
 async function findPBRecordId(config: GsdConfig, taskId: string): Promise<string> {
@@ -110,7 +120,7 @@ async function findPBRecordId(config: GsdConfig, taskId: string): Promise<string
     );
     return record.id;
   } catch (error) {
-    if ((error as { status?: unknown } | null)?.status === 404) {
+    if (await isConfirmedNotFound(config, error)) {
       throw new Error(`Task not found in PocketBase: ${taskId}`);
     }
     throw error;
@@ -145,8 +155,7 @@ export async function fetchSinglePBTaskFresh(
     // network failure — must propagate; otherwise downstream code would
     // misreport it as "task deleted between read and write" and the LLM may
     // try to recreate a task that still exists.
-    const status = (err as { status?: number })?.status;
-    if (status === 404) return null;
+    if (await isConfirmedNotFound(config, err)) return null;
     throw err;
   }
 }
@@ -175,6 +184,8 @@ export async function fetchPBSnapshotForTasks(
     .join(' || ');
 
   const records = await pb.collection('tasks').getFullList<PBTask>({ filter });
+  // A refused token lists nothing, so finding none of the tasks needs a confirmed token.
+  if (records.length === 0) await confirmUsersPrincipal(config);
   for (const record of records) {
     const snapshot = pbTaskSnapshotFields(record);
     map.set(snapshot.taskId, {

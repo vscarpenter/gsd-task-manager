@@ -32,6 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "Most tasks in" line, instead of the one with the best completion rate.
 - `bulk_update_tasks` writes a task named twice once. The second copy used to
   come back as a conflict, with `isError`, for a write that had succeeded.
+- A revoked or rejected token, for example after "Sign out of all devices",
+  now gets the sign-in error from every tool. PocketBase reads such a token as
+  a guest, which lists no tasks and finds no record, so `list_tasks` answered
+  `[]` and `update_task`, `complete_task`, and `delete_task` answered "Task not
+  found". The server now confirms the token with auth-refresh before it trusts
+  an empty listing or a missing record. `bulk_update_tasks` no longer reports
+  "No matching tasks found", `get_sync_status` reports unhealthy instead of an
+  empty account, and `get_task_stats` reports unknown counts instead of zeros.
+- After PocketBase refuses the token, the next call sends the configured token
+  again. Later calls used to go out with no token at all until the MCP server
+  restarted.
 
 ### Documentation
 - README: `delete_task` and bulk deletes default to a dry run; pass

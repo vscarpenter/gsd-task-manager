@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { applyRemoteChange, fullSync } from '@/lib/sync/pb-sync-engine';
+import { isAuthError } from '@/lib/sync/error-categorizer';
+import { SessionRejectedError } from '@/lib/sync/pb-sync-helpers';
 import { StaleSyncSessionError } from '@/lib/sync/sync-session';
+import type { PBSyncResult } from '@/lib/sync/types';
 
 // Mock logger
 vi.mock('@/lib/logger', () => ({
@@ -164,6 +167,17 @@ vi.mock('@/lib/sync/pb-auth', () => ({
 /** Resolve to the rejection reason, or undefined when the promise resolves. */
 function settle(promise: Promise<unknown>): Promise<unknown> {
   return promise.then(() => undefined, (error: unknown) => error);
+}
+
+/**
+ * The sign-in prompt: an error the sync button reads as an auth error (it then
+ * offers Re-login), and the toast that asks for sign-in.
+ */
+async function expectSignInPrompt(result: PBSyncResult): Promise<void> {
+  const { notifySyncError } = await import('@/lib/sync/notifications');
+  expect(result.status).toBe('error');
+  expect(isAuthError(new Error(result.error))).toBe(true);
+  expect(notifySyncError).toHaveBeenCalledWith('Please sign in to sync your tasks', false);
 }
 
 describe('pb-sync-engine', () => {
@@ -450,8 +464,7 @@ describe('pb-sync-engine', () => {
 
       const result = await fullSync();
 
-      expect(result.status).toBe('error');
-      expect(result.error).toContain('not authenticated');
+      await expectSignInPrompt(result);
     });
 
     it('treats an unauthenticated pull as an error even when the push saw a session', async () => {
@@ -460,8 +473,47 @@ describe('pb-sync-engine', () => {
 
       const result = await fullSync();
 
-      expect(result.status).toBe('error');
-      expect(result.error).toContain('not authenticated');
+      await expectSignInPrompt(result);
+    });
+
+    // SYNC-10: after "Sign out of all devices" elsewhere, this device kept failing
+    // with unknown_error and never asked the user to sign in again.
+    it('stops before the push and pull when the session refresh fails, and asks for sign-in', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const { pullRemoteChanges } = await import('@/lib/sync/pb-pull');
+      mockEnsureValidAuth.mockResolvedValueOnce(false);
+
+      const result = await fullSync('auto');
+
+      expect(pushLocalChanges).not.toHaveBeenCalled();
+      expect(pullRemoteChanges).not.toHaveBeenCalled();
+      expect(mockRetryManager.recordFailure).toHaveBeenCalledTimes(1);
+      await expectSignInPrompt(result);
+    });
+
+    it('asks for sign-in when the server refuses the session partway through', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      vi.mocked(pushLocalChanges).mockRejectedValueOnce(new SessionRejectedError());
+
+      const result = await fullSync('auto');
+
+      expect(mockRetryManager.recordFailure).toHaveBeenCalledTimes(1);
+      await expectSignInPrompt(result);
+    });
+
+    it('cancels a refused sync whose session ended before the failure was recorded', async () => {
+      const { pushLocalChanges } = await import('@/lib/sync/pb-push');
+      const { notifySyncError } = await import('@/lib/sync/notifications');
+      vi.mocked(pushLocalChanges).mockImplementationOnce(async () => {
+        persistedConfig = { ...SIGNED_OUT_CONFIG };
+        throw new SessionRejectedError();
+      });
+
+      const result = await fullSync('auto');
+
+      expect(result.status).toBe('cancelled');
+      expect(mockRetryManager.recordFailure).not.toHaveBeenCalled();
+      expect(notifySyncError).not.toHaveBeenCalled();
     });
 
     it('reports the pull\'s skipped-record count on a successful sync', async () => {

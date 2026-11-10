@@ -55,6 +55,16 @@ export function clearPocketBase(): void {
 }
 
 /**
+ * Forget a token the server refused (a 401), so this device reads as signed out
+ * and the sync dialog offers sign-in again. Only that token goes: the store reads
+ * the shared localStorage key on every access, so a sign-in in this tab or
+ * another one may have saved a new token while the refusal was in flight.
+ */
+export function forgetRefusedToken(pb: PocketBase, refusedToken: string): void {
+  if (refusedToken && pb.authStore.token === refusedToken) pb.authStore.clear();
+}
+
+/**
  * Check if the current user is authenticated
  */
 export function isAuthenticated(): boolean {

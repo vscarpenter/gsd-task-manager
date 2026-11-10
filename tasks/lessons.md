@@ -436,6 +436,31 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **Project hook paths are relative to the shell's directory.** A `cd packages/mcp-server` left the guards unreachable. Stay at the root and use absolute paths or `bun run --cwd`.
 - **knip runs without its export check**, so exports that only tests call build up unnoticed (LIB-36, SYNC-23, MCP-24 in the audit).
 
+## Docker publish and the vendored display font (2026-11-10)
+
+- **`next/font/google` can fail with the network up.** Turbopack 16.4.1 failed a local build with the CI error (`next/font/google queries have exactly one entry`, nine times) while `curl` reached Google Fonts, and the same build passed on retry. Vendoring the files removed the fetch, not just the outage.
+- **`next/font/local` takes one `unicode-range` per call.** Google ships a font as subset files, each with its own range. One call listing all three files without ranges let the latin file paint accented letters it lacks as a base letter plus a combining mark: 128 letters per weight changed. One call per file, joined by a shared `font-family` declaration, matched the old build pixel for pixel. next/font names a local family after its const, so the join breaks if that const is renamed; `tests/e2e/display-serif.spec.ts` catches it.
+- **`COPY --from=<image>` pulls the image for the target platform,** even inside a `FROM --platform=$BUILDPLATFORM` stage. Pin a build-platform tool with its own named stage. On the arm64 leg the implicit copy put an arm64 Bun in the amd64 builder (exit 126 without QEMU).
+- **An offline build check needs loopback.** `unshare -n` starts with `lo` down, and `next build` hung on its own workers' localhost traffic instead of failing. Bring `lo` up first (`ip` is not installed here; a five-line Python `SIOCSIFFLAGS` call works).
+
+## Dependabot alert triage (2026-11-10)
+
+- **Dependabot matched package.json here, not bun.lock.** A devDependency pin of vite 8.3.1 raised six alerts while a `>=8.3.1` override installed the patched 8.3.6, so `bun audit` saw nothing. Only that reading fits the alert counts. Keep every declared pin equal to the installed version; `tests/data/dependency-pins.test.ts` enforces it.
+- **A `>=` override floor crosses majors on its own.** `minimatch >=3.1.3` drifted to 10 and then 11. `@babel/core` reached 8, and the React Compiler in eslint-plugin-react-hooks then hit an internal invariant in 28 files and skipped them without a lint error. Pin overrides exactly and keep each dependent on the major it declares.
+- **bun applies only top-level overrides.** bun 1.3.14 ignores npm's nested form, version-selector keys such as `minimatch@^3`, and yarn path resolutions, so one version serves every consumer of an overridden package.
+- **Write bun.lock with bun 1.4, then check it with 1.3.14.** bun 1.3.14 drops the lock's `libc` filters and a nested `@vitest/ui` copy. CI's bun 1.3.14 accepts a 1.4.4 lock under `--frozen-lockfile` and changes nothing.
+- **apt needs HTTPS in cloud sessions.** The proxy blocks the image's `http://` apt sources. Point apt at `https://archive.ubuntu.com` and `https://security.ubuntu.com` with `-o Dir::Etc::SourceList`, which `tests/docker-migrations.test.ts` needs for `sqlite3`.
+
+## A refused token reads as a guest (2026-11-10, audit P1 item 2)
+
+- **An empty listing or a 404 is never proof on its own.** PocketBase drops a token it refuses and answers as it answers a guest: `tasks` lists as 200 with no items, every lookup 404s, and a create gets the createRule's 400. Only auth-refresh tells a refused session apart, with a 401. Before acting on an empty answer, ask it.
+- **The SDK's `authRefresh()` saves its answer; `pb.send` to the same route doesn't.** A saved answer can land after another tab signs in and put the old account's token back. A check that only needs the verdict should read it and drop it.
+- **`LocalAuthStore.token` re-reads localStorage on every access.** So "clear only if the shared key still holds the refused token" protects another tab's newer sign-in even before its storage event runs. A mutation probe that compared the in-memory token instead failed the cross-tab test.
+- **Never charge a queue row for the session's failure.** Rows retire at `MAX_RETRIES`, nothing re-arms them, and the next reconcile sends a retired row's task to Trash. A refused session stops the push and leaves every row as it was.
+- **On the web, only a 401 from auth-refresh is a refusal.** PocketBase's 403 there means another auth collection or a token that can't be refreshed, which OAuth tokens never are, so a 403 most likely comes from a proxy. Wiping the token for it signs the user out of a working session. `pb-sync-reviewer` caught this.
+- **`vi.spyOn(module, 'fn')` misses calls made inside that module.** The MCP conflict suite spied on `getPocketBase`, and the new `confirmUsersPrincipal` called the real one from inside `pocketbase-client.ts` and went to the network. Stub the new function too.
+- **A type probe that errors on its own config reports nothing useful.** Setting `types: ["vitest/globals"]` made tsc stop at TS2688 before checking a file, and a grep for the test files' names came back empty, which looked like a clean pass. Read the raw output once before trusting a filtered one.
+
 ## A typecheck gate for the test suites (2026-11-10)
 
 - **An untyped suite hides more than fixture drift.** Of the 208 root errors, two pointed at real problems. A `pb-sync-helpers` case passed because `it.each` spread each row into arguments. The index fetch got one object and failed page validation, so it never reached the malformed-or-duplicate check the test names. And `docker/pb_hooks/encryption-core.d.ts` declared `encryptRecord` with two parameters, while the JS takes three and needs the third.
