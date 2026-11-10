@@ -25,6 +25,10 @@ function daysLeft(deletedAt: string | undefined): number {
   return Math.max(0, Math.ceil(TRASH_RETENTION_DAYS - elapsed));
 }
 
+function formatDaysLeft(days: number): string {
+  return `${days} ${days === 1 ? "day" : "days"} left`;
+}
+
 // Pure handlers — no component state, so they sit at module scope.
 async function handleRestore(task: TaskRecord): Promise<void> {
   await restoreFromTrash(task.id);
@@ -123,7 +127,7 @@ function TrashRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm text-foreground">{task.title}</p>
         <p className="text-xs tabular-nums text-foreground-muted">
-          {daysLeft(task.deletedAt)} days left
+          {formatDaysLeft(daysLeft(task.deletedAt))}
         </p>
       </div>
       <button
