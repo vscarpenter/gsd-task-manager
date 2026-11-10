@@ -30,6 +30,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsc",
+    "typecheck:tests": "tsc -p tsconfig.tests.json",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest run",
