@@ -71,12 +71,12 @@ const TOOLS: WebMCPToolDefinition[] = [
 				},
 				tags: {
 					type: "array",
-					items: { type: "string", minLength: 1, maxLength: 32 },
+					items: { type: "string", minLength: 1, maxLength: SCHEMA_LIMITS.TAG_MAX_LENGTH },
 					// maxItems mirrors the Zod constraint in createTask so the AI
 					// sees the same limit the validator will enforce. Without it,
 					// >20 tags pass JSON Schema and hit a confusing Zod error.
 					maxItems: SCHEMA_LIMITS.MAX_TAGS,
-					description: "Optional list of lowercase, kebab-case tags (max 20).",
+					description: `Optional list of lowercase, kebab-case tags (max ${SCHEMA_LIMITS.MAX_TAGS}).`,
 				},
 			},
 		},

@@ -1,6 +1,7 @@
 import { render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WebMcpRegister } from '@/components/webmcp-register';
+import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 
 const createTaskMock = vi.fn();
 const RESET_PENDING_KEY = 'gsd-reset-pending';
@@ -55,6 +56,18 @@ describe('WebMcpRegister', () => {
 			type: 'object',
 			required: ['title'],
 		});
+	});
+
+	it('advertises the tag limits the validator enforces', async () => {
+		render(<WebMcpRegister />);
+
+		await waitFor(() => expect(provideContext).toHaveBeenCalledTimes(1));
+
+		const schema = provideContext.mock.calls[0]?.[0]?.tools[0]?.inputSchema as {
+			properties: { tags: { items: { maxLength: number }; maxItems: number; description: string } };
+		};
+		expect(schema.properties.tags.items.maxLength).toBe(SCHEMA_LIMITS.TAG_MAX_LENGTH);
+		expect(schema.properties.tags.description).toContain(`max ${SCHEMA_LIMITS.MAX_TAGS}`);
 	});
 
 	it('execute() forwards normalized fields to lib/tasks createTask', async () => {
