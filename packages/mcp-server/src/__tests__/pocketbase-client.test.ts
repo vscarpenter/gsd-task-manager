@@ -178,7 +178,8 @@ describe('requireUsersPrincipal', () => {
   it('never advises rotating credentials for an unreachable backend', async () => {
     authRefresh.mockRejectedValueOnce(Object.assign(new Error('boom'), { status: 0 }));
 
-    const error = await requireUsersPrincipal(config).catch((e: unknown) => e as Error);
+    const error = await requireUsersPrincipal(config).catch((e: unknown) => e);
+    if (!(error instanceof Error)) throw new Error('requireUsersPrincipal did not reject with an Error');
 
     expect(error.message).toMatch(/were not changed/i);
     expect(error.message).not.toMatch(/--setup/);

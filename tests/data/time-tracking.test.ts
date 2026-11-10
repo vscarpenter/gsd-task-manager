@@ -6,6 +6,7 @@ import {
 } from '@/lib/tasks/crud/time-tracking';
 import { TIME_TRACKING } from '@/lib/constants';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 // Hoisted mocks for async function tests
 const mockGet = vi.hoisted(() => vi.fn());
@@ -108,7 +109,7 @@ describe('Time Tracking Utilities', () => {
     });
 
     it('returns false for task with empty timeEntries', () => {
-      const task = { timeEntries: [] } as TaskRecord;
+      const task = createMockTask({ timeEntries: [] });
       expect(hasRunningTimer(task)).toBe(false);
     });
 

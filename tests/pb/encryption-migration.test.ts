@@ -93,13 +93,15 @@ function loadMigration(key: string | undefined, records: FakeRecord[]) {
   if (!migrateUp) {
     throw new Error("Migration did not register an up migration");
   }
+  // A closure loses the narrowing on a let that a callback assigns.
+  const registeredUp = migrateUp;
 
   return {
     app,
     encrypt,
     executedSql,
     updates,
-    run: () => migrateUp(app),
+    run: () => registeredUp(app),
   };
 }
 

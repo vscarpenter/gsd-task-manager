@@ -46,7 +46,8 @@ describe("GlobalError", () => {
 
   it("navigates home when Go home button is clicked", () => {
     delete (window as { location?: unknown }).location;
-    window.location = { href: "" } as unknown as Location;
+    // The same assignment, without the DOM type that limits it to a URL string.
+    Reflect.set(window, "location", { href: "" });
 
     render(<GlobalError error={testError} reset={mockReset} />);
 

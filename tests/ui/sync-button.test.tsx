@@ -1,14 +1,22 @@
 import { act, render, screen } from '@testing-library/react';
 import { toast } from 'sonner';
+import type { UseSyncResult } from '@/lib/hooks/use-sync';
+import type { useSyncStatus } from '@/components/sync/use-sync-status';
 
 // --- Mocks ---
 
+/** The slice of the sync state that SyncButton reads. */
+type SyncButtonState = Pick<
+  UseSyncResult,
+  'sync' | 'isSyncing' | 'status' | 'error' | 'isEnabled' | 'nextRetryAt' | 'pendingCount' | 'healthReport'
+>;
+
 const mockSync = vi.fn();
 const mockUseSyncHealth = vi.fn();
-const mockUseSync = vi.fn(() => ({
+const mockUseSync = vi.fn<() => SyncButtonState>(() => ({
   sync: mockSync,
   isSyncing: false,
-  status: 'idle' as const,
+  status: 'idle',
   error: null,
   isEnabled: false,
   nextRetryAt: null,
@@ -17,11 +25,11 @@ const mockUseSync = vi.fn(() => ({
 }));
 
 vi.mock('@/lib/sync/sync-provider', () => ({
-  useSyncContext: (...args: unknown[]) => mockUseSync(...args),
+  useSyncContext: () => mockUseSync(),
 }));
 
 vi.mock('@/lib/hooks/use-sync', () => ({
-  useSync: (...args: unknown[]) => mockUseSync(...args),
+  useSync: () => mockUseSync(),
 }));
 
 vi.mock('@/components/ui/toast', () => ({
@@ -36,8 +44,8 @@ vi.mock('sonner', () => ({
   toast: vi.fn(),
 }));
 
-const mockUseSyncStatus = vi.fn(() => ({
-  iconType: 'cloud-off' as const,
+const mockUseSyncStatus = vi.fn<typeof useSyncStatus>(() => ({
+  iconType: 'cloud-off',
   tooltip: 'Sync disabled',
   pendingCount: 0,
   hasAuthError: false,
@@ -45,7 +53,7 @@ const mockUseSyncStatus = vi.fn(() => ({
 }));
 
 vi.mock('@/components/sync/use-sync-status', () => ({
-  useSyncStatus: (...args: unknown[]) => mockUseSyncStatus(...args),
+  useSyncStatus: (...args: Parameters<typeof useSyncStatus>) => mockUseSyncStatus(...args),
 }));
 
 vi.mock('@/components/sync/sync-auth-dialog', () => ({
@@ -82,6 +90,7 @@ describe('SyncButton', () => {
       isEnabled: false,
       nextRetryAt: null,
       pendingCount: 0,
+      healthReport: null,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-off',
@@ -122,6 +131,7 @@ describe('SyncButton', () => {
       isEnabled: true,
       nextRetryAt: null,
       pendingCount: 0,
+      healthReport: null,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-idle',
@@ -144,6 +154,7 @@ describe('SyncButton', () => {
       isEnabled: true,
       nextRetryAt: null,
       pendingCount: 0,
+      healthReport: null,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-syncing',
@@ -166,6 +177,7 @@ describe('SyncButton', () => {
       isEnabled: true,
       nextRetryAt: null,
       pendingCount: 0,
+      healthReport: null,
     });
     mockUseSyncStatus.mockReturnValue({
       iconType: 'cloud-idle',
@@ -188,6 +200,7 @@ describe('SyncButton', () => {
       isEnabled: true,
       nextRetryAt: null,
       pendingCount: 3,
+      healthReport: null,
     });
 
     render(<SyncButton />);
@@ -220,6 +233,7 @@ describe('SyncButton', () => {
       isEnabled: true,
       nextRetryAt: null,
       pendingCount: 0,
+      healthReport: null,
     });
     mockUseSyncHealth.mockImplementation(({ onHealthIssue }) => {
       onHealthIssue({

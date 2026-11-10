@@ -10,6 +10,7 @@ import {
 } from '@/lib/sync/config';
 import { getDb } from '@/lib/db';
 import type { PBSyncConfig } from '@/lib/sync/types';
+import { createMockTask } from '@/tests/fixtures';
 
 // Mock dependencies
 
@@ -42,6 +43,7 @@ describe('Sync Config', () => {
     email: null,
     provider: null,
     lastSyncAt: null,
+    lastSuccessfulSyncAt: null,
     consecutiveFailures: 0,
     lastFailureAt: null,
     lastFailureReason: null,
@@ -146,36 +148,14 @@ describe('Sync Config', () => {
     it('should queue existing tasks for initial sync', async () => {
       // Add some tasks
       await db.tasks.bulkAdd([
-        {
-          id: 'task-1',
-          title: 'Task 1',
-          description: '',
-          urgent: true,
-          important: true,
-          quadrant: 'urgent-important',
-          completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          recurrence: 'none',
-          tags: [],
-          subtasks: [],
-          dependencies: [],
-        },
-        {
+        createMockTask({ id: 'task-1', title: 'Task 1', description: '' }),
+        createMockTask({
           id: 'task-2',
           title: 'Task 2',
           description: '',
           urgent: false,
-          important: true,
           quadrant: 'not-urgent-important',
-          completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          recurrence: 'none',
-          tags: [],
-          subtasks: [],
-          dependencies: [],
-        },
+        }),
       ]);
 
       await enableSync();
@@ -300,7 +280,7 @@ describe('Sync Config', () => {
         {
           id: 'h2',
           timestamp: new Date().toISOString(),
-          status: 'failure',
+          status: 'error',
           pushedCount: 0,
           pulledCount: 0,
           conflictsResolved: 0,

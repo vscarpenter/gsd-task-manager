@@ -49,6 +49,7 @@ function resolveExportFile(outputRoot, requestUrl, headers) {
   return target;
 }
 
+/** @param {{ outputRoot?: string, port?: number, csp?: string }} [options] */
 function startStaticExportServer({ outputRoot = resolve("out"), port = 0, csp } = {}) {
   if (!existsSync(join(outputRoot, "index.html"))) {
     return Promise.reject(
@@ -77,6 +78,7 @@ function startStaticExportServer({ outputRoot = resolve("out"), port = 0, csp } 
 
 // playwright.export.config.ts runs this file directly. Exporting the entry
 // point lets a test pin the CSP that the export journeys are served under.
+/** @param {{ outputRoot?: string, port?: number }} [options] */
 function serveProductionExport({ outputRoot, port = Number(process.env.PORT ?? DEFAULT_PORT) } = {}) {
   return startStaticExportServer({ outputRoot, port, csp: readProductionCsp() });
 }

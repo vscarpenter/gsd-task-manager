@@ -71,7 +71,8 @@ describe("ErrorBoundary", () => {
   it("provides reload page button", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     delete (window as { location?: unknown }).location;
-    window.location = { reload: vi.fn() } as unknown as Location;
+    // The same assignment, without the DOM type that limits it to a URL string.
+    Reflect.set(window, "location", { reload: vi.fn() });
 
     render(
       <ErrorBoundary>

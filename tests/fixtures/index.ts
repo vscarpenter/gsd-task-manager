@@ -107,6 +107,7 @@ export function createMockSyncConfig(overrides?: Partial<PBSyncConfig>): PBSyncC
     email: 'test@example.com',
     provider: 'google',
     lastSyncAt: null,
+    lastSuccessfulSyncAt: null,
     consecutiveFailures: 0,
     lastFailureAt: null,
     lastFailureReason: null,

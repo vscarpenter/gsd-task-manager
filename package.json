@@ -24,6 +24,7 @@
 		"test:system:pocketbase": "bash scripts/run-pocketbase-system-test.sh",
 		"test:watch": "vitest",
 		"typecheck": "bunx --no-install --package @typescript/native tsc --noEmit",
+		"typecheck:tests": "bunx --no-install --package @typescript/native tsc --noEmit -p tsconfig.tests.json",
 		"deploy": "bash scripts/deploy-prod.sh",
 		"test:e2e": "playwright test",
 		"test:e2e:ui": "playwright test --ui",

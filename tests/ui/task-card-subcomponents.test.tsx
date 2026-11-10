@@ -5,6 +5,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { SortableAttributes } from "@/components/task-card/types";
+import { QUADRANT_ACCENT } from "@/lib/quadrants";
+import { createMockTask } from "@/tests/fixtures";
 
 // ---------------------------------------------------------------------------
 // Common mocks
@@ -22,6 +24,10 @@ vi.mock("@/lib/logger", () => ({
 // Fixed base timestamp so rendered task dates are deterministic (no `new Date()`
 // "now" reaching JSX, which react-doctor flags as a hydration nondeterminism).
 const NOW = new Date("2026-01-15T12:00:00Z");
+
+// TaskCard hands each sub-component its quadrant's accent. No assertion here
+// depends on which accent it is.
+const ACCENT = QUADRANT_ACCENT.q1;
 
 // ---------------------------------------------------------------------------
 
@@ -53,6 +59,7 @@ describe("TaskCardHeader", () => {
         onToggleComplete={vi.fn()}
         sortableAttributes={{} as SortableAttributes}
         sortableListeners={undefined}
+        accentVar={ACCENT}
       />
     );
 
@@ -87,6 +94,7 @@ describe("TaskCardHeader", () => {
         onToggleComplete={vi.fn()}
         sortableAttributes={{} as SortableAttributes}
         sortableListeners={undefined}
+        accentVar={ACCENT}
       />
     );
 
@@ -119,6 +127,7 @@ describe("TaskCardHeader", () => {
       onToggleComplete: vi.fn(),
       sortableAttributes: {} as SortableAttributes,
       sortableListeners: undefined,
+      accentVar: ACCENT,
     };
     const { container, rerender } = render(<TaskCardHeader task={task} {...props} />);
 
@@ -154,6 +163,7 @@ describe("TaskCardHeader", () => {
       onToggleComplete,
       sortableAttributes: {} as SortableAttributes,
       sortableListeners: undefined,
+      accentVar: ACCENT,
     };
     const { container, rerender } = render(<TaskCardHeader task={task} {...props} />);
 
@@ -207,6 +217,7 @@ describe("TaskCardMetadata", () => {
         isBlocking={false}
         blockingTasks={[]}
         blockedTasks={[]}
+        accentVar={ACCENT}
       />
     );
 
@@ -247,6 +258,7 @@ describe("TaskCardMetadata", () => {
         isBlocking={false}
         blockingTasks={[]}
         blockedTasks={[]}
+        accentVar={ACCENT}
       />
     );
 
@@ -426,24 +438,14 @@ describe("TaskCardActions", () => {
 // ---------------------------------------------------------------------------
 
 describe("TaskCardActions snooze", () => {
-  const baseTask = {
+  const baseTask = createMockTask({
     id: "t5",
     title: "Snooze Task",
     description: "",
-    urgent: true,
-    important: true,
-    quadrant: "urgent-important" as const,
-    completed: false,
     dueDate: "2026-01-20T09:00:00.000Z",
     createdAt: NOW.toISOString(),
     updatedAt: NOW.toISOString(),
-    recurrence: "none" as const,
-    tags: [],
-    subtasks: [],
-    dependencies: [],
-    notificationEnabled: true,
-    notificationSent: false,
-  };
+  });
 
   async function renderActions(overrides: Partial<typeof baseTask> = {}, onSnooze = vi.fn()) {
     const { TaskCardActions } = await import("@/components/task-card/task-card-actions");

@@ -1,4 +1,5 @@
-import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcessByStdio } from 'node:child_process';
+import type { Readable } from 'node:stream';
 import { randomBytes } from 'node:crypto';
 import { copyFileSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { createServer } from 'node:net';
@@ -6,6 +7,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import PocketBase from 'pocketbase';
 import { afterAll, describe, expect, it } from 'vitest';
+
+/** What spawn returns for stdio ['ignore', 'pipe', 'pipe']. */
+type PipedProcess = ChildProcessByStdio<null, Readable, Readable>;
 
 const CURRENT_BIN = process.env.POCKETBASE_BIN;
 const UPGRADE_SOURCE_BIN = process.env.POCKETBASE_OLD_BIN;
@@ -36,7 +40,7 @@ async function availablePort(): Promise<number> {
 
 async function waitForHealth(
   baseUrl: string,
-  child: ChildProcessWithoutNullStreams,
+  child: PipedProcess,
   readOutput: () => string
 ): Promise<void> {
   const deadline = Date.now() + 15_000;
@@ -55,7 +59,7 @@ async function waitForHealth(
   throw new Error(`PocketBase readiness timed out:\n${readOutput()}`);
 }
 
-async function stopPocketBase(child: ChildProcessWithoutNullStreams | undefined): Promise<void> {
+async function stopPocketBase(child: PipedProcess | undefined): Promise<void> {
   if (!child || child.exitCode !== null) return;
   child.kill('SIGTERM');
   const deadline = Date.now() + 5_000;
@@ -66,7 +70,7 @@ async function stopPocketBase(child: ChildProcessWithoutNullStreams | undefined)
 describeUpgrade('PocketBase existing-data upgrade boundary', () => {
   const dataDirectory = mkdtempSync(join(tmpdir(), 'gsd-pocketbase-upgrade-'));
   const legacyMigrationDirectory = mkdtempSync(join(tmpdir(), 'gsd-pocketbase-legacy-migration-'));
-  let pocketBaseProcess: ChildProcessWithoutNullStreams | undefined;
+  let pocketBaseProcess: PipedProcess | undefined;
 
   afterAll(async () => {
     await stopPocketBase(pocketBaseProcess);

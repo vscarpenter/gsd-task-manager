@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { getDb } from '@/lib/db';
 import { RetryManager, getRetryManager } from '@/lib/sync/retry-manager';
 import { getSyncConfig } from '@/lib/sync/config';
+import { createMockSyncConfig } from '@/tests/fixtures';
 
 describe('RetryManager', () => {
   let retryManager: RetryManager;
@@ -20,21 +21,7 @@ describe('RetryManager', () => {
     await db.open();
 
     // Initialize sync config
-    await db.syncMetadata.add({
-      key: 'sync_config',
-      enabled: true,
-      userId: 'user1',
-      deviceId: 'device1',
-      deviceName: 'Test Device',
-      email: 'test@example.com',
-      token: 'test-token',
-      tokenExpiresAt: Date.now() + 60 * 60 * 1000,
-      lastSyncAt: null,
-      consecutiveFailures: 0,
-      lastFailureAt: null,
-      lastFailureReason: null,
-      nextRetryAt: null,
-    });
+    await db.syncMetadata.add(createMockSyncConfig({ userId: 'user1', deviceId: 'device1' }));
   });
 
   afterEach(async () => {

@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { ThemedToaster } from "@/components/ui/themed-toaster";
 
-const toasterSpy = vi.fn(() => null);
+const toasterSpy = vi.fn((_props: unknown) => null);
 
 vi.mock("next-themes", () => ({
   useTheme: () => ({ resolvedTheme: "dark" }),

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { entryShown, nextReminder, sweepCards, type SweepReminder } from "@/lib/weekly-sweep";
 import type { TaskRecord } from "@/lib/types";
+import { createMockTask } from "@/tests/fixtures";
 
 /**
  * Runs the shared cross-platform weekly sweep corpus (tasks/spec-weekly-sweep.md,
@@ -36,23 +37,18 @@ const DEFAULT_STAMP = "2026-11-07T00:00:00.000Z";
 /** A task field left out takes the model's default, as the corpus note says. */
 function toTask(t: CorpusTask): TaskRecord {
   const { savedAt, dueDate, location: _location, ...rest } = t;
-  return {
+  return createMockTask({
     title: t.id,
     description: "",
     urgent: false,
     important: false,
     quadrant: "not-urgent-not-important",
-    completed: false,
     createdAt: DEFAULT_STAMP,
     updatedAt: DEFAULT_STAMP,
-    recurrence: "none",
-    tags: [],
-    subtasks: [],
-    dependencies: [],
     ...rest,
     ...(savedAt ? { savedAt } : {}),
     ...(dueDate ? { dueDate } : {}),
-  } as TaskRecord;
+  });
 }
 
 describe("cross-platform weekly sweep corpus", () => {

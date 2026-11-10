@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { GlobalErrorListener } from "@/components/global-error-listener";
 
@@ -11,8 +11,8 @@ vi.mock("sonner", () => ({
 }));
 
 describe("GlobalErrorListener", () => {
-  let addEventSpy: ReturnType<typeof vi.spyOn>;
-  let removeEventSpy: ReturnType<typeof vi.spyOn>;
+  let addEventSpy: MockInstance<typeof window.addEventListener>;
+  let removeEventSpy: MockInstance<typeof window.removeEventListener>;
 
   beforeEach(() => {
     vi.clearAllMocks();

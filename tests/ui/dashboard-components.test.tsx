@@ -821,8 +821,8 @@ describe('Dashboard Components', () => {
       underEstimateTasks: 2,
     };
     const trackedDistribution: QuadrantTimeDistribution[] = [
-      { quadrantId: 'urgent-important', totalMinutes: 90, taskCount: 3 },
-      { quadrantId: 'not-urgent-important', totalMinutes: 60, taskCount: 2 },
+      { quadrantId: 'urgent-important', totalMinutes: 90, taskCount: 3, averageMinutesPerTask: 30 },
+      { quadrantId: 'not-urgent-important', totalMinutes: 60, taskCount: 2, averageMinutesPerTask: 30 },
     ];
     const emptySummary: TimeTrackingSummary = {
       totalMinutesTracked: 0,

@@ -36,6 +36,8 @@ describe("edit drawer field semantics", () => {
         onPresetChange={vi.fn()}
         onCustomDateChange={vi.fn()}
         onToggleCustomInput={vi.fn()}
+        dueTime={undefined}
+        onDueTimeChange={vi.fn()}
       />
     );
 

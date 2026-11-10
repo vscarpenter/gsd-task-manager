@@ -129,10 +129,17 @@ const users = {
 
 const AUTH_REFRESH_PATH = '/api/collections/users/auth-refresh';
 
+/** Each name answers with its own collection, so a test can spy on that collection's calls. */
+function collection(name: 'users'): typeof users;
+function collection(name: string): typeof tasks;
+function collection(name: string): typeof users | typeof tasks {
+  return name === 'users' ? users : tasks;
+}
+
 const pb = {
   /** The SDK's auth store, which the session check reads and forgets a refused token from. */
   authStore: new BaseAuthStore(),
-  collection: (name: string) => (name === 'users' ? users : tasks),
+  collection,
   /** A raw request, as the session check posts to auth-refresh without saving the answer. */
   send: async (path: string) => {
     if (path !== AUTH_REFRESH_PATH) throw new Error(`Unexpected request: ${path}`);

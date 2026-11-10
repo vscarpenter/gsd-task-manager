@@ -13,6 +13,7 @@ import {
 import { getDb } from '@/lib/db';
 import { getSyncConfig } from '@/lib/sync/config';
 import type { TaskDraft, TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 // Mock dependencies
 const mockRemoveDependencyReferences = vi.hoisted(() => vi.fn());
@@ -126,8 +127,8 @@ describe('Task CRUD Operations', () => {
   describe('listTasks', () => {
     it('should return all tasks ordered by creation date (newest first)', async () => {
       const tasks: TaskRecord[] = [
-        { ...baseDraft, id: '1', quadrant: 'urgent-important', completed: false, createdAt: '2025-01-15T10:00:00Z', updatedAt: '2025-01-15T10:00:00Z', notificationSent: false },
-        { ...baseDraft, id: '2', quadrant: 'urgent-important', completed: false, createdAt: '2025-01-14T10:00:00Z', updatedAt: '2025-01-14T10:00:00Z', notificationSent: false },
+        createMockTask({ ...baseDraft, id: '1', quadrant: 'urgent-important', completed: false, createdAt: '2025-01-15T10:00:00Z', updatedAt: '2025-01-15T10:00:00Z', notificationSent: false }),
+        createMockTask({ ...baseDraft, id: '2', quadrant: 'urgent-important', completed: false, createdAt: '2025-01-14T10:00:00Z', updatedAt: '2025-01-14T10:00:00Z', notificationSent: false }),
       ];
 
       mockDb.tasks.toArray.mockResolvedValue(tasks);
@@ -246,7 +247,7 @@ describe('Task CRUD Operations', () => {
 
   describe('updateTask', () => {
     it('should update task with partial changes', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -254,7 +255,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -267,7 +268,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should update quadrant when urgent/important change', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -275,7 +276,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -292,7 +293,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should reset notification state when due date changes', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -302,7 +303,7 @@ describe('Task CRUD Operations', () => {
         notificationSent: true,
         lastNotificationAt: '2025-01-15T10:00:00Z',
         snoozedUntil: '2025-01-15T12:00:00Z',
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -315,7 +316,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should throw descriptive error with field details when draft is invalid', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -323,7 +324,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
 
@@ -338,7 +339,7 @@ describe('Task CRUD Operations', () => {
         deviceId: 'test-device',
       });
 
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -346,7 +347,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -357,7 +358,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should throw wrapped error when database put fails', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -365,7 +366,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockRejectedValue(new Error('Write failed'));
@@ -396,7 +397,7 @@ describe('Task CRUD Operations', () => {
         expectedDescription: 'Plain description',
       },
     ])('$scenario', async ({ initialDescription, newTitle, expectedTitle, expectedDescription }) => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         description: initialDescription,
@@ -405,7 +406,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -419,7 +420,7 @@ describe('Task CRUD Operations', () => {
 
   describe('toggleCompleted', () => {
     it('should mark task as completed and set completedAt', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -427,7 +428,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -439,7 +440,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should mark task as uncompleted and clear completedAt', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -448,7 +449,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -460,7 +461,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should create recurring instance when completing recurring task', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         recurrence: 'daily',
@@ -470,7 +471,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.add.mockResolvedValue(undefined);
@@ -492,7 +493,7 @@ describe('Task CRUD Operations', () => {
         deviceId: 'test-device',
       });
 
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -500,7 +501,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -519,7 +520,7 @@ describe('Task CRUD Operations', () => {
 
   describe('deleteTask', () => {
     it('should delete task from database', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -527,7 +528,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockRemoveDependencyReferences.mockResolvedValue(undefined);
@@ -559,7 +560,7 @@ describe('Task CRUD Operations', () => {
         deviceId: 'test-device',
       });
 
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         quadrant: 'urgent-important',
@@ -567,7 +568,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockRemoveDependencyReferences.mockResolvedValue(undefined);
@@ -586,7 +587,7 @@ describe('Task CRUD Operations', () => {
   });
 
   describe('restoreTask', () => {
-    const deletedRecord: TaskRecord = {
+    const deletedRecord = createMockTask({
       ...baseDraft,
       id: 'task-restore-1',
       quadrant: 'urgent-important',
@@ -595,7 +596,7 @@ describe('Task CRUD Operations', () => {
       createdAt: '2025-01-10T08:00:00Z',
       updatedAt: '2025-01-15T10:00:00Z',
       notificationSent: false,
-    };
+    });
 
     it('should re-insert the exact record, preserving id, completed state, and createdAt', async () => {
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -650,7 +651,7 @@ describe('Task CRUD Operations', () => {
 
   describe('moveTaskToQuadrant', () => {
     it('should update task urgent/important flags and quadrant', async () => {
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         urgent: true,
@@ -660,7 +661,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -684,7 +685,7 @@ describe('Task CRUD Operations', () => {
         deviceId: 'test-device',
       });
 
-      const existing: TaskRecord = {
+      const existing = createMockTask({
         ...baseDraft,
         id: 'task-1',
         urgent: true,
@@ -694,7 +695,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(existing);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -707,7 +708,7 @@ describe('Task CRUD Operations', () => {
 
   describe('duplicateTask', () => {
     it('should create copy with new ID and updated title', async () => {
-      const original: TaskRecord = {
+      const original = createMockTask({
         ...baseDraft,
         id: 'task-1',
         title: 'Original Task',
@@ -716,7 +717,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(original);
       mockDb.tasks.put.mockResolvedValue(undefined);
@@ -729,7 +730,7 @@ describe('Task CRUD Operations', () => {
     });
 
     it('should not enqueue sync when sync is disabled', async () => {
-      const original: TaskRecord = {
+      const original = createMockTask({
         ...baseDraft,
         id: 'task-1',
         title: 'Original Task',
@@ -738,7 +739,7 @@ describe('Task CRUD Operations', () => {
         createdAt: '2025-01-15T10:00:00Z',
         updatedAt: '2025-01-15T10:00:00Z',
         notificationSent: false,
-      };
+      });
 
       mockDb.tasks.get.mockResolvedValue(original);
       mockDb.tasks.put.mockResolvedValue(undefined);

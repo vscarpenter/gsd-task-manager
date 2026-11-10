@@ -1,26 +1,17 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { getStreakData } from '@/lib/analytics/streaks';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 describe('Streak Calculation', () => {
-  const baseTask: TaskRecord = {
+  const baseTask = createMockTask({
     id: '1',
-    title: 'Test Task',
     description: '',
-    urgent: true,
-    important: true,
-    quadrant: 'urgent-important',
-    completed: false,
     dueDate: undefined,
-    recurrence: 'none',
-    tags: [],
-    subtasks: [],
-    dependencies: [],
     createdAt: '2025-01-01T10:00:00Z',
     updatedAt: '2025-01-01T10:00:00Z',
     notifyBefore: 15,
-    notificationEnabled: true,
-  };
+  });
 
   beforeEach(() => {
     // Mock current date to 2025-01-15

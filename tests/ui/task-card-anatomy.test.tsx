@@ -243,7 +243,7 @@ describe("QuadrantPane header — quadrant identity", () => {
     const title = screen.getByTestId("quadrant-title");
     expect(icon.tagName.toLowerCase()).toBe("svg");
     expect(icon.style.color).toBe("var(--q1-ink)");
-    expect(icon.className.baseVal).toContain("h-[18px]");
+    expect(icon.getAttribute("class")).toContain("h-[18px]");
     expect(title.style.color).toBe("var(--q1-ink)");
     expect(screen.getByTestId("quadrant-hint").style.color).toBe("var(--q1-ink)");
   });

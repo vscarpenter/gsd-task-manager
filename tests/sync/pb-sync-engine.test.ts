@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
+import type { classifyRemoteDeletion } from '@/lib/sync/queue';
 
 // Mock dependencies before importing the module
 vi.mock('@/lib/sync/pocketbase-client', () => ({
@@ -12,7 +13,7 @@ vi.mock('@/lib/sync/pocketbase-client', () => ({
 // future test that populates tasks, not a load-bearing gate.
 vi.mock('@/lib/sync/queue', () => ({
   getSyncQueue: vi.fn(),
-  classifyRemoteDeletion: vi.fn((rows) => {
+  classifyRemoteDeletion: vi.fn<typeof classifyRemoteDeletion>((rows) => {
     if (rows.some((row) => (row.status ?? 'pending') === 'pending')) {
       return { verdict: 'protect', staleRowIds: [] };
     }
@@ -165,7 +166,8 @@ function createMockPB() {
     // auth-refresh confirms the session for the owner these tests push for.
     authStore: { token: 'token-1', clear: vi.fn() },
     send: vi.fn().mockResolvedValue({ record: { id: 'user-123' } }),
-    collection: vi.fn(() => collectionMock),
+    // A test may swap in a collection that implements only the calls it expects.
+    collection: vi.fn((): Partial<typeof collectionMock> => collectionMock),
     _collectionMock: collectionMock,
   };
 }

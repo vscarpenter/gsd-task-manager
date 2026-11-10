@@ -242,6 +242,8 @@ function makeHandlers(): CommandActionHandlers {
     onImportTasks: vi.fn(),
     onOpenSettings: vi.fn(),
     onOpenHelp: vi.fn(),
+    onSendFeedback: vi.fn(),
+    onOpenWhatsNew: vi.fn(),
     onViewDashboard: vi.fn(),
     onViewMatrix: vi.fn(),
     onViewArchive: vi.fn(),

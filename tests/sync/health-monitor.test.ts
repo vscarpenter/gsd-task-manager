@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getDb } from '@/lib/db';
 import { HealthMonitor, getHealthMonitor } from '@/lib/sync/health-monitor';
+import type { SyncQueueItem } from '@/lib/sync/types';
 import {
   createMockSyncConfig,
   createMockSyncQueueItem,
@@ -42,8 +43,8 @@ import { isAuthenticated } from '@/lib/sync/pocketbase-client';
 
 // Create mock instances
 const mockQueue = {
-  getPending: vi.fn(async () => []),
-  getFailed: vi.fn(async () => []),
+  getPending: vi.fn(async (): Promise<SyncQueueItem[]> => []),
+  getFailed: vi.fn(async (): Promise<SyncQueueItem[]> => []),
 };
 
 // Default: user is authenticated

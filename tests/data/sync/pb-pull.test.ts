@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { RecordModel } from 'pocketbase';
+import type { ListOptions, RecordModel } from 'pocketbase';
 import Dexie from 'dexie';
 import { getDb } from '@/lib/db';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 vi.mock('@/lib/sync/pocketbase-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/sync/pocketbase-client')>()),
@@ -194,7 +195,7 @@ describe('pullRemoteChanges cursor clamping', () => {
   });
 
   it('uses client_updated_at for filtering and sorting', async () => {
-    const getList = vi.fn(async () => []);
+    const getList = vi.fn(async (_page: number, _perPage: number, _options: ListOptions) => []);
     mockPocketBase({
       collection: () => ({ getList }),
     });
@@ -217,24 +218,19 @@ describe('pullRemoteChanges cursor clamping', () => {
 
     const { getDb } = await import('@/lib/db');
     const db = getDb();
-    await db.tasks.add({
+    await db.tasks.add(createMockTask({
       id: 't-equal',
       title: 'Existing',
       description: '',
       urgent: false,
       important: false,
       quadrant: 'not-urgent-not-important',
-      completed: false,
       createdAt: '2026-05-18T00:00:00.000Z',
       updatedAt: timestamp,
-      tags: [],
-      subtasks: [],
-      dependencies: [],
       notificationEnabled: false,
-      notificationSent: false,
       timeSpent: 0,
       timeEntries: [],
-    });
+    }));
 
     mockPocketBase({
       collection: () => ({
@@ -781,7 +777,10 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     // The first read is the pre-delete plan, made outside any transaction. The
     // second is the one inside the reconcile transaction, which must serialize.
     let reads = 0;
-    const toArraySpy = vi.spyOn(db.tasks, 'toArray').mockImplementation(async () => {
+    // Spy through the one signature the pull calls. Spying on db.tasks directly
+    // types the mock by Dexie's last toArray overload, which no async function fits.
+    const tasksTable: { toArray(): Promise<TaskRecord[]> } = db.tasks;
+    const toArraySpy = vi.spyOn(tasksTable, 'toArray').mockImplementation(async () => {
       const snapshot = await originalToArray();
       if (++reads !== 2) return snapshot;
       markReadStarted();
@@ -883,7 +882,7 @@ describe('pullRemoteChanges after teardown', () => {
     const pull = pullRemoteChanges(null);
     await vi.waitFor(() => expect(fetchRemoteTaskIndexMock).toHaveBeenCalled());
     await db.syncMetadata.put(signedInConfig({ enabled: false, userId: null }));
-    releaseIndex?.({ index: new Map(), fetchSucceeded: true });
+    releaseIndex?.({ index: new Map<string, never>(), fetchSucceeded: true });
     const outcome = await settle(pull);
 
     await expect(db.tasks.get('kept-after-sign-out')).resolves.toBeDefined();

@@ -40,14 +40,14 @@ describe('guardPoll', () => {
   });
 
   it('should_catch_a_poll_that_throws_before_it_returns_a_promise', async () => {
-    const poll = guardPoll('lastSync', () => {
+    const poll = guardPoll('coordinator', () => {
       throw new TypeError('getStatus is not a function');
     });
 
     await expect(poll()).resolves.toBeUndefined();
 
     expect(warn).toHaveBeenCalledWith('SYNC_STATUS', 'Sync status poll failed', {
-      poll: 'lastSync',
+      poll: 'coordinator',
       errorType: 'TypeError',
       errorMessage: 'getStatus is not a function',
     });

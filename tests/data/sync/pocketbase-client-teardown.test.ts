@@ -8,6 +8,11 @@ function makeToken(exp: number): string {
 }
 const FAR_FUTURE = Math.floor(Date.now() / 1000) + 60 * 60;
 
+/** A users-collection auth record, the shape the SDK stores. */
+function authRecord(id: string) {
+  return { id, collectionId: '_pb_users_auth_', collectionName: 'users' };
+}
+
 /**
  * The SDK persists auth under one shared localStorage key and `authRefresh()`
  * saves whatever the server returns, with no notion of which session asked.
@@ -21,7 +26,7 @@ describe('clearPocketBase', () => {
   });
 
   it('clears the persisted session so the next client starts signed out', () => {
-    getPocketBase().authStore.save(makeToken(FAR_FUTURE), { id: 'user-a' });
+    getPocketBase().authStore.save(makeToken(FAR_FUTURE), authRecord('user-a'));
     expect(getCurrentUserId()).toBe('user-a');
 
     clearPocketBase();
@@ -32,13 +37,13 @@ describe('clearPocketBase', () => {
 
   it('detaches the old client from shared storage so a late save cannot overwrite the next account', () => {
     const oldClient = getPocketBase();
-    oldClient.authStore.save(makeToken(FAR_FUTURE), { id: 'user-a' });
+    oldClient.authStore.save(makeToken(FAR_FUTURE), authRecord('user-a'));
 
     clearPocketBase();
-    getPocketBase().authStore.save(makeToken(FAR_FUTURE), { id: 'user-b' });
+    getPocketBase().authStore.save(makeToken(FAR_FUTURE), authRecord('user-b'));
 
     // What the SDK does when account A's in-flight authRefresh finally resolves.
-    oldClient.authStore.save(makeToken(FAR_FUTURE), { id: 'user-a' });
+    oldClient.authStore.save(makeToken(FAR_FUTURE), authRecord('user-a'));
 
     expect(getCurrentUserId()).toBe('user-b');
     expect(JSON.parse(window.localStorage.getItem('pocketbase_auth') ?? '{}').record?.id).toBe('user-b');

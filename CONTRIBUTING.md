@@ -34,6 +34,7 @@ non-trivial pull request:
 ```bash
 bun run test -- --coverage
 bun typecheck
+bun run typecheck:tests
 bun lint
 bun run quality:shape
 bun run knip
@@ -47,6 +48,7 @@ bun run test:e2e
 The MCP workspace also requires:
 
 ```bash
+bun run --cwd packages/mcp-server typecheck:tests
 bun run --cwd packages/mcp-server test:coverage
 bun run --cwd packages/mcp-server build
 ```

@@ -17,7 +17,7 @@ describe("escalation window preference", () => {
     expect(DEFAULT_ESCALATION_WINDOW_DAYS).toBe(2);
   });
 
-  it.each([1, 2, 3, 7])("round-trips %i days", (days) => {
+  it.each([1, 2, 3, 7] as const)("round-trips %i days", (days) => {
     writeEscalationWindow(days);
     expect(readEscalationWindow()).toBe(days);
   });

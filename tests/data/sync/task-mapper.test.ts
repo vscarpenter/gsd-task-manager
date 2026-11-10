@@ -432,7 +432,7 @@ describe('task-mapper', () => {
 
   describe('remote task identity', () => {
     it('requires a valid timezone-bearing client version', () => {
-      const base = { id: 'record-1', task_id: 'task-1' } as never;
+      const base = { id: 'record-1', task_id: 'task-1' };
       for (const client_updated_at of [undefined, null, '', 'not-a-date', '2026-04-08T10:00:00.000']) {
         expect(getPocketBaseTaskIdentity({ ...base, client_updated_at } as never)).toBeNull();
       }
@@ -486,7 +486,7 @@ describe('task-mapper', () => {
   describe('round-trip', () => {
     it('should preserve data through local → PB → local conversion', () => {
       const original = buildLocalTask();
-      const pb = taskRecordToPocketBase(original, 'user-1', 'device-1');
+      const pb = taskRecordToPocketBase(original, 'user-1', 'device-1', DEVICE_DEFAULT);
 
       // Simulate a PB record with system fields added
       const pbRecord = {

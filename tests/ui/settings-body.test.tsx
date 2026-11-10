@@ -81,6 +81,9 @@ function makeSettings(overrides: Partial<SettingsData> = {}): SettingsData {
     toggleSmartViews: vi.fn(),
     notificationToggle: vi.fn(),
     defaultReminderChange: vi.fn(),
+    soundToggle: vi.fn(),
+    quietHoursToggle: vi.fn(),
+    quietHoursChange: vi.fn(),
     markAccountDeleted: vi.fn(),
     ...overrides,
   };

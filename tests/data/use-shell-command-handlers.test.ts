@@ -224,18 +224,18 @@ describe("useShellCommandHandlers", () => {
     window.addEventListener(APPLY_SMART_VIEW_EVENT, listener);
 
     const { result } = renderHook(() => useShellCommandHandlers());
-    result.current.handlers.onApplySmartView({ search: "x" }, "view-1");
+    result.current.handlers.onApplySmartView({ searchQuery: "x" }, "view-1");
 
     expect(listener).toHaveBeenCalledTimes(1);
     const detail = (listener.mock.calls[0][0] as CustomEvent).detail;
-    expect(detail).toEqual({ viewId: "view-1", criteria: { search: "x" } });
+    expect(detail).toEqual({ viewId: "view-1", criteria: { searchQuery: "x" } });
     window.removeEventListener(APPLY_SMART_VIEW_EVENT, listener);
   });
 
   it("navigates with a smart-view query off the matrix route", () => {
     navigateTo("/dashboard");
     const { result } = renderHook(() => useShellCommandHandlers());
-    result.current.handlers.onApplySmartView({ search: "x" }, "view 2");
+    result.current.handlers.onApplySmartView({ searchQuery: "x" }, "view 2");
     expect(pushMock).toHaveBeenCalledWith("/?smartView=view%202");
   });
 

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SyncQueue, getSyncQueue } from '@/lib/sync/queue';
 import { getDb } from '@/lib/db';
 import type { TaskRecord } from '@/lib/types';
+import { createMockTask } from '@/tests/fixtures';
 
 describe('SyncQueue', () => {
   let queue: SyncQueue;
@@ -21,21 +22,7 @@ describe('SyncQueue', () => {
 
   describe('enqueue', () => {
     it('should add operation to queue', async () => {
-      const task: TaskRecord = {
-        id: 'task-1',
-        title: 'Test Task',
-        description: '',
-        urgent: true,
-        important: true,
-        quadrant: 'urgent-important',
-        completed: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        recurrence: 'none',
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-      };
+      const task = createMockTask({ id: 'task-1', description: '' });
 
       await queue.enqueue('create', 'task-1', task);
 
@@ -372,36 +359,14 @@ describe('SyncQueue', () => {
   describe('populateFromExistingTasks', () => {
     it('should add all existing tasks to queue', async () => {
       const tasks: TaskRecord[] = [
-        {
-          id: 'task-1',
-          title: 'Task 1',
-          description: '',
-          urgent: true,
-          important: true,
-          quadrant: 'urgent-important',
-          completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          recurrence: 'none',
-          tags: [],
-          subtasks: [],
-          dependencies: [],
-          },
-        {
+        createMockTask({ id: 'task-1', title: 'Task 1', description: '' }),
+        createMockTask({
           id: 'task-2',
           title: 'Task 2',
           description: '',
           urgent: false,
-          important: true,
           quadrant: 'not-urgent-important',
-          completed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          recurrence: 'none',
-          tags: [],
-          subtasks: [],
-          dependencies: [],
-          },
+        }),
       ];
 
       await db.tasks.bulkAdd(tasks);
@@ -428,21 +393,7 @@ describe('SyncQueue', () => {
     });
 
     it('should skip tasks already in queue', async () => {
-      const task: TaskRecord = {
-        id: 'task-1',
-        title: 'Task 1',
-        description: '',
-        urgent: true,
-        important: true,
-        quadrant: 'urgent-important',
-        completed: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        recurrence: 'none',
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-      };
+      const task = createMockTask({ id: 'task-1', title: 'Task 1', description: '' });
 
       await db.tasks.add(task);
 
@@ -461,21 +412,9 @@ describe('SyncQueue', () => {
     });
 
     it('should handle large number of tasks', async () => {
-      const tasks: TaskRecord[] = Array.from({ length: 100 }, (_, i) => ({
-        id: `task-${i}`,
-        title: `Task ${i}`,
-        description: '',
-        urgent: true,
-        important: true,
-        quadrant: 'urgent-important',
-        completed: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        recurrence: 'none',
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-      }));
+      const tasks: TaskRecord[] = Array.from({ length: 100 }, (_, i) =>
+        createMockTask({ id: `task-${i}`, title: `Task ${i}`, description: '' })
+      );
 
       await db.tasks.bulkAdd(tasks);
 
@@ -489,21 +428,7 @@ describe('SyncQueue', () => {
     });
 
     it('should add tasks without extra metadata', async () => {
-      const task: TaskRecord = {
-        id: 'task-1',
-        title: 'Task 1',
-        description: '',
-        urgent: true,
-        important: true,
-        quadrant: 'urgent-important',
-        completed: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        recurrence: 'none',
-        tags: [],
-        subtasks: [],
-        dependencies: [],
-      };
+      const task = createMockTask({ id: 'task-1', title: 'Task 1', description: '' });
 
       await db.tasks.add(task);
 
@@ -538,7 +463,7 @@ describe('SyncQueue', () => {
       const promises = [];
 
       for (let i = 0; i < 50; i++) {
-        promises.push(queue.enqueue('create', `task-${i}`, null, {}));
+        promises.push(queue.enqueue('create', `task-${i}`, null));
       }
 
       await Promise.all(promises);

@@ -18,7 +18,7 @@ it("keeps the shared desktop actions attached to the correct task", async () => 
   render(<TooltipProvider><TaskCardActions task={task} taskIsOverdue={false} taskIsDueToday={false} overdueDays={0} onEdit={onEdit} onDelete={onDelete} onShare={onShare} onDuplicate={onDuplicate} /></TooltipProvider>);
   const user = userEvent.setup();
   for (const label of ["Share task", "Duplicate task", "Edit task", "Delete task"]) {
-    await user.click(screen.getAllByRole("button", { name: label, exact: true })[0]);
+    await user.click(screen.getAllByRole("button", { name: label })[0]);
   }
   for (const action of [onShare, onDuplicate, onEdit, onDelete]) expect(action).toHaveBeenCalledWith(task);
 });

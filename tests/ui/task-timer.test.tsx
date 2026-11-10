@@ -26,7 +26,7 @@ const mockGetRemainingSnoozeMinutes = vi.fn().mockReturnValue(0);
 vi.mock("@/lib/tasks", () => ({
   hasRunningTimer: (...args: unknown[]) => mockHasRunningTimer(...args),
   getRunningEntry: (...args: unknown[]) => mockGetRunningEntry(...args),
-  formatTimeSpent: (...args: unknown[]) => mockFormatTimeSpent(...args),
+  formatTimeSpent: (...args: Parameters<typeof mockFormatTimeSpent>) => mockFormatTimeSpent(...args),
   isTaskSnoozed: (...args: unknown[]) => mockIsTaskSnoozed(...args),
   getRemainingSnoozeMinutes: (...args: unknown[]) =>
     mockGetRemainingSnoozeMinutes(...args),

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { taskToPBFields, type GsdConfig, type Task } from '../../types.js';
+import { taskToPBFields, type GsdConfig, type PBTask, type Task } from '../../types.js';
 
 const { mockLoggerWarn } = vi.hoisted(() => ({ mockLoggerWarn: vi.fn() }));
 
@@ -64,12 +64,13 @@ function freshTask(task: Task, timestamp = task.updatedAt) {
   return {
     pbRecordId: `record-${task.id}`,
     clientUpdatedAt: timestamp,
+    // taskToPBFields sets every field the client owns, but its declared return type is Partial.
     record: {
       id: `record-${task.id}`,
       ...taskToPBFields(task, 'owner-1', 'device-1'),
       created: task.createdAt,
       updated: timestamp,
-    },
+    } as PBTask,
   };
 }
 

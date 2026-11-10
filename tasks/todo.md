@@ -1,3 +1,19 @@
+# Test typecheck gate (2026-11-10)
+
+Branch: `claude/focused-heisenberg-0j5671` off `main` (`e94022a`). Non-trivial tier: a new CI gate plus fixes in 61 test files. The owner's session request served as the approved spec, so there is no separate `tasks/spec.md`. Background: `tasks/audit-2026-11-10.md`, P1 item 12 (TEST-8, TEST-14, MCP-14).
+
+## Resuming From Here
+
+- [x] `tsconfig.tests.json` replaces `tsconfig.vitest.json`, with its own include, exclude, and types (`node`, `vitest/globals`, `@testing-library/jest-dom/vitest`) plus `allowJs` for the `.cjs` scripts the tests import. `vitest.d.ts` is gone: only the app's program loaded it, and the app now loads no Vitest or jest-dom types.
+- [x] Root suite: 208 errors in 67 files fixed. Copied task literals go through `createMockTask`, sync configs through `createMockSyncConfig`, and the rest got the props, fields, and mock types they drifted from.
+- [x] MCP suite: 59 errors in 6 files fixed under `packages/mcp-server/tsconfig.tests.json`.
+- [x] `typecheck:tests` scripts, run in CI's `typecheck` and `mcp-coverage` jobs. CLAUDE.md, README, CONTRIBUTING, AGENTS.md, and the testing rule list them.
+- [x] Verify: unit 4,819 passed in 355 files (the baseline), MCP 525 passed with 6 skipped (the baseline). Typecheck, both test typechecks, lint, shape, and knip pass. Each gate fails on a planted type error.
+- **One behavior change, in its own commit:** the malformed-or-duplicate `it.each` case in `tests/data/sync/pb-sync-helpers.test.ts` passed one object instead of a list, so it never reached the check it names. It now does, and still passes.
+- **Next:** the owner reviews the PR and its CI run.
+- **Follow-ups, not done:** typecheck `tests/e2e` in its own program (one error today, a `.cjs` import); declare `taskToPBFields` as returning every client field so the delete test can drop its one cast (this changes the published MCP types); route the copied factories that still compile through `createMockTask`.
+- **Assumptions:** `tests/e2e` stays out of the Vitest program, because those files run under Playwright and shouldn't see Vitest globals. Tests may stub env variables, so the env test uses `vi.stubEnv` rather than dropping `env.d.ts`'s `readonly` guard.
+
 # A refused token reads as an empty account (2026-11-10)
 
 Branch: `claude/happy-franklin-1evhvh` off `main` (`e94022a`). Audit P1 item 2 (SYNC-3, SYNC-10, MCP-1) in `tasks/audit-2026-11-10.md`. Non-trivial tier (both clients, a shared helper, the sync session model); the request's goal and "done means" served as the approved spec.

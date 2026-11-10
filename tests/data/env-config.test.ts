@@ -15,7 +15,7 @@ function setWindowLocation(url: string) {
 describe('env-config', () => {
   beforeEach(() => {
     vi.resetModules();
-    delete process.env.NEXT_PUBLIC_POCKETBASE_URL;
+    vi.stubEnv('NEXT_PUBLIC_POCKETBASE_URL', undefined);
     setWindowLocation('https://gsd.vinny.dev/');
   });
 
@@ -34,7 +34,7 @@ describe('env-config', () => {
   });
 
   it('respects an explicit NEXT_PUBLIC_POCKETBASE_URL override', async () => {
-    process.env.NEXT_PUBLIC_POCKETBASE_URL = 'https://sync.example.com';
+    vi.stubEnv('NEXT_PUBLIC_POCKETBASE_URL', 'https://sync.example.com');
 
     const { getEnvironmentConfig } = await import('@/lib/env-config');
 

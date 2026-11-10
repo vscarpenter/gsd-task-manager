@@ -8,6 +8,7 @@ import { subscribe, unsubscribe } from '@/lib/sync/pb-realtime';
 import { getDb } from '@/lib/db';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { PBSyncResult } from '@/lib/sync/types';
+import type { HealthReport } from '@/lib/sync/health-monitor';
 
 vi.mock('@/lib/sync/pocketbase-client');
 vi.mock('@/lib/sync/sync-coordinator');
@@ -39,7 +40,7 @@ vi.mock('@/lib/logger', () => ({
 
 const FIVE_SECONDS_MS = 5000;
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
-const HEALTHY = { healthy: true, issues: [], timestamp: 0 };
+const HEALTHY: HealthReport = { healthy: true, issues: [], timestamp: 0 };
 const STALE_QUEUE_ISSUE = {
   type: 'stale_queue' as const,
   severity: 'warning' as const,
