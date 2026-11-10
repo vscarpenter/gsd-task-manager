@@ -49,12 +49,14 @@ describe('fetchRemoteTaskIndex', () => {
     expect(index.size).toBe(0);
   });
 
+  // Each case is one argument, the rows getList returns. it.each spreads a
+  // case's array into arguments, so the rows sit in an array of their own.
   it.each([
-    [{ id: 'rec-1', task_id: 't1' }],
-    [
+    [[{ id: 'rec-1', task_id: 't1' }]],
+    [[
       { id: 'rec-1', task_id: 't1', client_updated_at: '2026-05-18T10:00:00.000Z' },
       { id: 'rec-2', task_id: 't1', client_updated_at: '2026-05-18T11:00:00.000Z' },
-    ],
+    ]],
   ])('marks malformed or duplicate rows as an incomplete index', async (items) => {
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       collection: () => ({ getList: vi.fn(async () => items) }),
