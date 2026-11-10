@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import {
   deriveIntroStats,
   introDateLabel,
@@ -39,7 +39,9 @@ function makeStats(overrides: Partial<IntroStats> = {}): IntroStats {
   };
 }
 
-const TODAY = "2026-08-01";
+/** How the app stores an all-day due date: local midnight as an ISO instant. */
+const localMidnight = (year: number, month: number, day: number) => new Date(year, month - 1, day).toISOString();
+const originalTimezone = process.env.TZ;
 
 describe("introDateLabel", () => {
   it("formats a weekday, month, and day without the year", () => {
@@ -52,10 +54,19 @@ describe("introDateLabel", () => {
 });
 
 describe("deriveIntroStats", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 1, 12));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    if (originalTimezone === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTimezone;
+  });
+
   it("counts only incomplete tasks as active", () => {
     const stats = deriveIntroStats(
-      [makeTask(), makeTask(), makeTask({ completed: true })],
-      TODAY
+      [makeTask(), makeTask(), makeTask({ completed: true })]
     );
     expect(stats.activeTotal).toBe(2);
   });
@@ -66,8 +77,7 @@ describe("deriveIntroStats", () => {
         makeTask({ urgent: true, important: true }),
         makeTask({ urgent: true, important: false }),
         makeTask({ urgent: true, important: true, completed: true }),
-      ],
-      TODAY
+      ]
     );
     expect(stats.doFirstCount).toBe(1);
   });
@@ -78,8 +88,7 @@ describe("deriveIntroStats", () => {
         makeTask({ urgent: false, important: false }),
         makeTask({ urgent: false, important: false, completed: true }),
         makeTask({ urgent: false, important: true }),
-      ],
-      TODAY
+      ]
     );
     expect(stats.eliminateCount).toBe(1);
   });
@@ -87,12 +96,11 @@ describe("deriveIntroStats", () => {
   it("counts overdue as incomplete tasks due strictly before today", () => {
     const stats = deriveIntroStats(
       [
-        makeTask({ dueDate: "2026-07-30" }),
-        makeTask({ dueDate: TODAY }),
-        makeTask({ dueDate: "2026-07-01", completed: true }),
+        makeTask({ dueDate: localMidnight(2026, 7, 30) }),
+        makeTask({ dueDate: localMidnight(2026, 8, 1) }),
+        makeTask({ dueDate: localMidnight(2026, 7, 1), completed: true }),
         makeTask(),
-      ],
-      TODAY
+      ]
     );
     expect(stats.overdueTotal).toBe(1);
   });
@@ -100,13 +108,22 @@ describe("deriveIntroStats", () => {
   it("collects deduped quadrant titles that hold overdue tasks", () => {
     const stats = deriveIntroStats(
       [
-        makeTask({ urgent: true, important: true, dueDate: "2026-07-30" }),
-        makeTask({ urgent: true, important: true, dueDate: "2026-07-29" }),
-        makeTask({ urgent: false, important: true, dueDate: "2026-07-28" }),
-      ],
-      TODAY
+        makeTask({ urgent: true, important: true, dueDate: localMidnight(2026, 7, 30) }),
+        makeTask({ urgent: true, important: true, dueDate: localMidnight(2026, 7, 29) }),
+        makeTask({ urgent: false, important: true, dueDate: localMidnight(2026, 7, 28) }),
+      ]
     );
     expect(stats.overdueQuadrants).toEqual(["Do First", "Schedule"]);
+  });
+
+  it("keeps a task due today out of overdue after the UTC date rolls over", () => {
+    process.env.TZ = "America/Chicago";
+    // 20:00 in Chicago on Aug 1 is already Aug 2 in UTC.
+    vi.setSystemTime(new Date(2026, 7, 1, 20));
+
+    const stats = deriveIntroStats([makeTask({ dueDate: localMidnight(2026, 8, 1) })]);
+
+    expect(stats.overdueTotal).toBe(0);
   });
 });
 

@@ -13,7 +13,7 @@ vi.mock('../../write-ops.js', () => mocks);
 import { handleBulkUpdateTasks } from '../../tools/handlers/write-handlers.js';
 
 const config = {
-  pocketbaseUrl: 'http://example.invalid',
+  pocketBaseUrl: 'http://example.invalid',
   authToken: 'token',
 };
 

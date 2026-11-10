@@ -1,8 +1,10 @@
 # 0004: PWA Architecture for Offline Capability
 
 **Date:** 2026-04-14
-**Status:** Accepted
+**Status:** Accepted; amended (see the note below)
 **Deciders:** Vinny Carpenter
+
+> **Amended.** `bun run build` writes the export (there is no `bun run export`), and the rewrite function is `cloudfront-function-url-rewrite.cjs`. It appends `/index.html` to every extensionless path, so a new route needs no function deploy. Fonts are self-hosted through `next/font`. A new service worker calls `skipWaiting()` on install and claims open pages on activate, and CI's `test:pwa` exercises that lifecycle.
 
 ## Context
 

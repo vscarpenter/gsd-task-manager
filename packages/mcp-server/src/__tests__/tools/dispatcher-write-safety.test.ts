@@ -39,7 +39,7 @@ vi.mock('../../tools/handlers/write-handlers.js', () => ({
 import { handleToolCall } from '../../tools/handlers/index.js';
 
 const config = {
-  pocketbaseUrl: 'http://example.invalid',
+  pocketBaseUrl: 'http://example.invalid',
   authToken: 'token',
 };
 

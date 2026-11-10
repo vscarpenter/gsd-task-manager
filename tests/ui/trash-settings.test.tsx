@@ -39,6 +39,18 @@ describe("<TrashSettings>", () => {
     expect(screen.getByText(/28 days left/i)).toBeInTheDocument();
   });
 
+  it("says one day, not one days, on the last day", async () => {
+    await getDb().deletedTasks.put({
+      ...createMockTask({ id: "t1", title: "Nearly gone" }),
+      deletedAt: daysAgo(29.5),
+    });
+
+    render(<TrashSettings />);
+
+    await waitFor(() => expect(screen.getByText("Nearly gone")).toBeInTheDocument());
+    expect(screen.getByText("1 day left")).toBeInTheDocument();
+  });
+
   it("restores a task back to the board", async () => {
     const user = userEvent.setup();
     await getDb().deletedTasks.put({

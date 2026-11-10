@@ -9,8 +9,18 @@ import {
 import type { WhatsNewRelease } from "@/lib/whats-new/releases";
 
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
-    <a href={href} {...rest}>
+  default: ({
+    href,
+    children,
+    onClick,
+    ...rest
+  }: {
+    href: string;
+    children: React.ReactNode;
+    onClick?: React.MouseEventHandler<HTMLAnchorElement>;
+  }) => (
+    // Run the component's handler, then stop jsdom's "navigation to another Document".
+    <a href={href} {...rest} onClick={(event) => { onClick?.(event); event.preventDefault(); }}>
       {children}
     </a>
   ),

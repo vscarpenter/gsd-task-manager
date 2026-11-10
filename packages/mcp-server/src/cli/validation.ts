@@ -32,7 +32,7 @@ function validateEnvironmentVariables(): {
     console.log('Missing required environment variables:');
     if (!pbUrl) console.log('  - GSD_POCKETBASE_URL');
     if (!authToken) console.log('  - GSD_AUTH_TOKEN');
-    console.log('\nRun setup wizard: npx gsd-mcp-server --setup');
+    console.log('\nRun setup wizard: gsd-mcp-server --setup');
     process.exit(1);
   }
 
@@ -70,39 +70,25 @@ async function validatePBConnection(pbUrl: string): Promise<ValidationCheck> {
 /**
  * Create sync status check result
  */
-function createSyncStatusCheck(status: SyncStatus): ValidationCheck {
-  return {
-    name: 'Sync Status',
-    status: status.healthy ? '✓' : '⚠',
-    details: status.healthy
-      ? `Healthy (${status.taskCount} tasks synced)`
-      : 'PocketBase reports unhealthy status',
-  };
-}
-
 /**
  * Validate authentication token and check sync status
  */
 async function validateAuthentication(config: GsdConfig): Promise<ValidationCheck[]> {
-  const checks: ValidationCheck[] = [];
-
+  const failed: ValidationCheck = { name: 'Authentication', status: '✗', details: 'Token validation failed' };
+  let status: SyncStatus;
   try {
-    const status = await getSyncStatus(config);
-    checks.push({
-      name: 'Authentication',
-      status: '✓',
-      details: `Token valid (${status.taskCount} tasks accessible)`,
-    });
-    checks.push(createSyncStatusCheck(status));
+    status = await getSyncStatus(config);
   } catch {
-    checks.push({
-      name: 'Authentication',
-      status: '✗',
-      details: 'Token validation failed',
-    });
+    return [failed];
   }
+  // getSyncStatus catches its own errors and returns healthy: false, so read the
+  // result rather than relying on a throw, the same rule validate_config uses.
+  if (!status.healthy) return [failed];
 
-  return checks;
+  return [
+    { name: 'Authentication', status: '✓', details: `Token valid (${status.taskCount} tasks accessible)` },
+    { name: 'Sync Status', status: '✓', details: `Healthy (${status.taskCount} tasks synced)` },
+  ];
 }
 
 /**
@@ -146,7 +132,7 @@ function displayOverallStatus(checks: ValidationCheck[]): void {
   console.log();
   if (hasErrors) {
     console.log('❌ Configuration has errors. Please fix the issues above.');
-    console.log('   Run setup wizard: npx gsd-mcp-server --setup');
+    console.log('   Run setup wizard: gsd-mcp-server --setup');
     process.exit(1);
   } else if (hasWarnings) {
     console.log('⚠️  Configuration is functional but has warnings.');

@@ -1,8 +1,10 @@
 # 0003: Last-Write-Wins Conflict Resolution
 
 **Date:** 2024-06-15  
-**Status:** Accepted  
+**Status:** Accepted; amended (see the note below)  
 **Deciders:** Vinny Carpenter
+
+> **Amended.** Clock skew is bounded by clamping a future `client_updated_at` to now plus five minutes (`clampClientTimestamp` in `lib/sync/task-mapper.ts`, `SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS`) and by checking remote stamps with `isBeyondClockSkew` (`lib/sync/pb-sync-helpers.ts`), not by ISO timestamps.
 
 ## Context
 

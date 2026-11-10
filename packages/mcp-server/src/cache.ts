@@ -240,7 +240,7 @@ export function generateTaskListCacheKey(filters?: {
   const parts: string[] = [];
   if (filters.quadrant) parts.push(`q:${filters.quadrant}`);
   if (filters.completed !== undefined) parts.push(`c:${filters.completed}`);
-  if (filters.tags?.length) parts.push(`t:${filters.tags.sort().join(',')}`);
+  if (filters.tags?.length) parts.push(`t:${[...filters.tags].sort().join(',')}`);
 
   const filterKey = parts.length > 0 ? parts.join('|') : 'all';
   return namespace ? `${namespace}|${filterKey}` : filterKey;

@@ -81,7 +81,11 @@ export async function runTaskSyncTransaction<T>(
     // would make those two operations non-atomic. `syncMetadata` is in scope so
     // a delete made while signed out remembers its id in the same commit.
     [db.tasks, db.deletedTasks, db.syncQueue, db.syncMetadata],
-    () => mutation({ syncEnabled, enqueue })
+    // The scope must be an async function. Dexie keeps the transaction across
+    // native awaits only for a scope tagged AsyncFunction; with a plain arrow, a
+    // write after an await that made no request runs in a transaction of its own,
+    // and Dexie rejects the commit as premature (WEB-UNDO-SIGNED-IN).
+    async () => mutation({ syncEnabled, enqueue })
   );
   if (didEnqueue) scheduleSyncAfterChange();
   return result;

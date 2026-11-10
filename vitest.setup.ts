@@ -43,6 +43,10 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   } as unknown as typeof ResizeObserver;
 }
 
+// jsdom logs "Not implemented" for every canvas.getContext() call, and lib/confetti.ts
+// probes one at import. Return null, as jsdom already does, without the noise.
+HTMLCanvasElement.prototype.getContext = (() => null) as unknown as HTMLCanvasElement["getContext"];
+
 // Polyfill for isContentEditable property in jsdom
 Object.defineProperty(HTMLElement.prototype, 'isContentEditable', {
   get: function() {

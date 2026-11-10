@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   cn,
   isoNow,
@@ -8,6 +8,7 @@ import {
   isOverdue,
   isDueToday,
   isDueThisWeek,
+  daysOverdue,
 } from "@/lib/utils";
 
 describe("utils", () => {
@@ -141,6 +142,29 @@ describe("utils", () => {
     it("returns false for today", () => {
       const today = new Date();
       expect(isOverdue(today.toISOString())).toBe(false);
+    });
+  });
+
+  describe("daysOverdue", () => {
+    const originalTimezone = process.env.TZ;
+    afterEach(() => {
+      vi.useRealTimers();
+      if (originalTimezone === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTimezone;
+    });
+
+    it("counts calendar days across the spring DST change", () => {
+      process.env.TZ = "America/Chicago";
+      vi.useFakeTimers();
+      // US clocks jump forward on 2026-03-08, so Mar 7 to Mar 9 holds only 47 hours.
+      vi.setSystemTime(new Date(2026, 2, 9, 12));
+
+      expect(daysOverdue(new Date(2026, 2, 7).toISOString())).toBe(2);
+    });
+
+    it("returns 0 for today and for future dates", () => {
+      expect(daysOverdue(new Date().toISOString())).toBe(0);
+      expect(daysOverdue(new Date(Date.now() + 3 * 86_400_000).toISOString())).toBe(0);
     });
   });
 

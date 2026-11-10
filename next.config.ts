@@ -28,7 +28,8 @@ const nextConfig: NextConfig = {
 
   // IMPORTANT: Security headers cannot be set here for static exports
   // They must be configured at the CDN/hosting level (CloudFront, Netlify, Vercel, etc.)
-  // See SECURITY_HEADERS.md for CloudFront configuration instructions
+  // The CSP comes from config/csp.cjs; CloudFront's headers live in
+  // cloudfront/response-headers-policy.json and the self-hosted ones in docker/Caddyfile.
 };
 
 export default nextConfig;

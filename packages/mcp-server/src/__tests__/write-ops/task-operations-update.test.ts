@@ -31,7 +31,7 @@ import { listTasksFresh as listTasks } from '../../tools/list-tasks.js';
 import { completeTask, updateTask } from '../../write-ops/task-operations.js';
 
 const config = {
-  pocketbaseUrl: 'http://example.invalid',
+  pocketBaseUrl: 'http://example.invalid',
   authToken: 'fake',
 } as GsdConfig;
 

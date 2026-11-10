@@ -36,9 +36,11 @@ bun run test -- --coverage
 bun typecheck
 bun lint
 bun run quality:shape
+bun run knip
 bun run license:check
 bun audit --audit-level=high
 bun run build
+bun run quality:bundle
 bun run test:e2e
 ```
 

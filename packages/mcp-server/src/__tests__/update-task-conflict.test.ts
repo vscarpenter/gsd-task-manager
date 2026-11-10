@@ -13,7 +13,7 @@ import { updateTask, bulkUpdateTasks } from '../write-ops.js';
 import { ConflictError } from '../errors.js';
 
 const config: GsdConfig = {
-  pocketbaseUrl: 'http://example.invalid',
+  pocketBaseUrl: 'http://example.invalid',
   authToken: 'fake',
 } as unknown as GsdConfig;
 

@@ -47,7 +47,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 ### MCP Server Integration
 - **Purpose**: Enable Claude Desktop to access/analyze tasks via natural language.
 - **Location**: `packages/mcp-server/` (standalone npm package, Node.js 18+).
-- **19 Tools**: Read (6), Write (5), Analytics (5), System (3). All write operations support `dryRun` mode.
+- **20 Tools**: Read (7), Write (5), Analytics (5), System (3). All write operations support `dryRun` mode.
 - **Config**: `~/Library/Application Support/Claude/claude_desktop_config.json` with `GSD_POCKETBASE_URL`, `GSD_AUTH_TOKEN`.
 
 ## Developer Workflows
@@ -62,12 +62,11 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 - `bun run test -- -t "test name pattern"` — Run tests matching a name pattern
 - `bun run test:watch` — Vitest watch mode
 - `bun run test -- --coverage` — Coverage report (target: ≥80% statements/lines/functions, ≥75% branches)
-- `bun run build` — Production build (includes typecheck)
-- `bun run export` — Static export for S3/CloudFront
+- `bun run build` — Production build (includes typecheck); writes the static export for S3/CloudFront to `out/`
 
 ### CloudFront Deployment
 - **Why**: S3 doesn't auto-serve `index.html` for directory paths. Need CloudFront Function for SPA routing.
-- **Deploy**: `./scripts/deploy-cloudfront-function.sh` after adding new App Router routes.
+- **Deploy**: `./scripts/deploy-cloudfront-function.sh` only when a function file changes. The rewrite appends `/index.html` to every extensionless path, so a new App Router route needs no function deploy.
 - **Full Deploy**: `bun run deploy` (builds, syncs to S3, invalidates CloudFront)
 
 ### MCP Server Development
@@ -134,7 +133,7 @@ This guide enables AI coding agents to work productively in the GSD Task Manager
 ## PWA & Privacy
 
 - **Client-side only**: No server rendering or network dependencies (except optional sync).
-- **Manifest & Icons**: Update `public/manifest.json`, icons, and `public/sw.js` together. Test with `bun run export`.
+- **Manifest & Icons**: Update `public/manifest.json`, icons, and `public/sw.js` together. Test with `bun run build:e2e && bun run test:pwa`, as CI does.
 - **Data**: All user data stays local by default. Export/import via JSON. Sync is opt-in via self-hosted PocketBase.
 
 ## References

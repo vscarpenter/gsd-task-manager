@@ -111,12 +111,9 @@ export function isOverdue(value?: string): boolean {
  */
 export function daysOverdue(value?: string): number {
   if (!value) return 0;
-  const due = new Date(value);
-  const now = new Date();
-  due.setHours(0, 0, 0, 0);
-  now.setHours(0, 0, 0, 0);
-  const diff = now.getTime() - due.getTime();
-  return diff > 0 ? Math.floor(diff / TIME_MS.DAY) : 0;
+  // Calendar days, not 24-hour blocks: a DST change makes one day 23 or 25 hours.
+  const days = differenceInCalendarDays(new Date(), new Date(value));
+  return days > 0 ? days : 0;
 }
 
 /**

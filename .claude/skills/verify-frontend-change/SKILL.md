@@ -40,7 +40,7 @@ Identify which surface(s) changed and what "correct" means. Pull the acceptance 
 ### 2. Pick the loop
 
 - **`bun dev`** (localhost:3000) for normal visual/behavioral checks. Fast feedback.
-- **`bun run build && bun start`** when the change touches the service worker, PWA manifest, caching, or anything that only manifests in a production build. Dev mode won't surface those.
+- **`bun run build && bun start`** (serves `out/` at http://127.0.0.1:3100 under the production CSP) when the change touches the service worker, PWA manifest, caching, or anything that only manifests in a production build. Dev mode won't surface those.
 
 If a dev server is already running, reuse it.
 

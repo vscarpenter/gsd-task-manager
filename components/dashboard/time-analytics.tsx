@@ -171,11 +171,13 @@ function StatBlock({ icon: Icon, label, value, subtitle, valueColor }: StatBlock
   );
 }
 
+// Accuracy is actual / estimated * 100: below 80 the work took less time than
+// estimated, above 120 it took longer. The bands match getAccuracyColor.
 function getAccuracyLabel(accuracy: number): string {
   if (accuracy === 0) return "not enough data";
-  if (accuracy <= 80) return "under-estimating";
+  if (accuracy < 80) return "over-estimating";
   if (accuracy <= 120) return "good accuracy";
-  return "over-estimating";
+  return "under-estimating";
 }
 
 function getAccuracyColor(accuracy: number): string | undefined {

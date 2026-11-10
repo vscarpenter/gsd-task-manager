@@ -8,6 +8,7 @@
 
 import { applyFilters, type SmartView } from "@/lib/filters";
 import type { TaskRecord } from "@/lib/types";
+import { isOverdue } from "@/lib/utils";
 
 /** Case-insensitive search across title, description, tags, and subtasks. */
 export function filterTasks(tasks: TaskRecord[], query: string): TaskRecord[] {
@@ -49,13 +50,13 @@ export interface MatrixView {
 
 /** Tally the header figures for whichever set is actually on screen. */
 function tally(tasks: TaskRecord[]): { total: number; completed: number; overdue: number } {
-  const todayIso = new Date().toISOString().slice(0, 10);
   let completed = 0;
   let overdue = 0;
 
   for (const task of tasks) {
     if (task.completed) completed += 1;
-    else if (task.dueDate && task.dueDate < todayIso) overdue += 1;
+    // Local calendar days, as on the cards; the UTC date runs a day ahead in the evening.
+    else if (isOverdue(task.dueDate)) overdue += 1;
   }
 
   return { total: tasks.length, completed, overdue };

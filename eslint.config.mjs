@@ -29,7 +29,7 @@ const config = [
         // removed — crashing `react/*` rules. Pinning the version skips detection.
         // Keep in sync with the `react` dependency in package.json.
         settings: {
-            react: { version: "19.2.8" },
+            react: { version: "19.3.0" },
         },
     },
     {

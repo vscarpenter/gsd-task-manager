@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { deriveMatrixView, filterTasks } from "@/components/matrix-simplified/matrix-view";
 import type { TaskRecord } from "@/lib/types";
 import type { SmartView } from "@/lib/filters";
@@ -79,6 +79,30 @@ describe("deriveMatrixView", () => {
     expect(view.total).toBe(3);
     expect(view.completed).toBe(1);
     expect(view.overdue).toBe(1);
+  });
+
+  describe("after the UTC date rolls over", () => {
+    const originalTimezone = process.env.TZ;
+    afterEach(() => {
+      vi.useRealTimers();
+      if (originalTimezone === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTimezone;
+    });
+
+    it("doesn't count a task due today as overdue", () => {
+      process.env.TZ = "America/Chicago";
+      vi.useFakeTimers();
+      // 20:00 in Chicago on Aug 1 is already Aug 2 in UTC.
+      vi.setSystemTime(new Date(2026, 7, 1, 20));
+      // An all-day due date is stored as local midnight.
+      const dueToday = makeTask({ id: "today", dueDate: new Date(2026, 7, 1).toISOString() });
+
+      const view = deriveMatrixView({
+        all: [dueToday], showCompleted: false, smartViewsEnabled: false, activeSmartView: null, searchQuery: "",
+      });
+
+      expect(view.overdue).toBe(0);
+    });
   });
 
   it("hides completed tasks when showCompleted is false and no smart view is active", () => {

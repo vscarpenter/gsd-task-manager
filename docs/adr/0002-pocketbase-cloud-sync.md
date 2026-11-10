@@ -1,8 +1,10 @@
 # 0002: PocketBase for Optional Cloud Sync
 
 **Date:** 2024-06-01  
-**Status:** Accepted  
+**Status:** Accepted; amended by ADR 0016  
 **Deciders:** Vinny Carpenter
+
+> **Amended by [ADR 0016](0016-hosted-sync-defers-field-encryption.md).** The hosted service runs without the field encryption hooks, and its operator has technical access to synced task content, so "the user owns the server" holds only for a self-hosted server. Sign-in also offers Apple (`lib/sync/pb-auth.ts`).
 
 ## Context
 

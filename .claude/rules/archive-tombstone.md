@@ -1,10 +1,12 @@
 ---
 name: archive-tombstone
-description: The archivedTasks tombstone invariant. Loads when writing to tasks or archivedTasks from archive, sync, migration, or the archive page.
+description: The archivedTasks and deletedTasks tombstone invariant. Loads when writing to tasks, archivedTasks, or deletedTasks from archive, Trash, sync, migration, or the archive page.
 paths:
   - lib/archive.ts
+  - lib/trash.ts
   - lib/sync/**
   - lib/db.ts
+  - lib/db-migrations.ts
   - lib/tasks/**
   - app/(archive)/**
 ---
@@ -39,7 +41,7 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `reinstateArchivedTask` | `lib/archive.ts` | Writes only when the id is absent |
 | `applyRemoteRecords` | `lib/sync/pb-pull.ts` | Archive guard, un-archives on a newer edit and maps it over the archive or Trash row (`mapOverLocalCopy`), so this device's reminder state survives; session check first, with `syncMetadata` in scope |
 | `applyRemoteChange` | `lib/sync/pb-sync-engine.ts` | Same guard and merge, realtime path; session check first, with `syncMetadata` in scope |
-| Migration v15 | `lib/db.ts` | Deletes only duplicates that stay archivable |
+| Migration v15 | `lib/db-migrations.ts` | Deletes only duplicates that stay archivable |
 | `applyArchivedTasks` | `lib/tasks/import-export.ts` | Idempotent `put`; live copy wins on a contradictory payload; absent key ≠ delete |
 | `deleteTask` | `lib/tasks/crud/delete.ts` | Moves live → `deletedTasks` in one transaction; idempotent `put` |
 | `restoreFromTrash` | `lib/trash.ts` | One transaction; clears the trash row |

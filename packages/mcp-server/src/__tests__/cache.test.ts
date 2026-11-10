@@ -109,6 +109,13 @@ describe('task cache', () => {
 });
 
 describe('generateTaskListCacheKey', () => {
+  it("leaves the caller's tag order alone", () => {
+    const tags = ['zeta', 'alpha'];
+
+    expect(generateTaskListCacheKey({ tags })).toBe('t:alpha,zeta');
+    expect(tags).toEqual(['zeta', 'alpha']);
+  });
+
   it('uses all for absent or empty filters', () => {
     expect(generateTaskListCacheKey()).toBe('all');
     expect(generateTaskListCacheKey({})).toBe('all');

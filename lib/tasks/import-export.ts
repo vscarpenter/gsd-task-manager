@@ -38,6 +38,15 @@ export interface ExportReport {
 }
 
 /**
+ * IndexedDB keeps undefined-valued keys, and a strict schema rejects one it
+ * doesn't declare. JSON.stringify drops them anyway, so validate the record
+ * as the backup will write it.
+ */
+function withoutUndefinedKeys(record: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
+}
+
+/**
  * Read all tasks, keeping only those that pass the strict schema. A corrupt
  * task is skipped (not thrown) so one bad record never aborts the whole backup,
  * but the count is returned so callers can surface it instead of losing data
@@ -49,7 +58,7 @@ async function collectExportableTasks(): Promise<{ tasks: TaskRecord[]; skippedC
   const normalized: TaskRecord[] = [];
   let skippedCount = 0;
   for (const task of tasks) {
-    const result = taskRecordSchema.safeParse(task);
+    const result = taskRecordSchema.safeParse(withoutUndefinedKeys(task));
     if (result.success) {
       normalized.push(result.data);
     } else {
@@ -74,7 +83,7 @@ async function collectExportableArchive(): Promise<{ tasks: TaskRecord[]; skippe
   const normalized: TaskRecord[] = [];
   let skippedCount = 0;
   for (const task of archived) {
-    const result = archivedTaskRecordSchema.safeParse(task);
+    const result = archivedTaskRecordSchema.safeParse(withoutUndefinedKeys(task));
     if (result.success) {
       normalized.push(result.data as TaskRecord);
     } else {
@@ -99,7 +108,7 @@ async function collectExportableTrash(): Promise<{ tasks: TaskRecord[]; skippedC
   const normalized: TaskRecord[] = [];
   let skippedCount = 0;
   for (const task of trashed) {
-    const result = trashedTaskRecordSchema.safeParse(task);
+    const result = trashedTaskRecordSchema.safeParse(withoutUndefinedKeys(task));
     if (result.success) normalized.push(result.data as TaskRecord);
     else {
       skippedCount++;

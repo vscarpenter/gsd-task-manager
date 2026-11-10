@@ -5,8 +5,7 @@
 // The MCP server is published as a standalone npm package built with plain `tsc`.
 // It cannot import from the webapp's lib/ tree because tsconfig.rootDir = "./src".
 // Vendoring + parity test was chosen over introducing a bundler or a separate
-// shared workspace package — see
-// docs/superpowers/specs/2026-05-02-mcp-url-extraction-parity-design.md.
+// shared workspace package.
 
 export interface ExtractedUrls {
   cleanTitle: string;
