@@ -41,6 +41,7 @@ vi.mock('../../cache.js', () => ({
 }));
 
 import { bulkUpdateTasks } from '../../write-ops/bulk-operations.js';
+import type { BulkOperation } from '../../write-ops/types.js';
 
 const config: GsdConfig = {
   pocketBaseUrl: 'http://example.invalid',
@@ -70,7 +71,7 @@ function makeTask(id: string): Task {
  * from PocketBase (cache bypassed) instead of `listTasks`, so write-path tests
  * mock `fetchPBSnapshotForTasks` with one of these entries per task.
  */
-function makeSnapshotEntry(id: string) {
+function makeSnapshotEntry(id: string): PBEntry {
   return {
     pbRecordId: `rec-${id}`,
     clientUpdatedAt: '2026-04-01T00:00:00Z',
@@ -285,17 +286,17 @@ describe('bulkUpdateTasks — delete safety', () => {
 
   it.each([
     [
-      { type: 'move_quadrant', urgent: true, important: false } as const,
+      { type: 'move_quadrant', urgent: true, important: false } satisfies BulkOperation,
       { urgent: true, important: false, quadrant: 'urgent-not-important' },
     ],
-    [{ type: 'add_tags', tags: ['work', 'work'] } as const, { tags: ['old', 'work'] }],
-    [{ type: 'remove_tags', tags: ['old'] } as const, { tags: [] }],
+    [{ type: 'add_tags', tags: ['work', 'work'] } satisfies BulkOperation, { tags: ['old', 'work'] }],
+    [{ type: 'remove_tags', tags: ['old'] } satisfies BulkOperation, { tags: [] }],
     [
-      { type: 'set_due_date', dueDate: '2026-05-01T00:00:00Z' } as const,
+      { type: 'set_due_date', dueDate: '2026-05-01T00:00:00Z' } satisfies BulkOperation,
       { dueDate: '2026-05-01T00:00:00Z' },
     ],
-    [{ type: 'set_due_date' } as const, { dueDate: undefined }],
-    [{ type: 'complete', completed: false } as const, { completed: false, completedAt: undefined }],
+    [{ type: 'set_due_date' } satisfies BulkOperation, { dueDate: undefined }],
+    [{ type: 'complete', completed: false } satisfies BulkOperation, { completed: false, completedAt: undefined }],
   ])('applies operation %# without changing the response contract', async (operation, expected) => {
     const helpers = await import('../../write-ops/helpers.js');
     const snapshot = makeSnapshotEntry('t1');
@@ -691,10 +692,10 @@ describe('bulkUpdateTasks — remove_tags against legacy stored tags', () => {
 
 describe('bulkUpdateTasks — top three picks', () => {
   it.each([
-    [{ type: 'complete', completed: true } as const],
-    [{ type: 'move_quadrant', urgent: true, important: true } as const],
-    [{ type: 'add_tags', tags: ['work'] } as const],
-    [{ type: 'set_due_date', dueDate: '2026-05-01T00:00:00Z' } as const],
+    [{ type: 'complete', completed: true } satisfies BulkOperation],
+    [{ type: 'move_quadrant', urgent: true, important: true } satisfies BulkOperation],
+    [{ type: 'add_tags', tags: ['work'] } satisfies BulkOperation],
+    [{ type: 'set_due_date', dueDate: '2026-05-01T00:00:00Z' } satisfies BulkOperation],
   ])('operation %# keeps the pick', async (operation) => {
     const helpers = await import('../../write-ops/helpers.js');
     const entry = makeSnapshotEntry('t1');

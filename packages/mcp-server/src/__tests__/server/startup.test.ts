@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 
 const {
   loadConfigMock,
@@ -98,8 +98,8 @@ describe('startMcpServer', () => {
 });
 
 describe('reportStartupFailure', () => {
-  let stderrSpy: ReturnType<typeof vi.spyOn>;
-  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let stderrSpy: MockInstance<typeof process.stderr.write>;
+  let stdoutSpy: MockInstance<typeof process.stdout.write>;
 
   beforeEach(() => {
     vi.resetAllMocks();

@@ -1,4 +1,7 @@
-import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+// The page.evaluate callbacks run in Chromium, where the DOM globals exist.
+/// <reference lib="dom" />
+import { execFileSync, spawn, type ChildProcessByStdio } from 'node:child_process';
+import type { Readable } from 'node:stream';
 import { createServer } from 'node:net';
 import { copyFileSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,6 +13,9 @@ import { chromium, type Browser, type Page } from '@playwright/test';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resetTaskCache } from '../../cache.js';
 import { clearPocketBase } from '../../pocketbase-client.js';
+
+/** What spawn returns for stdio ['ignore', 'pipe', 'pipe']. */
+type PipedProcess = ChildProcessByStdio<null, Readable, Readable>;
 
 const POCKETBASE_BIN = process.env.POCKETBASE_BIN;
 const describeSystem = POCKETBASE_BIN ? describe : describe.skip;
@@ -43,7 +49,7 @@ async function availablePort(): Promise<number> {
   });
 }
 
-async function waitForHealth(baseUrl: string, process: ChildProcessWithoutNullStreams): Promise<void> {
+async function waitForHealth(baseUrl: string, process: PipedProcess): Promise<void> {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     if (process.exitCode !== null) {
@@ -86,7 +92,7 @@ async function waitForAsyncValue<T>(
 
 async function waitForHttp(
   url: string,
-  process: ChildProcessWithoutNullStreams,
+  process: PipedProcess,
   output: () => string
 ): Promise<void> {
   const deadline = Date.now() + 90_000;
@@ -105,7 +111,7 @@ async function waitForHttp(
   throw new Error(`App server did not become ready within 90 seconds\n${output()}`);
 }
 
-async function stopProcess(process: ChildProcessWithoutNullStreams | undefined): Promise<void> {
+async function stopProcess(process: PipedProcess | undefined): Promise<void> {
   if (!process || process.exitCode !== null) return;
   process.kill('SIGTERM');
   const deadline = Date.now() + 5_000;
@@ -295,7 +301,7 @@ describeSystem('PocketBase authenticated system boundary', () => {
   let dataDirectory = '';
   let migrationsDirectory = '';
   let encryptionKey = '';
-  let pocketBaseProcess: ChildProcessWithoutNullStreams | undefined;
+  let pocketBaseProcess: PipedProcess | undefined;
   let baseUrl = '';
   let processOutput = '';
 
@@ -697,7 +703,7 @@ describeSystem('PocketBase authenticated system boundary', () => {
   it('proves browser push, pull, realtime isolation, token renewal, tombstones, and reconnect', async () => {
     expect(baseUrl).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
 
-    let appProcess: ChildProcessWithoutNullStreams | undefined;
+    let appProcess: PipedProcess | undefined;
     let browser: Browser | undefined;
     let appOutput = '';
 
