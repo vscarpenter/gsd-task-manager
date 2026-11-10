@@ -32,7 +32,7 @@ function countActiveSchedule(tasks: TaskRecord[]): number {
  */
 export function MatrixBriefing({ tasks, mounted, isLoading, onFocusSchedule }: MatrixBriefingProps) {
   const introReady = mounted && !isLoading;
-  const introStats = introReady ? deriveIntroStats(tasks, new Date().toISOString().slice(0, 10)) : null;
+  const introStats = introReady ? deriveIntroStats(tasks) : null;
 
   return (
     <>

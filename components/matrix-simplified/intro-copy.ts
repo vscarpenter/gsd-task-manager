@@ -11,6 +11,7 @@
 
 import { quadrantForTask } from "@/lib/quadrants";
 import type { TaskRecord } from "@/lib/types";
+import { isOverdue } from "@/lib/utils";
 
 export interface IntroStats {
   activeTotal: number;
@@ -32,7 +33,7 @@ export function introDateLabel(now: Date): string {
   return DATE_FORMAT.format(now);
 }
 
-export function deriveIntroStats(all: TaskRecord[], todayIso: string): IntroStats {
+export function deriveIntroStats(all: TaskRecord[]): IntroStats {
   let activeTotal = 0;
   let doFirstCount = 0;
   let eliminateCount = 0;
@@ -45,7 +46,7 @@ export function deriveIntroStats(all: TaskRecord[], todayIso: string): IntroStat
     const meta = quadrantForTask(task.urgent, task.important);
     if (meta.rdKey === "q1") doFirstCount += 1;
     if (meta.rdKey === "q4") eliminateCount += 1;
-    if (task.dueDate && task.dueDate < todayIso) {
+    if (isOverdue(task.dueDate)) {
       overdueTotal += 1;
       if (!overdueQuadrants.includes(meta.title)) {
         overdueQuadrants.push(meta.title);
