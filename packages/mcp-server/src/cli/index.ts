@@ -40,7 +40,7 @@ export function showHelp(): void {
 🎯 GSD Task Manager MCP Server
 
 USAGE:
-  npx gsd-mcp-server [OPTIONS]
+  gsd-mcp-server [OPTIONS]
 
 OPTIONS:
   --setup       Interactive setup wizard
@@ -50,13 +50,13 @@ OPTIONS:
 
 EXAMPLES:
   # First-time setup
-  npx gsd-mcp-server --setup
+  gsd-mcp-server --setup
 
   # Test your configuration
-  npx gsd-mcp-server --validate
+  gsd-mcp-server --validate
 
   # Run as MCP server (configured in Claude Desktop)
-  npx gsd-mcp-server
+  gsd-mcp-server
 
 CONFIGURATION:
   Environment variables (set in Claude Desktop config):

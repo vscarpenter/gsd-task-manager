@@ -54,7 +54,6 @@ See [Installation](#installation) section below for detailed setup instructions.
 - ✅ Configuration validator (`--validate`)
 - ✅ Automatic connectivity and auth testing
 - ✅ Enhanced error messages with actionable guidance
-- ✅ Multi-device support (fixes hardcoded device ID)
 
 **Analytics & Insights** (v0.3.0)
 - ✅ Comprehensive productivity metrics
@@ -259,14 +258,14 @@ Once configured, you can ask Claude questions like:
 Claude will use the MCP tools to fetch real-time data from your PocketBase backend and can now modify your tasks!
 
 Tags are stored lowercase without a leading `#`, the way the apps store them. The
-server stores tags exactly as given, so ask for `work`, not `#work`, or the tag
-won't match the one the apps use.
+server normalizes the tags it receives the same way, so `#Work` and `work` are
+one tag.
 
 ### Saved items (1.4.0)
 
 Items saved in the apps (Move to Saved) stay out of `list_tasks`, `get_task`,
 `search_tasks`, and the analytics tools, so `get_task` answers "Task not found"
-for a saved ID. `get_task_stats` and `get_sync_status` still count them. Updates
+for a saved ID. `get_sync_status` still counts them; `get_task_stats` doesn't. Updates
 keep an item saved. Completing a saved item is refused, so return it to the
 matrix in the app first. The MCP server can't save an item or return one.
 
@@ -304,7 +303,7 @@ Get task statistics (metadata only).
 }
 ```
 
-Counts include Saved items. Every field is null if the stats can't be read.
+Counts leave out Saved items. Every field is null if the stats can't be read.
 
 ---
 
@@ -832,7 +831,7 @@ packages/mcp-server/
 │   │   │   └── system-handlers.ts
 │   │   └── schemas/       # MCP tool schemas (20 tools)
 │   │       ├── index.ts
-│   │       ├── read-tools.ts     # 6 read tools
+│   │       ├── read-tools.ts     # 7 read tools
 │   │       ├── write-tools.ts    # 5 write tools
 │   │       ├── analytics-tools.ts # 5 analytics tools
 │   │       └── system-tools.ts   # 3 system tools

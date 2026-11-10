@@ -32,7 +32,7 @@ const PRIVILEGED_PRINCIPAL_HELP = [
   'GSD MCP server refused to start: GSD_AUTH_TOKEN is a PocketBase superuser token.',
   'This server is account-scoped and never runs as an administrator.',
   'Recover:',
-  '  1. Sign in at https://gsd.vinny.dev with your normal account',
+  '  1. Sign in to the GSD web app you sync with (gsd.vinny.dev for the hosted service) using your normal account',
   '  2. Run: gsd-mcp-server --setup',
   '  3. Restart Claude Desktop',
 ].join('\n');

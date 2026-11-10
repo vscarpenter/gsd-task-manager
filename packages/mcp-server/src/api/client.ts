@@ -35,7 +35,7 @@ export async function apiRequest<T>(
     throw new Error(
       `API request failed (${response.status}): ${errorText}\n` +
         `Endpoint: ${endpoint}\n` +
-        `Run: npx gsd-mcp-server --validate`
+        `Run: gsd-mcp-server --validate`
     );
   }
 
@@ -72,7 +72,7 @@ async function fetchWithErrorHandling(
         `  1. Your internet connection\n` +
         `  2. GSD_POCKETBASE_URL is correct\n` +
         `  3. PocketBase server is running\n\n` +
-        `Run: npx gsd-mcp-server --validate`
+        `Run: gsd-mcp-server --validate`
     );
   }
 }

@@ -91,7 +91,7 @@ function buildToolsHelpSection(): string {
 
 ### Metadata & Status Tools
 - **get_sync_status** - Check PocketBase health and task count
-- **get_task_stats** - Get high-level task statistics (counts include Saved items)
+- **get_task_stats** - Get high-level task statistics (Saved items are left out)
 - **get_token_status** - Check auth token expiration status
 
 ### Task Access Tools

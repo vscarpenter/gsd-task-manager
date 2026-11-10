@@ -7,7 +7,7 @@ paths:
 
 ## MCP Server Package
 
-- **Location**: `packages/mcp-server/` — standalone npm package, npm workspace.
+- **Location**: `packages/mcp-server/` — standalone npm package in the Bun workspace.
 - **Runtime**: Node.js 18+ with TypeScript, stdio transport (JSON-RPC 2.0).
 - **Build**: `npm run build` in `packages/mcp-server/` (uses tsc).
 
@@ -27,10 +27,10 @@ paths:
 
 ## Conventions
 
-- Use `fetchWithRetry()` for resilient PocketBase API calls.
+- PocketBase calls go through the SDK client in `src/pocketbase-client.ts`. The `fetchWithRetry()` helpers in `src/api/` are legacy, and no tool uses them.
 - Validate circular dependencies before adding task relationships.
 - TTL cache for read tools; dry-run mode for all writes.
-- Field changes that touch the synced schema must invoke the `pb-collection` skill (auto-fires on `lib/sync/**`).
+- Field changes that touch the synced schema follow the `pb-collection` skill. It sets `disable-model-invocation: true`, so ask the user to run `/pb-collection`.
 
 ## Configuration
 
