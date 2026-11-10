@@ -24,7 +24,8 @@ export function DropdownMenuSubTrigger({
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent data-[state=open]:bg-accent",
+      // Same focus and open surface as DropdownMenuItem: solid tide behind ink fell to 2.6:1.
+      "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none pointer-coarse:min-h-11 focus:bg-background-muted focus:text-foreground data-[state=open]:bg-background-muted data-[state=open]:text-foreground",
       inset && "pl-8",
       className
     )}
