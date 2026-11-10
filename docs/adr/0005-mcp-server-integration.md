@@ -14,7 +14,7 @@ Implement a standalone MCP (Model Context Protocol) server in `packages/mcp-serv
 
 The server exposes **20 tools** across four categories:
 
-- **Read (7)**: `list_tasks`, `get_task`, `search_tasks`, `get_sync_status`, `list_devices`, `get_task_stats`, `get_token_status`
+- **Read (7)**: `list_tasks`, `get_task`, `search_tasks`, `get_sync_status`, `get_task_stats`, `get_token_status`, `get_top_three`
 - **Write (5)**: `create_task`, `update_task`, `complete_task`, `delete_task`, `bulk_update_tasks`
 - **Analytics (5)**: `get_productivity_metrics`, `get_quadrant_analysis`, `get_tag_analytics`, `get_upcoming_deadlines`, `get_task_insights`
 - **System (3)**: `validate_config`, `get_help`, `get_cache_stats`

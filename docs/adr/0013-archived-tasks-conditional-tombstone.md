@@ -1,8 +1,10 @@
 # ADR 0013: `archivedTasks` Is a Conditional Tombstone
 
 - **Date:** 2026-07-31
-- **Status:** Accepted
+- **Status:** Accepted; extended by ADR 0015
 - **Deciders:** Vinny Carpenter
+
+> **Extended by [ADR 0015](0015-trash-with-retention.md),** which adds `deletedTasks` as a third table under the same rules. The current writer list lives in `.claude/rules/archive-tombstone.md`.
 
 ## Context
 

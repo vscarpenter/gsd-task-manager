@@ -1,6 +1,6 @@
 # ADR 0019: A pull contract version backfills newly synced fields
 
-Status: accepted 2026-10-27. Paired with the iOS change on the same branch name
+Status: accepted 2026-10-27; narrowed by ADR 0020. Paired with the iOS change on the same branch name
 (`gsd-iosapp/docs/2026-10-27-synced-field-backfill.md`).
 
 ## Context

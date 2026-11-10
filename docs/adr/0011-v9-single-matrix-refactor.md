@@ -74,3 +74,10 @@ preserves dependency IDs not resolvable locally (not-yet-synced tasks).
 Subtask editing remains drawer-less; `restoreTask` still does not restore
 inbound dependency edges; full WAI-ARIA combobox semantics for the picker are
 a tracked follow-up (see tasks/todo.md).
+
+## Later changes
+
+The command palette is mounted again in
+`components/matrix-simplified/app-shell.tsx` (⌘K or Ctrl+K). `lib/confetti.ts`
+and `canvas-confetti` are back for completion celebrations. Subtasks are edited
+in the drawer (`SubtasksField` in `edit-drawer-fields.tsx`).

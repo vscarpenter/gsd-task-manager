@@ -49,7 +49,7 @@ GSD should explicitly NOT look or feel like:
 
 ## Accessibility & Inclusion
 
-WCAG 2.1 AA is the baseline, enforced by construction and review (see `coding-standards.md` Part 2 and the `a11y-reviewer` agent):
+WCAG 2.1 AA is the baseline, enforced by construction and review (see `DESIGN.md` and the `a11y-reviewer` agent):
 
 - **Contrast:** body text ≥4.5:1, large text ≥3:1. Editorial's light `--gray-500` (`#6E6760`) measures 5.6:1 on paper (`#FFFFFF`), so muted text has a documented floor. Quadrant titles use their `--q*-ink` token rather than the raw pigment.
 - **Motion:** every animation has a `prefers-reduced-motion: reduce` fallback (crossfade or instant). Reveals enhance already-visible content; they never gate visibility.

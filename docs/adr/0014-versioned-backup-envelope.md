@@ -3,8 +3,10 @@
 | Field | Value |
 |---|---|
 | Date | 2026-08-12 |
-| Status | Accepted |
+| Status | Accepted; amended (see the note below) |
 | Deciders | Vinny Carpenter |
+
+> **Amended.** Export now writes envelope `2.2.0`, and `assertWithinImportCap` counts live, archived, and trashed tasks against `MAX_IMPORT_TASKS`.
 
 ## Context
 

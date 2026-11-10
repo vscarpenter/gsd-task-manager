@@ -34,7 +34,7 @@ Classification rules:
 - Cache logic is independently testable (27 unit tests)
 
 **Harder:**
-- Two files must stay in sync (`lib/sw-cache-logic.ts` and `public/sw-cache-logic.js`)
+- Two files must stay in sync (`lib/sw-cache-logic.ts` and `public/sw-cache-logic.js`). Later amended: `scripts/generate-sw-cache-logic.cjs` writes the public copy, and `tests/data/sw-cache-logic-generated.test.ts` fails on drift.
 - First deploy after this change causes a one-time full re-download (old single cache is deleted)
 
 **Out of scope:**

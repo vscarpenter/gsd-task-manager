@@ -5,8 +5,8 @@ or eliminate.
 
 **Live app:** [gsd.vinny.dev](https://gsd.vinny.dev)
 **Current version:** 14.8.0
-**Current product:** the v11 single-matrix shell, offline-first local storage,
-optional PocketBase sync, and the GSD MCP server.
+**Current product:** the single-matrix shell introduced in v9 (ADR 0011),
+offline-first local storage, optional PocketBase sync, and the GSD MCP server.
 
 [![npm version](https://img.shields.io/npm/v/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 [![npm downloads](https://img.shields.io/npm/dm/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
@@ -14,7 +14,7 @@ optional PocketBase sync, and the GSD MCP server.
 
 ![GSD Task Manager Eisenhower matrix](public/gsd-matrix.png)
 
-## What ships in v11
+## What ships
 
 - A responsive four-quadrant matrix with drag-and-drop movement.
 - The Add a task bar, full task editing, search, keyboard navigation, and
@@ -23,6 +23,8 @@ optional PocketBase sync, and the GSD MCP server.
   Installed on Android, GSD also appears in the share sheet.
 - Due dates, tags, dependency selection, and circular-dependency prevention.
 - Archive, dashboard/review analytics, sync history, settings, and onboarding.
+- Trash with 30-day retention, the Today strip for your top three, the weekly
+  sweep, snooze, and What's New notes.
 - Local IndexedDB persistence, JSON import/export, offline PWA support, and
   user-controlled update prompts.
 - Optional multi-device PocketBase sync with Google, Apple, or GitHub OAuth and
@@ -33,7 +35,8 @@ optional PocketBase sync, and the GSD MCP server.
   accessibility floor.
 
 Retired v7/v8 surfaces such as selection-mode batch operations, the Quick
-Settings panel, and smart-view pinning shortcuts are not part of the v11 shell.
+Settings panel, and smart-view pinning shortcuts are not part of the
+single-matrix shell.
 
 ## Privacy and data custody
 
@@ -96,9 +99,11 @@ bun run test -- --coverage
 bun typecheck
 bun lint
 bun run quality:shape
+bun run knip
 bun run license:check
 bun audit --audit-level=high
 bun run build
+bun run quality:bundle
 bun run test:e2e
 ```
 
@@ -141,9 +146,12 @@ the architecture decisions in [`docs/adr/`](docs/adr/).
 ## Deployment
 
 - `bun run build` creates the static export in `out/`.
-- `bun run deploy` runs the production deployment script. Production
-  (gsd.vinny.dev) is the only deploy target; the development deploy was
-  retired on 2026-09-11.
+- Production (gsd.vinny.dev) is the only deploy target; the development deploy
+  was retired on 2026-09-11. A release ships when a `v*.*.*` tag starts the
+  `deploy-production-release` workflow, which waits for the Gate 2 approval in
+  [`docs/ops/gate2.md`](docs/ops/gate2.md).
+- `bun run deploy` (`scripts/deploy-prod.sh`) builds on your machine and
+  uploads with local AWS credentials, which skips that gate.
 - [`docker/Dockerfile`](docker/Dockerfile) builds the self-hosted Caddy and
   PocketBase image.
 - [`cloudfront/response-headers-policy.json`](cloudfront/response-headers-policy.json)

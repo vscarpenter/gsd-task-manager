@@ -1,8 +1,10 @@
 # 0009: Smart Views System
 
 **Date:** 2026-04-14
-**Status:** Accepted
+**Status:** Accepted; partially superseded by ADR 0011
 **Deciders:** Vinny Carpenter
+
+> **Partially superseded by [ADR 0011](0011-v9-single-matrix-refactor.md).** v9 removed the header pins, the 1–9 and 0 shortcuts, and `useSmartViewShortcuts`. Smart views remain as an opt-in strip above the matrix (Settings › Features).
 
 ## Context
 

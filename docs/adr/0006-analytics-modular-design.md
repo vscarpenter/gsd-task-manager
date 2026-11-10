@@ -1,8 +1,10 @@
 # 0006: Pure-Function Modular Analytics Design
 
 **Date:** 2026-04-14
-**Status:** Accepted
+**Status:** Accepted; amended (see the note below)
 **Deciders:** Vinny Carpenter
+
+> **Amended.** The MCP server keeps its own copy of these rules in `packages/mcp-server/src/analytics/` rather than importing `lib/analytics`; `packages/mcp-server/src/__tests__/pinned-copies/` pins the shared completion metrics to a fixture the root suite also reads. The file limit is 400 lines (`scripts/check-code-shape.cjs`).
 
 ## Context
 

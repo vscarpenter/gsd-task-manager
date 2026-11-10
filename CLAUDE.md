@@ -8,7 +8,7 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 
 **Key Features:**
 - **Single-Matrix UI (v9)** — Simplified single-matrix layout with capture-bar; see `docs/adr/0011-v9-single-matrix-refactor.md`
-- **Optional Cloud Sync** — Multi-device sync via self-hosted PocketBase at `https://api.vinny.io` (OAuth with Google/GitHub)
+- **Optional Cloud Sync** — Multi-device sync via self-hosted PocketBase at `https://api.vinny.io` (OAuth with Google, GitHub, or Apple)
 - **MCP Server Integration** — AI-powered task management through Claude Desktop with natural language queries
 - **Realtime Sync** — PocketBase SSE (Server-Sent Events) for instant cross-device updates
 - **iOS-style Settings** — Full-page settings with grouped layout and modular sections (`components/settings-page/`)
@@ -19,7 +19,7 @@ GSD Task Manager is a privacy-first Eisenhower matrix task manager built with Ne
 - `.claude/rules/testing.md` — Test runner, TDD workflow, jsdom/bun gotchas
 - `.claude/rules/sw-cache.md` — Service worker multi-cache strategy (ADR 0012)
 - `.claude/rules/mcp-server.md` — MCP server package conventions and tool layout
-- `.claude/rules/archive-tombstone.md` — The `archivedTasks` tombstone invariant (ADR 0013); read before writing to `tasks` or `archivedTasks`
+- `.claude/rules/archive-tombstone.md` — The `archivedTasks` and `deletedTasks` tombstone invariant (ADRs 0013 and 0015); read before writing to `tasks`, `archivedTasks`, or `deletedTasks`
 
 ## Design Context
 
@@ -70,7 +70,7 @@ Architecture details for these subsystems live in path-scoped rules:
 - PWA / service-worker cache strategy → `.claude/rules/sw-cache.md` (auto-loads on `public/sw*.js`, `lib/sw-cache-logic.ts`)
 - PocketBase sync + OAuth → `.claude/rules/pocketbase-sync.md` (auto-loads on `lib/sync/**`)
 - MCP server package → `.claude/rules/mcp-server.md` (auto-loads on `packages/mcp-server/**`)
-- Archive/sync tombstone invariant → `.claude/rules/archive-tombstone.md` (auto-loads on `lib/archive.ts`, `lib/sync/**`, `lib/db.ts`)
+- Archive/sync tombstone invariant → `.claude/rules/archive-tombstone.md` (auto-loads on `lib/archive.ts`, `lib/trash.ts`, `lib/tasks/**`, `lib/sync/**`, `lib/db.ts`, `lib/db-migrations.ts`, `app/(archive)/**`)
 
 **Quick refs that survive without opening a rule file**:
 - Backend: self-hosted PocketBase at `https://api.vinny.io`; admin UI at `/_/`.
@@ -116,7 +116,7 @@ These packages are not self-explanatory from their names alone:
 
 ### Schema & Database
 - Task schema changes require updating `lib/schema.ts`, export/import logic, and test fixtures
-- Database migrations in `lib/db.ts` - current version is 17
+- Database versions and migrations are registered in `lib/db-migrations.ts`, which `lib/db.ts` calls; current version is 17
 - New task fields (recurrence, tags, subtasks, dependencies) are optional with sensible defaults
 - **Import schema** uses `.strip()` (not `.strict()`) to accept legacy exports with extra fields (e.g., `vectorClock` from the old Cloudflare sync system)
 - Export schema still uses `.strict()` to ensure clean outgoing data
@@ -128,8 +128,8 @@ These packages are not self-explanatory from their names alone:
 
 ### Navigation & UI
 - Use `useViewTransition()` hook for client-side navigation with View Transitions API
-- Button component variants: "primary" | "subtle" | "ghost" (no size prop)
-- Smart view shortcuts and pinning UI were removed in v9 (see ADR 0011). The `smartViews` Dexie table is retained for data continuity but has no UI surface in the v9 shell.
+- Button component variants: "primary" | "subtle" | "ghost" | "destructive" (no size prop)
+- Smart view keyboard shortcuts and header pinning were removed in v9 (see ADR 0011). Smart views remain as an opt-in strip above the matrix (Settings › Features), which also lists custom views stored in the `smartViews` table.
 
 ### Cloud Sync, MCP Server, OAuth
 Detail moved to path-scoped rules — see `.claude/rules/pocketbase-sync.md` and `.claude/rules/mcp-server.md`. Those auto-load when you edit the relevant subtrees.
@@ -155,7 +155,7 @@ Detail moved to path-scoped rules — see `.claude/rules/pocketbase-sync.md` and
 **Verification:** Run `bun run test -- --coverage` after implementation. Coverage for changed files must be ≥80% across statements, lines, and functions.
 
 ### Pre-commit
-- Run `bun run test`, `bun typecheck`, and `bun lint` before committing
+- Run `bun run test`, `bun typecheck`, `bun lint`, `bun run quality:shape`, and `bun run knip` before committing (CI's lint job runs the last three)
 - Static export mode means no API routes or SSR
 
 ### Testing
