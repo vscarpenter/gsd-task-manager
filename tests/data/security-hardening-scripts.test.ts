@@ -394,6 +394,7 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides['source-map-js']).toBe('>=1.2.2');
     expect(rootPackage.overrides['body-parser']).toBe('>=2.4.0');
     expect(rootPackage.devDependencies.vite).toBe('8.3.6');
+    expect(rootPackage.devDependencies.rimraf).toBe('6.1.4');
     expect(rootPackage.devDependencies.vitest).toBe('5.0.5');
     expect(mcpPackage.devDependencies.vitest).toBe('4.1.12');
     expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.12');
