@@ -436,3 +436,11 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **`toISOString().slice(0, 10)` is the UTC day, not today.** Due dates are local-midnight instants, so compare local days (`isOverdue`, `localDayOf`, `differenceInCalendarDays`). The suite now runs in UTC; a test that needs another zone sets `process.env.TZ` itself.
 - **Project hook paths are relative to the shell's directory.** A `cd packages/mcp-server` left the guards unreachable. Stay at the root and use absolute paths or `bun run --cwd`.
 - **knip runs without its export check**, so exports that only tests call build up unnoticed (LIB-36, SYNC-23, MCP-24 in the audit).
+
+## Dependabot alert triage (2026-11-10)
+
+- **Dependabot matched package.json here, not bun.lock.** A devDependency pin of vite 8.3.1 raised six alerts while a `>=8.3.1` override installed the patched 8.3.6, so `bun audit` saw nothing. Only that reading fits the alert counts. Keep every declared pin equal to the installed version; `tests/data/dependency-pins.test.ts` enforces it.
+- **A `>=` override floor crosses majors on its own.** `minimatch >=3.1.3` drifted to 10 and then 11. `@babel/core` reached 8, and the React Compiler in eslint-plugin-react-hooks then hit an internal invariant in 28 files and skipped them without a lint error. Pin overrides exactly and keep each dependent on the major it declares.
+- **bun applies only top-level overrides.** bun 1.3.14 ignores npm's nested form, version-selector keys such as `minimatch@^3`, and yarn path resolutions, so one version serves every consumer of an overridden package.
+- **Write bun.lock with bun 1.4, then check it with 1.3.14.** bun 1.3.14 drops the lock's `libc` filters and a nested `@vitest/ui` copy. CI's bun 1.3.14 accepts a 1.4.4 lock under `--frozen-lockfile` and changes nothing.
+- **apt needs HTTPS in cloud sessions.** The proxy blocks the image's `http://` apt sources. Point apt at `https://archive.ubuntu.com` and `https://security.ubuntu.com` with `-o Dir::Etc::SourceList`, which `tests/docker-migrations.test.ts` needs for `sqlite3`.
