@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => {
     pb,
     getPocketBase: vi.fn(() => pb),
     requireUsersPrincipal: vi.fn(),
+    confirmUsersPrincipal: vi.fn(),
     invalidate: vi.fn(),
     taskToPBFields: vi.fn(() => ({ mapped: true })),
   };
@@ -28,6 +29,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('../../pocketbase-client.js', () => ({
   getPocketBase: mocks.getPocketBase,
   requireUsersPrincipal: mocks.requireUsersPrincipal,
+  confirmUsersPrincipal: mocks.confirmUsersPrincipal,
 }));
 
 vi.mock('../../cache.js', () => ({
@@ -95,6 +97,7 @@ beforeEach(() => {
   mocks.tasks.getFullList.mockResolvedValue([]);
   mocks.users.authRefresh.mockResolvedValue({});
   mocks.requireUsersPrincipal.mockResolvedValue({ pb: mocks.pb, ownerId: 'owner-1' });
+  mocks.confirmUsersPrincipal.mockResolvedValue(undefined);
 });
 
 describe('filter and identity helpers', () => {
@@ -156,6 +159,7 @@ describe('PocketBase mutation helpers', () => {
     await expect(deleteTaskInPB(config, 'missing')).rejects.toThrow(
       'Task not found in PocketBase: missing'
     );
+    expect(mocks.confirmUsersPrincipal).toHaveBeenCalledWith(config);
 
     const rateLimited = { status: 429, response: { retryAfterMs: 2000 } };
     mocks.tasks.getFirstListItem.mockRejectedValueOnce(rateLimited);
@@ -207,6 +211,38 @@ describe('fresh read helpers', () => {
     const unauthorized = { status: 401 };
     mocks.tasks.getFirstListItem.mockRejectedValueOnce(unauthorized);
     await expect(fetchSinglePBTaskFresh(config, 'private')).rejects.toBe(unauthorized);
+  });
+
+  // A refused token reads as a guest, and a guest gets a 404 for every record.
+  it('confirms the token before a 404 counts as "not found"', async () => {
+    mocks.tasks.getFirstListItem.mockRejectedValueOnce({ status: 404 });
+    await fetchSinglePBTaskFresh(config, 'missing');
+    expect(mocks.confirmUsersPrincipal).toHaveBeenCalledWith(config);
+
+    vi.clearAllMocks();
+    mocks.tasks.getFirstListItem.mockRejectedValueOnce({ status: 429 });
+    await expect(fetchSinglePBTaskFresh(config, 'rate-limited')).rejects.toEqual({ status: 429 });
+    expect(mocks.confirmUsersPrincipal).not.toHaveBeenCalled();
+  });
+
+  it('raises the sign-in error for a 404 under a refused token', async () => {
+    const signIn = new Error('Not authenticated as a normal users-collection account');
+    mocks.confirmUsersPrincipal.mockRejectedValue(signIn);
+    mocks.tasks.getFirstListItem.mockRejectedValue({ status: 404 });
+
+    await expect(fetchSinglePBTaskFresh(config, 'task-1')).rejects.toBe(signIn);
+    await expect(deleteTaskInPB(config, 'task-1')).rejects.toBe(signIn);
+    expect(mocks.tasks.delete).not.toHaveBeenCalled();
+  });
+
+  it('confirms the token when a batch snapshot finds none of its tasks', async () => {
+    await fetchPBSnapshotForTasks(config, ['task-1']);
+    expect(mocks.confirmUsersPrincipal).toHaveBeenCalledWith(config);
+
+    vi.clearAllMocks();
+    mocks.tasks.getFullList.mockResolvedValueOnce([pbRecord('record-1', 'task-1')]);
+    await fetchPBSnapshotForTasks(config, ['task-1', 'task-2']);
+    expect(mocks.confirmUsersPrincipal).not.toHaveBeenCalled();
   });
 
   it('fetches a batch snapshot in one escaped filter request', async () => {

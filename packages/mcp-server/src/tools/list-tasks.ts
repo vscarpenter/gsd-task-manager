@@ -1,4 +1,4 @@
-import { getPocketBase } from '../pocketbase-client.js';
+import { confirmUsersPrincipal, getPocketBase } from '../pocketbase-client.js';
 import {
   getTaskCache,
   generateTaskListCacheKey,
@@ -62,24 +62,30 @@ export function listTasksFresh(config: GsdConfig): Promise<Task[]> {
  * Fetch all tasks from PocketBase collection
  */
 async function fetchTasks(config: GsdConfig): Promise<Task[]> {
+  const records = await fetchTaskRecords(config);
+  // A refused token reads as a guest, whose listing is empty too.
+  if (records.length === 0) await confirmUsersPrincipal(config);
+
+  return records.map((record) => {
+    try {
+      return pbTaskToTask(record);
+    } catch (error) {
+      logger.error(
+        `Failed to map task ${record.id}`,
+        error instanceof Error ? error : new Error(String(error))
+      );
+      return null;
+    }
+  }).filter((task): task is Task => task !== null);
+}
+
+async function fetchTaskRecords(config: GsdConfig): Promise<PBTask[]> {
   const pb = getPocketBase(config);
 
   try {
-    const records = await pb.collection('tasks').getFullList<PBTask>({
+    return await pb.collection('tasks').getFullList<PBTask>({
       sort: '-client_updated_at',
     });
-
-    return records.map((record) => {
-      try {
-        return pbTaskToTask(record);
-      } catch (error) {
-        logger.error(
-          `Failed to map task ${record.id}`,
-          error instanceof Error ? error : new Error(String(error))
-        );
-        return null;
-      }
-    }).filter((task): task is Task => task !== null);
   } catch (error) {
     const safeError = new Error(
       `Failed to fetch tasks from PocketBase\n\n` +

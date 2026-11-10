@@ -107,6 +107,37 @@ function unreachableError(config: GsdConfig, cause: unknown): Error {
 }
 
 /**
+ * Drop a refused principal's auth state. The configured token is forgotten as
+ * well, so the next call saves it again and asks the server afresh, instead of
+ * going out with no token and reading as a guest.
+ */
+function retirePrincipal(pb: PocketBase): void {
+  pb.authStore.clear();
+  pbToken = '';
+}
+
+/** Ask auth-refresh for PocketBase's verdict on the token. A refusal retires it. */
+async function refreshPrincipal(config: GsdConfig, pb: PocketBase): Promise<void> {
+  try {
+    await pb.collection('users').authRefresh();
+  } catch (error) {
+    if (!isPrincipalRejection(error)) throw unreachableError(config, error);
+    retirePrincipal(pb);
+    throw normalUserAuthError();
+  }
+}
+
+/** The id of the users-collection record the store holds. Anything else is refused. */
+function usersOwnerId(pb: PocketBase): string {
+  const model = pb.authStore.record;
+  if (pb.authStore.isSuperuser || !model?.id || model.collectionName !== 'users') {
+    retirePrincipal(pb);
+    throw normalUserAuthError();
+  }
+  return model.id;
+}
+
+/**
  * Hydrate and attest the configured PocketBase principal before any account-
  * scoped operation. Administrator/superuser tokens are never accepted.
  */
@@ -115,24 +146,21 @@ export async function requireUsersPrincipal(
 ): Promise<{ pb: PocketBase; ownerId: string }> {
   // getPocketBase has already refused a decoded superuser, offline.
   const pb = getPocketBase(config);
+  if (!pb.authStore.record?.id && pb.authStore.token) await refreshPrincipal(config, pb);
+  return { pb, ownerId: usersOwnerId(pb) };
+}
 
-  if (!pb.authStore.record?.id && pb.authStore.token) {
-    try {
-      await pb.collection('users').authRefresh();
-    } catch (error) {
-      if (!isPrincipalRejection(error)) throw unreachableError(config, error);
-      pb.authStore.clear();
-      throw normalUserAuthError();
-    }
-  }
-
-  const model = pb.authStore.record;
-  if (pb.authStore.isSuperuser || !model?.id || model.collectionName !== 'users') {
-    pb.authStore.clear();
-    throw normalUserAuthError();
-  }
-
-  return { pb, ownerId: model.id };
+/**
+ * Confirm the configured token before an empty listing or a 404 counts.
+ * PocketBase reads a token it refuses as a guest, and a guest gets an empty
+ * `tasks` listing and a 404 for every record: the answers an empty account
+ * gives. auth-refresh answers a guest with 401, so a refused token raises the
+ * sign-in error here instead of reading as "no tasks" or "Task not found".
+ */
+export async function confirmUsersPrincipal(config: GsdConfig): Promise<void> {
+  const pb = getPocketBase(config);
+  await refreshPrincipal(config, pb);
+  usersOwnerId(pb);
 }
 
 /**
