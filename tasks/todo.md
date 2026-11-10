@@ -1,3 +1,19 @@
+# A refused token reads as an empty account (2026-11-10)
+
+Branch: `claude/happy-franklin-1evhvh` off `main` (`e94022a`). Audit P1 item 2 (SYNC-3, SYNC-10, MCP-1) in `tasks/audit-2026-11-10.md`. Non-trivial tier (both clients, a shared helper, the sync session model); the request's goal and "done means" served as the approved spec.
+
+## Resuming From Here
+
+- [x] Web: a push acts on a 404 only after `confirmSessionIdentity`, which now posts to auth-refresh with `pb.send` and saves nothing. Creates ask once per push; a delete that found nothing asks after its own lookup. A refused session stops the push without charging rows. `fullSync` honors `ensureValidAuth()`, and every auth failure reads as one to the sync button (Re-login). A 401 forgets the refused token, so the dialog offers sign-in; only a 401 counts, never a 403.
+- [x] MCP: `confirmUsersPrincipal` before an empty listing or a 404 counts (`list_tasks`, update, complete, delete, bulk, `get_sync_status`, `get_task_stats`). A refusal resets `pbToken`, so the next call sends the configured token again.
+- [x] Red first: `tests/data/sync/refused-session.test.ts` (13, real push, pull, and auth against the fake server) and `packages/mcp-server/src/__tests__/refused-token.test.ts` (15, real tools against a faked SDK), plus unit cases in the helper, auth, engine, and teardown suites.
+- [x] `pb-sync-reviewer`: 0 blocking. Acted on the 403 finding. The multi-tab finding was a false positive (`LocalAuthStore.token` re-reads localStorage), now pinned by a test and a mutation probe. The offline-expired finding matched the old behavior.
+- [x] `verify-sync-session`: model updated (`TokenFresh`, `RefreshLands`, `ForgetRefused`, `PushChecks`, `CheckLands`), all nine configs match.
+- [x] Verify: unit 4,850 passed (356 files, `sqlite3` installed for `docker-migrations`), MCP 543 passed and 6 skipped (coverage 90.08% statements; `write-ops` 98.95/95.48/100/99.75 against 98/95/100/98). Typecheck, lint, shape (complexity debt 27 to 25, long functions 88 to 87), knip, and the MCP `tsc` build all pass. The e2e suite and a production build weren't run (no UI files changed).
+- **Next:** the owner reviews the PR. After it merges, move the verify-sync-session sync commit to the merge commit. Release notes and version bumps go with `/release`.
+- **Known, not fixed (reviewer, low):** a session revoked mid-push charges each remaining create one attempt; N already-gone deletes cost N auth-refresh calls; background syncs keep reporting the auth failure until sign-in; realtime stays subscribed as a guest; a lookup that fails with a non-404 status is still charged as "index unavailable".
+- **Blockers:** none.
+
 # Dependabot alert triage (2026-11-10)
 
 Branch: `claude/determined-feynman-y5mi5x` off `main` (`e94022a`). Standard tier: the two manifests, `bun.lock`, and guard tests, with the owner's request as the spec. It closes the dependency bullet in `tasks/audit-2026-11-10.md` (TOOL-16, TOOL-18).

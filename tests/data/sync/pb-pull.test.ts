@@ -6,7 +6,8 @@ import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { TaskRecord } from '@/lib/types';
 
-vi.mock('@/lib/sync/pocketbase-client', () => ({
+vi.mock('@/lib/sync/pocketbase-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/sync/pocketbase-client')>()),
   getPocketBase: vi.fn(),
   getCurrentUserId: vi.fn(() => 'user-1'),
 }));
@@ -46,6 +47,25 @@ function signedInConfig(overrides: Partial<PBSyncConfig> = {}): PBSyncConfig {
     nextRetryAt: null,
     ...overrides,
   };
+}
+
+const AUTH_REFRESH_PATH = '/api/collections/users/auth-refresh';
+
+/**
+ * Serve `double` as the PocketBase client. The session check posts to
+ * auth-refresh as a raw request, so `send` answers it with the double's own
+ * authRefresh, the server route behind both.
+ */
+function mockPocketBase(double: { collection: () => Record<string, unknown> }): void {
+  (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    ...double,
+    authStore: { token: 'token-1', clear: vi.fn() },
+    send: async (path: string) => {
+      const { authRefresh } = double.collection() as { authRefresh?: () => Promise<unknown> };
+      if (path !== AUTH_REFRESH_PATH || !authRefresh) throw new Error(`Unexpected request: ${path}`);
+      return authRefresh();
+    },
+  });
 }
 
 /** Resolve to the rejection reason, or undefined when the promise resolves. */
@@ -112,7 +132,7 @@ describe('pullRemoteChanges cursor clamping', () => {
 
   it('does not advance the cursor past now for a far-future stamp', async () => {
     const before = Date.now();
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('t1', '3000-01-01T00:00:00.000Z')]),
@@ -127,7 +147,7 @@ describe('pullRemoteChanges cursor clamping', () => {
   it('does not advance the cursor past now for a clock a few minutes fast', async () => {
     const before = Date.now();
     const twoMinutesAhead = new Date(before + 2 * 60 * 1000).toISOString();
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('t1', twoMinutesAhead)]),
@@ -144,7 +164,7 @@ describe('pullRemoteChanges cursor clamping', () => {
     // Force `pocketBaseToTaskRecord` to reject by stripping a required field.
     delete (badRecord as Record<string, unknown>).title;
 
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
@@ -161,7 +181,7 @@ describe('pullRemoteChanges cursor clamping', () => {
   it('reports how many fetched records it could not apply', async () => {
     const badRecord = pbRecord('t1', '2026-05-18T00:00:00.000Z');
     delete (badRecord as Record<string, unknown>).title;
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
@@ -175,7 +195,7 @@ describe('pullRemoteChanges cursor clamping', () => {
 
   it('uses client_updated_at for filtering and sorting', async () => {
     const getList = vi.fn(async () => []);
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({ getList }),
     });
 
@@ -216,7 +236,7 @@ describe('pullRemoteChanges cursor clamping', () => {
       timeEntries: [],
     });
 
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('t-equal', timestamp)]),
@@ -252,7 +272,7 @@ describe('pullRemoteChanges last-write-wins', () => {
 
   function pullRemoteVersion(clientUpdatedAt: string) {
     const record = { ...pbRecord('t-lww', clientUpdatedAt), title: 'Remote title' } as RecordModel;
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({ getList: vi.fn(async () => [record]) }),
     });
     return pullRemoteChanges(null);
@@ -299,7 +319,7 @@ describe('pullRemoteChanges archive guard', () => {
       ...makeTask('future-archive'),
       archivedAt: '2026-05-21T00:00:00.000Z',
     });
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('future-archive', '3000-01-01T00:00:00.000Z')]),
@@ -320,7 +340,7 @@ describe('pullRemoteChanges archive guard', () => {
       ...makeTask('future-trash'),
       deletedAt: '2026-05-21T00:00:00.000Z',
     });
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('future-trash', '3000-01-01T00:00:00.000Z')]),
@@ -345,7 +365,7 @@ describe('pullRemoteChanges archive guard', () => {
       archivedAt: '2026-05-21T00:00:00.000Z',
     });
 
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('archived-task', '2026-05-20T00:00:00.000Z')]),
@@ -366,7 +386,7 @@ describe('pullRemoteChanges archive guard', () => {
       ...makeTask('deleted-task'),
       deletedAt: '2026-05-21T00:00:00.000Z',
     });
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('deleted-task', '2026-05-20T00:00:00.000Z')]),
@@ -386,7 +406,7 @@ describe('pullRemoteChanges archive guard', () => {
       ...makeTask('edited-after-delete'),
       deletedAt: '2026-05-19T00:00:00.000Z',
     });
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('edited-after-delete', '2026-05-20T00:00:00.000Z')]),
@@ -413,7 +433,7 @@ describe('pullRemoteChanges archive guard', () => {
       archivedAt: '2026-05-21T00:00:00.000Z',
     });
 
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [
@@ -446,7 +466,7 @@ describe('pullRemoteChanges archive guard', () => {
       archivedAt: '2026-05-19T00:00:00.000Z',
     });
 
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [
@@ -476,7 +496,7 @@ describe('pullRemoteChanges archive guard', () => {
       ...makeTask('atomic-restore'),
       archivedAt: '2026-05-19T00:00:00.000Z',
     });
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [
@@ -501,7 +521,7 @@ describe('pullRemoteChanges archive guard', () => {
       archivedAt: '2026-05-19T00:00:00.000Z',
     });
 
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('stale-remote', '2026-05-18T00:00:00.000Z')]),
@@ -518,7 +538,7 @@ describe('pullRemoteChanges archive guard', () => {
   it('pulls a restored task again once it leaves the archive', async () => {
     const db = getDb();
 
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(async () => [pbRecord('restored-task', '2026-05-20T00:00:00.000Z')]),
@@ -552,7 +572,7 @@ describe('pullRemoteChanges deletion reconciliation', () => {
     // The archive-guard describe above leaves a row in deletedTasks, which
     // would poison the trash assertions below.
     await db.deletedTasks.clear();
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         getList: vi.fn(async () => []),
         authRefresh: authRefreshMock,
@@ -568,7 +588,8 @@ describe('pullRemoteChanges deletion reconciliation', () => {
 
     const failure = await settle(pullRemoteChanges(null));
 
-    expect(failure).toBeInstanceOf(Error);
+    // fullSync turns this into the sign-in prompt.
+    expect(failure).toMatchObject({ name: 'SessionRejectedError' });
     await expect(db.tasks.count()).resolves.toBe(2);
   });
 
@@ -817,7 +838,7 @@ describe('pullRemoteChanges after teardown', () => {
   /** Hold the task fetch open and return the function that lets it land. */
   function holdRemoteFetch(): (records: RecordModel[]) => void {
     let release: ((records: RecordModel[]) => void) | undefined;
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
         getList: vi.fn(() => new Promise<RecordModel[]>((resolve) => { release = resolve; })),
@@ -851,7 +872,7 @@ describe('pullRemoteChanges after teardown', () => {
   it('should_not_reconcile_deletions_when_sync_disabled_while_fetch_pending', async () => {
     const db = getDb();
     await db.tasks.add(makeTask('kept-after-sign-out'));
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({ getList: vi.fn(async () => []), authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })), }),
     });
     let releaseIndex: ((value: { index: Map<string, never>; fetchSucceeded: boolean }) => void) | undefined;
@@ -907,7 +928,7 @@ describe('pullRemoteChanges same-version backfill', () => {
 
   function pullSavedRecord(clientUpdatedAt: string, options?: PullOptions) {
     const record = { ...pbRecord('t-saved', clientUpdatedAt), saved_at: stamp } as RecordModel;
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+    mockPocketBase({
       collection: () => ({ getList: vi.fn(async () => [record]) }),
     });
     return pullRemoteChanges(null, options);

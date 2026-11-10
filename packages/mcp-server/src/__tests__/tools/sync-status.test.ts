@@ -6,6 +6,8 @@ const getFullList = vi.fn();
 vi.mock('../../pocketbase-client.js', () => ({
   getPocketBase: () => ({ collection: () => ({ getFullList }) }),
   requireUsersPrincipal: vi.fn(),
+  // An empty listing counts once the token is confirmed; here it is.
+  confirmUsersPrincipal: vi.fn(async () => undefined),
 }));
 
 import { getTaskStats } from '../../tools/sync-status.js';

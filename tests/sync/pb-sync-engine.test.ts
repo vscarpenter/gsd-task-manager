@@ -149,6 +149,7 @@ import { getDb } from '@/lib/db';
 import { getRetryManager } from '@/lib/sync/retry-manager';
 import { notifySyncError } from '@/lib/sync/notifications';
 import { recordSyncError } from '@/lib/sync-history';
+import { isAuthError } from '@/lib/sync/error-categorizer';
 
 // Helper to create a mock PocketBase instance
 // Returns a stable collection mock so chained getList calls work correctly
@@ -161,6 +162,9 @@ function createMockPB() {
     delete: vi.fn().mockResolvedValue({}),
   };
   return {
+    // auth-refresh confirms the session for the owner these tests push for.
+    authStore: { token: 'token-1', clear: vi.fn() },
+    send: vi.fn().mockResolvedValue({ record: { id: 'user-123' } }),
     collection: vi.fn(() => collectionMock),
     _collectionMock: collectionMock,
   };
@@ -247,7 +251,7 @@ describe('pb-sync-engine', () => {
       expect(mockQueue.recordAttemptFailure).toHaveBeenCalledWith('q1', expect.any(String));
     });
 
-    it('should dequeue delete operations when index fetch succeeds and task not found remotely', async () => {
+    it('should dequeue a delete the server no longer has once the session is confirmed', async () => {
       (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
 
       const mockCollection = {
@@ -271,7 +275,8 @@ describe('pb-sync-engine', () => {
 
       const result = await pushLocalChanges('user-123');
 
-      // Delete should be dequeued (task not found remotely, which is fine)
+      // A refused token 404s every lookup too, so the session is confirmed first.
+      expect(mockPB.send).toHaveBeenCalledWith('/api/collections/users/auth-refresh', { method: 'POST' });
       expect(mockQueue.dequeue).toHaveBeenCalledWith('q1');
       expect(result.pushedCount).toBe(1);
     });
@@ -475,7 +480,8 @@ describe('pb-sync-engine', () => {
       const result = await fullSync('auto');
 
       expect(result.status).toBe('error');
-      expect(result.error).toContain('not authenticated');
+      // The sync button reads this as an auth error and offers Re-login.
+      expect(isAuthError(new Error(result.error))).toBe(true);
 
       // Verify lastSyncAt was NOT updated
       expect(db.syncMetadata.put).not.toHaveBeenCalled();

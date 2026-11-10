@@ -13,6 +13,7 @@ const mockPb = {
     token: 'test-token',
     isValid: true,
     record: { id: 'user-123', email: 'test@example.com' },
+    clear: vi.fn(),
   },
   buildURL: vi.fn((path: string) => `https://pb.example.test${path}`),
   cancelRequest: mockCancelRequest,
@@ -44,7 +45,8 @@ function tokenExpiringIn(seconds: number): string {
   return `header.${payload}.signature`;
 }
 
-vi.mock('@/lib/sync/pocketbase-client', () => ({
+vi.mock('@/lib/sync/pocketbase-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/sync/pocketbase-client')>()),
   getPocketBase: vi.fn(() => mockPb),
   clearPocketBase: vi.fn(),
   isAuthenticated: vi.fn(() => true),
@@ -433,6 +435,39 @@ describe('PocketBase Auth', () => {
       );
 
       await expect(refreshAuthOutcome()).resolves.toBe('unreachable');
+    });
+
+    // A revoked token that hasn't expired would otherwise stay "signed in" here
+    // until it expires, and the sync dialog would never offer sign-in.
+    it('forgets a token the server refuses with a 401', async () => {
+      mockAuthRefresh.mockRejectedValue(
+        Object.assign(new Error('The request requires valid record authorization token.'), { status: 401 }),
+      );
+
+      await expect(refreshAuthOutcome()).resolves.toBe('rejected');
+      expect(mockPb.authStore.clear).toHaveBeenCalledOnce();
+    });
+
+    it('keeps a token that a sign-in saved while the refusal was in flight', async () => {
+      mockAuthRefresh.mockImplementationOnce(async () => {
+        mockPb.authStore.token = 'token-from-a-new-sign-in';
+        throw Object.assign(new Error('The request requires valid record authorization token.'), { status: 401 });
+      });
+
+      await expect(refreshAuthOutcome()).resolves.toBe('rejected');
+      expect(mockPb.authStore.clear).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['no answer', Object.assign(new Error('Something went wrong.'), { status: 0 })],
+      ['a failure that is no verdict on the token', new Error('refresh rejected')],
+      ['a 403 from a proxy or firewall', Object.assign(new Error('Forbidden'), { status: 403 })],
+    ])('keeps the token after %s', async (_name, failure) => {
+      mockAuthRefresh.mockRejectedValue(failure);
+
+      await refreshAuthOutcome();
+
+      expect(mockPb.authStore.clear).not.toHaveBeenCalled();
     });
   });
 

@@ -61,6 +61,8 @@ beforeEach(() => {
     pb: pbClient.getPocketBase(currentConfig),
     ownerId: 'user-1',
   }));
+  // A 404 counts only once the token is confirmed; here the session is the owner's.
+  vi.spyOn(pbClient, 'confirmUsersPrincipal').mockResolvedValue(undefined);
 });
 
 describe('updateTask conflict detection', () => {

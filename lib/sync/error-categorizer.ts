@@ -50,6 +50,21 @@ const HTTP_TOO_MANY_REQUESTS = 429;
 const HTTP_SERVER_ERROR_MIN = 500;
 
 /**
+ * PocketBase answers a request whose token it refuses (revoked, expired, or
+ * unknown) with 401. Its only 403 here is for a token from another auth
+ * collection, or one that can't be refreshed, and the web app's OAuth tokens are
+ * neither. So a 403, like no response, a 429, a 5xx, or a proxy's 404, more
+ * likely comes from something in front of the server and says nothing about
+ * the session.
+ */
+const HTTP_UNAUTHORIZED = 401;
+
+/** True only when PocketBase itself refused the session's token. */
+export function isSessionRefusal(error: unknown): boolean {
+  return (error as { status?: unknown } | null)?.status === HTTP_UNAUTHORIZED;
+}
+
+/**
  * Should this failure be treated as transient operational noise?
  *
  * Returns true for errors the retry/backoff machinery already handles

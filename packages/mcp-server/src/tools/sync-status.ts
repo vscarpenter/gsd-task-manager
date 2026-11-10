@@ -1,4 +1,4 @@
-import { getPocketBase, requireUsersPrincipal } from '../pocketbase-client.js';
+import { confirmUsersPrincipal, getPocketBase, requireUsersPrincipal } from '../pocketbase-client.js';
 import type { GsdConfig, SyncStatus, TaskStats, PBTask } from '../types.js';
 import { createMcpLogger } from '../utils/logger.js';
 
@@ -12,6 +12,8 @@ export async function getSyncStatus(config: GsdConfig): Promise<SyncStatus> {
     const { pb } = await requireUsersPrincipal(config);
     await pb.health.check();
     const taskCount = await pb.collection('tasks').getList<PBTask>(1, 1);
+    // A refused token reads as a guest, who counts no tasks either.
+    if (taskCount.totalItems === 0) await confirmUsersPrincipal(config);
 
     return {
       healthy: true,
@@ -38,6 +40,8 @@ export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
     const records = await pb.collection('tasks').getFullList<PBTask>({
       fields: 'task_id,completed,saved_at,client_created_at,client_updated_at',
     });
+    // A refused token reads as a guest, whose listing is empty too.
+    if (records.length === 0) await confirmUsersPrincipal(config);
     // Saved items live outside the matrix, so every other read tool leaves them out too.
     const allTasks = records.filter(t => !t.saved_at);
 

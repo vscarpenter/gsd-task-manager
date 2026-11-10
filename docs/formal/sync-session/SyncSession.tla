@@ -66,7 +66,7 @@ TypeOK ==
   /\ tok \in Accounts \cup {None}
   /\ rows \subseteq Accounts /\ queue \subseteq Accounts
   /\ srv \in [Accounts -> SUBSET Accounts]
-  /\ sp \in {"idle", "auth", "refreshing", "push", "pushing", "pull", "applying"}
+  /\ sp \in {"idle", "auth", "refreshing", "push", "pushing", "checking", "pull", "applying"}
   /\ pullFirst \in BOOLEAN
   /\ owner \in Accounts \cup {None} /\ rt \in Accounts \cup {None}
   /\ pushOwner \in Accounts \cup {None} /\ pending \subseteq Accounts
@@ -120,11 +120,15 @@ SyncStarts ==
 FirstPass == IF pullFirst THEN "pull" ELSE "push"
 
 \* ensureValidAuth with more than seven days left on the token, or with no
-\* token: no request goes out.
+\* token: no request goes out. With no token it fails, and fullSync ends with
+\* the sign-in prompt (reportAuthFailure), which writes no rows.
 TokenFresh ==
   /\ sp = "auth"
-  /\ sp' = FirstPass
-  /\ UNCHANGED <<cfg, tok, rows, queue, srv, pullFirst, owner, rt, pushOwner, pending, pullOwner, fetched, siVars, soVars, st, ed, ev>>
+  /\ IF tok = None
+     THEN SyncEnds
+     ELSE /\ sp' = FirstPass
+          /\ UNCHANGED <<pullFirst, owner, rt, pushOwner, pending, pullOwner, fetched>>
+  /\ UNCHANGED <<cfg, tok, rows, queue, srv, siVars, soVars, st, ed, ev>>
 
 \* ensureValidAuth inside the refresh window: refreshAuthOutcome sends
 \* authRefresh with the token the shared key holds now.
@@ -133,15 +137,33 @@ RefreshSent ==
   /\ sp' = "refreshing" /\ rt' = tok
   /\ UNCHANGED <<cfg, tok, rows, queue, srv, pullFirst, owner, pushOwner, pending, pullOwner, fetched, siVars, soVars, st, ed, ev>>
 
-\* The authRefresh response: RecordService.authResponse saves it to this tab's
-\* authStore. That is the shared pocketbase_auth key, unless this tab's own
-\* clearPocketBase swapped in a throwaway store (rt = None). A failed refresh
-\* saves nothing, which TokenFresh already covers.
+\* forgetRefusedToken, after a 401: the shared key is cleared only while it still
+\* holds the token the refused request carried. A request from a client that
+\* this tab's clearPocketBase retired (rt = None) compares against a throwaway
+\* store and clears nothing. Tokens here are named by account, so the model also
+\* clears a newer token of the same account, which the code, comparing the token
+\* itself, keeps. Clearing only ever takes a principal away.
+ForgetRefused == IF rt # None /\ tok = rt THEN None ELSE tok
+
+\* The authRefresh response. An answer: RecordService.authResponse saves it to
+\* this tab's authStore. That is the shared pocketbase_auth key, unless this
+\* tab's own clearPocketBase swapped in a throwaway store (rt = None). A failure
+\* saves nothing. With no answer and a token that is still valid, the sync goes
+\* on. A 401: refreshAuthOutcome forgets the refused token, ensureValidAuth
+\* fails, and fullSync ends with the sign-in prompt. It ends the same way, and
+\* clears nothing, with no answer for an expired token or another rejection.
 RefreshLands ==
   /\ sp = "refreshing"
-  /\ tok' = IF rt # None THEN rt ELSE tok
-  /\ sp' = FirstPass /\ rt' = None
-  /\ UNCHANGED <<cfg, rows, queue, srv, pullFirst, owner, pushOwner, pending, pullOwner, fetched, siVars, soVars, st, ed, ev>>
+  /\ \/ /\ tok' = IF rt # None THEN rt ELSE tok
+        /\ sp' = FirstPass /\ rt' = None
+        /\ UNCHANGED <<pullFirst, owner, pushOwner, pending, pullOwner, fetched>>
+     \/ /\ sp' = FirstPass /\ rt' = None
+        /\ UNCHANGED <<tok, pullFirst, owner, pushOwner, pending, pullOwner, fetched>>
+     \/ /\ tok' = ForgetRefused
+        /\ SyncEnds
+     \/ /\ SyncEnds
+        /\ UNCHANGED tok
+  /\ UNCHANGED <<cfg, rows, queue, srv, siVars, soVars, st, ed, ev>>
 
 \* pushLocalChanges(owner): resolvePushPrincipal, then queue.getPending().
 \* No token: "Push skipped: not authenticated", and an ordinary sync still pulls.
@@ -171,6 +193,31 @@ PushSends(r) ==
   /\ srv' = IF tok = pushOwner THEN [srv EXCEPT ![pushOwner] = @ \cup {r}] ELSE srv
   /\ pending' = pending \ {r}
   /\ UNCHANGED <<cfg, tok, rows, queue, sp, pullFirst, owner, rt, pushOwner, pullOwner, fetched, siVars, soVars, st, ed, ev>>
+
+\* pushSingleItem: a lookup that finds nothing (fetchRemoteTaskEntry's 404) is
+\* also what a refused token gets for every task. Before it creates the task,
+\* the push asks confirmSessionIdentity, which posts to auth-refresh with the
+\* token the shared key holds now and never saves the answer. The code asks
+\* once per push before creates; the model lets it ask any number of times.
+PushChecks ==
+  /\ sp = "pushing" /\ pending # {}
+  /\ sp' = "checking" /\ rt' = tok
+  /\ UNCHANGED <<cfg, tok, rows, queue, srv, pullFirst, owner, pushOwner, pending, pullOwner, fetched, siVars, soVars, st, ed, ev>>
+
+\* The check's answer, which saves nothing. The push owner's record, or no
+\* answer (that row is charged and the loop goes on): the push continues. A 401:
+\* forgetRefusedToken, then SessionRejectedError ends fullSync with the sign-in
+\* prompt. Another account's record: SessionIdentityMismatchError ends it too.
+\* Either way the push stops before it charges or sends another row.
+CheckLands ==
+  /\ sp = "checking"
+  /\ \/ /\ sp' = "pushing" /\ rt' = None
+        /\ UNCHANGED <<tok, pullFirst, owner, pushOwner, pending, pullOwner, fetched>>
+     \/ /\ tok' = ForgetRefused
+        /\ SyncEnds
+     \/ /\ SyncEnds
+        /\ UNCHANGED tok
+  /\ UNCHANGED <<cfg, rows, queue, srv, siVars, soVars, st, ed, ev>>
 
 \* The push loop ends: every row sent, or a 429 broke the loop early. An
 \* ordinary sync pulls next; a backfill already pulled.
@@ -361,7 +408,7 @@ EditSaves(r) ==
 
 Next ==
   \/ SyncStarts \/ TokenFresh \/ RefreshSent \/ RefreshLands
-  \/ PushStarts \/ (\E r \in Accounts : PushSends(r)) \/ PushEnds
+  \/ PushStarts \/ (\E r \in Accounts : PushSends(r)) \/ PushChecks \/ CheckLands \/ PushEnds
   \/ PullFetches \/ PullApplies
   \/ (\E x, r \in Accounts : EventArrives(x, r)) \/ EventApplies
   \/ (\E t \in Tabs, x \in Accounts : YouSignIn(t, x)) \/ SignInSaves
