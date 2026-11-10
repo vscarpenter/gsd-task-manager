@@ -428,3 +428,11 @@ Adding a wire column is not enough. A client that pulled a record before the col
 
 51 cases of the due-time corpus pinned `reminderFireAt`, which production never called, while the checker ran its own rule and lost snoozed reminders. When a corpus covers behavior, confirm the live path runs the code under test.
 
+
+## Whole-repo audit (2026-11-10)
+
+- **Give Dexie an `async` transaction scope.** Dexie keeps the transaction across native awaits only for a function tagged AsyncFunction. A plain arrow that returns a promise lost it after an await that made no request, the next write ran in a transaction of its own, and Dexie threw "Transaction committed too early". fake-indexeddb reproduces it, so a red test is cheap.
+- **IndexedDB keeps undefined-valued keys.** `archivedAt: undefined` stored the key, and the `.strict()` export schema then dropped the row from every backup. Delete the key instead, and validate a backup row the way JSON will write it.
+- **`toISOString().slice(0, 10)` is the UTC day, not today.** Due dates are local-midnight instants, so compare local days (`isOverdue`, `localDayOf`, `differenceInCalendarDays`). The suite now runs in UTC; a test that needs another zone sets `process.env.TZ` itself.
+- **Project hook paths are relative to the shell's directory.** A `cd packages/mcp-server` left the guards unreachable. Stay at the root and use absolute paths or `bun run --cwd`.
+- **knip runs without its export check**, so exports that only tests call build up unnoticed (LIB-36, SYNC-23, MCP-24 in the audit).

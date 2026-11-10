@@ -1,3 +1,32 @@
+# Whole-repo audit (2026-11-10)
+
+Branch: `claude/eloquent-mccarthy-p7ybod` off `main` (`20dc641`). The audit was read-only; each fix is Standard tier, a few files with a red test first. Findings, fixes, and open items: `tasks/audit-2026-11-10.md`. Nothing pushed: the owner reviews first.
+
+## Resuming From Here
+
+- [x] Baseline green. Seven read-only reviewers (lib core, sync with the PocketBase schema, UI, MCP, tests, docs, tooling) reported 283 findings.
+- [x] 19 commits:
+  - `WEB-UNDO-SIGNED-IN`, the top P1 from the previous section.
+  - `bun start` and `next export`.
+  - Five MCP result bugs.
+  - Duplicates left out of backups and hidden from the board.
+  - Overdue counted by local day, and DST overdue days.
+  - Typed edit errors, and stored titles left alone.
+  - What's New retry.
+  - The suite pinned to UTC.
+  - The Saved return day.
+  - Review's labels and "Tomorrow".
+  - The WebMCP tag limit, the Trash plural, and menu contrast.
+  - The discovery card.
+  - Doc and config drift.
+- [x] Verify: unit 4,819 passed with 0 skipped (coverage 90.95% statements), MCP 525. Typecheck, lint, shape, knip, and license all pass. 6 of 6 dev-server checks pass in Chromium.
+- **Next:** the owner reviews the branch and the P1 list in the audit file, then says push. Bump web to 14.8.1 and MCP to 1.4.2 when releasing. Re-run the failed Docker publish for `20dc641`.
+- **Blockers:** none. The work lives only in this container until it's pushed.
+- **Assumptions:**
+  - Sync-engine behavior changes go through the sync review process (`pb-sync-reviewer` plus the verify skills), so they're listed, not changed.
+  - `.claude/settings.json` hooks gate the agent itself, so they're listed, not changed.
+  - The e2e suite and a production build weren't run, because Google Fonts is unreachable here.
+
 # Formal verification skills and statecharts (2026-11-08)
 
 Branch: `chore/formal-verification-skills` off `main` (`dd32e08c`). Standard tier: verification files, project skills, and docs only, with no product code and no public contract. Page: https://claude.ai/artifact/7s4VdzPxDvBiR6WE6nZ6tn (private).
