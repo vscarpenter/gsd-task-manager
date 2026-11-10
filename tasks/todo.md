@@ -1,3 +1,19 @@
+# Dependabot alert triage (2026-11-10)
+
+Branch: `claude/determined-feynman-y5mi5x` off `main` (`e94022a`). Standard tier: the two manifests, `bun.lock`, and guard tests, with the owner's request as the spec. It closes the dependency bullet in `tasks/audit-2026-11-10.md` (TOOL-16, TOOL-18).
+
+## Resuming From Here
+
+- [x] The six alerts (one high, four moderate, one low) are the six vite advisories for `>=8.3.0 <=8.3.2`. Dependabot read the root devDependency pin, 8.3.1, while the `>=8.3.1` override installed 8.3.6. No tool here reads alerts, so the match comes from the advisory database: only vite fits those counts, and `glob` would have made seven.
+- [x] `a48569b` pins vite, nanoid, postcss, Stagehand, and `@playwright/test` to the versions bun.lock installs.
+- [x] `c3ddca7` rimraf 6.1.4 pulls glob 14.0.4, which clears GHSA-3g3m-2fjr-6pw4.
+- [x] `b37feff` the edit drawer keeps its baseline in state. Babel 8 had hidden three `react-hooks/refs` warnings there.
+- [x] `f0175b4` overrides are exact pins only. Seven entries are gone, and four crossings move back to their dependents' majors. minimatch 11.0.5 stays as the one accepted crossing.
+- [x] Verify: `bun audit` finds nothing at any level, and so does the production scope. Unit 4,824 passed (coverage 90.95% statements), MCP 525. license:check, lint, typecheck, shape, and knip pass. bun 1.3.14 `--frozen-lockfile` leaves the lock unchanged. The edit drawer passed a live Chromium check against the previous build.
+- **Next:** the owner reviews the PR. After merge, the six vite alerts should close on GitHub's next scan of `main`; confirm on the Dependabot page. Releasing ships the edit drawer change, so bump web then.
+- **Accepted, not fixed:** minimatch 11.0.5 for the minimatch 3 plugins (see `tests/data/dependency-pins.test.ts`). The braces entry in `scripts/check-audit-results.cjs` now matches nothing, because the advisory feed no longer lists GHSA-vfj7-8cjw-p6xm. Its tests use it as the fixture, and it lapses on 2027-01-05.
+- **Lockfile:** write it with bun 1.4.4, then check it with bun 1.3.14 `--frozen-lockfile`. bun 1.3.14 drops the `libc` filters and a nested `@vitest/ui` copy that the current lock carries.
+
 # Docker publish: vendored Newsreader, native static export, job timeout (2026-11-10)
 
 Branch: `claude/zealous-ptolemy-877pnd` off `main` (`e94022a`). Audit P1 item 1 and TOOL-21 in `tasks/audit-2026-11-10.md`. Standard tier: the request gave the goal and the done criteria, and no public contract changes.

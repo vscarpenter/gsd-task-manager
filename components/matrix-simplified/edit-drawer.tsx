@@ -86,14 +86,15 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   const titleRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
   const draft = useEditDraftState(task, initialDraft, titleRef);
-  const baselineRef = useRef<EditDraft | null>(null);
-  if (baselineRef.current === null) baselineRef.current = draft.toDraft();
-  const dirty = JSON.stringify(draft.toDraft()) !== JSON.stringify(baselineRef.current) || draft.tagInput.trim() !== "";
+  // The draft as the form opened. Render reads it for the dirty check, so it
+  // lives in state rather than a ref; the form remounts per task, so it never resets.
+  const [baseline] = useState(() => draft.toDraft());
+  const dirty = JSON.stringify(draft.toDraft()) !== JSON.stringify(baseline) || draft.tagInput.trim() !== "";
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   const { saving, submit } = useDrawerSave({
     task,
     draft,
-    baseline: baselineRef.current,
+    baseline,
     allTasks,
     onSubmit,
     setDependencyError,
