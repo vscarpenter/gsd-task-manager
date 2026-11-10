@@ -14,7 +14,7 @@ import { recordSyncSuccess, recordSyncError, recordSyncPartial } from '@/lib/syn
 import { notifySyncSuccess, notifySyncError } from './notifications';
 import { isTransientSyncFailure, sanitizeSyncError, extractRetryAfterMs } from './error-categorizer';
 import { ensureValidAuth } from './pb-auth';
-import { getDeviceId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, mapOverLocalCopy, readClientUpdatedAt } from './pb-sync-helpers';
+import { SessionRejectedError, getDeviceId, holdsOffFarFutureRemote, isRemoteNewerThanArchive, mapOverLocalCopy, readClientUpdatedAt } from './pb-sync-helpers';
 import { pushLocalChanges, type PushResult } from './pb-push';
 import { pullRemoteChanges } from './pb-pull';
 import { resurrectOnSight } from './resurrect-on-sight';
@@ -236,11 +236,10 @@ export async function fullSync(triggeredBy: 'user' | 'auto' = 'auto'): Promise<P
   };
 
   try {
-    // A merely-expired JWT can still be refreshed from the server session.
-    // Attempt that silently here; if it fails, push/pull report the auth
-    // failure cleanly via the unauthenticated path below.
+    // ensureValidAuth renews a token in its last seven days. No session, or one
+    // the server refused, stops here with the sign-in prompt.
     // react-doctor-disable-next-line react-doctor/async-parallel -- auth->push->pull ordering is required; not independent
-    await ensureValidAuth();
+    if (!(await ensureValidAuth())) return await reportAuthFailure(ctx);
 
     const passes = await runSyncPasses(ownerId, resolvePullCursor(config));
 
@@ -303,8 +302,12 @@ async function reportSuccess(
   return { status: 'success', pushedCount, pulledCount, ...skippedField(pullResult) };
 }
 
+/**
+ * No session, or one the server refused. The message reads as an auth error to
+ * the sync button (isAuthError), which then offers Re-login.
+ */
 async function reportAuthFailure(ctx: SyncOutcomeContext): Promise<PBSyncResult> {
-  const authError = new Error('Sync skipped: not authenticated');
+  const authError = new Error('Sync skipped: authentication required, sign in again');
   await writeSyncOutcome(ctx.ownerId, async () => {
     await ctx.retryManager.recordFailure(authError);
     await recordSyncError(authError.message, ctx.deviceId, ctx.triggeredBy, Date.now() - ctx.startTime);
@@ -368,8 +371,16 @@ async function reportPartialFailure(
   };
 }
 
+/** The session can also end while a failure is being recorded. */
+function cancelledIfStale(error: unknown): PBSyncResult {
+  if (error instanceof StaleSyncSessionError) return cancelledSync();
+  throw error;
+}
+
 async function reportSyncError(error: unknown, ctx: SyncOutcomeContext): Promise<PBSyncResult> {
   if (error instanceof StaleSyncSessionError) return cancelledSync();
+  // A push, pull, or resurrect check found the session refused: the same prompt as no session.
+  if (error instanceof SessionRejectedError) return reportAuthFailure(ctx).catch(cancelledIfStale);
   const errorObj = error instanceof Error ? error : new Error(String(error));
   // PB 4xx bodies can echo submitted field values (task titles), so persist
   // and surface only the stable code; keep the raw Error for diagnostics.

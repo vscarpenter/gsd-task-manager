@@ -10,10 +10,10 @@
  * could hand a victim's code to an attacker.
  */
 
-import { getPocketBase } from './pocketbase-client';
+import { forgetRefusedToken, getPocketBase } from './pocketbase-client';
 import { OAUTH_REDIRECT_PATH, waitForOAuthCallback } from './oauth-callback';
 import { createLogger } from '@/lib/logger';
-import { isTransientSyncFailure } from './error-categorizer';
+import { isSessionRefusal, isTransientSyncFailure } from './error-categorizer';
 import { isTokenExpired } from 'pocketbase';
 
 const logger = createLogger('SYNC_AUTH');
@@ -305,13 +305,15 @@ export type AuthRefreshOutcome = 'refreshed' | 'no-session' | 'rejected' | 'unre
  *
  * Exchanges the current token for a fresh one with a full lifetime. PocketBase
  * accepts only a token that is still valid: once it has expired the server
- * answers 401, so this must run before expiry (see ensureValidAuth).
+ * answers 401, so this must run before expiry (see ensureValidAuth). A token the
+ * server refuses with a 401 is forgotten, so the sync dialog offers sign-in.
  */
 export async function refreshAuthOutcome(): Promise<AuthRefreshOutcome> {
   const pb = getPocketBase();
+  const sentToken = pb.authStore.token;
 
   // Nothing to refresh if there's no token at all
-  if (!pb.authStore.token) return 'no-session';
+  if (!sentToken) return 'no-session';
 
   try {
     await pb.collection('users').authRefresh();
@@ -321,7 +323,9 @@ export async function refreshAuthOutcome(): Promise<AuthRefreshOutcome> {
     logger.warn('Auth token refresh failed', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return isTransientSyncFailure(error) ? 'unreachable' : 'rejected';
+    if (isTransientSyncFailure(error)) return 'unreachable';
+    if (isSessionRefusal(error)) forgetRefusedToken(pb, sentToken);
+    return 'rejected';
   }
 }
 

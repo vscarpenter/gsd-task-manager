@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { clearPocketBase, getPocketBase, getCurrentUserId } from '@/lib/sync/pocketbase-client';
+import { clearPocketBase, forgetRefusedToken, getPocketBase, getCurrentUserId } from '@/lib/sync/pocketbase-client';
 
 // A JWT the SDK's LocalAuthStore treats as valid: exp far in the future.
 function makeToken(exp: number): string {
@@ -42,5 +42,46 @@ describe('clearPocketBase', () => {
 
     expect(getCurrentUserId()).toBe('user-b');
     expect(JSON.parse(window.localStorage.getItem('pocketbase_auth') ?? '{}').record?.id).toBe('user-b');
+  });
+});
+
+/**
+ * A refused token is forgotten only while the shared key still holds it. Another
+ * tab's sign-in writes the key directly, and this tab learns of it only through a
+ * storage event, so the guard depends on LocalAuthStore re-reading the key on
+ * every access rather than trusting its in-memory copy.
+ */
+describe('forgetRefusedToken', () => {
+  const userA = { id: 'user-a', collectionId: '_pb_users_auth_', collectionName: 'users' };
+  const stored = () => JSON.parse(window.localStorage.getItem('pocketbase_auth') ?? 'null');
+
+  beforeEach(() => {
+    clearPocketBase();
+    window.localStorage.removeItem('pocketbase_auth');
+  });
+
+  it('clears the shared key when it still holds the refused token', () => {
+    const pb = getPocketBase();
+    const refused = makeToken(FAR_FUTURE);
+    pb.authStore.save(refused, userA);
+
+    forgetRefusedToken(pb, refused);
+
+    expect(stored()).toBeNull();
+    expect(getCurrentUserId()).toBeNull();
+  });
+
+  it('keeps a token another tab saved while the refusal was in flight', () => {
+    const pb = getPocketBase();
+    const refused = makeToken(FAR_FUTURE);
+    pb.authStore.save(refused, userA);
+    const newer = makeToken(FAR_FUTURE + 60);
+    // Another tab's save. jsdom fires no storage event in the window that wrote it,
+    // so this tab's in-memory copy still holds the refused token.
+    window.localStorage.setItem('pocketbase_auth', JSON.stringify({ token: newer, record: userA }));
+
+    forgetRefusedToken(pb, refused);
+
+    expect(stored()?.token).toBe(newer);
   });
 });

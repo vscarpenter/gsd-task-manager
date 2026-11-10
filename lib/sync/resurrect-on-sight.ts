@@ -10,6 +10,7 @@ import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import type { TaskRecord } from '@/lib/types';
 import {
+  SessionRejectedError,
   assertSafeRecordId,
   confirmSessionIdentity,
   escapeFilterValue,
@@ -63,7 +64,10 @@ async function applyResurrections(
   });
 }
 
-/** A guest listing is empty, so the owner is confirmed before the listing counts. */
+/**
+ * A guest listing is empty, so the owner is confirmed before the listing counts.
+ * A refused session fails the sync, so the user is asked to sign in again.
+ */
 async function listAccount(ownerId: string): Promise<RecordModel[] | null> {
   try {
     assertSafeRecordId(ownerId, 'ownerId');
@@ -74,6 +78,7 @@ async function listAccount(ownerId: string): Promise<RecordModel[] | null> {
     await confirmSessionIdentity(ownerId);
     return records;
   } catch (error) {
+    if (error instanceof SessionRejectedError) throw error;
     logger.warn('Resurrect on sight skipped: no complete listing for this account', {
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
     });

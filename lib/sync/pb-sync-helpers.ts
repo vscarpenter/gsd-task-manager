@@ -2,13 +2,14 @@
  * Shared helpers for PocketBase sync operations.
  */
 
-import { getPocketBase, getCurrentUserId } from './pocketbase-client';
+import { forgetRefusedToken, getPocketBase, getCurrentUserId } from './pocketbase-client';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import type { PBSyncConfig, RemoteTaskIndexEntry } from './types';
 import type { TaskRecord } from '@/lib/types';
 import { getPocketBaseTaskIdentity, pocketBaseToTaskRecord } from './task-mapper';
 import { isPendingSyncQueueItem } from './queue';
+import { isSessionRefusal } from './error-categorizer';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import type { RecordModel } from 'pocketbase';
 
@@ -192,16 +193,39 @@ export class SessionIdentityMismatchError extends Error {
   }
 }
 
+/** The server refused this session's token (a 401): the user has to sign in again. */
+export class SessionRejectedError extends Error {
+  constructor() {
+    super('Sync session was refused by the server');
+    this.name = 'SessionRejectedError';
+  }
+}
+
+const AUTH_REFRESH_PATH = '/api/collections/users/auth-refresh';
+
 /**
  * Ask the server whether this session is really the owner's. A token the server
- * rejects still lists `tasks` as 200 with zero items, the answer an empty account
- * gives, so only auth-refresh (a 401 for a guest) tells the two apart. Rejection,
- * an unreachable server, or another account's record all throw, and the caller
- * must then delete nothing.
+ * rejects reads as a guest: `tasks` lists as 200 with zero items and every lookup
+ * 404s, the answers an empty account gives, so only auth-refresh (a 401 for a
+ * guest) tells them apart. The answer is read and dropped, never saved. A saved
+ * answer can land after a newer sign-in and put this account's token back over it.
+ *
+ * Throws SessionRejectedError on a 401, after forgetting the refused token;
+ * SessionIdentityMismatchError for another account's record; and the original
+ * error when the server can't be reached. The caller must then write nothing.
  */
 export async function confirmSessionIdentity(ownerId: string): Promise<void> {
-  const { record } = await getPocketBase().collection('users').authRefresh();
-  if (record.id !== ownerId) throw new SessionIdentityMismatchError();
+  const pb = getPocketBase();
+  const sentToken = pb.authStore.token;
+  let answer: { record?: { id?: unknown } } | undefined;
+  try {
+    answer = await pb.send(AUTH_REFRESH_PATH, { method: 'POST' });
+  } catch (error) {
+    if (!isSessionRefusal(error)) throw error;
+    forgetRefusedToken(pb, sentToken);
+    throw new SessionRejectedError();
+  }
+  if (answer?.record?.id !== ownerId) throw new SessionIdentityMismatchError();
 }
 
 export async function fetchRemoteTaskEntry(

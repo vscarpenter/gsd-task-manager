@@ -1,18 +1,89 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('@/lib/sync/pocketbase-client', () => ({
+vi.mock('@/lib/sync/pocketbase-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/sync/pocketbase-client')>()),
   getPocketBase: vi.fn(),
   getCurrentUserId: vi.fn(() => 'user-1'),
 }));
 
 import {
+  confirmSessionIdentity,
   fetchBoundedRemoteTasks,
   fetchRemoteTaskIndex,
   escapeFilterValue,
   assertSafeRecordId,
   isRemoteNewerThanArchive,
+  SessionIdentityMismatchError,
 } from '@/lib/sync/pb-sync-helpers';
 import { getPocketBase } from '@/lib/sync/pocketbase-client';
+
+describe('confirmSessionIdentity', () => {
+  const AUTH_REFRESH_PATH = '/api/collections/users/auth-refresh';
+  const refusal = (status: number) =>
+    Object.assign(new Error('The request requires valid record authorization token.'), { status });
+
+  /** A client whose raw auth-refresh request answers with `send`. */
+  function mockSession(send: () => Promise<unknown>) {
+    const authStore = { token: 'token-1', save: vi.fn(), clear: vi.fn() };
+    const sdkAuthRefresh = vi.fn();
+    const pb = { authStore, send: vi.fn(send), collection: () => ({ authRefresh: sdkAuthRefresh }) };
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue(pb);
+    return { ...pb, sdkAuthRefresh };
+  }
+
+  it('asks auth-refresh and saves nothing from the answer', async () => {
+    // A saved answer can land after a newer sign-in and put this account's
+    // token back over it, so the check only reads.
+    const pb = mockSession(async () => ({ token: 'token-2', record: { id: 'user-1' } }));
+
+    await confirmSessionIdentity('user-1');
+
+    expect(pb.send).toHaveBeenCalledWith(AUTH_REFRESH_PATH, expect.objectContaining({ method: 'POST' }));
+    expect(pb.sdkAuthRefresh).not.toHaveBeenCalled();
+    expect(pb.authStore.save).not.toHaveBeenCalled();
+  });
+
+  it('throws SessionRejectedError and forgets the refused token on a 401', async () => {
+    const pb = mockSession(async () => {
+      throw refusal(401);
+    });
+
+    await expect(confirmSessionIdentity('user-1')).rejects.toMatchObject({ name: 'SessionRejectedError' });
+    expect(pb.authStore.clear).toHaveBeenCalledOnce();
+  });
+
+  it('keeps a token that a sign-in saved while the refusal was in flight', async () => {
+    const pb = mockSession(async () => {
+      pb.authStore.token = 'token-from-a-new-sign-in';
+      throw refusal(401);
+    });
+
+    await expect(confirmSessionIdentity('user-1')).rejects.toMatchObject({ name: 'SessionRejectedError' });
+    expect(pb.authStore.clear).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['no answer at all', Object.assign(new Error('Something went wrong.'), { status: 0 })],
+    ['a 404 from a proxy', Object.assign(new Error("The requested resource wasn't found."), { status: 404 })],
+    // PocketBase answers a refused token with 401. A 403 here comes from a proxy
+    // or firewall, and wiping a working session for it would sign the user out.
+    ['a 403 from a proxy or firewall', Object.assign(new Error('Forbidden'), { status: 403 })],
+    ['a 503', Object.assign(new Error('Something went wrong.'), { status: 503 })],
+  ])('rethrows %s unchanged and keeps the token', async (_name, failure) => {
+    const pb = mockSession(async () => {
+      throw failure;
+    });
+
+    await expect(confirmSessionIdentity('user-1')).rejects.toBe(failure);
+    expect(pb.authStore.clear).not.toHaveBeenCalled();
+  });
+
+  it("throws SessionIdentityMismatchError when the session is another account's", async () => {
+    mockSession(async () => ({ token: 'token-2', record: { id: 'user-2' } }));
+
+    await expect(confirmSessionIdentity('user-1')).rejects.toBeInstanceOf(SessionIdentityMismatchError);
+  });
+});
 
 describe('fetchRemoteTaskIndex', () => {
   it('returns task_id -> { pbRecordId, clientUpdatedAt } map', async () => {

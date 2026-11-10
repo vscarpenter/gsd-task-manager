@@ -11,11 +11,20 @@ import { getSyncQueue } from './queue';
 import { placementToWire, taskRecordToPocketBase } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
-import { THROTTLE_MS, delay, getDeviceId, getCurrentUserId, fetchRemoteTaskEntry } from './pb-sync-helpers';
+import {
+  THROTTLE_MS,
+  SessionIdentityMismatchError,
+  SessionRejectedError,
+  confirmSessionIdentity,
+  delay,
+  getDeviceId,
+  getCurrentUserId,
+  fetchRemoteTaskEntry,
+} from './pb-sync-helpers';
 import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { StaleSyncSessionError } from './sync-session';
-import type { SyncQueueItem } from './types';
+import type { RemoteTaskIndexEntry, SyncQueueItem } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
 
@@ -127,6 +136,52 @@ async function upsertRemoteTask(
  */
 type PushItemOutcome = 'pushed' | 'skipped' | 'index_unavailable';
 
+/** What fetchRemoteTaskEntry found for one queued task. */
+interface RemoteLookup {
+  entry: RemoteTaskIndexEntry | null;
+  fetchSucceeded: boolean;
+}
+
+/**
+ * A token the server refuses reads as a guest, and a guest's lookup 404s for
+ * every task: the answer a task that was never pushed, or was already deleted,
+ * gets. So a push acts on a 404 only once auth-refresh confirms the session
+ * (confirmSessionIdentity). Creates ask once per push: a session that dies later
+ * in the push fails each remaining create, which charges that row one attempt,
+ * and the next push's check stops before it charges more. A delete that finds
+ * nothing leaves the queue for good, so each one asks after its own lookup.
+ */
+interface PushSessionCheck {
+  beforeCreate(): Promise<void>;
+  beforeDroppingDelete(): Promise<void>;
+}
+
+function createPushSessionCheck(ownerId: string): PushSessionCheck {
+  let confirmed = false;
+  const confirm = async (): Promise<void> => {
+    await confirmSessionIdentity(ownerId);
+    confirmed = true;
+  };
+  return {
+    beforeCreate: () => (confirmed ? Promise.resolve() : confirm()),
+    beforeDroppingDelete: confirm,
+  };
+}
+
+/**
+ * The session check failed, not this row. Charging the row would retire it after
+ * MAX_RETRIES, and nothing re-arms a retired row, so the push stops instead.
+ */
+function isSessionCheckFailure(error: unknown): boolean {
+  return error instanceof SessionRejectedError || error instanceof SessionIdentityMismatchError;
+}
+
+interface PushContext {
+  ownerId: string;
+  deviceId: string;
+  session: PushSessionCheck;
+}
+
 function hasUsableRemoteVersion(value: unknown): value is string {
   return typeof value === 'string'
     && /(?:Z|[+-]\d{2}:\d{2})$/.test(value)
@@ -166,60 +221,69 @@ function isStaleDelete(item: SyncQueueItem, remoteAt: string): boolean {
  * the queued op is stale — skip the write and dequeue. The next pull will
  * deliver the newer remote version, restoring correctness on this device.
  */
-async function pushSingleItem(
-  item: SyncQueueItem,
-  ownerId: string,
-  deviceId: string,
-): Promise<PushItemOutcome> {
-  const pb = getPocketBase();
-  const queue = getSyncQueue();
-  const { entry: remote, fetchSucceeded } = await fetchRemoteTaskEntry(ownerId, item.taskId);
+async function pushSingleItem(item: SyncQueueItem, ctx: PushContext): Promise<PushItemOutcome> {
+  const lookup = await fetchRemoteTaskEntry(ctx.ownerId, item.taskId);
 
-  if (remote && !hasUsableRemoteVersion(remote.clientUpdatedAt)) {
+  if (lookup.entry && !hasUsableRemoteVersion(lookup.entry.clientUpdatedAt)) {
     await recordUnusableRemoteVersion(item);
     return 'index_unavailable';
   }
 
-  if (item.operation === 'create' || item.operation === 'update') {
-    if (!item.payload) {
-      // Invalid queue state — payload is required for create/update.
-      await queue.dequeue(item.id);
-      return 'skipped';
-    }
+  if (item.operation === 'delete') return pushDelete(item, lookup, ctx.session);
+  return pushUpsert(item, lookup, ctx);
+}
 
-    // If the index fetch failed AND we have no remote entry, we cannot
-    // verify whether the queued write would clobber newer remote data.
-    // Refuse to push and let the next attempt retry once the index is
-    // available again. Mirrors the symmetric guard in the delete path.
-    if (!fetchSucceeded) {
-      logger.warn('Skipping upsert dequeue: remote index unavailable', {
-        taskId: item.taskId,
-        operation: item.operation,
-      });
-      await queue.recordAttemptFailure(
-        item.id,
-        'Remote task index unavailable for upsert LWW verification',
-      );
-      return 'index_unavailable';
-    }
-
-    if (remote && isRemoteNewer(remote.clientUpdatedAt, item.payload.updatedAt)) {
-      logger.info('Skipping stale push: remote is newer', {
-        taskId: item.taskId,
-        operation: item.operation,
-        remoteAt: remote.clientUpdatedAt,
-        localAt: item.payload.updatedAt,
-      });
-      await queue.dequeue(item.id);
-      return 'skipped';
-    }
-
-    await upsertRemoteTask(item.payload, remote?.pbRecordId, ownerId, deviceId);
+async function pushUpsert(
+  item: SyncQueueItem,
+  { entry: remote, fetchSucceeded }: RemoteLookup,
+  ctx: PushContext,
+): Promise<PushItemOutcome> {
+  const queue = getSyncQueue();
+  if (!item.payload) {
+    // Invalid queue state — payload is required for create/update.
     await queue.dequeue(item.id);
-    return 'pushed';
+    return 'skipped';
   }
 
-  // item.operation === 'delete'
+  // If the index fetch failed AND we have no remote entry, we cannot
+  // verify whether the queued write would clobber newer remote data.
+  // Refuse to push and let the next attempt retry once the index is
+  // available again. Mirrors the symmetric guard in the delete path.
+  if (!fetchSucceeded) {
+    logger.warn('Skipping upsert dequeue: remote index unavailable', {
+      taskId: item.taskId,
+      operation: item.operation,
+    });
+    await queue.recordAttemptFailure(
+      item.id,
+      'Remote task index unavailable for upsert LWW verification',
+    );
+    return 'index_unavailable';
+  }
+
+  if (remote && isRemoteNewer(remote.clientUpdatedAt, item.payload.updatedAt)) {
+    logger.info('Skipping stale push: remote is newer', {
+      taskId: item.taskId,
+      operation: item.operation,
+      remoteAt: remote.clientUpdatedAt,
+      localAt: item.payload.updatedAt,
+    });
+    await queue.dequeue(item.id);
+    return 'skipped';
+  }
+
+  if (!remote) await ctx.session.beforeCreate();
+  await upsertRemoteTask(item.payload, remote?.pbRecordId, ctx.ownerId, ctx.deviceId);
+  await queue.dequeue(item.id);
+  return 'pushed';
+}
+
+async function pushDelete(
+  item: SyncQueueItem,
+  { entry: remote, fetchSucceeded }: RemoteLookup,
+  session: PushSessionCheck,
+): Promise<PushItemOutcome> {
+  const queue = getSyncQueue();
   if (remote) {
     if (isStaleDelete(item, remote.clientUpdatedAt)) {
       logger.info('Skipping stale delete: remote modified after the deleted version', {
@@ -230,7 +294,7 @@ async function pushSingleItem(
       await queue.dequeue(item.id);
       return 'skipped';
     }
-    await pb.collection('tasks').delete(remote.pbRecordId);
+    await getPocketBase().collection('tasks').delete(remote.pbRecordId);
     await queue.dequeue(item.id);
     return 'pushed';
   }
@@ -241,7 +305,8 @@ async function pushSingleItem(
     return 'index_unavailable';
   }
 
-  // Remote record is already gone and index fetch succeeded — local delete is a no-op.
+  // The remote record is gone and the session is the owner's, so the local delete is a no-op.
+  await session.beforeDroppingDelete();
   await queue.dequeue(item.id);
   return 'pushed';
 }
@@ -281,8 +346,25 @@ function resolvePushPrincipal(sessionOwnerId: string): string | null {
 }
 
 /**
+ * Charge one row for a failed push. Persists a stable error code only, never the
+ * raw message, which for a 4xx can echo task content back from PocketBase.
+ */
+async function recordItemFailure(item: SyncQueueItem, error: unknown): Promise<string> {
+  const errorCode = sanitizeSyncError(error);
+  const context = { taskId: item.taskId, operation: item.operation, errorCode };
+  if (isTransientSyncFailure(error)) {
+    logger.warn('Push failed for item (transient)', context);
+  } else {
+    logger.error('Push failed for item', makeSafePushError(errorCode), context);
+  }
+  await getSyncQueue().recordAttemptFailure(item.id, errorCode);
+  return errorCode;
+}
+
+/**
  * Push all pending local changes to PocketBase on behalf of `sessionOwnerId`,
- * the account sync_config names as the enabled session.
+ * the account sync_config names as the enabled session. A session the server
+ * refuses throws SessionRejectedError and leaves every remaining row as it was.
  */
 export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResult> {
   const ownerId = resolvePushPrincipal(sessionOwnerId);
@@ -297,7 +379,7 @@ export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResu
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
   }
 
-  const deviceId = await getDeviceId();
+  const ctx: PushContext = { ownerId, deviceId: await getDeviceId(), session: createPushSessionCheck(ownerId) };
   let pushedCount = 0;
   let failedCount = 0;
   let skippedCount = 0;
@@ -307,7 +389,7 @@ export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResu
   for (const item of pending) {
     try {
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
-      const outcome = await pushSingleItem(item, ownerId, deviceId);
+      const outcome = await pushSingleItem(item, ctx);
       if (outcome === 'pushed') {
         pushedCount++;
       } else if (outcome === 'skipped') {
@@ -318,27 +400,10 @@ export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResu
       }
 
     } catch (error) {
+      if (isSessionCheckFailure(error)) throw error;
       failedCount++;
-      // Persist a stable error code only — never the raw error message,
-      // which (for 4xx responses) can echo task content back from PocketBase.
-      const errorCode = sanitizeSyncError(error);
-      lastError = errorCode;
-      const errorObj = error instanceof Error ? error : new Error(String(error));
-      if (isTransientSyncFailure(errorObj)) {
-        logger.warn('Push failed for item (transient)', {
-          taskId: item.taskId,
-          operation: item.operation,
-          errorCode,
-        });
-      } else {
-        logger.error('Push failed for item', makeSafePushError(errorCode), {
-          taskId: item.taskId,
-          operation: item.operation,
-          errorCode,
-        });
-      }
       // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
-      await queue.recordAttemptFailure(item.id, errorCode);
+      lastError = await recordItemFailure(item, error);
 
       // 429 means the server is under load. Abort the push loop early so
       // we don't hammer it through the remaining queue items at 100ms

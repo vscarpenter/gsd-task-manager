@@ -10,6 +10,7 @@
  *   });
  */
 
+import { BaseAuthStore } from 'pocketbase';
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { PBSyncConfig } from '@/lib/sync/types';
@@ -20,7 +21,7 @@ type Write = { op: 'create' | 'update'; body: Record<string, unknown> };
 
 const state = {
   records: new Map<string, ServerRow>(),
-  /** 'pull', 'index', 'listing', 'update', 'create', and 'delete', in the order they happened. */
+  /** 'pull', 'index', 'listing', 'update', 'create', 'delete', and 'auth-refresh', in order. */
   events: [] as string[],
   writes: [] as Write[],
   failPull: false,
@@ -30,7 +31,18 @@ const state = {
   failUpdate: false,
   /** Who auth-refresh says the session belongs to; null answers it with a 401. */
   authRefreshUserId: 'user-1' as string | null,
+  /** Auth-refresh gets no answer at all (offline). */
+  failAuthRefresh: false,
+  /**
+   * The server refuses this session's token, as after "Sign out of all devices"
+   * elsewhere, so it reads every request as a guest's. The tasks rules then show
+   * an empty account and 404 every record (scripts/setup-pocketbase-collections.sh).
+   */
+  refused: false,
 };
+
+/** PocketBase's answer to a guest asking for a record the rules hide. */
+const notFound = () => Object.assign(new Error("The requested resource wasn't found."), { status: 404 });
 
 /** The pull sorts by client_updated_at and the index asks for fields; anything else is a listing. */
 function listingKind(options?: { fields?: string; sort?: string }): string {
@@ -46,16 +58,18 @@ const tasks = {
     state.events.push(kind);
     if (kind === 'pull' && state.failPull) throw new Error('network down');
     if (kind === 'listing' && state.failListing) throw new Error('network down');
+    if (state.refused) return [];
     return [...state.records.values()].map((row) => ({ ...row }));
   },
   getFirstListItem: async (filter: string) => {
     const row = [...state.records.values()].find((r) => r.task_id === taskIdIn(filter));
-    if (!row) throw Object.assign(new Error('not found'), { status: 404 });
+    if (!row || state.refused) throw notFound();
     return { ...row };
   },
   update: async (id: string, body: Record<string, unknown>) => {
     if (state.failUpdate) throw Object.assign(new Error('Too many requests'), { status: 429 });
     state.events.push('update');
+    if (state.refused) throw notFound();
     state.writes.push({ op: 'update', body });
     const merged = { ...state.records.get(id)!, ...body };
     state.records.set(id, merged);
@@ -63,6 +77,8 @@ const tasks = {
   },
   create: async (body: Record<string, unknown>) => {
     state.events.push('create');
+    // The createRule's answer to a guest.
+    if (state.refused) throw Object.assign(new Error('Failed to create record.'), { status: 400 });
     state.writes.push({ op: 'create', body });
     const row = { ...body, id: `rec_${String(body.task_id)}` } as ServerRow;
     state.records.set(row.id, row);
@@ -70,19 +86,61 @@ const tasks = {
   },
   delete: async (id: string) => {
     state.events.push('delete');
+    if (state.refused) throw notFound();
     state.records.delete(id);
     return true;
   },
 };
 
+const DAY_SECONDS = 24 * 60 * 60;
+
+/** A JWT-shaped token the SDK can read the expiry of. Nothing here checks the signature. */
+export function sessionToken(daysLeft: number, userId = 'user-1', issuedBy = 'sign-in'): string {
+  const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64');
+  const exp = Math.floor(Date.now() / 1000) + daysLeft * DAY_SECONDS;
+  const payload = { id: userId, type: 'auth', collectionId: '_pb_users_auth_', refreshable: true, exp, issuedBy };
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}.signature`;
+}
+
+type AuthAnswer = { token: string; record: { id: string; collectionId: string; collectionName: string } };
+
+/** What auth-refresh answers: the session's record, PocketBase's 401 for a guest, or nothing at all. */
+function authRefreshAnswer(): AuthAnswer {
+  state.events.push('auth-refresh');
+  if (state.failAuthRefresh) throw Object.assign(new Error('Something went wrong.'), { status: 0 });
+  if (state.authRefreshUserId === null || state.refused) {
+    throw Object.assign(new Error('The request requires valid record authorization token.'), { status: 401 });
+  }
+  const id = state.authRefreshUserId;
+  return {
+    token: sessionToken(30, id, 'auth-refresh'),
+    record: { id, collectionId: '_pb_users_auth_', collectionName: 'users' },
+  };
+}
+
 const users = {
-  authRefresh: async () => {
-    if (state.authRefreshUserId === null) throw Object.assign(new Error('Unauthorized'), { status: 401 });
-    return { record: { id: state.authRefreshUserId } };
+  /** RecordService.authRefresh saves the answer in the auth store, as authResponse does. */
+  authRefresh: async (): Promise<AuthAnswer> => {
+    const answer = authRefreshAnswer();
+    pb.authStore.save(answer.token, answer.record);
+    return answer;
   },
 };
 
-export const fake = { state, pb: { collection: (name: string) => (name === 'users' ? users : tasks) } };
+const AUTH_REFRESH_PATH = '/api/collections/users/auth-refresh';
+
+const pb = {
+  /** The SDK's auth store, which the session check reads and forgets a refused token from. */
+  authStore: new BaseAuthStore(),
+  collection: (name: string) => (name === 'users' ? users : tasks),
+  /** A raw request, as the session check posts to auth-refresh without saving the answer. */
+  send: async (path: string) => {
+    if (path !== AUTH_REFRESH_PATH) throw new Error(`Unexpected request: ${path}`);
+    return authRefreshAnswer();
+  },
+};
+
+export const fake = { state, pb };
 
 export async function resetFakeSync(): Promise<void> {
   state.records.clear();
@@ -92,6 +150,9 @@ export async function resetFakeSync(): Promise<void> {
   state.failListing = false;
   state.failUpdate = false;
   state.authRefreshUserId = 'user-1';
+  state.failAuthRefresh = false;
+  state.refused = false;
+  pb.authStore.clear();
   const db = getDb();
   await Promise.all(db.tables.map((table) => table.clear()));
 }
