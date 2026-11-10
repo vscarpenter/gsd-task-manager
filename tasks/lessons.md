@@ -55,13 +55,13 @@ UI padding files (different from data files — these were the *sole* tests for 
 
 - Use `bun run test` (not `bun test`) — the latter invokes bun's built-in runner, not Vitest.
 - Mock IndexedDB with `fake-indexeddb` for data layer tests.
-- The sync module (`lib/sync/`) has no tests yet — critical gap for multi-device features.
+- Sync tests live in `tests/data/sync/`. `support/fake-pocketbase.ts` runs the real push, pull, mapper, and queue against fake-indexeddb with only PocketBase faked.
 
 ## Build & Deploy
 
 - Static export mode means no API routes or SSR.
 - CloudFront Function needed for SPA routing (S3 doesn't auto-serve `index.html` for directory paths).
-- Run `deploy-cloudfront-function.sh` after adding new App Router routes.
+- A new App Router route needs no function deploy: the URL rewrite appends `/index.html` to every extensionless path. Run `deploy-cloudfront-function.sh` only when a function file changes.
 - **First-load JavaScript has a CI budget (2026-09-19, audit finding PRF-1).**
   `bun run quality:bundle` sums the gzip size of the scripts each prerendered
   route references and compares it with `scripts/bundle-budget.json`. Refresh with
