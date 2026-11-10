@@ -41,6 +41,8 @@ export async function updateTask(
       taskId: id,
       updates,
     });
+    // Keep the type, so the editor can name the field to shorten, as it does on create.
+    if (error instanceof TaskValidationError) throw error;
     throw new Error(`Failed to update task: ${formatErrorMessage(error)}`);
   }
 }
@@ -51,9 +53,13 @@ function validateUpdatedDraft(
   defaultReminder: number
 ): TaskDraft {
   const nextDraft = mergeTaskUpdates(existing, updates, defaultReminder);
-  const { cleanTitle, urls } = extractUrlsFromTitle(nextDraft.title);
-  nextDraft.title = cleanTitle;
-  nextDraft.description = buildDescription(nextDraft.description, urls);
+  // Only a new title moves its links to the description. A stored title is left
+  // as it is, so writes such as Add to today change no other field.
+  if (updates.title !== undefined) {
+    const { cleanTitle, urls } = extractUrlsFromTitle(nextDraft.title);
+    nextDraft.title = cleanTitle;
+    nextDraft.description = buildDescription(nextDraft.description, urls);
+  }
   const result = taskDraftSchema.safeParse(nextDraft);
   if (!result.success) {
     const fields = result.error.issues.map((issue) => issue.path.join(".")).join(", ");
