@@ -430,7 +430,9 @@ describe('Dashboard Components', () => {
       expect(screen.getByText('good accuracy')).toBeInTheDocument();
     });
 
-    it('should show "under-estimating" label for low accuracy', () => {
+    // Accuracy is actual / estimated * 100, so 60 means the work took less time
+    // than estimated: the estimates ran high.
+    it('should show "over-estimating" when work takes less time than estimated', () => {
       const summary: TimeTrackingSummary = {
         ...emptySummary,
         tasksWithTimeTracking: 3,
@@ -440,10 +442,10 @@ describe('Dashboard Components', () => {
 
       render(<TimeAnalytics summary={summary} quadrantDistribution={emptyDistribution} />);
 
-      expect(screen.getByText('under-estimating')).toBeInTheDocument();
+      expect(screen.getByText('over-estimating')).toBeInTheDocument();
     });
 
-    it('should show "over-estimating" label for high accuracy', () => {
+    it('should show "under-estimating" when work takes longer than estimated', () => {
       const summary: TimeTrackingSummary = {
         ...emptySummary,
         tasksWithTimeTracking: 3,
@@ -453,7 +455,20 @@ describe('Dashboard Components', () => {
 
       render(<TimeAnalytics summary={summary} quadrantDistribution={emptyDistribution} />);
 
-      expect(screen.getByText('over-estimating')).toBeInTheDocument();
+      expect(screen.getByText('under-estimating')).toBeInTheDocument();
+    });
+
+    it('should call 80% good accuracy, matching its color', () => {
+      const summary: TimeTrackingSummary = {
+        ...emptySummary,
+        tasksWithTimeTracking: 3,
+        totalMinutesTracked: 100,
+        estimationAccuracy: 80,
+      };
+
+      render(<TimeAnalytics summary={summary} quadrantDistribution={emptyDistribution} />);
+
+      expect(screen.getByText('good accuracy')).toBeInTheDocument();
     });
 
     it('should show "not enough data" when accuracy is 0', () => {
@@ -706,6 +721,25 @@ describe('Dashboard Components', () => {
       render(<UpcomingDeadlines tasks={testTasks} />);
 
       expect(screen.getByText('Due This Week')).toBeInTheDocument();
+    });
+
+    it('should label a timed task due tomorrow evening "Tomorrow"', () => {
+      vi.useFakeTimers();
+      // 14:00 today to 18:00 tomorrow is 28 hours, one calendar day.
+      vi.setSystemTime(new Date(2026, 10, 10, 14));
+      try {
+        const dueTomorrow = createMockTask({
+          id: 'tomorrow-1',
+          title: 'Dinner booking',
+          dueDate: new Date(2026, 10, 11, 18).toISOString(),
+        });
+
+        render(<UpcomingDeadlines tasks={[dueTomorrow]} />);
+
+        expect(screen.getByText('Tomorrow')).toBeInTheDocument();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('should group tasks by category', () => {
