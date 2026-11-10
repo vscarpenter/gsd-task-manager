@@ -77,7 +77,11 @@ function addDeadlineInsights(insights: string[], deadlines: UpcomingDeadlines): 
  * Add quadrant distribution insights
  */
 function addQuadrantInsights(insights: string[], quadrants: QuadrantPerformance[]): void {
-  const topQuadrant = quadrants[0];
+  // getQuadrantPerformance sorts by completion rate, so pick by active count.
+  const topQuadrant = quadrants.reduce<QuadrantPerformance | undefined>(
+    (busiest, quadrant) => (!busiest || quadrant.activeTasks > busiest.activeTasks ? quadrant : busiest),
+    undefined
+  );
   if (topQuadrant && topQuadrant.activeTasks > 0) {
     insights.push(
       `Most tasks in ${topQuadrant.name}: ${topQuadrant.activeTasks} active (${topQuadrant.completionRate}% completion rate)`

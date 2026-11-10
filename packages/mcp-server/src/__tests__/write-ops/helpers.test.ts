@@ -56,7 +56,7 @@ import {
 } from '../../write-ops/helpers.js';
 
 const config = {
-  pocketbaseUrl: 'http://example.invalid',
+  pocketBaseUrl: 'http://example.invalid',
   authToken: 'token',
 } as GsdConfig;
 
@@ -109,6 +109,16 @@ describe('filter and identity helpers', () => {
 
   it('rejects a filter value above the maximum length', () => {
     expect(() => escapeFilterValue('x'.repeat(501))).toThrow(/length/i);
+  });
+
+  it('generates an id without the global crypto object, as on Node 18', () => {
+    // Node 18 exposes globalThis.crypto only behind --experimental-global-webcrypto.
+    vi.stubGlobal('crypto', undefined);
+    try {
+      expect(generateTaskId()).toMatch(/^[a-f0-9]{32}$/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('generates a compact UUID and derives every quadrant', () => {

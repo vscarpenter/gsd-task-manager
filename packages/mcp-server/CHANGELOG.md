@@ -7,10 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `get_top_three`, a read-only tool for today's top three picks and suggestions
+  (#698). The server now exposes 20 tools.
+
+### Changed
+- `get_task_stats` leaves Saved items out of its counts (#686).
+- Tags are normalized the way the apps store them, lowercase without a leading
+  `#`, before validation, so `#Work` and `work` are one tag (#687).
+- Completing a recurring task through `update_task` or `bulk_update_tasks`
+  creates its next instance, as `complete_task` does (#691).
+- Task records carry the top three pick (`focus_date`, `focus_rank`) the same
+  way the web app maps it (#703).
+
 ### Fixed
 - `validate_config` reports an Authentication error when the sync status is
   unhealthy. `getSyncStatus` catches its own errors, so the check used to report
   success even for a revoked or rejected token.
+- `gsd-mcp-server --validate` applies the same rule. It printed "Token valid"
+  and exited 0 for a rejected token.
+- `create_task` works on Node 18. Task ids come from `node:crypto` instead of
+  the global `crypto`, which Node 18 exposes only behind a flag.
+- `get_task_insights` names the quadrant with the most active tasks in its
+  "Most tasks in" line, instead of the one with the best completion rate.
+- `bulk_update_tasks` writes a task named twice once. The second copy used to
+  come back as a conflict, with `isError`, for a write that had succeeded.
 
 ### Documentation
 - README: `delete_task` and bulk deletes default to a dry run; pass
@@ -29,9 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The README token edits from #663 (30-day tokens, no renewal) land on npm with
   the next release.
 - Tool descriptions: `list_tasks`, `get_task`, and `search_tasks` say Saved
-  items are excluded and `get_task_stats` says it counts them; tag examples are
-  lowercase without `#`; `update_task` and `bulk_update_tasks` say completion
-  there doesn't create the next recurring instance; bulk deletes skip Trash;
+  items are excluded and `get_task_stats` says it leaves them out; tag examples
+  are lowercase without `#`; `update_task` and `bulk_update_tasks` say
+  completion there creates the next recurring instance; bulk deletes skip Trash;
   `get_token_status` lists `invalid`; `validate_config` no longer claims to
   check environment variables. `notifyBefore`, `estimatedMinutes`, and
   `get_tag_analytics` `limit` advertise `type: integer`, matching validation.

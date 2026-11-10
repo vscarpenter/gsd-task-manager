@@ -30,7 +30,7 @@ import { SCHEMA_LIMITS } from '../../constants.js';
 import { createTaskInPB } from '../../write-ops/helpers.js';
 
 const config: GsdConfig = {
-  pocketbaseUrl: 'http://example.invalid',
+  pocketBaseUrl: 'http://example.invalid',
   authToken: 'fake',
 } as GsdConfig;
 

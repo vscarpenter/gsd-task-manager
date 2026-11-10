@@ -384,7 +384,7 @@ async function executeBulkWrite(
 
 export async function bulkUpdateTasks(
   config: GsdConfig,
-  taskIds: string[],
+  requestedIds: string[],
   operation: BulkOperation,
   options?: { dryRun?: boolean }
 ): Promise<BulkUpdateResult> {
@@ -392,6 +392,9 @@ export async function bulkUpdateTasks(
   // `dryRun: false` explicitly to actually delete.
   const isDryRun =
     operation.type === 'delete' ? options?.dryRun !== false : options?.dryRun ?? false;
+  // A repeated id would write the task twice, and the second preflight would
+  // report the first write as a conflict.
+  const taskIds = [...new Set(requestedIds)];
 
   validateBulkRequest(taskIds, operation);
   if (taskIds.length === 0) return emptyBulkResult(isDryRun);

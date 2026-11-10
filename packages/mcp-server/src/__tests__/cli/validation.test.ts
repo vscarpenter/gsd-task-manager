@@ -59,10 +59,10 @@ describe('runValidation', () => {
     expect(output).not.toContain('private.internal');
   });
 
-  it('reports warning-only connectivity and sync results without exiting', async () => {
+  it('reports a warning-only connectivity result without exiting', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 503 })));
     vi.mocked(getSyncStatus).mockResolvedValueOnce({
-      healthy: false,
+      healthy: true,
       taskCount: 0,
       lastSyncAt: null,
     });
@@ -73,7 +73,6 @@ describe('runValidation', () => {
     expect(exitSpy).not.toHaveBeenCalled();
     expect(logSpy).toHaveBeenCalledWith('⚠️  Configuration is functional but has warnings.');
     expect(logSpy).toHaveBeenCalledWith('    Connected but got status 503');
-    expect(logSpy).toHaveBeenCalledWith('    PocketBase reports unhealthy status');
   });
 
   it('fails when connectivity, authentication, and task access fail', async () => {
@@ -105,6 +104,19 @@ describe('runValidation', () => {
     const output = logSpy.mock.calls.flat().join('\n');
     expect(output).toContain('https://[pocketbase-host]');
     expect(output).not.toContain('private.internal');
+  });
+
+  it('fails authentication when the sync status is unhealthy, as for a rejected token', async () => {
+    // getSyncStatus catches its own errors, so a rejected token resolves unhealthy.
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200 })));
+    vi.mocked(getSyncStatus).mockResolvedValueOnce({ healthy: false, taskCount: 0, lastSyncAt: null });
+    vi.mocked(listTasks).mockResolvedValueOnce([]);
+
+    await expect(runValidation()).rejects.toThrow('process.exit:1');
+
+    const output = logSpy.mock.calls.flat().join('\n');
+    expect(output).toContain('Token validation failed');
+    expect(output).not.toContain('Token valid (');
   });
 
   it('uses stable fallback messages for non-Error failures', async () => {

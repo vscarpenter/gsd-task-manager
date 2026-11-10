@@ -3,6 +3,7 @@
  * Includes ID generation, quadrant logic, and PocketBase push
  */
 
+import { randomUUID } from 'node:crypto';
 import type { GsdConfig, PBTask } from '../types.js';
 import { pbTaskSnapshotFields, taskDependencyPatchToPBFields, taskToPBFields } from '../types.js';
 import type { Task } from '../types.js';
@@ -29,7 +30,8 @@ export function escapeFilterValue(value: string): string {
  * Generate unique ID for new tasks
  */
 export function generateTaskId(): string {
-  const uuid = crypto.randomUUID();
+  // From node:crypto, not the global: Node 18 has no global crypto without a flag.
+  const uuid = randomUUID();
   return uuid.replace(/-/g, '');
 }
 

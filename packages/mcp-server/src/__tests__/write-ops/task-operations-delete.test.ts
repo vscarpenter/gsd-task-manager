@@ -38,7 +38,7 @@ vi.mock('../../cache.js', () => ({
 import { deleteTask } from '../../write-ops/task-operations.js';
 
 const config: GsdConfig = {
-  pocketbaseUrl: 'http://example.invalid',
+  pocketBaseUrl: 'http://example.invalid',
   authToken: 'fake',
 } as GsdConfig;
 

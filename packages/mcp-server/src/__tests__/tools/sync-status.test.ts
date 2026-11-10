@@ -10,7 +10,7 @@ vi.mock('../../pocketbase-client.js', () => ({
 
 import { getTaskStats } from '../../tools/sync-status.js';
 
-const config = { pocketbaseUrl: 'http://example.invalid', authToken: 'fake' } as GsdConfig;
+const config = { pocketBaseUrl: 'http://example.invalid', authToken: 'fake' } as GsdConfig;
 
 function record(overrides: Record<string, unknown>) {
   return {

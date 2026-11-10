@@ -43,7 +43,7 @@ vi.mock('../../cache.js', () => ({
 import { bulkUpdateTasks } from '../../write-ops/bulk-operations.js';
 
 const config: GsdConfig = {
-  pocketbaseUrl: 'http://example.invalid',
+  pocketBaseUrl: 'http://example.invalid',
   authToken: 'fake',
 } as GsdConfig;
 
@@ -712,5 +712,24 @@ describe('bulkUpdateTasks — top three picks', () => {
       focusDate: '2026-11-04',
       focusRank: 3,
     });
+  });
+});
+
+describe('bulkUpdateTasks — repeated ids', () => {
+  it('writes a task named twice once, with no conflict', async () => {
+    const helpers = await import('../../write-ops/helpers.js');
+    const snapshot = makeSnapshotEntry('t1');
+    vi.mocked(helpers.fetchPBSnapshotForTasks).mockResolvedValueOnce(new Map([['t1', snapshot]]));
+    // The first preflight matches the snapshot. A second preflight would see the
+    // stamp that the first write left behind.
+    vi.mocked(helpers.fetchSinglePBTaskFresh)
+      .mockResolvedValueOnce(snapshot)
+      .mockResolvedValueOnce({ ...snapshot, clientUpdatedAt: '2026-04-02T00:00:00Z' });
+
+    const result = await bulkUpdateTasks(config, ['t1', 't1'], { type: 'complete', completed: true });
+
+    expect(result.updated).toBe(1);
+    expect(result.conflicts).toEqual([]);
+    expect(helpers.updateTaskInPBById).toHaveBeenCalledTimes(1);
   });
 });
