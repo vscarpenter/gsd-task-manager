@@ -34,6 +34,9 @@ jobs:
   publish:
     needs: audit
     runs-on: ubuntu-24.04
+    # Successful runs take up to 11 minutes. Without a limit, a hung build
+    # holds the runner for GitHub's six-hour default.
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write

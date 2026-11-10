@@ -130,6 +130,14 @@ describe("pipeline workflows", () => {
     }
   });
 
+  // TOOL-21: without a limit, a hung image build holds a runner for GitHub's
+  // six-hour default.
+  it("bounds the Docker publish job with a timeout", () => {
+    const publish = jobBodies(readWorkflow(`${WORKFLOW_DIR}/publish-docker.yml`)).get("publish");
+
+    expect(publish).toMatch(/^ {4}timeout-minutes: \d+$/m);
+  });
+
   it("declares top-level permissions in every workflow", () => {
     const missing = listWorkflowPaths().filter(
       (path) => !/^permissions:/m.test(readWorkflow(path))
