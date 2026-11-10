@@ -1,3 +1,4 @@
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { getDb } from "@/lib/db";
 import { generateId } from "@/lib/id-generator";
 import { createLogger } from "@/lib/logger";
@@ -7,6 +8,13 @@ import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./helpers";
 
 const logger = createLogger("TASK_CRUD");
+const COPY_SUFFIX = " (Copy)";
+
+/** Shorten the original so the suffixed title stays valid; the board hides an invalid row. */
+function copyTitle(title: string): string {
+  const room = SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH - COPY_SUFFIX.length;
+  return `${title.slice(0, room).trimEnd()}${COPY_SUFFIX}`;
+}
 
 /**
  * Duplicate a task - copies all properties except ID
@@ -40,10 +48,10 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
 function buildDuplicateRecord(original: TaskRecord, defaultReminder: number): TaskRecord {
   const now = isoNow();
 
-  return {
+  const duplicate: TaskRecord = {
     ...original,
     id: generateId(),
-    title: `${original.title} (Copy)`,
+    title: copyTitle(original.title),
     notifyBefore: original.notifyBefore ?? defaultReminder,
     createdAt: now,
     updatedAt: now,
@@ -52,9 +60,12 @@ function buildDuplicateRecord(original: TaskRecord, defaultReminder: number): Ta
     notificationSent: false,
     lastNotificationAt: undefined,
     snoozedUntil: undefined,
-    archivedAt: undefined,
     // A duplicate starts unpicked (spec-top-three.md section 3.2).
     focusDate: undefined,
     focusRank: undefined,
   };
+  // Delete rather than set undefined: IndexedDB stores the key, and the strict
+  // export schema, which declares no archivedAt, then left the copy out of backups.
+  delete duplicate.archivedAt;
+  return duplicate;
 }
