@@ -14,6 +14,19 @@ Branch: `claude/determined-feynman-y5mi5x` off `main` (`e94022a`). Standard tier
 - **Accepted, not fixed:** minimatch 11.0.5 for the minimatch 3 plugins (see `tests/data/dependency-pins.test.ts`). The braces entry in `scripts/check-audit-results.cjs` now matches nothing, because the advisory feed no longer lists GHSA-vfj7-8cjw-p6xm. Its tests use it as the fixture, and it lapses on 2027-01-05.
 - **Lockfile:** write it with bun 1.4.4, then check it with bun 1.3.14 `--frozen-lockfile`. bun 1.3.14 drops the `libc` filters and a nested `@vitest/ui` copy that the current lock carries.
 
+# Docker publish: vendored Newsreader, native static export, job timeout (2026-11-10)
+
+Branch: `claude/zealous-ptolemy-877pnd` off `main` (`e94022a`). Audit P1 item 1 and TOOL-21 in `tasks/audit-2026-11-10.md`. Standard tier: the request gave the goal and the done criteria, and no public contract changes.
+
+## Resuming From Here
+
+- [x] Newsreader ships in `app/fonts/newsreader` with its OFL: the three files `next/font/google` downloaded, byte for byte. `app/layout.tsx` loads them with `next/font/local`, one call per file, because each file needs its own `unicode-range` and a call takes one. One call without the ranges changed the accents on 128 letters per weight (ź, ć, ā, and others).
+- [x] `docker/Dockerfile`: the builder and a new `bun` stage run on `$BUILDPLATFORM`; only the PocketBase download reads `TARGETARCH`.
+- [x] `publish-docker.yml`: `timeout-minutes: 30`. The slowest successful publish job of the last 30 runs took 11 minutes.
+- [x] Verify: `bun run build` passes with no network (network namespace, loopback only), and the old layout fails there. Pixel-identical before and after across 516 code points at weights 400, 500, and 600, and on the About hero in light and dark. Unit 4,825, e2e export 175 in Chromium, typecheck, lint, shape, knip, and quality:bundle (1 to 4 bytes per route). Docker: the arm64 builder runs natively, and one no-cache build of both platforms runs the static export once.
+- **Next:** the first publish run on `main` proves the whole multi-platform build. This sandbox blocks the Debian and Alpine package mirrors, so the PocketBase step and the Caddy stage were not built here.
+- **Known difference:** the fallback face shown until Newsreader loads now takes its metrics from the font file: `size-adjust` 104.8% instead of 105.48%.
+
 # Whole-repo audit (2026-11-10)
 
 Branch: `claude/eloquent-mccarthy-p7ybod` off `main` (`20dc641`). The audit was read-only; each fix is Standard tier, a few files with a red test first. Findings, fixes, and open items: `tasks/audit-2026-11-10.md`. Nothing pushed: the owner reviews first.

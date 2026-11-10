@@ -472,8 +472,8 @@ describe('security hardening scripts and workflows', () => {
   it('pins Docker base images by digest', () => {
     const dockerfile = readRepoFile('docker/Dockerfile');
 
-    expect(dockerfile).toMatch(/^FROM node:24[\w.-]*@sha256:[0-9a-f]{64}/m);
-    expect(dockerfile).toMatch(/^COPY --from=oven\/bun:1@sha256:[0-9a-f]{64} /m);
+    expect(dockerfile).toMatch(/^FROM (?:--platform=\S+ )?node:24[\w.-]*@sha256:[0-9a-f]{64}/m);
+    expect(dockerfile).toMatch(/^FROM (?:--platform=\S+ )?oven\/bun:1@sha256:[0-9a-f]{64} /m);
     expect(dockerfile).toMatch(/^FROM caddy:2-alpine@sha256:[0-9a-f]{64}/m);
   });
 

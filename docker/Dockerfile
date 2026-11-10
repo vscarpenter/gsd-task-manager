@@ -6,12 +6,20 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Build the Next.js static export
 # ---------------------------------------------------------------------------
+# The static export is the same on every CPU, so this stage runs once,
+# natively, on the build machine ($BUILDPLATFORM) for every image platform,
+# instead of a second time under QEMU emulation for arm64.
+#
+# Bun gets its own stage because COPY --from=<image> pulls that image for the
+# target platform, which would put an arm64 Bun in the amd64 builder.
+FROM --platform=$BUILDPLATFORM oven/bun:1@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 AS bun
+
 # Real Node runs `next build` here. The oven/bun image links `node` to Bun,
 # and Bun 1.3.14 crashed while exiting after a successful build (exit 132).
 # Copy only the Bun binary so `bun install` stays on Bun and `node` stays Node.
-FROM node:24-trixie-slim@sha256:6950b66b4c0cb0151ce89fa75074673850763d096b044f422c6729b588dd4956 AS builder
+FROM --platform=$BUILDPLATFORM node:24-trixie-slim@sha256:6950b66b4c0cb0151ce89fa75074673850763d096b044f422c6729b588dd4956 AS builder
 
-COPY --from=oven/bun:1@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /app
 
@@ -33,7 +41,9 @@ ENV PATH="/app/node_modules/.bin:$PATH"
 RUN node scripts/generate-build-info.cjs \
     && bash scripts/build-static-export.sh
 
-# Download PocketBase in the Debian-based builder (avoids Alpine TLS issues)
+# Download PocketBase in the Debian-based builder (avoids Alpine TLS issues).
+# TARGETARCH names the image's CPU even though this stage runs on the build
+# machine's, so each image gets its own PocketBase binary.
 ARG POCKETBASE_VERSION=0.40.4
 ARG POCKETBASE_SHA256_AMD64=9042ec818570e79c3628dadcd0a756c1496d9e1173918ec409d133c02f82e5fa
 ARG POCKETBASE_SHA256_ARM64=86095bf8ed9345954f0d2bf0a5fb9b57584ae60b77ebf3b6cd23a8003a3fd418
