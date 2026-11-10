@@ -2,7 +2,10 @@
 
 import { useSyncExternalStore } from "react";
 
+import { createLogger } from "@/lib/logger";
 import type { WhatsNewRelease } from "./releases";
+
+const logger = createLogger("UI");
 
 /**
  * The notes file holds every client's releases, so importing it statically put
@@ -17,17 +20,27 @@ let loaded: WhatsNewRelease[] | null = null;
 const listeners = new Set<() => void>();
 
 export function loadWhatsNewReleases(): Promise<WhatsNewRelease[]> {
-  pending ??= import("./whats-new.json").then((module) => {
-    loaded = module.default.releases as WhatsNewRelease[];
-    listeners.forEach((listener) => listener());
-    return loaded;
-  });
+  pending ??= import("./whats-new.json")
+    .then((module) => {
+      loaded = module.default.releases as WhatsNewRelease[];
+      listeners.forEach((listener) => listener());
+      return loaded;
+    })
+    .catch((error: unknown) => {
+      // Forget a failed load (offline before the chunk was cached), so the next
+      // subscriber retries instead of reusing the rejection until a reload.
+      pending = null;
+      throw error;
+    });
   return pending;
 }
 
 function subscribe(onChange: () => void): () => void {
   listeners.add(onChange);
-  void loadWhatsNewReleases();
+  // A failed load leaves the notes empty (null) until the next subscriber retries.
+  loadWhatsNewReleases().catch((error: unknown) => {
+    logger.warn("What's New notes failed to load", { error: error instanceof Error ? error.message : String(error) });
+  });
   return () => listeners.delete(onChange);
 }
 
