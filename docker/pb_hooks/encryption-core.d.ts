@@ -5,7 +5,11 @@ declare const core: {
   ENCRYPTED_JSON_FIELDS: string[];
   isEncrypted(v: unknown): boolean;
   requireValidKey(key: unknown): void;
-  encryptRecord(record: EncRecord, cipherFn: (s: string) => string): void;
+  encryptRecord(
+    record: EncRecord,
+    cipherFn: (s: string) => string,
+    decipherFn: (s: string) => string,
+  ): void;
   decryptRecord(record: EncRecord, decipherFn: (s: string) => string): void;
 };
 export default core;
