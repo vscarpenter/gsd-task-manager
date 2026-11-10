@@ -4,6 +4,34 @@
   "releases": [
     {
       "platform": "web",
+      "version": "14.8.1",
+      "date": "2026-11-10",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [
+        "When an edit goes over a limit, the message now says which one, such as how many tags a task can have, instead of Failed to save task.",
+        "Snooze and Move to in a task's ⋯ menu are now easy to read when highlighted."
+      ],
+      "fixed": [
+        "Undo after deleting a task or a saved item now works when you're signed in to sync.",
+        "When another device uses Sign out of all devices, this device now asks you to sign in again. Before, sync kept failing without saying why.",
+        "Deletes you make before signing in again now reach your other devices once you do. Before, they could be lost.",
+        "JSON backups now include tasks made with Duplicate, including copies made before this update.",
+        "Duplicating a task with a long title now shortens the copy's title so it fits. Before, the copy didn't appear on the matrix.",
+        "The overdue count above the matrix and in its intro line now goes by your local day, as task cards do. Before, a task due today could count as overdue before the day was over.",
+        "Cards now count overdue days correctly across a daylight saving change.",
+        "Quick actions such as Add to today and Mark urgent no longer rewrite a task's title. Before, they could move a link from the title into the description.",
+        "Return to matrix now shows a saved task's due date on the right day in every time zone.",
+        "Picking a new date in Return to matrix keeps an all-day task all day. Before, it got a 12:00 time and a reminder.",
+        "Review's estimation accuracy now says over-estimating when tasks take less time than you planned, and under-estimating when they take more.",
+        "Upcoming deadlines in Review now count calendar days, so a task due tomorrow evening says Tomorrow, not In 2 days.",
+        "Trash now says 1 day left on a task's last day, instead of 1 days left.",
+        "If What's new can't load its notes, such as while you're offline, it tries again the next time you open it."
+      ]
+    },
+    {
+      "platform": "web",
       "version": "14.8.0",
       "date": "2026-11-08",
       "notable": true,
