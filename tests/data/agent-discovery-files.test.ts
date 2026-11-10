@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -75,8 +75,15 @@ describe('/.well-known/mcp/server-card.json', () => {
 		serverInfo: { name: string; version: string };
 		transports: Array<{ type: string; install?: { command: string } }>;
 		tools: Array<{ name: string; category: string }>;
+		capabilities: { prompts: boolean; logging: boolean };
 	};
 	const card = readJson<ServerCard>('.well-known/mcp/server-card.json');
+	const schemaDir = resolve(__dirname, '../../packages/mcp-server/src/tools/schemas');
+	const registeredTools = readdirSync(schemaDir)
+		.filter((file) => file.endsWith('-tools.ts'))
+		.flatMap((file) =>
+			[...readFileSync(resolve(schemaDir, file), 'utf-8').matchAll(/^ {2}name: '([a-z_]+)'/gm)].map((match) => match[1])
+		);
 
 	it('matches the published npm package name', () => {
 		expect(card.serverInfo.name).toBe('gsd-mcp-server');
@@ -89,12 +96,14 @@ describe('/.well-known/mcp/server-card.json', () => {
 		expect(stdio?.install?.command).toBeDefined();
 	});
 
-	it('lists the 19 documented MCP tools', () => {
-		expect(card.tools).toHaveLength(19);
-		const names = new Set(card.tools.map((t) => t.name));
-		for (const required of ['list_tasks', 'create_task', 'get_productivity_metrics']) {
-			expect(names.has(required)).toBe(true);
-		}
+	it('lists exactly the tools the MCP server registers', () => {
+		expect(registeredTools).toHaveLength(20);
+		expect(card.tools.map((t) => t.name).sort()).toEqual([...registeredTools].sort());
+	});
+
+	it('advertises the capabilities the MCP server declares: prompts, and no logging', () => {
+		expect(card.capabilities.prompts).toBe(true);
+		expect(card.capabilities.logging).toBe(false);
 	});
 });
 

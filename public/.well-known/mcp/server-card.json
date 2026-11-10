@@ -31,7 +31,7 @@
           "required": true
         },
         "GSD_AUTH_TOKEN": {
-          "description": "PocketBase auth token for the user (obtain via GSD Task Manager Settings → Sync).",
+          "description": "PocketBase auth token for the user (copy it in GSD Task Manager: Settings → Cloud Sync → Copy auth token).",
           "required": true,
           "secret": true
         }
@@ -41,8 +41,8 @@
   "capabilities": {
     "tools": { "listChanged": false },
     "resources": false,
-    "prompts": false,
-    "logging": true
+    "prompts": true,
+    "logging": false
   },
   "tools": [
     { "name": "list_tasks", "category": "read" },
@@ -51,6 +51,7 @@
     { "name": "get_sync_status", "category": "read" },
     { "name": "get_task_stats", "category": "read" },
     { "name": "get_token_status", "category": "read" },
+    { "name": "get_top_three", "category": "read" },
     { "name": "create_task", "category": "write" },
     { "name": "update_task", "category": "write" },
     { "name": "complete_task", "category": "write" },
