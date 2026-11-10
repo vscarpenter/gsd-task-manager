@@ -30,9 +30,10 @@ fully local-only without it.
 **Lint and TypeScript compatibility.** `bun lint` is expected to run. The root
 workspace deliberately installs the TypeScript 7 CLI as `@typescript/native`
 while keeping `typescript@6.0.3` for the compiler API. The `bun typecheck`
-script explicitly invokes the native alias; Next.js and `typescript-eslint`
-continue to import TypeScript 6. Keep both packages until those tools support
-the new TypeScript API. ESLint 10 also relies on the explicit React version in
+and `bun run typecheck:tests` scripts explicitly invoke the native alias;
+Next.js and `typescript-eslint` continue to import TypeScript 6. Keep both
+packages until those tools support the new TypeScript API. ESLint 10 also
+relies on the explicit React version in
 `eslint.config.mjs` because `eslint-plugin-react@7.37.5` still calls an API
 ESLint 10 removed. The standalone MCP workspace has no compiler-API consumer
 and uses TypeScript 7 directly. A blanket `bun update --latest` will try to

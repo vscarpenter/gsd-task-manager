@@ -97,6 +97,7 @@ for local task CRUD.
 bun run test
 bun run test -- --coverage
 bun typecheck
+bun run typecheck:tests
 bun lint
 bun run quality:shape
 bun run knip

@@ -23,6 +23,13 @@ paths:
 - `tests/e2e/` — Playwright (auto-starts dev server via `playwright.config.ts`)
 - `packages/mcp-server/src/__tests__/` — MCP server tests
 
+## Type Checking
+
+- `tsconfig.json` leaves `tests/` out, so the Vitest suites have their own program, `tsconfig.tests.json`. Run `bun run typecheck:tests`; CI runs it in the `typecheck` job.
+- That program loads Vitest's globals and jest-dom's Vitest matchers. The app's program loads neither, so keep test types out of `tsconfig.json`.
+- The MCP package has its own: `bun run --cwd packages/mcp-server typecheck:tests`, in the `mcp-coverage` job.
+- Build task records with `createMockTask` and sync configs with `createMockSyncConfig` from `tests/fixtures`, so a newly required field needs one fix in the fixture.
+
 ## Testing Gotchas
 
 - **`fake-indexeddb`** is auto-imported in `vitest.setup.ts` — no per-test setup needed.

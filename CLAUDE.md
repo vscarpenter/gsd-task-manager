@@ -39,6 +39,7 @@ Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work 
 - `bun run test` - Run Vitest tests in CI mode (`bun test` invokes bun's built-in runner, not vitest)
 - `bun run test:watch` - Run Vitest in watch mode
 - `bun run test -- --coverage` - Generate coverage report (target: ≥80%)
+- `bun run typecheck:tests` - Typecheck the Vitest suites through `tsconfig.tests.json`, because `tsconfig.json` leaves `tests/` out. `bun run --cwd packages/mcp-server typecheck:tests` checks the MCP tests.
 - `bun run quality:bundle` - Check first-load JavaScript per route against `scripts/bundle-budget.json` (needs a built `out/`; refresh with `node scripts/check-bundle-budget.cjs --write-baseline` after `bash scripts/build-local.sh`)
 
 ### Build & Deployment
@@ -155,7 +156,7 @@ Detail moved to path-scoped rules — see `.claude/rules/pocketbase-sync.md` and
 **Verification:** Run `bun run test -- --coverage` after implementation. Coverage for changed files must be ≥80% across statements, lines, and functions.
 
 ### Pre-commit
-- Run `bun run test`, `bun typecheck`, `bun lint`, `bun run quality:shape`, and `bun run knip` before committing (CI's lint job runs the last three)
+- Run `bun run test`, `bun typecheck`, `bun run typecheck:tests`, `bun lint`, `bun run quality:shape`, and `bun run knip` before committing (CI's lint job runs the last three)
 - Static export mode means no API routes or SSR
 
 ### Testing

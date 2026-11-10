@@ -294,11 +294,10 @@ Fix pattern: wait for the title to be focused before touching other fields
   `passthrough` whatever the guards said. Pick each case so removing one branch
   changes its answer. For the `/api` and admin guards, that means sending a
   `text/html` Accept header.
-- **Test files are never type-checked.** Root `tsconfig.json` excludes `tests/`
-  and `packages/`, and the MCP tsconfig excludes `__tests__/`, so `bun typecheck`
-  passes over them. To check new test files, extend the real tsconfig from a
-  scratch file, and set `typeRoots` to the repo's `node_modules/@types`, because
-  type roots resolve from the config's own folder.
+- **Test files went untyped until 2026-11-10.** Root `tsconfig.json` excludes
+  `tests/` and `packages/`, and the MCP tsconfig excludes `__tests__/`, so
+  `bun typecheck` passes over them. `bun run typecheck:tests` and the MCP
+  package's `typecheck:tests` now check them (see the 2026-11-10 gate entry).
 - **`process.env.TZ` can switch zones inside a Vitest test.** Node resets its
   timezone cache on assignment, and the default forks pool keeps it inside one
   file. Restore it with `delete` when it started unset, because assigning
@@ -436,3 +435,13 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **`toISOString().slice(0, 10)` is the UTC day, not today.** Due dates are local-midnight instants, so compare local days (`isOverdue`, `localDayOf`, `differenceInCalendarDays`). The suite now runs in UTC; a test that needs another zone sets `process.env.TZ` itself.
 - **Project hook paths are relative to the shell's directory.** A `cd packages/mcp-server` left the guards unreachable. Stay at the root and use absolute paths or `bun run --cwd`.
 - **knip runs without its export check**, so exports that only tests call build up unnoticed (LIB-36, SYNC-23, MCP-24 in the audit).
+
+## A typecheck gate for the test suites (2026-11-10)
+
+- **An untyped suite hides more than fixture drift.** Of the 208 root errors, two pointed at real problems. A `pb-sync-helpers` case passed because `it.each` spread each row into arguments. The index fetch got one object and failed page validation, so it never reached the malformed-or-duplicate check the test names. And `docker/pb_hooks/encryption-core.d.ts` declared `encryptRecord` with two parameters, while the JS takes three and needs the third.
+- **`it.each` spreads each case array into arguments.** To pass a list as one argument, wrap it: `[[a, b]]`.
+- **`vi.fn(impl)` survives `mockReset()` in the root suite's Vitest 5.** Put a mock's default in the factory's `impl` instead of re-applying `mockResolvedValue` after each reset. The reset then needs no value that the real function's type rejects.
+- **`ReturnType<typeof vi.spyOn>` is untyped.** Declare `MockInstance<typeof window.addEventListener>`, and the recorded calls get real types.
+- **A zero-parameter `vi.fn(() => x)` types every call as an empty tuple**, so `mock.calls[0][0]` fails. Give the implementation the parameters its caller passes.
+- **Next's global types make `NODE_ENV` required on `ProcessEnv`** in any program that imports Next, tests included. A minimal child-process `env` has to carry it.
+- **TypeScript infers a JS function's options from its destructuring defaults.** `startStaticExportServer` lost `csp`, which has no default, until a JSDoc `@param` named it. Fix the JSDoc, not the test.
