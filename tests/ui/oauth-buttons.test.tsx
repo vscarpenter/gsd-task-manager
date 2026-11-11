@@ -4,6 +4,7 @@
  * using the PocketBase-based authentication flow.
  */
 
+import { StrictMode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -175,38 +176,96 @@ describe('OAuthButtons', () => {
   });
 
   describe('Loading States', () => {
-    it('should show "Connecting..." when Google OAuth is in progress', async () => {
+    it('should keep an empty status region mounted, so a later message is announced', () => {
+      render(<OAuthButtons />);
+
+      expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    });
+
+    it('should say which provider it is waiting for', async () => {
       const user = userEvent.setup();
       // Never resolve so the loading state persists
       mockLoginWithGoogle.mockReturnValue(new Promise(() => {}));
 
       render(<OAuthButtons />);
 
-      const googleButton = screen.getByRole('button', { name: /continue with google/i });
-      await user.click(googleButton);
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
 
       await waitFor(() => {
-        expect(screen.getByText('Connecting...')).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent(/waiting for google/i);
       });
     });
 
-    it('should show "Connecting..." when GitHub OAuth is in progress', async () => {
+    it('should name GitHub while GitHub sign-in is in progress', async () => {
       const user = userEvent.setup();
       mockLoginWithGithub.mockReturnValue(new Promise(() => {}));
 
       render(<OAuthButtons />);
 
-      const githubButton = screen.getByRole('button', { name: /continue with github/i });
-      await user.click(githubButton);
+      await user.click(screen.getByRole('button', { name: /continue with github/i }));
 
       await waitFor(() => {
-        expect(screen.getByText('Connecting...')).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent(/waiting for github/i);
       });
     });
 
-    it('should disable both buttons when one OAuth flow is in progress', async () => {
+    it('should disable every provider button while one sign-in is in progress', async () => {
       const user = userEvent.setup();
       mockLoginWithGoogle.mockReturnValue(new Promise(() => {}));
+
+      render(<OAuthButtons />);
+
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
+
+      await waitFor(() => {
+        screen.getAllByRole('button', { name: /continue with/i }).forEach((button) => {
+          expect(button).toBeDisabled();
+        });
+      });
+    });
+
+    it('should offer Cancel while waiting, focus it, and cancel that sign-in', async () => {
+      // A closed popup can't be detected for every provider, so Cancel is the
+      // way out of a sign-in the user abandoned.
+      const user = userEvent.setup();
+      mockLoginWithGoogle.mockReturnValue(new Promise(() => {}));
+
+      render(<OAuthButtons />);
+
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
+      const cancel = await screen.findByRole('button', { name: /cancel sign-in/i });
+      const requestKey = mockLoginWithGoogle.mock.calls[0][0].requestKey;
+
+      expect(cancel).toHaveFocus();
+      await user.click(cancel);
+
+      expect(mockCancelOAuthLogin).toHaveBeenCalledWith(requestKey);
+    });
+
+    it('should leave the waiting state under StrictMode, which re-runs effects', async () => {
+      // The dev server mounts every effect twice. The unmount cleanup marked the
+      // component as gone for good, so a sign-in there never ended on screen.
+      const user = userEvent.setup();
+      const onError = vi.fn();
+      mockLoginWithGoogle.mockRejectedValue(new Error('nope'));
+
+      render(
+        <StrictMode>
+          <OAuthButtons onError={onError} />
+        </StrictMode>
+      );
+
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
+
+      await waitFor(() => {
+        expect(onError).toHaveBeenCalledOnce();
+        expect(screen.getByRole('status')).toBeEmptyDOMElement();
+      });
+    });
+
+    it('should return focus to the provider button when sign-in ends', async () => {
+      const user = userEvent.setup();
+      mockLoginWithGoogle.mockRejectedValue(new Error('nope'));
 
       render(<OAuthButtons />);
 
@@ -214,10 +273,8 @@ describe('OAuthButtons', () => {
       await user.click(googleButton);
 
       await waitFor(() => {
-        const buttons = screen.getAllByRole('button');
-        buttons.forEach((button) => {
-          expect(button).toBeDisabled();
-        });
+        expect(screen.getByRole('status')).toBeEmptyDOMElement();
+        expect(googleButton).toHaveFocus();
       });
     });
 

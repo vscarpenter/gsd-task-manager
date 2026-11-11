@@ -23,10 +23,10 @@ const LOGIN_FNS: Record<OAuthProvider, typeof loginWithGoogle> = {
   apple: loginWithApple,
 };
 
-const PROVIDER_LABELS: Record<OAuthProvider, string> = {
-  google: "Continue with Google",
-  apple: "Continue with Apple",
-  github: "Continue with GitHub",
+const PROVIDER_NAMES: Record<OAuthProvider, string> = {
+  google: "Google",
+  apple: "Apple",
+  github: "GitHub",
 };
 
 interface OAuthButtonsProps {
@@ -35,13 +35,17 @@ interface OAuthButtonsProps {
   onStart?: (provider: OAuthProvider) => void;
 }
 
-export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps) {
+/** Runs one sign-in at a time and cancels it on request or on unmount. */
+function useOAuthSignIn({ onSuccess, onError, onStart }: OAuthButtonsProps) {
   const [loading, setLoading] = useState<OAuthProvider | null>(null);
   const activeRequestKey = useRef<string | null>(null);
   const mounted = useRef(true);
 
   // react-doctor-disable-next-line react-doctor/exhaustive-deps -- cleanup intentionally reads the latest ref value at unmount
   useEffect(() => {
+    // StrictMode runs this cleanup once on a component that stays mounted, so
+    // the next run has to mark it mounted again.
+    mounted.current = true;
     // On unmount, cancel whatever OAuth login is currently in flight. Reading
     // the latest ref values at cleanup time is the intended behavior here.
     return () => {
@@ -51,16 +55,6 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
       }
     };
   }, []);
-
-  const handleOAuth = (provider: OAuthProvider) => {
-    const popupWindow = openOAuthPopup(provider);
-    const requestKey = createOAuthRequestKey(provider);
-    activeRequestKey.current = requestKey;
-    setLoading(provider);
-    onStart?.(provider);
-
-    void runOAuth(provider, requestKey, popupWindow);
-  };
 
   const runOAuth = async (
     provider: OAuthProvider,
@@ -93,19 +87,104 @@ export function OAuthButtons({ onSuccess, onError, onStart }: OAuthButtonsProps)
     }
   };
 
+  const start = (provider: OAuthProvider) => {
+    const popupWindow = openOAuthPopup(provider);
+    const requestKey = createOAuthRequestKey(provider);
+    activeRequestKey.current = requestKey;
+    setLoading(provider);
+    onStart?.(provider);
+
+    void runOAuth(provider, requestKey, popupWindow);
+  };
+
+  const cancel = () => {
+    if (activeRequestKey.current) {
+      cancelOAuthLogin(activeRequestKey.current);
+    }
+  };
+
+  return { loading, start, cancel };
+}
+
+/**
+ * Offered for the whole sign-in. A closed popup can't be detected for every
+ * provider (Google severs the window handle), so Cancel is the way out.
+ */
+function CancelSignIn({ onCancel }: { onCancel: () => void }) {
+  const cancelButton = useRef<HTMLButtonElement>(null);
+
+  // The clicked provider button is now disabled, and a disabled button can't
+  // hold focus, so Cancel takes it.
+  useEffect(() => {
+    cancelButton.current?.focus();
+  }, []);
+
   return (
-    <div className="space-y-3">
-      {(Object.keys(PROVIDER_LABELS) as OAuthProvider[]).map((provider) => (
-        <Button
-          key={provider}
-          variant="subtle"
-          className="relative w-full justify-start"
-          disabled={loading !== null}
-          onClick={() => handleOAuth(provider)}
-        >
-          {loading === provider ? "Connecting..." : PROVIDER_LABELS[provider]}
-        </Button>
-      ))}
+    <Button ref={cancelButton} variant="ghost" className="shrink-0" onClick={onCancel}>
+      Cancel sign-in
+    </Button>
+  );
+}
+
+/** What the sign-in is waiting on, with the way out. Renders empty between sign-ins. */
+function SignInStatus({
+  provider,
+  onCancel,
+}: {
+  provider: OAuthProvider | null;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className={
+        provider
+          ? "mt-3 flex items-center justify-between gap-3 rounded-lg bg-background-muted p-3"
+          : undefined
+      }
+    >
+      {/* Always mounted: a live region that arrives with its text often goes unannounced. */}
+      <p role="status" className="text-sm text-foreground">
+        {provider &&
+          `Waiting for ${PROVIDER_NAMES[provider]}. Finish signing in in the window that opened.`}
+      </p>
+      {provider && <CancelSignIn onCancel={onCancel} />}
+    </div>
+  );
+}
+
+export function OAuthButtons(props: OAuthButtonsProps) {
+  const { loading, start, cancel } = useOAuthSignIn(props);
+  const providerButtons = useRef<Partial<Record<OAuthProvider, HTMLButtonElement | null>>>({});
+  const lastProvider = useRef<OAuthProvider | null>(null);
+
+  // When sign-in ends, focus goes back to the button that started it.
+  useEffect(() => {
+    if (loading) {
+      lastProvider.current = loading;
+    } else if (lastProvider.current) {
+      providerButtons.current[lastProvider.current]?.focus();
+    }
+  }, [loading]);
+
+  return (
+    <div>
+      <div className="space-y-3">
+        {(Object.keys(PROVIDER_NAMES) as OAuthProvider[]).map((provider) => (
+          <Button
+            key={provider}
+            ref={(node) => {
+              providerButtons.current[provider] = node;
+            }}
+            variant="subtle"
+            className="relative w-full justify-start"
+            disabled={loading !== null}
+            onClick={() => start(provider)}
+          >
+            Continue with {PROVIDER_NAMES[provider]}
+          </Button>
+        ))}
+      </div>
+      <SignInStatus provider={loading} onCancel={cancel} />
     </div>
   );
 }

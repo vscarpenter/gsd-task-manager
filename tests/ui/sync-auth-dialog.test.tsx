@@ -52,6 +52,7 @@ vi.mock('@/lib/sync/pb-auth', () => ({
   logout: vi.fn(),
   refreshAuth: (...args: unknown[]) => mockRefreshAuth(...args),
   getOAuthErrorMessage: (error: Error) => error.message,
+  isOAuthCancellation: (error: { isAbort?: boolean }) => error.isAbort === true,
 }));
 
 vi.mock('@/lib/sync/pocketbase-client', () => ({
@@ -330,7 +331,9 @@ describe('SyncAuthDialog', () => {
       ).toBeTruthy();
     });
 
-    it('should set loading state when OAuth starts', async () => {
+    it('should keep the dialog uncovered while sign-in waits on the provider', async () => {
+      // A full-screen spinner used to cover the close button for the whole
+      // sign-in, which left Escape as the only way out.
       const user = userEvent.setup();
 
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
@@ -341,11 +344,7 @@ describe('SyncAuthDialog', () => {
 
       await user.click(screen.getByText('Continue with Google'));
 
-      // Loading spinner should appear
-      await waitFor(() => {
-        const spinner = document.querySelector('.animate-spin');
-        expect(spinner).toBeInTheDocument();
-      });
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 
     it('should handle successful OAuth authentication', async () => {
@@ -614,9 +613,27 @@ describe('SyncAuthDialog', () => {
       capturedOnError!(new Error('Authentication failed'));
 
       await waitFor(() => {
-        expect(screen.getByText('Authentication failed')).toBeInTheDocument();
-        expect(mockToastError).toHaveBeenCalledWith('Authentication failed');
+        expect(screen.getByRole('alert')).toHaveTextContent('Authentication failed');
       });
+      // The dialog is open for the whole sign-in, so the inline alert is enough.
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+
+    it('should show no error when the user cancels sign-in', async () => {
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(capturedOnError).toBeDefined();
+      });
+
+      capturedOnError!(new Error('First error'));
+      await screen.findByRole('alert');
+      capturedOnError!(Object.assign(new Error('OAuth sign-in was cancelled.'), { isAbort: true }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      });
+      expect(mockToastError).not.toHaveBeenCalled();
     });
 
     it('should clear error when starting new OAuth flow', async () => {

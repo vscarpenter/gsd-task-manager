@@ -200,7 +200,7 @@ function LoadingOverlay() {
       role="status"
       aria-live="polite"
     >
-      <span className="sr-only">Loading sync settings</span>
+      <span className="sr-only">Signing out</span>
       <div
         className="h-12 w-12 animate-spin rounded-full border-4 border-accent border-t-transparent"
         aria-hidden="true"

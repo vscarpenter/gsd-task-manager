@@ -19,11 +19,29 @@ export const OAUTH_CALLBACK_CHANNEL = 'gsd-oauth-callback';
 export const OAUTH_REDIRECT_PATH = '/api/gsd/oauth-callback';
 
 const MAX_PARAM_LENGTH = 2048;
+/** How long the callback page waits for the starting tab to acknowledge. */
+const ACK_WAIT_MS = 3000;
 
 export interface OAuthCallbackMessage {
   state: string;
   code?: string;
   error?: string;
+}
+
+/** Sent back by the tab that took a callback message, so the callback page knows. */
+interface OAuthCallbackAck {
+  ack: string;
+}
+
+/**
+ * What became of a relayed callback. `unclaimed` means no tab was waiting for
+ * that state: the sign-in timed out, was cancelled, or its tab is gone.
+ */
+export type OAuthRelayOutcome = 'delivered' | 'unclaimed' | 'invalid';
+
+/** The provider's own error code (for example `access_denied`), when it sent one. */
+export interface OAuthProviderError extends Error {
+  providerError?: string;
 }
 
 function boundedParam(params: URLSearchParams, name: string): string | undefined {
@@ -48,21 +66,37 @@ export function parseOAuthCallback(search: string): OAuthCallbackMessage | null 
 
 /**
  * Called by the callback page with its URL fragment (without the `#`).
- * Returns false when there is nothing to relay.
+ * Relays the message, then waits for the tab holding that state to acknowledge.
  */
-export function relayOAuthCallback(fragment: string): boolean {
+export function relayOAuthCallback(
+  fragment: string,
+  ackWaitMs: number = ACK_WAIT_MS
+): Promise<OAuthRelayOutcome> {
   const message = parseOAuthCallback(fragment);
-  if (!message || typeof BroadcastChannel === 'undefined') return false;
+  if (!message) return Promise.resolve('invalid');
+  if (typeof BroadcastChannel === 'undefined') return Promise.resolve('unclaimed');
 
-  const channel = new BroadcastChannel(OAUTH_CALLBACK_CHANNEL);
-  channel.postMessage(message);
-  channel.close();
-  return true;
+  return new Promise((resolve) => {
+    const channel = new BroadcastChannel(OAUTH_CALLBACK_CHANNEL);
+    const finish = (outcome: OAuthRelayOutcome) => {
+      clearTimeout(timeoutId);
+      channel.close();
+      resolve(outcome);
+    };
+    const timeoutId = setTimeout(() => finish('unclaimed'), ackWaitMs);
+
+    channel.onmessage = (event: MessageEvent<OAuthCallbackAck>) => {
+      if (event.data?.ack === message.state) finish('delivered');
+    };
+    channel.postMessage(message);
+  });
 }
 
 /**
  * Resolves with the authorization code once the callback page relays a
- * message for `expectedState`. Messages for any other state are ignored.
+ * message for `expectedState`, and acknowledges it so the callback page can
+ * tell a delivered sign-in from an abandoned one. Messages for any other state
+ * are ignored.
  * Rejects with `signal.reason` when the signal aborts (cancel or timeout).
  */
 export function waitForOAuthCallback(expectedState: string, signal: AbortSignal): Promise<string> {
@@ -90,9 +124,14 @@ export function waitForOAuthCallback(expectedState: string, signal: AbortSignal)
       const message = event.data;
       if (!message || message.state !== expectedState) return;
 
+      channel.postMessage({ ack: expectedState } satisfies OAuthCallbackAck);
       finish();
       if (message.error || !message.code) {
-        reject(new Error(`OAuth sign-in failed: ${message.error ?? 'no authorization code returned'}`));
+        const error: OAuthProviderError = new Error(
+          `OAuth sign-in failed: ${message.error ?? 'no authorization code returned'}`
+        );
+        error.providerError = message.error;
+        reject(error);
         return;
       }
       resolve(message.code);

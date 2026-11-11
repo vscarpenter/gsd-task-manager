@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useSyncExternalStore } from "react";
-import { getOAuthErrorMessage, type AuthState, refreshAuth } from "@/lib/sync/pb-auth";
+import {
+  getOAuthErrorMessage,
+  isOAuthCancellation,
+  type AuthState,
+  refreshAuth,
+} from "@/lib/sync/pb-auth";
 import { clearPocketBase, isAuthenticated } from "@/lib/sync/pocketbase-client";
 import { getSyncQueue } from "@/lib/sync/queue";
 import { toast } from "sonner";
@@ -93,7 +98,6 @@ export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps)
       const setupError = err instanceof Error ? err.message : "Please try again.";
       clearPocketBase();
       setSyncStatus({ enabled: false, email: null });
-      setIsLoading(false);
       throw new Error(`Signed in, but sync setup failed. ${setupError}`, {
         cause: err,
       });
@@ -105,21 +109,18 @@ export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps)
       provider: authState.provider,
     });
 
-    setIsLoading(false);
     toast.success(`Signed in as ${authState.email}`);
     onSuccess?.();
   };
 
+  // The provider buttons show their own waiting state with a Cancel, so a
+  // sign-in never sets `isLoading`: that draws a spinner over the whole dialog.
   const handleOAuthStart = () => {
     setError(null);
-    setIsLoading(true);
   };
 
   const handleOAuthError = (err: Error) => {
-    const message = getOAuthErrorMessage(err);
-    setIsLoading(false);
-    setError(message);
-    toast.error(message);
+    setError(isOAuthCancellation(err) ? null : getOAuthErrorMessage(err));
   };
 
   return {

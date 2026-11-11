@@ -19,7 +19,14 @@ import { isTokenExpired } from 'pocketbase';
 const logger = createLogger('SYNC_AUTH');
 
 export type OAuthProvider = 'google' | 'github' | 'apple';
-const DEFAULT_OAUTH_TIMEOUT_MS = 120_000;
+/**
+ * A sign-in can include a 2FA prompt, a password manager, or account creation.
+ * Two minutes failed those after the user had finished them, so the limit only
+ * bounds a sign-in nobody is coming back to. Cancel ends one sooner.
+ */
+const DEFAULT_OAUTH_TIMEOUT_MS = 10 * 60 * 1000;
+/** Provider error codes that mean the user declined: Google and GitHub, then Apple. */
+const PROVIDER_CANCEL_ERRORS = new Set(['access_denied', 'user_cancelled_authorize']);
 /**
  * Renew the session once this little time is left on the token, matching the
  * 7-day skew on iOS (`AuthService.refreshSkew`) and Android (`AuthManager`).
@@ -68,6 +75,7 @@ interface OAuthDiagnosticError {
   originalError?: {
     message?: string;
   };
+  providerError?: string;
 }
 
 export function openOAuthPopup(provider: OAuthProvider): Window | null {
@@ -162,6 +170,16 @@ async function runCodeFlow(
     .authWithOAuth2Code(provider, code, providerInfo.codeVerifier, redirectUrl, undefined, requestOptions);
 }
 
+/**
+ * True when the user ended the sign-in: Cancel in this app, or declining on the
+ * provider's page. Neither is a failure, so callers show no error for it.
+ */
+export function isOAuthCancellation(error: unknown): boolean {
+  const diagnostic = error as OAuthDiagnosticError;
+  if (diagnostic?.isAbort) return true;
+  return PROVIDER_CANCEL_ERRORS.has(diagnostic?.providerError ?? '');
+}
+
 export function getOAuthErrorMessage(error: unknown): string {
   const diagnostic = error as OAuthDiagnosticError;
 
@@ -217,6 +235,18 @@ function trackLogin(options: OAuthLoginOptions) {
   return { signal: controller.signal, aborted, dispose };
 }
 
+/** A cancel is the user's choice, so it isn't logged as an error. */
+function logLoginFailure(provider: OAuthProvider, error: unknown): void {
+  if (isOAuthCancellation(error)) {
+    logger.info('OAuth login cancelled', { provider });
+    return;
+  }
+  logger.error('OAuth login failed', error instanceof Error ? error : new Error(String(error)), {
+    provider,
+    status: (error as OAuthDiagnosticError)?.status,
+  });
+}
+
 /**
  * Initiate OAuth login with the manual code flow
  *
@@ -254,12 +284,7 @@ export async function loginWithProvider(
       provider,
     };
   } catch (error) {
-    const diagnostic = error as OAuthDiagnosticError;
-    logger.error('OAuth login failed', error instanceof Error ? error : new Error(String(error)), {
-      provider,
-      status: diagnostic?.status,
-      type: diagnostic?.isAbort ? 'abort' : 'oauth',
-    });
+    logLoginFailure(provider, error);
     throw error;
   } finally {
     login.dispose();

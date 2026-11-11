@@ -1,3 +1,20 @@
+# OAuth sign-in: failure paths (2026-11-11)
+
+Branch: `fix/oauth-signin-failure-paths` off `main` (`601facd1`). Standard tier: the owner picked items 1 to 4 from a review of the sign-in flow, and no public contract changes. A second branch, `feat/oauth-signin-flow-polish`, follows with items 6, 7, and 8.
+
+## Resuming From Here
+
+- [x] Item 1: a sign-in no longer draws the full-screen spinner, which covered the dialog's close button. `OAuthButtons` shows "Waiting for <provider>" with a Cancel that takes focus. The overlay's label now reads "Signing out", the only case left that shows it.
+- [x] Item 2: the sign-in limit is 10 minutes, up from 2. A code relayed 3 minutes in still signs in.
+- [x] Item 3: the starting tab acknowledges a relayed callback. `relayOAuthCallback` resolves `delivered`, `unclaimed`, or `invalid`, and the callback page closes only on `delivered`.
+- [x] Item 4: `isOAuthCancellation` covers Cancel, `access_denied`, and Apple's `user_cancelled_authorize`. A cancel shows no error and logs at info. Other errors show once, in the inline alert; the duplicate toast is gone.
+- [x] Found on the way: under StrictMode (the dev server) the buttons' unmount cleanup marked the component gone for good, so a sign-in there never ended on screen. The effect now marks it mounted again.
+- [x] Verify: unit 4,885 passed in 359 files. Typecheck, test typecheck, lint, shape, and knip pass. `tests/e2e/oauth-sign-in.spec.ts` drives a real popup through the relay and passes in Chromium, Firefox, and WebKit, on the dev server and on the production build.
+- **Not done, by choice:** closed-popup detection. Google's COOP header makes its popup read as closed the moment it loads, so polling `popup.closed` would abort every Google sign-in. Cancel covers the case.
+- **Not verified:** a sign-in against the real providers. The hosted bounce returns to gsd.vinny.dev, so that check happens after deploy.
+- **Next:** the owner reviews the PR. No version bump here; that goes with `/release`.
+- **Blockers:** none.
+
 # Test typecheck gate (2026-11-10)
 
 Branch: `claude/focused-heisenberg-0j5671` off `main` (`e94022a`). Non-trivial tier: a new CI gate plus fixes in 61 test files. The owner's session request served as the approved spec, so there is no separate `tasks/spec.md`. Background: `tasks/audit-2026-11-10.md`, P1 item 12 (TEST-8, TEST-14, MCP-14).
@@ -100,8 +117,9 @@ Branch: `chore/formal-verification-skills` off `main` (`dd32e08c`). Standard tie
 - [x] Verify: every `check.sh` matches on the merged branch; unit 4,798 with coverage; typecheck, lint, shape, knip.
 - **Findings, none fixed (owner decides):** 18, every one replayed against the real code. The page ranks them. Top five: an offline edit never reaches the other device (shared pull cursor); a restored task is lost everywhere after one failed delete push (`isStaleDelete`); Undo after a delete fails whenever you're signed in (plain-arrow Dexie scope in `runTaskSyncTransaction`, since #701, confirmed in Chrome); a late token refresh uploads one account's task into another; a retried edit re-creates a deleted task on the server.
 - **Owner decisions parked:** whether the two repeating-task behaviors are bugs (unchecking leaves two open copies; Undo puts a copy in Trash); `.claude/rules/archive-tombstone.md` rule 4 contradicts rule 1 for replace-mode import.
-- [x] 2026-11-09: the 18 findings became 14 backlog rows plus one update, by priority, in `tasks/formal-findings-backlog.md` (parity backlog format, ready to paste into the Project's `parity/backlog.md`). P1, in fix order: `WEB-UNDO-SIGNED-IN` (live in production 14.8.0), `WEB-STALE-DELETE-RESTORE`, `WEB-PULL-CURSOR-SKIP`.
+- [x] 2026-11-09: the 18 findings became 13 new backlog rows plus one update to an existing row, by priority, in `tasks/formal-findings-backlog.md` (parity backlog format, ready to paste into the Project's `parity/backlog.md`). P1, in fix order: `WEB-UNDO-SIGNED-IN` (live in production 14.8.0), `WEB-STALE-DELETE-RESTORE`, `WEB-PULL-CURSOR-SKIP`.
 - [x] 2026-11-09: removed the four agent worktrees and their `worktree-agent-*` branches, after `git cherry` showed every commit already on this branch.
+- [x] 2026-11-09: merged as #713 (`20dc6418`), with all 13 checks green; local branch deleted. SonarCloud failed once on a flaky teardown in `tests/ui/toast-action-hint.test.tsx` (from #709: "window is not defined" after the environment closed) and passed on rerun. Not in the backlog yet; it's a P3 candidate.
 - **Next:** fix `WEB-UNDO-SIGNED-IN` first; it's one scope change in `runTaskSyncTransaction`. A fix to a finding flips its config from "breaks" to "holds", so update that line in the skill's `check.sh` in the same change.
 - **Assumptions:** the four subsystems were picked from the code by harm and test reach, because the request didn't name them. OAuth state binding was left out, since its check is one comparison.
 

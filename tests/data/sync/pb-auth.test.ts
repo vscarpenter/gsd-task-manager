@@ -52,13 +52,15 @@ vi.mock('@/lib/sync/pocketbase-client', async (importOriginal) => ({
   isAuthenticated: vi.fn(() => true),
 }));
 
+const mockLogger = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+
 vi.mock('@/lib/logger', () => ({
-  createLogger: () => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  }),
+  createLogger: () => mockLogger,
 }));
 
 import {
@@ -68,6 +70,7 @@ import {
   loginWithApple,
   cancelOAuthLogin,
   getOAuthErrorMessage,
+  isOAuthCancellation,
   openOAuthPopup,
   refreshAuth,
   refreshAuthOutcome,
@@ -230,6 +233,30 @@ describe('PocketBase Auth', () => {
       expect(mockAuthWithOAuth2Code).not.toHaveBeenCalled();
     });
 
+    it.each(['access_denied', 'user_cancelled_authorize'])(
+      'should treat a provider %s as the user cancelling',
+      async (providerError) => {
+        stubWindowOpen((url) => {
+          relayOAuthCallback(`error=${providerError}&state=state-${providerOf(url)}`);
+        });
+
+        const error = await loginWithProvider('google').catch((caught: unknown) => caught);
+
+        expect(isOAuthCancellation(error)).toBe(true);
+      }
+    );
+
+    it('should not treat other provider errors or a timeout as cancelling', async () => {
+      stubWindowOpen((url) => {
+        relayOAuthCallback(`error=server_error&state=state-${providerOf(url)}`);
+      });
+
+      const error = await loginWithProvider('google').catch((caught: unknown) => caught);
+
+      expect(isOAuthCancellation(error)).toBe(false);
+      expect(isOAuthCancellation(new Error('OAuth sign-in timed out.'))).toBe(false);
+    });
+
     it('should close a pre-opened popup after successful OAuth handoff', async () => {
       const popup = fakePopup();
 
@@ -284,6 +311,27 @@ describe('PocketBase Auth', () => {
       }
     });
 
+    it('should still accept a code three minutes after sign-in started', async () => {
+      // A 2FA prompt or a password manager detour runs past two minutes. The
+      // old limit failed those sign-ins after the user had finished them.
+      const THREE_MINUTES_MS = 3 * 60 * 1000;
+      vi.useFakeTimers();
+      try {
+        let providerUrl = '';
+        stubWindowOpen((url) => {
+          providerUrl = url;
+        });
+
+        const promise = loginWithProvider('github');
+        await vi.advanceTimersByTimeAsync(THREE_MINUTES_MS);
+        relayCodeFor(providerUrl);
+
+        await expect(promise).resolves.toMatchObject({ isLoggedIn: true });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('should report a cancelled sign-in as cancelled', async () => {
       stubWindowOpen(() => {
         cancelOAuthLogin('oauth_google_cancel');
@@ -293,6 +341,9 @@ describe('PocketBase Auth', () => {
         .catch((caught: unknown) => caught);
 
       expect(getOAuthErrorMessage(error)).toMatch(/cancelled/i);
+      expect(isOAuthCancellation(error)).toBe(true);
+      // A cancel is the user's choice, so it isn't logged as an error.
+      expect(mockLogger.error).not.toHaveBeenCalled();
       expect(mockCancelRequest).toHaveBeenCalledWith('oauth_google_cancel');
       expect(mockAuthWithOAuth2Code).not.toHaveBeenCalled();
     });
