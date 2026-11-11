@@ -8,6 +8,7 @@ import {
   loginWithGithub,
   loginWithApple,
   openOAuthPopup,
+  prepareOAuthLogin,
   type AuthState,
   type OAuthProvider,
 } from "@/lib/sync/pb-auth";
@@ -33,6 +34,11 @@ interface OAuthButtonsProps {
   onSuccess?: (authState: AuthState) => void | Promise<void>;
   onError?: (error: Error) => void;
   onStart?: (provider: OAuthProvider) => void;
+  /**
+   * The provider this account signed in with, when it's signing in again. Each
+   * provider can be its own account, so the wrong button reaches a different one.
+   */
+  lastUsedProvider?: string | null;
 }
 
 /** Runs one sign-in at a time and cancels it on request or on unmount. */
@@ -168,7 +174,8 @@ export function OAuthButtons(props: OAuthButtonsProps) {
 
   return (
     <div>
-      <div className="space-y-3">
+      {/* Reaching for a button is the first sign the user means to sign in. */}
+      <div className="space-y-3" onPointerEnter={prepareOAuthLogin} onFocus={prepareOAuthLogin}>
         {(Object.keys(PROVIDER_NAMES) as OAuthProvider[]).map((provider) => (
           <Button
             key={provider}
@@ -181,6 +188,9 @@ export function OAuthButtons(props: OAuthButtonsProps) {
             onClick={() => start(provider)}
           >
             Continue with {PROVIDER_NAMES[provider]}
+            {provider === props.lastUsedProvider && (
+              <span className="ml-auto text-xs text-foreground">Last used</span>
+            )}
           </Button>
         ))}
       </div>

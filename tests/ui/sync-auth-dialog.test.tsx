@@ -85,19 +85,23 @@ vi.mock('@/lib/sync/sign-out-everywhere', () => ({
 // Capture OAuthButtons callbacks so tests can invoke them directly
 let capturedOnSuccess: ((authState: AuthState) => void | Promise<void>) | undefined;
 let capturedOnError: ((error: Error) => void) | undefined;
+let capturedLastUsedProvider: string | null | undefined;
 
 vi.mock('@/components/sync/oauth-buttons', () => ({
   OAuthButtons: ({
     onStart,
     onSuccess,
     onError,
+    lastUsedProvider,
   }: {
+    lastUsedProvider?: string | null;
     onStart?: (provider: 'google' | 'github') => void;
     onSuccess?: (authState: AuthState) => void | Promise<void>;
     onError?: (error: Error) => void;
   }) => {
     capturedOnSuccess = onSuccess;
     capturedOnError = onError;
+    capturedLastUsedProvider = lastUsedProvider;
 
     return (
       <div data-testid="oauth-buttons">
@@ -978,6 +982,17 @@ describe('SyncAuthDialog', () => {
       });
     });
 
+    it('should tell the provider buttons which provider this account used', async () => {
+      // Each provider can be its own account, so the wrong button signs in to
+      // a different one and sync setup then refuses it.
+      mockRefreshAuth.mockResolvedValue(false);
+      render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
+
+      await screen.findByTestId('oauth-buttons');
+
+      expect(capturedLastUsedProvider).toBe('google');
+    });
+
     it('should show disconnect option when session expired', async () => {
       mockRefreshAuth.mockResolvedValue(false);
 
@@ -1019,6 +1034,25 @@ describe('SyncAuthDialog', () => {
       await waitFor(() => {
         expect(mockDb.syncMetadata.get).toHaveBeenCalledWith('sync_config');
       });
+    });
+
+    it('should reload sync status when sync turns on while the dialog is open', async () => {
+      // Another tab signed in. This dialog would otherwise keep offering sign-in.
+      const { rerender } = render(
+        <SyncAuthDialog isOpen={true} onClose={vi.fn()} syncEnabled={false} />
+      );
+      await screen.findByTestId('oauth-buttons');
+
+      mockDb.syncMetadata.get.mockResolvedValue({
+        key: 'sync_config',
+        enabled: true,
+        email: 'other-tab@example.com',
+        provider: 'github',
+      });
+      rerender(<SyncAuthDialog isOpen={true} onClose={vi.fn()} syncEnabled={true} />);
+
+      expect(await screen.findByText('other-tab@example.com')).toBeInTheDocument();
+      expect(screen.queryByTestId('oauth-buttons')).not.toBeInTheDocument();
     });
 
     it('should reload sync status when dialog re-opens', async () => {

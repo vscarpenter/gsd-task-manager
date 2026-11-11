@@ -17,8 +17,10 @@ const {
   mockLoginWithApple,
   mockOpenOAuthPopup,
   mockCancelOAuthLogin,
+  mockPrepareOAuthLogin,
   mockPopupWindow,
 } = vi.hoisted(() => ({
+  mockPrepareOAuthLogin: vi.fn(),
   mockLoginWithGoogle: vi.fn(),
   mockLoginWithGithub: vi.fn(),
   mockLoginWithApple: vi.fn(),
@@ -34,6 +36,7 @@ vi.mock('@/lib/sync/pb-auth', () => ({
   loginWithApple: (...args: unknown[]) => mockLoginWithApple(...args),
   openOAuthPopup: (...args: unknown[]) => mockOpenOAuthPopup(...args),
   cancelOAuthLogin: (...args: unknown[]) => mockCancelOAuthLogin(...args),
+  prepareOAuthLogin: () => mockPrepareOAuthLogin(),
 }));
 
 // Import component after mocks
@@ -90,6 +93,51 @@ describe('OAuthButtons', () => {
 
       expect(googleButton).not.toBeDisabled();
       expect(githubButton).not.toBeDisabled();
+    });
+  });
+
+  describe('Last used provider', () => {
+    it('should mark the provider this account signed in with', () => {
+      render(<OAuthButtons lastUsedProvider="github" />);
+
+      expect(screen.getByRole('button', { name: /continue with github/i })).toHaveTextContent(/last used/i);
+      expect(screen.getByRole('button', { name: /continue with google/i })).not.toHaveTextContent(/last used/i);
+      expect(screen.getByRole('button', { name: /continue with apple/i })).not.toHaveTextContent(/last used/i);
+    });
+
+    it('should mark nothing for a first sign-in or an unknown provider', () => {
+      const { rerender } = render(<OAuthButtons />);
+      expect(screen.queryByText(/last used/i)).not.toBeInTheDocument();
+
+      rerender(<OAuthButtons lastUsedProvider="myspace" />);
+      expect(screen.queryByText(/last used/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Fetching auth methods ahead of the click', () => {
+    it('should send nothing to the server just for being on screen', () => {
+      render(<OAuthButtons />);
+
+      expect(mockPrepareOAuthLogin).not.toHaveBeenCalled();
+    });
+
+    it('should prepare sign-in when the pointer reaches a provider button', async () => {
+      const user = userEvent.setup();
+      render(<OAuthButtons />);
+
+      await user.hover(screen.getByRole('button', { name: /continue with github/i }));
+
+      expect(mockPrepareOAuthLogin).toHaveBeenCalled();
+    });
+
+    it('should prepare sign-in when keyboard focus reaches a provider button', async () => {
+      const user = userEvent.setup();
+      render(<OAuthButtons />);
+
+      await user.tab();
+
+      expect(screen.getByRole('button', { name: /continue with google/i })).toHaveFocus();
+      expect(mockPrepareOAuthLogin).toHaveBeenCalled();
     });
   });
 

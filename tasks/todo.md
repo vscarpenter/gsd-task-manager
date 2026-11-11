@@ -1,3 +1,19 @@
+# OAuth sign-in: flow polish (2026-11-11)
+
+Branch: `feat/oauth-signin-flow-polish`, stacked on `fix/oauth-signin-failure-paths` (PR #722). Standard tier: items 6, 7, and 8 from the same review.
+
+## Resuming From Here
+
+- [x] Item 6: `prepareOAuthLogin` fetches the auth methods when the pointer or keyboard focus reaches a provider button. One sign-in takes them, so a state and verifier are never reused. A failed early fetch falls back to the fetch on click.
+- [x] Item 7: the session-expired screen marks the provider the account used with "Last used".
+- [x] Item 8: a second tab already noticed a sign-in within 2 seconds (the status store polls). The gap was a sign-in dialog left open there, which kept offering sign-in. `SyncAuthDialog` takes `syncEnabled` from the sync button and re-reads the account when it changes.
+- [x] Verify: unit 4,894 passed in 359 files. Typecheck, test typecheck, lint, shape, and knip pass. On the production build, the sign-in and sync specs pass 3 times each in Chromium, Firefox, and WebKit (153 passed, 18 skipped).
+- **Owner decision parked:** item 6 fetches on reaching a button, where the review said "when the dialog opens". Opening the dialog sends nothing to the server today, and fetching there would contact api.vinny.io before the user chose to sign in. Moving the call to dialog open is a one-line change if that's preferred.
+- **Open, cause not found:** the two-tab browser tests run in Chromium only. In WebKit and Firefox runs the first tab's dialog sometimes closed while the second tab loaded, before any sign-in started. It could be the test setup or a real cross-tab effect.
+- **Dev server only:** on `next dev`, Firefox fails `sync-auth-token.spec.ts` on an engine warning ("execution of microtasks was reordered"), and WebKit sometimes logs "Failed to fetch RSC payload". Neither appears on the production build, which is what CI runs.
+- **Next:** the owner reviews both PRs. Merge #722 first, then retarget this one to `main`.
+- **Blockers:** none.
+
 # OAuth sign-in: failure paths (2026-11-11)
 
 Branch: `fix/oauth-signin-failure-paths` off `main` (`601facd1`). Standard tier: the owner picked items 1 to 4 from a review of the sign-in flow, and no public contract changes. A second branch, `feat/oauth-signin-flow-polish`, follows with items 6, 7, and 8.
