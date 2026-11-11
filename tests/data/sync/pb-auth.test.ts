@@ -72,6 +72,7 @@ import {
   getOAuthErrorMessage,
   isOAuthCancellation,
   openOAuthPopup,
+  prepareOAuthLogin,
   refreshAuth,
   refreshAuthOutcome,
   ensureValidAuth,
@@ -330,6 +331,32 @@ describe('PocketBase Auth', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it('should use auth methods fetched ahead of the click, once', async () => {
+      // With the methods already in hand the popup leaves about:blank at once.
+      // A state and verifier serve one sign-in, so the next one fetches its own.
+      stubWindowOpen();
+
+      prepareOAuthLogin();
+      prepareOAuthLogin();
+      await loginWithProvider('google');
+      expect(mockListAuthMethods).toHaveBeenCalledOnce();
+      expect(mockAuthWithOAuth2Code).toHaveBeenCalledOnce();
+
+      await loginWithProvider('google');
+      expect(mockListAuthMethods).toHaveBeenCalledTimes(2);
+    });
+
+    it('should fetch auth methods on the click when the early fetch failed', async () => {
+      stubWindowOpen();
+      mockListAuthMethods.mockRejectedValueOnce(new Error('offline'));
+
+      prepareOAuthLogin();
+      const result = await loginWithProvider('google');
+
+      expect(result.isLoggedIn).toBe(true);
+      expect(mockListAuthMethods).toHaveBeenCalledTimes(2);
     });
 
     it('should report a cancelled sign-in as cancelled', async () => {

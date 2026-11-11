@@ -165,7 +165,7 @@ export function SyncButton() {
       <SyncAuthDialog
         isOpen={authDialogOpen}
         onClose={() => setAuthDialogOpen(false)}
-        onSuccess={handleAuthSuccess}
+        onSuccess={handleAuthSuccess} syncEnabled={isEnabled}
       />
     </>
   );

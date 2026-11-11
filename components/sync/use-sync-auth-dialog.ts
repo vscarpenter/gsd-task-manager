@@ -24,6 +24,7 @@ export interface SyncStatusInfo {
 interface UseSyncAuthDialogProps {
   isOpen: boolean;
   onSuccess?: () => void;
+  syncEnabled?: boolean;
 }
 
 interface CancellationToken {
@@ -39,7 +40,7 @@ const subscribeMounted = (): (() => void) => () => {};
 const getMountedSnapshot = (): boolean => true;
 const getMountedServerSnapshot = (): boolean => false;
 
-export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps) {
+export function useSyncAuthDialog({ isOpen, onSuccess, syncEnabled }: UseSyncAuthDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatusInfo | null>(null);
@@ -87,7 +88,9 @@ export function useSyncAuthDialog({ isOpen, onSuccess }: UseSyncAuthDialogProps)
     return () => {
       cancellation.cancelled = true;
     };
-  }, [isOpen]);
+    // `syncEnabled` isn't read here. It changes when any tab signs in or out,
+    // and that's when the account on screen has to be read again.
+  }, [isOpen, syncEnabled]);
 
   const handleOAuthSuccess = async (authState: AuthState) => {
     setError(null);

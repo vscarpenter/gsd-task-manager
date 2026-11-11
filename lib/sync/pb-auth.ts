@@ -51,6 +51,39 @@ const ALLOWED_OAUTH_PROVIDERS = new Set<OAuthProvider>(['google', 'github', 'app
 /** In-flight sign-ins by request key, so cancelOAuthLogin can stop the callback wait. */
 const pendingLogins = new Map<string, AbortController>();
 
+type AuthMethods = Awaited<ReturnType<typeof fetchAuthMethods>>;
+
+/** Auth methods fetched ahead of a click. One sign-in takes them, so a state and verifier are never reused. */
+let preparedAuthMethods: Promise<AuthMethods | null> | null = null;
+
+function fetchAuthMethods(requestOptions: { requestKey?: string } = {}) {
+  return getPocketBase().collection('users').listAuthMethods(requestOptions);
+}
+
+/**
+ * Fetch the auth methods before the click, so the popup goes straight to the
+ * provider and doesn't sit on a blank page for a round trip. Call it when the
+ * user reaches for a sign-in button: opening the dialog alone sends nothing.
+ */
+export function prepareOAuthLogin(): void {
+  if (preparedAuthMethods) return;
+  const request = fetchAuthMethods().catch((error: unknown) => {
+    // The click fetches again and reports its own failure.
+    logger.debug('Early auth methods fetch failed', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    if (preparedAuthMethods === request) preparedAuthMethods = null;
+    return null;
+  });
+  preparedAuthMethods = request;
+}
+
+function takePreparedAuthMethods(): Promise<AuthMethods | null> | null {
+  const prepared = preparedAuthMethods;
+  preparedAuthMethods = null;
+  return prepared;
+}
+
 export interface AuthState {
   isLoggedIn: boolean;
   userId: string | null;
@@ -148,7 +181,7 @@ async function runCodeFlow(
   const pb = getPocketBase();
   const requestOptions = options.requestKey ? { requestKey: options.requestKey } : {};
 
-  const methods = await pb.collection('users').listAuthMethods(requestOptions);
+  const methods = (await takePreparedAuthMethods()) ?? (await fetchAuthMethods(requestOptions));
   const providerInfo = methods.oauth2?.providers?.find((p) => p.name === provider);
   if (!providerInfo) {
     throw new Error(`OAuth provider is not configured on the server: ${provider}`);

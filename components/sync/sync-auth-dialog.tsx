@@ -17,10 +17,15 @@ interface SyncAuthDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  /**
+   * Whether sync is on, as the app shell sees it. Another tab can sign in or
+   * out while this dialog is open, and a change here makes it re-read the account.
+   */
+  syncEnabled?: boolean;
 }
 
-export function SyncAuthDialog({ isOpen, onClose, onSuccess }: SyncAuthDialogProps) {
-  const state = useSyncAuthDialog({ isOpen, onSuccess });
+export function SyncAuthDialog({ isOpen, onClose, onSuccess, syncEnabled }: SyncAuthDialogProps) {
+  const state = useSyncAuthDialog({ isOpen, onSuccess, syncEnabled });
   const { dialogRef, handleKeyDown } = useSyncDialogFocus(isOpen && state.mounted, onClose);
 
   if (!isOpen || !state.mounted) return null;

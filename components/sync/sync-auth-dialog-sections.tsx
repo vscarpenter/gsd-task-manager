@@ -59,6 +59,7 @@ export function SessionExpiredSection({
         onStart={oauthCallbacks.onStart}
         onSuccess={oauthCallbacks.onSuccess}
         onError={oauthCallbacks.onError}
+        lastUsedProvider={syncStatus.provider}
       />
 
       <div className="border-t border-card-border pt-3">
