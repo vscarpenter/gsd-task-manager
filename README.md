@@ -26,7 +26,8 @@ offline-first local storage, optional PocketBase sync, and the GSD MCP server.
 - Trash with 30-day retention, the Today strip for your top three tasks, the
   weekly sweep of tasks that need a decision, snooze, and What's New notes.
 - Local IndexedDB persistence, JSON import/export, offline PWA support, and
-  user-controlled update prompts.
+  an update notice. A new version installs and takes control on its own; the
+  notice offers a refresh.
 - Optional multi-device PocketBase sync with Google, Apple, or GitHub OAuth and
   realtime server-sent events.
 - A separately installed MCP server with 20 task, analytics, and diagnostic

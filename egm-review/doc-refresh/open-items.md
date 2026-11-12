@@ -6,19 +6,23 @@ The round reports in the folders beside this file hold the evidence for each ite
 
 ## Questions only the owner can answer
 
-1. Which hooks does the hosted server load? ADR 0016, `lib/sync/pb-account-deletion.ts:18`, and `lib/sync/sign-out-everywhere.ts:7` say none. Web sign-in needs `/api/gsd/oauth-callback`, which only `docker/pb_hooks/oauth_web_redirect.pb.js` serves. The feedback and account deletion specs also rely on hooks.
-2. How did `saved_at` reach the hosted collection? ADR 0018 says to deploy the backend migration first. The repo rule says hosted never runs `docker/pb_migrations`, and `scripts/update-pocketbase-tasks-schema.sh` does not add the field.
-3. Does the hosted PocketBase have a backup? `docs/architecture.html` still says it has none. The repo shows only a manual `docker cp` in `docker/README.md`.
-4. Should `docs/architecture.html` and `docs/cloud-sync-explainer.html` stay living overviews? Neither covers weekly sweep, top three, account deletion, or resurrect on sight.
-5. Should the pipeline page be redrawn? Its three diagrams and the separation matrix still draw the July 2026 design. Captions now say so.
-6. Should the privacy page list more flows? It omits account deletion, sign out everywhere, token refresh, the sign-in hover prefetch, the share dialog, and WebMCP registration.
-7. `SECURITY.md` says local-only mode makes no background network calls. `app/layout.tsx:250` always emits a preconnect to the hosted sync server. Change the code or the claim.
-8. `coding-standards.md` names Biome, a commitlint hook, and a magic-number lint rule. None exists in the repo.
-9. `README.md` says update prompts are user-controlled. `public/sw.js:48` calls `skipWaiting()` with no condition.
-10. Three `SECURITY.md` edits need a second look: the sign-in hover prefetch is now disclosed, the history rewrite must cover commit `f3e5edf`, and `NEXT_PUBLIC_BASE_URL` replaced the Sentry variable in the permitted list.
-11. `tasks/formal-findings-backlog.md` marks `WEB-LATE-AUTH-REFRESH` as fixed. Only half shipped: `refreshAuthOutcome` in `lib/sync/pb-auth.ts` still saves a late refresh response with no session check.
-12. The escalation spec says its corpus pins dependencies, tags, subtasks, and archive and Trash rows. `escalation-corpus.json` covers recurrence and snooze only. Closing this may need new cases in three repos.
-13. The conditional delete spec describes work that is not built. iOS and Android send a delete even when the remote has no usable stamp, which the design does not cover.
+1. Do the task encryption hooks load on the hosted server? The owner confirmed it loads hooks, and a probe found only the OAuth callback route. ADR 0016 and `SECURITY.md` still say hosted task content is plaintext.
+2. Should `docs/architecture.html` and `docs/cloud-sync-explainer.html` stay living overviews? Neither covers weekly sweep, top three, account deletion, or resurrect on sight.
+3. Should the pipeline page be redrawn? Its three diagrams and the separation matrix still draw the July 2026 design. Captions now say so.
+4. Should the privacy page list more flows? It omits account deletion, sign out everywhere, token refresh, the sign-in hover prefetch, the share dialog, and WebMCP registration.
+5. Three `SECURITY.md` edits need a second look: the sign-in hover prefetch is now disclosed, the history rewrite must cover commit `f3e5edf`, and `NEXT_PUBLIC_BASE_URL` replaced the Sentry variable in the permitted list.
+6. The escalation spec says its corpus pins dependencies, tags, subtasks, and archive and Trash rows. `escalation-corpus.json` covers recurrence and snooze only. Closing this may need new cases in three repos.
+7. The conditional delete spec describes work that is not built. iOS and Android send a delete even when the remote has no usable stamp, which the design does not cover.
+
+## Answered by the owner, 2026-11-12
+
+- The hosted server does load hooks. A probe with no credentials found `/api/gsd/oauth-callback` live, and `/api/gsd/account`, `/api/gsd/sessions`, and `/api/gsd/feedback-controls` returning 404. ADR 0016 carries the note.
+- `saved_at` reached the hosted collection by a manual schema change. ADR 0018 carries the note.
+- The hosted PocketBase has a daily backup. `docs/architecture.html` now says so. The job is not in this repo.
+- The preconnect in `app/layout.tsx` is correct. `SECURITY.md` now discloses it.
+- `public/sw.js` is correct. `README.md` now says a new version takes control on its own.
+- `coding-standards.md` stays as written. It is the standard for periodic compliance scans, not a description of the repo tooling.
+- `WEB-LATE-AUTH-REFRESH`: the second half ships in PR #738.
 
 ## Possible code defects
 
