@@ -17,7 +17,7 @@ Three purpose-specific caches with distinct strategies:
 |---|---|---|---|
 | `gsd-immutable-v1` | content-hashed `/_next/static/*` assets | cache-first | FIFO-pruned at 60 entries, survives deploys |
 | `gsd-pages-v{version}` | HTML + RSC flight data | network-first | rotated on deploy |
-| `gsd-runtime-v{version}` | icons, manifest, other static | cache-first | rotated on deploy |
+| `gsd-runtime-v{version}` | an allowlist: `/manifest.json`, `/theme-init.js`, `/favicon.svg`, and `/icons/` | cache-first | rotated on deploy |
 
 ## Files
 

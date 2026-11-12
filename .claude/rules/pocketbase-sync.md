@@ -44,7 +44,7 @@ paths:
 - Sign-in uses the manual code flow: `listAuthMethods`, then the provider, then the `/api/gsd/oauth-callback` bounce, then the `/auth/callback/` BroadcastChannel relay, then `authWithOAuth2Code` with this tab's `state` and PKCE verifier (`lib/sync/pb-auth.ts`, `lib/sync/oauth-callback.ts`). The tab that takes a relayed message acknowledges it on the channel, so the callback page closes only when a tab has the answer and otherwise says the sign-in went unclaimed. Never call the realtime `authWithOAuth2({ provider })` form: it delivers the code to whichever realtime client the state names, so a crafted link can hand a victim's code to an attacker. Tokens live in the SDK's `authStore` (localStorage).
 - **Google**: configured in PB admin.
 - **GitHub**: requires server-side provider setup in PocketBase admin (`https://api.vinny.io/_/` → Settings → Auth providers).
-- **Local dev**: OAuth sign-in against production PB completes only on gsd.vinny.dev, because the hosted bounce returns there. To test sign-in locally, run PocketBase at `127.0.0.1:8090` with `--hooksDir=docker/pb_hooks`, its own OAuth provider setup, and `GSD_WEB_OAUTH_CALLBACK_URL=http://localhost:3000/auth/callback/`.
+- **Local dev**: OAuth sign-in against production PB completes only on gsd.vinny.dev, because the hosted bounce returns there. To test sign-in locally, run PocketBase at `127.0.0.1:8090` with `--hooksDir=docker/pb_hooks`, its own OAuth provider setup, and `GSD_WEB_OAUTH_CALLBACK_URL=http://localhost:3000/auth/callback/`. That hooks folder also loads the task encryption hooks, so task writes fail unless `GSD_TASKS_ENC_KEY` holds a 32-character key.
 
 ## OAuth Callback Domain Mismatch (recurring bug)
 

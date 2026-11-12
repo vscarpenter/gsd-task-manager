@@ -375,15 +375,15 @@ footer.page-foot {
   <div class="cards-grid">
     <div class="card">
       <h4>Where data lives</h4>
-      <p>Source of truth is local IndexedDB. PocketBase is a mirror for multi-device fan-out, not the database of record.</p>
+      <p>Source of truth is local IndexedDB. PocketBase is a mirror for multi-device fan-out, not the database of record. Once a task has synced, a newer remote edit or a remote deletion still applies locally.</p>
     </div>
     <div class="card">
       <h4>What triggers a sync</h4>
-      <p>UI mutations enqueue an op. Background timer, app focus, and the sync button all call <code>coordinator.requestSync()</code>.</p>
+      <p>A task edit queues an op and schedules a debounced sync. A start-up sync, the periodic timer, a return to the tab, coming back online, and the sync button also reach <code>coordinator.requestSync()</code>.</p>
     </div>
     <div class="card">
       <h4>Conflict resolution</h4>
-      <p>Last-write-wins on <code>client_updated_at</code>. Newer timestamp wins; ties go to remote.</p>
+      <p>Last-write-wins on <code>client_updated_at</code>. A strictly newer timestamp wins. On a tie the local copy stays.</p>
     </div>
     <div class="card">
       <h4>Realtime</h4>
@@ -439,10 +439,10 @@ footer.page-foot {
 
       <rect class="panel" x="40" y="354" width="240" height="100" rx="12"/>
       <text class="title-mono" x="160" y="378" text-anchor="middle">fullSync()</text>
-      <text class="sub" x="160" y="396" text-anchor="middle">1. pushLocalChanges()</text>
-      <text class="sub" x="160" y="414" text-anchor="middle">2. pullRemoteChanges(cursor)</text>
-      <text class="sub" x="160" y="432" text-anchor="middle">3. reconcileDeletedTasks()</text>
-      <text class="sub" x="160" y="450" text-anchor="middle">4. update lastSyncAt cursor</text>
+      <text class="sub" x="160" y="396" text-anchor="middle">1. ensureValidAuth()</text>
+      <text class="sub" x="160" y="414" text-anchor="middle">2. push, then pull + reconcile</text>
+      <text class="sub" x="160" y="432" text-anchor="middle">3. resurrectOnSight()</text>
+      <text class="sub" x="160" y="450" text-anchor="middle">4. update lastClientUpdatedAt</text>
 
       <path class="flow-dashed" d="M160 104 L160 134" marker-end="url(#arr-accent)"/>
       <path class="flow-dashed" d="M160 214 L160 244" marker-end="url(#arr-accent)"/>
@@ -451,9 +451,9 @@ footer.page-foot {
       <text x="640" y="22" text-anchor="middle" class="col-label">— api.vinny.io (PocketBase) —</text>
 
       <rect class="panel-auth" x="520" y="40" width="240" height="80" rx="12"/>
-      <text class="title-mono" x="640" y="64" text-anchor="middle">OAuth2 (Google / GitHub)</text>
-      <text class="sub" x="640" y="84" text-anchor="middle">pb.collection('users')</text>
-      <text class="sub" x="640" y="102" text-anchor="middle">.authWithOAuth2({ provider })</text>
+      <text class="title-mono" x="640" y="64" text-anchor="middle">OAuth2 (Google / GitHub / Apple)</text>
+      <text class="sub" x="640" y="84" text-anchor="middle">manual code flow</text>
+      <text class="sub" x="640" y="102" text-anchor="middle">authWithOAuth2Code(provider, code, …)</text>
 
       <rect class="panel" x="520" y="160" width="240" height="80" rx="12"/>
       <text class="title-mono" x="640" y="184" text-anchor="middle">tasks collection</text>
@@ -476,7 +476,7 @@ footer.page-foot {
       <text class="flow-note" x="430" y="296" text-anchor="middle">PUSH &middot; upsert/delete &middot; 100ms throttle</text>
 
       <path class="flow-accent" d="M520 220 C 420 220, 380 410, 280 410" marker-end="url(#arr-accent)"/>
-      <text class="flow-note" x="430" y="378" text-anchor="middle">PULL &middot; client_updated_at &gt; cursor</text>
+      <text class="flow-note" x="430" y="378" text-anchor="middle">PULL &middot; client_updated_at &gt;= cursor</text>
 
       <path class="flow-sky" d="M520 310 C 400 310, 350 180, 280 180" marker-end="url(#arr-sky)"/>
       <text class="flow-note" x="395" y="156" text-anchor="middle">SSE &middot; applyRemoteChange()</text>
@@ -502,25 +502,31 @@ footer.page-foot {
     <h2>Auth flow</h2>
   </div>
   <p>
-    The PocketBase SDK does all the heavy lifting. The user clicks &ldquo;Sign in with
-    Google&rdquo; &rarr; <code>authWithOAuth2</code> opens a popup, runs the OAuth dance,
-    stashes the JWT in <code>localStorage</code>, and keeps it refreshed. Sync code just
-    asks the singleton whether it's authenticated and grabs the user id.
+    The app runs the OAuth manual code flow. The user clicks a provider button and a
+    popup opens the provider page. PocketBase bounces the result to the app's
+    <code>/auth/callback/</code> page, which relays the code to the tab that started
+    sign-in. That tab exchanges it with <code>authWithOAuth2Code</code>, and the SDK
+    stores the token in <code>localStorage</code>. The app refreshes the token itself:
+    <code>ensureValidAuth</code> runs at the start of each <code>fullSync</code>. Never
+    call the realtime <code>authWithOAuth2({ provider })</code> form. It delivers the
+    code to whichever realtime client the request's <code>state</code> value names, so a
+    crafted link can hand a victim's code to an attacker.
   </p>
 
   <div class="snippet">
-    <span class="file-ref">lib/sync/pb-auth.ts:41</span>
+    <span class="file-ref">lib/sync/pb-auth.ts:loginWithProvider</span>
 <pre class="code-sample"><span class="c-note">// Runtime allowlist — type erasure means callers could pass anything</span>
-const ALLOWED_OAUTH_PROVIDERS = new Set&lt;OAuthProvider&gt;(['google', 'github']);
+const ALLOWED_OAUTH_PROVIDERS = new Set&lt;OAuthProvider&gt;(['google', 'github', 'apple']);
 
-export async function loginWithProvider(provider: OAuthProvider): Promise&lt;AuthState&gt; {
+<span class="c-note">// Simplified. The real function also handles cancel, timeout, and closing the popup.</span>
+export async function loginWithProvider(provider: OAuthProvider, options = {}): Promise&lt;AuthState&gt; {
   if (!provider || !ALLOWED_OAUTH_PROVIDERS.has(provider)) {
     throw new Error(`OAuth provider not allowed: ${String(provider)}`);
   }
 
-  const pb = getPocketBase();
-  <span class="c-note">// SDK handles popup, code exchange, token storage, and refresh</span>
-  const authData = await pb.collection('users').authWithOAuth2({ provider });
+  <span class="c-note">// runCodeFlow: listAuthMethods, open the provider page, wait for the relayed</span>
+  <span class="c-note">// code for this tab's state, then authWithOAuth2Code with the PKCE verifier</span>
+  const authData = await runCodeFlow(provider, options, signal);
 
   return {
     isLoggedIn: true,
@@ -534,19 +540,19 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
   <div class="alert is-info" role="note" style="margin-top: var(--sp-3);">
     <div class="alert-body">
       <p class="alert-title">Why the allowlist isn't theatre</p>
-      <p>Any provider configured server-side would otherwise be callable from the browser console. We only accept the two we ship UI for.</p>
+      <p>Without it, <code>loginWithProvider</code> would start sign-in for any provider string a caller passes, if the server has that provider configured. It accepts only the three the app has sign-in buttons for.</p>
     </div>
   </div>
 
   <h3 class="t-h3" style="margin-top: var(--sp-5);">The singleton</h3>
   <div class="snippet">
-    <span class="file-ref">lib/sync/pocketbase-client.ts:18</span>
+    <span class="file-ref">lib/sync/pocketbase-client.ts:getPocketBase</span>
 <pre class="code-sample">export function getPocketBase(): PocketBase {
   if (!pbInstance) {
     pbInstance = new PocketBase(ENV_CONFIG.pocketBaseUrl);
-    <span class="c-warn">// CRITICAL: SDK cancels in-flight requests by default when a new one</span>
-    <span class="c-warn">// fires on the same collection. Our push loop would tear itself apart.</span>
+    <span class="c-warn">// Disable auto-cancellation so concurrent requests don't cancel each other</span>
     pbInstance.autoCancellation(false);
+    <span class="c-note">// Omitted here: an afterSend hook that captures Retry-After on a 429</span>
   }
   return pbInstance;
 }</pre>
@@ -562,35 +568,32 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
     <h2>Local mutation &rarr; push</h2>
   </div>
   <p>
-    Every task mutation does two things in order: write to Dexie, then enqueue a sync op.
-    The queue is durable (it's an IndexedDB table), so offline edits survive a reload
+    A task edit writes to Dexie and, when sync is on, enqueues a sync op in the
+    same transaction. The queue is durable (it's an IndexedDB table), so offline edits survive a reload
     and get flushed on the next successful sync.
   </p>
 
   <div class="snippet">
-    <span class="file-ref">lib/sync/pb-push.ts:97</span>
-<pre class="code-sample">export async function pushLocalChanges(): Promise&lt;PushResult&gt; {
-  const ownerId = getCurrentUserId();
+    <span class="file-ref">lib/sync/pb-push.ts:pushLocalChanges</span>
+<pre class="code-sample"><span class="c-note">// Simplified. Counters and the result object are left out.</span>
+export async function pushLocalChanges(sessionOwnerId: string): Promise&lt;PushResult&gt; {
+  const ownerId = resolvePushPrincipal(sessionOwnerId);   <span class="c-warn">// throws if the SDK user is not the session owner</span>
   if (!ownerId) return { ..., authenticated: false };  <span class="c-note">// no-op when logged out</span>
 
-  const pending = await getSyncQueue().getPending();
+  const pending = await readPendingForSession(ownerId);   <span class="c-note">// session check, then the pending rows</span>
   if (pending.length === 0) return { ..., authenticated: true };
-
-  <span class="c-note">// Pre-fetch all remote ids in ONE request — avoids N "does this exist?" lookups</span>
-  const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
 
   for (const item of pending) {
     try {
-      await pushSingleItem(item, remoteIndex, fetchSucceeded, ownerId, deviceId);
-      pushedCount++;
-      if (pushedCount + failedCount &lt; pending.length) {
-        await delay(THROTTLE_MS);   <span class="c-note">// 100ms gap → stay under PB's 429 threshold</span>
-      }
+      <span class="c-note">// Looks up this row's remote record, then creates, updates, or deletes it.</span>
+      <span class="c-note">// Skips and dequeues a stale op when the remote is strictly newer (a far-future stamp never counts).</span>
+      const outcome = await pushSingleItem(item, ctx);   <span class="c-note">// 'pushed', 'skipped', or a failed lookup</span>
     } catch (error) {
-      const errorCode = sanitizeSyncError(error);   <span class="c-warn">// stable code only — raw 4xx bodies can echo task text</span>
-      await queue.recordAttemptFailure(item.id, errorCode);
+      if (isSessionCheckFailure(error)) throw error;   <span class="c-warn">// session ended: stop, count no retry against any row</span>
+      lastError = await recordItemFailure(item, error, ownerId);   <span class="c-warn">// stable code only — raw 4xx bodies can echo task text</span>
       if (isRateLimitError(error)) break;            <span class="c-danger">// 429 → abort, don't amplify the storm</span>
     }
+    await delay(THROTTLE_MS);   <span class="c-note">// 100ms gap between items, skipped after the last one</span>
   }
 }</pre>
   </div>
@@ -598,7 +601,7 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
   <div class="alert is-warning" style="margin-top: var(--sp-3);">
     <div class="alert-body">
       <p class="alert-title">Failed items aren't deleted</p>
-      <p>After <code>SYNC_CONFIG.MAX_RETRIES</code> attempts, a queue item flips to <code>status: 'failed'</code> and stays in <code>db.syncQueue</code>. Failed items are visible in the sync history UI for manual recovery; <code>getPending()</code> filters them so they don't clog the push loop.</p>
+      <p>After <code>SYNC_CONFIG.MAX_RETRIES</code> attempts, a queue item flips to <code>status: 'failed'</code> and stays in <code>db.syncQueue</code>. The health check reports them as a <code>failed_items</code> issue. <code>getPending()</code> filters them out so they don't clog the push loop, and nothing re-arms a failed row.</p>
     </div>
   </div>
 </section>
@@ -612,37 +615,40 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
     <h2>Pull &amp; last-write-wins</h2>
   </div>
   <p>
-    Pull uses a cursor (<code>lastSyncAt</code>) so we only fetch what changed since last
-    time. The filter is the most subtle part — see Gotcha #1 about why we can't use
-    PocketBase's own <code>updated</code> column.
+    Pull uses a cursor (<code>lastClientUpdatedAt</code>) so we only fetch what changed
+    since last time. The filter is the most subtle part. The first gotcha explains why
+    we can't use PocketBase's own <code>updated</code> column. An ordinary sync pushes,
+    then pulls. A backfill sync is the exception (ADR 0020). It runs when the stored
+    pull contract version is missing or older than this build's, until a pull completes.
+    That sync pulls before it pushes, ignores the cursor, and accepts tied records. After
+    both passes, <code>resurrectOnSight</code> brings back a remembered task whose Trash
+    delete never reached the server, if the account still lists it.
   </p>
 
   <div class="snippet">
-    <span class="file-ref">lib/sync/pb-pull.ts:83</span>
-<pre class="code-sample">export async function pullRemoteChanges(lastSyncAt: string | null) {
+    <span class="file-ref">lib/sync/pb-pull.ts:pullRemoteChanges</span>
+<pre class="code-sample"><span class="c-note">// Simplified. The return value is left out.</span>
+export async function pullRemoteChanges(lastClientUpdatedAt: string | null, options = {}) {
   const ownerId = getCurrentUserId();
   if (!ownerId) return { ..., authenticated: false };
 
   assertSafeRecordId(ownerId, 'ownerId');           <span class="c-note">// reject filter-injection attempts</span>
 
   let filter = `owner = "${escapeFilterValue(ownerId)}"`;
-  if (lastSyncAt) {
-    filter += ` &amp;&amp; client_updated_at &gt; "${escapeFilterValue(lastSyncAt)}"`;
+  if (lastClientUpdatedAt) {
+    filter += ` &amp;&amp; client_updated_at &gt;= "${escapeFilterValue(lastClientUpdatedAt)}"`;
   }
 
-  const records = await pb.collection('tasks').getFullList({
+  const records = await fetchBoundedRemoteTasks({   <span class="c-note">// paged, throws past SYNC_CONFIG.MAX_REMOTE_TASKS</span>
     filter,
-    sort: '-client_updated_at',   <span class="c-warn">// NOT `-updated` — system fields aren't sortable in PB v0.23+</span>
+    sort: 'client_updated_at,task_id,id',   <span class="c-warn">// NOT `updated` — system fields aren't sortable in PB v0.23+</span>
   });
 
-  <span class="c-note">// LWW merge into Dexie. Remote wins on ties (&gt;=).</span>
-  for (const record of validRecords) {
-    const localTask = localTaskMap.get(taskId);
-    const remoteTask = pocketBaseToTaskRecord(record, localTask ?? null);
-    if (!localTask || new Date(remoteTask.updatedAt) &gt;= new Date(localTask.updatedAt)) {
-      await db.tasks.put(remoteTask);
-    }
-  }
+  <span class="c-note">// One Dexie transaction: session check, archive and Trash tombstones, then LWW.</span>
+  <span class="c-note">// A strictly newer remote wins. A tie keeps the local copy, except during a backfill.</span>
+  const { appliedRecords } = await applyRemoteRecords(records, ownerId, options);
+
+  <span class="c-note">// The next cursor comes only from applied records, minus a 30-second overlap.</span>
 
   await reconcileDeletedTasks(ownerId);   <span class="c-note">// drop local rows the server no longer has</span>
 }</pre>
@@ -650,12 +656,13 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
 
   <p style="margin-top: var(--sp-4);">
     The mapper layer is the single place where camelCase &harr; snake_case lives, and it
-    also preserves <em>device-local fields</em> (notification dismissal state, snooze) so
-    a sync doesn't undo &ldquo;I dismissed that ping on this device&rdquo;:
+    also keeps <em>device-local fields</em> (reminder state and snooze) from the local row,
+    so a sync doesn't undo &ldquo;I dismissed that ping on this device&rdquo;. A pull that
+    moves the due date resets them:
   </p>
 
   <div class="snippet">
-    <span class="file-ref">lib/sync/task-mapper.ts:122</span>
+    <span class="file-ref">lib/sync/task-mapper.ts:pocketBaseToTaskRecord</span>
 <pre class="code-sample">export function pocketBaseToTaskRecord(record, existingLocal) {
   const parsed = pbTaskRecordSchema.safeParse(record);   <span class="c-warn">// fail closed on malformed remote payloads</span>
   if (!parsed.success) return null;
@@ -663,9 +670,9 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
   const r = parsed.data;
   return {
     id: r.task_id, title: r.title, /* … */
-    notificationSent:    existingLocal?.notificationSent ?? false,    <span class="c-note">// per-device</span>
-    lastNotificationAt:  existingLocal?.lastNotificationAt,           <span class="c-note">// per-device</span>
-    snoozedUntil:        existingLocal?.snoozedUntil,                 <span class="c-note">// per-device</span>
+    <span class="c-note">// notificationSent, lastNotificationAt, snoozedUntil: per-device, reset when the due date moves</span>
+    ...localReminderState(existingLocal, r.due_date || undefined),
+    parentTaskId: existingLocal?.parentTaskId,   <span class="c-note">// no wire field, always from the local row</span>
   };
 }</pre>
   </div>
@@ -680,33 +687,32 @@ export async function loginWithProvider(provider: OAuthProvider): Promise&lt;Aut
     <h2>Realtime (SSE)</h2>
   </div>
   <p>
-    The pull loop covers correctness; the SSE subscription covers latency. PocketBase
-    pushes every write on the <code>tasks</code> collection to all connected clients; we
-    filter out our own writes by <code>device_id</code> so we don't ping-pong our changes
-    back into Dexie.
+    The periodic sync covers correctness; the SSE subscription covers latency. The
+    subscription delivers writes on the <code>tasks</code> collection, whose rules
+    require <code>owner = @request.auth.id</code>. The handler also drops any event
+    whose owner is not the current user. We filter out our own writes by
+    <code>device_id</code> so we don't ping-pong our changes back into Dexie.
   </p>
 
   <div class="snippet">
-    <span class="file-ref">lib/sync/pb-realtime.ts:38</span>
-<pre class="code-sample">const realtimeRecordShape = z.object({
-  device_id: z.string(), task_id: z.string(), owner: z.string(),
-});
-
+    <span class="file-ref">lib/sync/pb-realtime.ts:handleRealtimeEvent</span>
+<pre class="code-sample"><span class="c-note">// Simplified. The real subscribe is single-flight per device and drops a replaced subscription.</span>
 export async function subscribe(deviceId: string) {
   currentDeviceId = deviceId;
   unsubscribeFn = await pb.collection('tasks').subscribe('*', handleRealtimeEvent);
 }
 
 async function handleRealtimeEvent(event) {
-  const parsed = realtimeRecordShape.safeParse(event.record);
-  if (!parsed.success) return;   <span class="c-warn">// fail closed on weird shapes from a compromised server</span>
-  const record = parsed.data;
+  <span class="c-note">// task-mapper.ts validates task_id, owner, and device_id</span>
+  const record = getPocketBaseRealtimeEnvelope(event.record);
+  if (!record) return;   <span class="c-warn">// fail closed on weird shapes from a compromised server</span>
 
   <span class="c-note">// Echo filter — require BOTH non-empty so cold-start (null deviceId) doesn't swallow everything</span>
-  if (record.device_id &amp;&amp; currentDeviceId &amp;&amp; record.device_id === currentDeviceId) return;
-  if (record.owner !== getCurrentUserId()) return;
+  if (record.deviceId &amp;&amp; currentDeviceId &amp;&amp; record.deviceId === currentDeviceId) return;
+  const userId = getCurrentUserId();
+  if (record.ownerId !== userId) return;
 
-  await applyRemoteChange(event.action, event.record);   <span class="c-note">// same LWW merge as pull</span>
+  await applyRemoteChange(event.action, event.record, userId);   <span class="c-note">// strictly newer remote wins, as in pull</span>
 }</pre>
   </div>
 </section>
@@ -720,8 +726,9 @@ async function handleRealtimeEvent(event) {
     <h2>The coordinator</h2>
   </div>
   <p>
-    Anyone can call <code>requestSync()</code> — the sync button, the background timer,
-    the health monitor, the app on focus. The coordinator collapses concurrent requests
+    Two callers reach <code>requestSync()</code>: the sync button, and the background sync
+    manager for its start-up, timer, tab-visible, back-online, and after-change triggers. The
+    coordinator collapses concurrent requests
     into one in-flight sync plus at most one queued follow-up, with user-priority
     overriding auto-priority.
   </p>
@@ -733,18 +740,18 @@ async function handleRealtimeEvent(event) {
     <tbody>
       <tr>
         <td>Click &ldquo;Sync now&rdquo;</td>
-        <td><code>sync-provider.tsx:172</code></td>
+        <td><code>sync-provider.tsx</code></td>
         <td><code>requestSync('user')</code> — bypasses backoff</td>
       </tr>
       <tr>
-        <td>Background timer</td>
+        <td>Start-up, timer, tab visible, back online</td>
         <td><code>background-sync.ts</code></td>
         <td><code>requestSync('auto')</code> — gated by retry backoff</td>
       </tr>
       <tr>
         <td>Local mutation</td>
-        <td><code>tasks/crud/*</code></td>
-        <td>Enqueue only; sync happens on next tick</td>
+        <td><code>tasks/crud/helpers.ts</code></td>
+        <td>Enqueue, then a debounced <code>requestSync('auto')</code> when background sync is running</td>
       </tr>
       <tr>
         <td>SSE event</td>
@@ -754,7 +761,7 @@ async function handleRealtimeEvent(event) {
       <tr>
         <td>Health monitor</td>
         <td><code>health-monitor.ts</code></td>
-        <td>Logs issues, does not auto-sync</td>
+        <td>Reports issues, never requests a sync itself</td>
       </tr>
     </tbody>
   </table>
@@ -774,7 +781,7 @@ async function handleRealtimeEvent(event) {
     <div class="alert is-danger">
       <div class="alert-body">
         <p class="alert-title">System fields are unsortable / unfilterable in PocketBase v0.23+</p>
-        <p>You cannot <code>sort: '-updated'</code> or <code>filter: 'updated &gt; X'</code> — the query parser refuses. Every timestamp the sync code touches is <code>client_updated_at</code>, a custom field set from <code>task.updatedAt</code>. Same applies to indexes: custom indexes can't reference <code>updated</code>/<code>created</code>.</p>
+        <p>You cannot <code>sort: '-updated'</code> or <code>filter: 'updated &gt; X'</code> — the query parser refuses. Every timestamp the sync code filters or sorts on is <code>client_updated_at</code>, a custom field set from <code>task.updatedAt</code>. Same applies to indexes: custom indexes can't reference <code>updated</code>/<code>created</code>.</p>
       </div>
     </div>
 
@@ -794,57 +801,57 @@ async function handleRealtimeEvent(event) {
 
     <div class="alert is-warning">
       <div class="alert-body">
-        <p class="alert-title">SDK auto-cancellation will tear apart a push loop</p>
-        <p>The default behaviour cancels any in-flight request when a new one fires on the same collection. We call <code>pb.autoCancellation(false)</code> in the singleton — don't re-enable it.</p>
+        <p class="alert-title">SDK auto-cancellation stays off</p>
+        <p>With auto-cancellation on, the SDK can cancel one in-flight request when another starts. Push, pull, and other callers overlap, so the singleton calls <code>autoCancellation(false)</code>. Don't re-enable it.</p>
       </div>
     </div>
 
     <div class="alert is-warning">
       <div class="alert-body">
         <p class="alert-title">100ms throttle is load-bearing, not paranoia</p>
-        <p>PocketBase returns 429s under bursts. We sleep <code>THROTTLE_MS</code> between push items, and if a 429 still slips through we abort the push loop early rather than grind through the queue and amplify the response.</p>
+        <p>PocketBase returns 429s under bursts. We sleep <code>THROTTLE_MS</code> between push items, and if a write still returns a 429 we abort the push loop early rather than grind through the queue and amplify the response. A 429 on a row's lookup is different: it costs that row one attempt, and the loop continues.</p>
       </div>
     </div>
 
     <div class="alert is-warning">
       <div class="alert-body">
-        <p class="alert-title">LWW uses <code>&gt;=</code>, not <code>&gt;</code></p>
-        <p>On a timestamp tie, remote wins. Deliberate — if two devices write at the same millisecond, whichever made it to the server first becomes truth, the same invariant the pull cursor relies on.</p>
+        <p class="alert-title">LWW is strict: <code>&gt;</code>, not <code>&gt;=</code></p>
+        <p>On a timestamp tie, the local copy stays. A tied remote record is normally the version this device already holds. One exception: a backfill sync accepts a tie, so a newly synced field reaches rows an older build stored without it. A separate ceiling guards against bad clocks. A remote stamp more than 5 minutes ahead of now (<code>MAX_CLIENT_CLOCK_SKEW_MS</code>) is clamped on pull, never counts as newer on push, and never overwrites a row with a pending queued write. The pull cursor is the lenient side: it queries with <code>&gt;=</code> and a 30-second overlap.</p>
       </div>
     </div>
 
     <div class="alert is-warning">
       <div class="alert-body">
         <p class="alert-title">Device-local fields are not synced through</p>
-        <p><code>notificationSent</code>, <code>lastNotificationAt</code>, <code>snoozedUntil</code>, and <code>parentTaskId</code> are preserved from the existing local row when a remote update lands. Adding a new per-device field means editing <code>pocketBaseToTaskRecord</code> in <code>task-mapper.ts</code> — not just the schema.</p>
+        <p>The device-local fields are <code>notificationSent</code>, <code>lastNotificationAt</code>, and <code>snoozedUntil</code>. They are kept from the existing local row when a remote update lands, and a pull that moves the due date resets them. <code>parentTaskId</code> is a separate case: it has no wire field, so it always comes from the local row. Adding a new device-local field means editing <code>localReminderState</code> or <code>pocketBaseToTaskRecord</code> in <code>task-mapper.ts</code>, not just the schema.</p>
       </div>
     </div>
 
     <div class="alert is-warning">
       <div class="alert-body">
         <p class="alert-title">Echo filter needs both sides non-empty</p>
-        <p>A naïve <code>record.device_id === currentDeviceId</code> would treat a cold-start race (where <code>currentDeviceId</code> is still null) as &ldquo;this is my echo, skip it&rdquo; and drop every legitimate event. The actual check requires both to be truthy.</p>
+        <p>A bare equality check would treat two empty device ids as &ldquo;this is my echo, skip it&rdquo; and drop legitimate events. The actual check requires both ids to be non-empty and equal.</p>
       </div>
     </div>
 
     <div class="alert is-warning">
       <div class="alert-body">
-        <p class="alert-title">Deletes are reconciled, not pushed individually</p>
-        <p>Pull ends with <code>reconcileDeletedTasks()</code>: any local task missing from the remote index and with <em>no pending sync op</em> gets deleted locally. If the remote index fetch fails, reconciliation is skipped — better to keep a stale row than to delete real data based on an incomplete view.</p>
+        <p class="alert-title">How deletes travel</p>
+        <p>A local delete is pushed as its own queue op. Separately, pull ends with <code>reconcileDeletedTasks()</code>. The function fetches the remote index, the list of task ids the account holds. It removes any local task that list no longer names, unless a <em>pending queue row</em> protects the task. A task with no pending row and at least one retry-exhausted row moves to Trash and is not dropped outright. A realtime delete event follows the same rule. Before the function deletes anything, it confirms the session with the server. If the remote index fetch fails, reconciliation is skipped. A stale row is better than deleting real data from an incomplete view.</p>
       </div>
     </div>
 
     <div class="alert is-warning">
       <div class="alert-body">
         <p class="alert-title">Raw error messages from PB must never be persisted</p>
-        <p>4xx responses can echo task content (titles, descriptions) back. Push errors run through <code>sanitizeSyncError()</code> to a stable code before they hit <code>queue.lastError</code> or any log. Do the same if you add new write paths.</p>
+        <p>4xx responses can echo task content (titles, descriptions) back. Push errors run through <code>sanitizeSyncError()</code> to a stable code before they reach a queue row's <code>lastError</code> or the sync history. Do the same if you add new write paths.</p>
       </div>
     </div>
 
     <div class="alert is-success">
       <div class="alert-body">
         <p class="alert-title">Local dev tip</p>
-        <p>Set <code>NEXT_PUBLIC_POCKETBASE_URL=https://api.vinny.io</code> in <code>.env.local</code> to test against production OAuth. A local PocketBase at <code>127.0.0.1:8090</code> needs its own provider setup — Google/GitHub apps need the right redirect URIs registered.</p>
+        <p>OAuth sign-in against production PocketBase completes only on <code>gsd.vinny.dev</code>, because the hosted bounce returns there. To test sign-in locally, run PocketBase at <code>127.0.0.1:8090</code> with <code>--hooksDir=docker/pb_hooks</code> and <code>GSD_WEB_OAUTH_CALLBACK_URL=http://localhost:3000/auth/callback/</code>. It needs its own provider setup, with the right redirect URIs registered. That hooks folder also loads the task encryption hooks, so task writes fail unless <code>GSD_TASKS_ENC_KEY</code> holds a 32-character key.</p>
       </div>
     </div>
 
@@ -864,9 +871,9 @@ async function handleRealtimeEvent(event) {
     <p class="tldr-label">TL;DR</p>
     <ol>
       <li>Local Dexie is the source of truth. PocketBase is a fan-out mirror.</li>
-      <li>Every timestamp comparison uses <code>client_updated_at</code>. Never trust system fields.</li>
-      <li>Mutations enqueue durably; the coordinator decides when to flush.</li>
-      <li>Realtime SSE applies the same LWW merge as the pull loop — one merge rule, two places.</li>
+      <li>Remote queries filter and sort timestamps on <code>client_updated_at</code>. System fields are off-limits.</li>
+      <li>Mutations enqueue durably. The background sync manager and the coordinator decide when to flush.</li>
+      <li>Realtime SSE and pull follow the same LWW rule: a strictly newer remote wins.</li>
     </ol>
   </div>
 
@@ -881,11 +888,11 @@ async function handleRealtimeEvent(event) {
     </div>
     <div class="lesson">
       <span class="n">03 / Durable queue</span>
-      <p>Mutations enqueue locally; the coordinator owns scheduling and backoff.</p>
+      <p>Mutations enqueue locally. The background sync manager schedules, and the coordinator runs one sync at a time.</p>
     </div>
     <div class="lesson">
       <span class="n">04 / One merge rule</span>
-      <p>Pull and realtime apply the same LWW (<code>&gt;=</code>) merge. Two surfaces, identical behavior.</p>
+      <p>Pull and realtime both let a strictly newer remote win. Only a backfill sync accepts a tie.</p>
     </div>
   </div>
 </section>
