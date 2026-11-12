@@ -248,3 +248,50 @@ The admin dashboard is not exposed through `https://localhost/_/` by default. Te
 
 ### OAuth not working
 OAuth providers must be configured in PocketBase admin (the **users** collection's settings, **Options › OAuth2**). Register `https://localhost/api/gsd/oauth-callback` (or the same path on your custom `SITE_ADDRESS`) as the redirect URL with each provider. This image disables PocketBase's built-in `/api/oauth2-redirect`, because it can deliver a sign-in code to a browser other than the one that started sign-in.
+
+## Directory contract
+
+This section records the contract of the source files in `docker/`: `Dockerfile`, `docker-entrypoint.sh`, `docker-compose.yml`, and `Caddyfile`.
+
+### Interface
+
+- `Dockerfile` build arguments: `POCKETBASE_VERSION`, `POCKETBASE_SHA256_AMD64`, `POCKETBASE_SHA256_ARM64`, and `TARGETARCH`. It uses the optional BuildKit secret `npmrc`.
+- `Dockerfile` runtime stage: `EXPOSE 80 443`, `VOLUME ["/pb_data"]`, `USER gsd`, `ENTRYPOINT ["/entrypoint.sh"]`.
+- `docker-entrypoint.sh` reads `GSD_TASKS_ENC_KEY`, `TLS_MODE`, `TLS_CERT`, `TLS_KEY`, `TMPDIR`, and `SITE_ADDRESS`.
+- `docker-entrypoint.sh` exits 1 on an invalid key, an invalid `TLS_MODE`, or a missing or unreadable certificate or key in `custom` mode. Its `cleanup` function exits 0.
+- `docker-entrypoint.sh` runs in this order: validate the key, resolve `TLS_MODE`, source `migrations.sh`, call `gsd_install_state /pb_data`, run `pocketbase migrate up`, start `pocketbase serve`, wait for `/api/health`, start `caddy run`.
+- `docker-compose.yml` defines one service, `gsd`, with ports `443:443` and `80:80`, the volume `pb_data:/pb_data`, and `restart: unless-stopped`.
+- `Caddyfile` reads the placeholders `SITE_ADDRESS`, `TLS_MODE`, `TLS_CERT`, and `TLS_KEY`. It imports `tls_internal`, `tls_public`, or `tls_custom`.
+- `Caddyfile` proxies `/api/*` to `localhost:8090` and serves `/srv` for everything else, with `/index.html` as the fallback.
+- `Caddyfile` returns 404 for `/api/collections/_superusers/*`, the same collection by id, `/api/admins/*`, `/api/gsd/feedback-controls*`, `/api/oauth2-redirect*`, and `/_/*`.
+- Subdirectories:
+  - [lib](./lib/README.md): the shell library that picks the migration set.
+  - [pb_hooks](./pb_hooks.md): the PocketBase hooks.
+  - [pb_migrations](./pb_migrations.md): the shipped migrations.
+  - [pb_fresh_migrations](./pb_fresh_migrations.md): the overlay for fresh installs.
+
+### Invariants
+
+- `docker-entrypoint.sh` refuses to start unless `GSD_TASKS_ENC_KEY` has exactly 32 characters.
+- `docker-entrypoint.sh` accepts `internal`, `public`, and `custom` for `TLS_MODE`. An unset mode with both `TLS_CERT` and `TLS_KEY` set becomes `custom`.
+- `docker-entrypoint.sh` passes `--automigrate=false` to both `pocketbase migrate up` and `pocketbase serve`. It uses the fresh overlay only when `gsd_install_state` prints `fresh`.
+- `docker-entrypoint.sh` waits up to 30 seconds for PocketBase. After that it prints a warning and starts Caddy anyway.
+- `docker-compose.yml` uses `${GSD_TASKS_ENC_KEY:?...}`, so `docker compose up` fails when the variable is unset.
+- `Dockerfile` accepts `amd64` or `arm64` for `TARGETARCH`. It checks the PocketBase archive with `sha256sum -c` against the checksum argument for that architecture.
+- `Dockerfile` pins all three base images by digest.
+- `Dockerfile` copies hooks and migrations outside `/pb_data`, so an existing volume cannot shadow them.
+- `Caddyfile` sets `admin off`. Its deny rules are more specific than `/api/*`, so they take precedence.
+
+### Side Effects
+
+- `Dockerfile` (build time): runs `bun install --frozen-lockfile`, builds the static export, and downloads the PocketBase release archive from GitHub with `curl`.
+- `Dockerfile` (build time): runs `setcap cap_net_bind_service=+ep` on the `caddy` and `pocketbase` binaries.
+- `docker-entrypoint.sh`: on a fresh install it writes the folder `${TMPDIR:-/tmp}/gsd-fresh-migrations-$$`.
+- `docker-entrypoint.sh`: `pocketbase migrate up --dir=/pb_data` writes to the data volume. `pocketbase serve --http=0.0.0.0:8090` and `caddy run` start as background processes.
+- `docker-entrypoint.sh:cleanup`: sends `kill` to both processes on `TERM`, `INT`, or `QUIT`.
+- `Caddyfile`: `tls internal` makes Caddy create a local certificate authority. The `public` mode makes outbound ACME requests.
+- `docker-compose.yml`: keeps `/pb_data` in the named volume `pb_data`.
+
+### Verification
+
+- Run: `bun run test` (Vitest; `tests/docker-entrypoint.test.ts`, `tests/docker-migrations.test.ts`, and `tests/data/docker-context-imports.test.ts` cover this directory)

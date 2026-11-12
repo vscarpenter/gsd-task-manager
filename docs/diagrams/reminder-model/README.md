@@ -40,3 +40,41 @@ The models treat the checker's read, the notification, and `markNotificationSent
 They don't model the offset's value. A pull that changes only `notify_before` keeps this device's sent flag. D-10 makes every new write a number, but a server `0` can still be an old null, so a reset there would re-fire reminders on unrelated edits. Pull is unchanged by D-10 (`tasks/spec-notify-before.md` section 3). `OtherDeviceEditsTask` assumes the server's offset fires at the same time as this device's.
 
 They leave out the per-task reminder switch (`notificationEnabled`) and the Settings switch, which stop the checker for this task. Quiet hours aren't modeled either, since `reminderWindow` folds them into the fire time. Completing, saving for later, archiving, and Trash take the task off the checker's list, and the models don't follow it there. They also leave out two open tabs showing the same reminder, the weekly sweep reminder, and the iOS and Android apps.
+
+## Directory contract
+
+This section records the contract of the source files here: `check.sh`, the two `.tla` modules, the six `.cfg` files, and the two view files.
+
+### Interface
+
+- `check.sh`: run `bash docs/diagrams/reminder-model/check.sh`. It takes no arguments and reads no environment variables itself.
+  - It runs `scripts/tlc.sh <spec> <config>` once for each of the six entries in `checks`.
+  - It maps TLC exit 0 to `holds` and exit 12 to the name of the violated invariant. Any other status is `TLC exit <n>`.
+  - It exits 1 when any config does not match its expected result. Otherwise it exits 0.
+- `Reminders.tla` (module `Reminders`): constant `OtherDevices`. `Next` joins nine actions, including `AppShows`, `YouSnooze`, `YouMoveDueDate`, and `OtherDeviceMovesDueDate`. `Spec == Init /\ [][Next]_vars`.
+- `RemindersFixed.tla` (module `RemindersFixed`): constants `OtherDevices` and `Break`. `Next` joins twelve actions. It adds `YouSaveTask`, `PushStoresOffset`, and `OtherDeviceEditsTask`.
+- `Reminders.cfg` and `RemindersOneDevice.cfg` set `OtherDevices` to `TRUE` and `FALSE`. Both check `TypeOK`, `DueReminderStillOwed`, `SnoozeBringsItBack`, and `EachReminderOnce`.
+- `RemindersFixed.cfg` sets `Break = "none"` and adds `NoEarlyReminder` to that list.
+- `BreakSnoozeKeepsSent.cfg`, `BreakSnoozeFiresEarly.cfg`, and `BreakRawOffsetCompare.cfg` each set one `Break` value. Each lists `TypeOK` and one other invariant.
+- `view.mjs` and `view-fixed.mjs` each export `title`, `state(v)`, `group(v)`, `colors`, and `step(action, from, to)`. `step` returns `null` to hide an arrow.
+
+### Invariants
+
+- `Reminders.tla:TypeOK` and `RemindersFixed.tla:TypeOK`: every variable keeps its declared type.
+- `DueReminderStillOwed` (both modules): once a reminder's time comes and nothing holds it, the app owes it until the user has seen it.
+- `SnoozeBringsItBack` (both modules): when a snooze ends, the app owes the reminder until the user has seen it.
+- `EachReminderOnce` (both modules): `shows <= 1`.
+- `RemindersFixed.tla:NoEarlyReminder`: a reminder never shows before its reminder time.
+- `RemindersFixed.tla:ASSUME`: `Break` is one of `none`, `snoozeKeepsSent`, `snoozeFiresEarly`, or `rawOffsetCompare`.
+- Neither module defines a temporal property, and no config has a `PROPERTY` line.
+- `check.sh` uses `set -uo pipefail` without `-e`, so a failed TLC run does not stop the loop.
+
+### Side Effects
+
+- `check.sh` spawns `bash scripts/tlc.sh` six times. It writes to stdout only.
+- `scripts/tlc.sh` can download the TLC jar and it starts Java. See [scripts](../../../scripts/README.md).
+- The `.tla` files, the `.cfg` files, `view.mjs`, and `view-fixed.mjs`: None.
+
+### Verification
+
+- Run: `bash docs/diagrams/reminder-model/check.sh`
