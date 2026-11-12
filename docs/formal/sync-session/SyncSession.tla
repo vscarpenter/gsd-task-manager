@@ -15,7 +15,7 @@
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS
-  Gaps,    \* the gaps the code has today; {} models the code with all four fixed
+  Gaps,    \* the gaps the code has today; {} models the code with every gap fixed
   Broken   \* "none", or the guard that a broken variant removes
 
 None == "none"
@@ -25,12 +25,12 @@ Accounts == {"A", "B"}
 Tabs == {"sync", "other"}
 
 AllGaps == {
-  "push-reads-queue-unfenced",     \* pushLocalChanges reads the queue with no session check
   "sign-out-reads-config-early",   \* disableSync reads sync_config before its transaction
   "settings-writes-stale-config",  \* updateSyncConfig writes back a row read earlier
   "populate-after-sign-in"         \* populateFromExistingTasks runs after persistSyncConfig commits
 }
-BrokenGuards == {"none", "pull-skips-fence", "sign-in-skips-owner-check", "push-skips-principal-check"}
+BrokenGuards == {"none", "pull-skips-fence", "sign-in-skips-owner-check", "push-skips-principal-check",
+                 "push-skips-queue-fence"}
 
 Cfg(on, user, lowner) == [on |-> on, user |-> user, lowner |-> lowner]
 SignedOut(lowner) == Cfg(FALSE, None, lowner)
@@ -165,15 +165,16 @@ RefreshLands ==
         /\ UNCHANGED tok
   /\ UNCHANGED <<cfg, rows, queue, srv, siVars, soVars, st, ed, ev>>
 
-\* pushLocalChanges(owner): resolvePushPrincipal, then queue.getPending().
+\* pushLocalChanges(owner): resolvePushPrincipal, then readPendingForSession.
 \* No token: "Push skipped: not authenticated", and an ordinary sync still pulls.
 \* Another account's token: StaleSyncSessionError, and fullSync returns cancelled.
-\* Without the push-reads-queue-unfenced gap, the queue is read inside a
-\* transaction with assertSyncSessionCurrent(owner), as the pull does.
+\* readPendingForSession reads the queue inside a transaction with
+\* assertSyncSessionCurrent(owner), as the pull does, so a sync_config that
+\* names another account ends the sync the same way.
 PushStarts ==
   /\ sp = "push"
   /\ LET principalOk == tok = owner \/ Broken = "push-skips-principal-check"
-         fenced == "push-reads-queue-unfenced" \notin Gaps
+         fenced == Broken # "push-skips-queue-fence"
      IN CASE tok = None /\ ~pullFirst ->
                /\ sp' = "pull" /\ owner' = None
                /\ UNCHANGED <<pullFirst, rt, pushOwner, pending, pullOwner, fetched>>
@@ -188,6 +189,9 @@ PushStarts ==
 \* owner = pushOwner, sent with the token the shared key holds now. The tasks
 \* createRule and updateRule accept a write only when owner = @request.auth.id.
 \* The model leaves out dequeue, so a row stays queued and can send again.
+\* The code also checks the session again before each row and inside each
+\* queue write. The model leaves those checks out, so it allows more than the
+\* code does: a rule that holds here holds with them too.
 PushSends(r) ==
   /\ sp = "pushing" /\ r \in pending
   /\ srv' = IF tok = pushOwner THEN [srv EXCEPT ![pushOwner] = @ \cup {r}] ELSE srv
