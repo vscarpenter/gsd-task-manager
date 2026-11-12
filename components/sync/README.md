@@ -25,7 +25,7 @@ Its hooks cover dialog state, sign-out (this device and all devices), sync statu
 - `useSignOutEverywhere` (`use-sign-out-everywhere.ts`): hook `(SignOutCallbacks) => SignOutEverywhereControls`. It always shows a confirmation before it signs out all devices.
 - `SignOutEverywhereControls` (`use-sign-out-everywhere.ts`): interface with `showConfirm`, `pendingChanges`, `onRequest`, `onConfirm`, and `onCancel`.
 - `useSyncAuthDialog` (`use-sync-auth-dialog.ts`): hook `({ isOpen, onSuccess?, syncEnabled? })`. It returns `isLoading`, `error`, `syncStatus`, `mounted`, `logout`, `sessionExpired`, `isRefreshing`, the OAuth handlers, and `signOutEverywhere`.
-- `persistSyncConfig` (`use-sync-auth-dialog.ts`): `async (authState: AuthState)`. It writes the `sync_config` record in a Dexie transaction, then populates the sync queue.
+- `persistSyncConfig` (`use-sync-auth-dialog.ts`): `async (authState: AuthState)`. In one Dexie transaction it writes the `sync_config` record and queues the local tasks.
 - `SyncStatusInfo` (`use-sync-auth-dialog.ts`): interface `{ enabled: boolean; email: string | null; provider?: string | null }`.
 - `useSyncHealth` (`use-sync-health.ts`): hook `({ healthReport, onHealthIssue, onSync })`. It calls `onHealthIssue` for each notifiable issue in an unhealthy report.
 - `HealthNotification` (`use-sync-health.ts`): interface `{ id: string; message: string; action?: { label, onClick }; duration: number }`.
@@ -55,6 +55,7 @@ Its hooks cover dialog state, sign-out (this device and all devices), sync statu
 - `use-sync-auth-dialog.ts:persistSyncConfig`: throws when `authState.userId` is falsy. The message says the sign-in response did not include an account ID.
 - `use-sync-auth-dialog.ts:persistSyncConfig`: throws "Local tasks belong to a different sync account..." when any lifecycle count is above 0, `localTaskOwnerUserId` is truthy, and it differs from `authState.userId`.
 - `use-sync-auth-dialog.ts:persistSyncConfig`: `localTaskOwnerUserId` resolves as `existingConfig?.localTaskOwnerUserId ?? existingConfig?.userId ?? null`.
+- `use-sync-auth-dialog.ts:persistSyncConfig`: the `sync_config` row and the queue rows commit together or not at all. A failed enqueue aborts the sign-in save.
 - `use-sync-auth-dialog.ts:buildSyncConfig`: carries `pullCursorVersion` from `existingConfig` only. A comment states that only a completed pull may stamp the contract (ADR 0019).
 - `use-sync-auth-dialog.ts:buildSyncConfig`: sets `key: "sync_config"`, `autoSyncEnabled: true`, `autoSyncIntervalMinutes: 2`, and `consecutiveFailures: 0`. `deviceName` is `navigator.userAgent.substring(0, 50)`. It reuses `deviceId` or calls `crypto.randomUUID()`. It sets `localTaskOwnerUserId` to `authState.userId`.
 - `use-sync-auth-dialog.ts:buildSyncConfig`: resets `lastSyncAt`, `lastClientUpdatedAt`, `lastServerUpdatedAt`, `lastSuccessfulSyncAt`, `lastFailureAt`, `lastFailureReason`, and `nextRetryAt` to `null` on every sign-in. Only `deviceId` and `pullCursorVersion` carry over from `existingConfig`.
@@ -96,8 +97,8 @@ Its hooks cover dialog state, sign-out (this device and all devices), sync statu
 - `use-sign-out-everywhere.ts:useSignOutEverywhere.onConfirm`: calls `signOutEverywhere` from `@/lib/sync/sign-out-everywhere`. It shows "Signed out of all devices" or a warning that the server cannot end other sessions.
 - `use-sync-auth-dialog.ts:loadSyncStatus`: reads Dexie with `db.syncMetadata.get("sync_config")` through `getDb` from `@/lib/db`.
 - `use-sync-auth-dialog.ts:validateTokenAndRefresh`: calls `isAuthenticated` from `@/lib/sync/pocketbase-client` and `refreshAuth` from `@/lib/sync/pb-auth`.
-- `use-sync-auth-dialog.ts:persistSyncConfig`: runs a Dexie `rw` transaction over `tasks`, `archivedTasks`, `deletedTasks`, and `syncMetadata`. It reads `sync_config`, counts three tables, and calls `db.syncMetadata.put(...)`.
-- `use-sync-auth-dialog.ts:persistSyncConfig`: calls `getSyncQueue` from `@/lib/sync/queue`, then `queue.populateFromExistingTasks()`.
+- `use-sync-auth-dialog.ts:persistSyncConfig`: runs one Dexie `rw` transaction over `tasks`, `archivedTasks`, `deletedTasks`, `syncMetadata`, and `syncQueue`. Inside it, it reads `sync_config`, counts three tables, calls `db.syncMetadata.put(...)`, then calls `queue.populateFromExistingTasks()`.
+- `use-sync-auth-dialog.ts:persistSyncConfig`: calls `getSyncQueue` from `@/lib/sync/queue` before the transaction opens. `queue.populateFromExistingTasks()` writes the `syncQueue` rows inside the transaction.
 - `use-sync-auth-dialog.ts:useSyncAuthDialog.handleOAuthSuccess`: calls `clearPocketBase` from `@/lib/sync/pocketbase-client` on a setup failure. On success it shows a "Signed in as" toast with the email.
 - `use-sync-auth-dialog.ts:useSyncAuthDialog.handleOAuthError`: calls `isOAuthCancellation` and `getOAuthErrorMessage` from `@/lib/sync/pb-auth`.
 - `use-sync-status.ts:useSyncStatus`: calls `useRetryCountdown` from `@/lib/hooks/use-retry-countdown` and `isAuthError` from `@/lib/sync/error-categorizer`.
