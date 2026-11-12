@@ -1,5 +1,7 @@
 # Spec: Tokens-per-PR instrumentation (cycle E follow-up)
 
+> **Status note, 2026-11-12.** This design shipped, and both ends of it are gone. PR #449 removed `.github/workflows/telemetry.yml`, which read the token marker. PR #527 retired `scripts/builder-run.sh` and `.claude/commands/build-next.md`, which produced it (see `docs/agents/builder.md`). `scripts/extract-run-tokens.cjs` and the `tokensPerPR` mean in `scripts/telemetry-metrics.cjs` remain, with no caller outside their tests.
+
 - **Date:** 2026-07-08
 - **Status:** Accepted (design approved 2026-07-08; extends cycle E / PR #429)
 - **Deciders:** Vinny Carpenter

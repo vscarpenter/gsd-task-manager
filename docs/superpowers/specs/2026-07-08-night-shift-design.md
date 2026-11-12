@@ -1,5 +1,7 @@
 # Spec: Cycle D — The Night Shift
 
+> **Status note, 2026-11-12.** This design shipped (PR #427), and PR #527 retired the fix loop. `.claude/commands/triage-prs.md` refuses to run, and `scripts/triage-run.sh` never checks out a branch or invokes Claude. With `GSD_TRIAGE_BOT_LOGIN` set, the script only counts failing bot-authored `claude/*` pull requests through `scripts/failing-agent-prs.cjs`. `docs/agents/night-shift.md` describes the current discovery-only behavior.
+
 - **Date:** 2026-07-08
 - **Status:** Accepted (design approved 2026-07-08; proceeding to plan + implementation per standing correction)
 - **Deciders:** Vinny Carpenter

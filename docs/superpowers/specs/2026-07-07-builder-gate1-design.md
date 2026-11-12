@@ -1,5 +1,7 @@
 # Spec: Cycle B — The Builder + Gate 1 (local, blog-faithful)
 
+> **Status note, 2026-11-12.** This design shipped (PR #424) and PR #527 retired it. `scripts/builder-run.sh` now prints a disabled notice and exits, and `.claude/commands/build-next.md` refuses to run. `docs/agents/builder.md` no longer holds the operating spec: it explains the retirement and the controls a replacement needs. `scripts/setup-labels.sh` still creates the `plan:*`, `agent:building`, and `builder:paused` labels, but the builder script no longer reads them.
+
 - **Date:** 2026-07-07
 - **Status:** Accepted (design approved 2026-07-07; proceeding to plan + implementation per standing correction)
 - **Deciders:** Vinny Carpenter

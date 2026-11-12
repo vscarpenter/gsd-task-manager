@@ -1,5 +1,7 @@
 # MCP Server — Opt-in Sentry Coverage
 
+> **Status note, 2026-11-12.** This design shipped and was later removed in full. ADR 0017 (`docs/adr/0017-remove-sentry-telemetry.md`, PR #566) removed Sentry from the web app and the MCP server. `packages/mcp-server/src/utils/sentry.ts` and its test are gone. The 1.3.0 entry in `packages/mcp-server/CHANGELOG.md` records that the server dropped `@sentry/node` and no longer reads `GSD_SENTRY_DSN`. For current error handling, read `packages/mcp-server/src/utils/logger.ts`.
+
 **Date:** 2026-05-29
 **Status:** Approved
 **Author:** Vinny Carpenter (with Claude)

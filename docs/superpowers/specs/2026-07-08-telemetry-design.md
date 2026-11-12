@@ -1,5 +1,7 @@
 # Spec: Cycle E — Telemetry + the standards loop
 
+> **Status note, 2026-11-12.** This design shipped (PR #429). PR #449 removed `.github/workflows/telemetry.yml`, so nothing updates a telemetry issue, branch, or snapshot. `scripts/telemetry-metrics.cjs` and its test remain, but no workflow or script calls the helper. `docs/ops/pipeline-audit.md` now tells the reader to pick audit candidates by hand.
+
 - **Date:** 2026-07-08
 - **Status:** Accepted (design approved 2026-07-08; proceeding to plan + implementation per standing correction)
 - **Deciders:** Vinny Carpenter

@@ -1,5 +1,7 @@
 # Spec: Server-Side At-Rest Encryption of Task Content
 
+> **Status note, 2026-11-12.** This design shipped in the self-hosted Docker image only. `docker/pb_hooks/tasks_encryption.pb.js` and `docker/pb_hooks/encryption-core.js` encrypt the five fields, and `docker/docker-entrypoint.sh` exits at boot without a 32-character key. ADR 0016 (`docs/adr/0016-hosted-sync-defers-field-encryption.md`) records that the hosted service at `api.vinny.io` runs without the hooks or the key. Task content there is plaintext at rest. The image now pins PocketBase 0.40.4 (`docker/Dockerfile`), and `docker/pb_migrations/` holds three later migrations in the encryption set.
+
 - **Date:** 2026-06-20
 - **Status:** Accepted (design approved; pending spec review)
 - **Deciders:** Vinny Carpenter
