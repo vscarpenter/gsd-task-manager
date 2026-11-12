@@ -134,7 +134,7 @@ section.sec > p { max-width: 68ch; }
     <li>Cloud sync is <strong>opt-in</strong> via self-hosted PocketBase. Last-write-wins conflict resolution with <code>client_updated_at</code> timestamps. SSE realtime for instant cross-device updates.</li>
     <li>Static export to <strong>S3/CloudFront</strong> with a three-cache service worker strategy. No SSR and no API routes.</li>
     <li>MCP server provides <strong>20 AI tools</strong> for Claude Desktop integration. All writes support dry-run mode.</li>
-    <li>Key risks: LWW data loss on concurrent edits, single EC2 instance for PocketBase, no automated backups.</li>
+    <li>Key risks: LWW data loss on concurrent edits, single EC2 instance for PocketBase. A daily backup covers its data.</li>
   </ol>
 </div>
 
@@ -520,9 +520,9 @@ section.sec > p { max-width: 68ch; }
         <td>None documented. No failover, no multi-region.</td>
       </tr>
       <tr>
-        <td><span class="chip-dot attention"><span class="dot"></span>No automated PocketBase backup</span></td>
-        <td>Disk failure loses all synced data permanently</td>
-        <td>SQLite on EC2 with no backup scripts or S3 snapshots.</td>
+        <td><span class="chip-dot medium"><span class="dot"></span>PocketBase backup lives outside the repo</span></td>
+        <td>Disk failure loses up to a day of synced changes</td>
+        <td>The hosted server is backed up daily (owner, 2026-11-12). The job and a restore drill are not in this repo.</td>
       </tr>
       <tr>
         <td><span class="chip-dot medium"><span class="dot"></span>Hand-written service worker</span></td>
@@ -553,7 +553,7 @@ section.sec > p { max-width: 68ch; }
 
   <h3 class="t-h3" style="margin-top:var(--sp-5)">The Hard Questions</h3>
   <ul class="hard-q">
-    <li>If <code>api.vinny.io</code> (the PocketBase host) goes down for 48 hours, what happens? What&rsquo;s the user experience? What&rsquo;s the data recovery story? Is there even a backup?</li>
+    <li>If <code>api.vinny.io</code> (the PocketBase host) goes down for 48 hours, what happens? What&rsquo;s the user experience? What&rsquo;s the data recovery story? A daily backup exists; has anyone restored from it?</li>
     <li>The app markets itself as &ldquo;privacy-first&rdquo; but stores plaintext tasks on a server with localStorage tokens and no encryption. What is the actual threat model?</li>
     <li>30 files and about 5,500 lines of sync code for an optional feature on a personal task app &mdash; is this proportional to the value it delivers?</li>
     <li>MCP server requires cloud sync to function. It cannot access local-only IndexedDB data. Does this limit the &ldquo;privacy-first&rdquo; story for AI-powered task management?</li>

@@ -4,9 +4,9 @@
  * PocketBase auth tokens are stateless, so the server can only end a user's
  * sessions by rotating their token key, which ends every session at once. The
  * self-host image serves that route from `docker/pb_hooks/session_revoke.pb.js`.
- * The hosted service runs PocketBase without the repo's hooks (ADR 0016) and
- * answers 404, so this device still signs out and the caller says the other
- * sessions are untouched.
+ * The hosted service loads some of the repo's hooks, but not this one (it
+ * answered 404 on 2026-11-12), so this device still signs out and the caller
+ * says the other sessions are untouched.
  */
 
 import { disableSync } from "@/lib/sync/config";

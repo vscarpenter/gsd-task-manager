@@ -23,9 +23,13 @@ GSD Task Manager is a privacy-first application where all data is stored locally
 
 1. **Local Data Storage by Default**
    - All tasks stored in IndexedDB (client-side)
-   - No background network calls in local-only mode. The exception is the
+   - No background requests in local-only mode. The exception is the
      app's own origin: the service worker fetches pages and checks for its
      own update there
+   - Every page carries a preconnect hint for the sync server
+     (`app/layout.tsx`), so the browser may open a connection to
+     `https://api.vinny.io` in local-only mode too. That connection sends no
+     request and no task data, and it does show the server the client IP
    - Two user actions send a request. The first is the feedback a user chooses
      to send from Settings; it is never automatic and carries no account,
      device, or task data

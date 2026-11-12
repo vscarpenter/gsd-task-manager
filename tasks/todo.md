@@ -21,6 +21,7 @@ All of it is on `main` and v14.8.7 is live on gsd.vinny.dev. No branch is open.
   - `tests/ui/toast-action-hint.test.tsx` leaks a toast timer that fails the SonarCloud coverage run now and then.
   - Two system findings from the review have no issue: web never re-arms a retry-exhausted queue row, and last write wins discards the losing copy.
 - **Document refresh (2026-11-12), PR #737 on `docs/doc-refresh-2026-11`, awaiting CI and the owner merge:** every spec, design doc, ADR, plan, audit record, and HTML page was checked against the code. It changed documents only. `egm-review/doc-refresh/open-items.md` lists 13 owner questions and the possible code defects the reviewers found. Nothing in that list was run or filed as an issue.
+- Owner answers (2026-11-12): PR #739 records seven answers in the docs, and PR #738 ships the second half of `WEB-LATE-AUTH-REFRESH` (v14.8.8). One question is new: whether the task encryption hooks load on the hosted server. See `egm-review/doc-refresh/open-items.md`.
 - **Blockers:** none.
 
 # OAuth sign-in: flow polish (2026-11-11)

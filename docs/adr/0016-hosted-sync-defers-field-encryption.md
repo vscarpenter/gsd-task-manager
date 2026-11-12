@@ -7,7 +7,7 @@
 | Deciders | Vinny Carpenter |
 | Related | ADR 0002 (PocketBase cloud sync), `docs/superpowers/specs/2026-06-20-server-side-encryption-design.md` |
 
-> **Status note, 2026-11-12.** Both Docker folders have grown since this ADR. `docker/pb_hooks/` gained the web OAuth return route (`oauth_web_redirect.pb.js`) and session revoke (`session_revoke.pb.js`). `docker/pb_migrations/` gained the `saved_at` field, a 30-day auth token setting, the top three fields, and a fourth migration in the encryption set. Step 2 below would now change more than encryption. A comment in `docker/pb_migrations/1794061500_top_three.js` says never to point the hosted binary at that folder.
+> **Status note, 2026-11-12.** Both Docker folders have grown since this ADR. `docker/pb_hooks/` gained the web OAuth return route (`oauth_web_redirect.pb.js`) and session revoke (`session_revoke.pb.js`). `docker/pb_migrations/` gained the `saved_at` field, a 30-day auth token setting, the top three fields, and a fourth migration in the encryption set. Step 2 below would now change more than encryption. A comment in `docker/pb_migrations/1794061500_top_three.js` says never to point the hosted binary at that folder. The hosted server does load hooks (owner, 2026-11-12), so the Context sentence "with no hooks directory" is wrong. A probe that day, with no credentials, found `/api/gsd/oauth-callback` answering with a redirect. `/api/gsd/account`, `/api/gsd/sessions`, and `/api/gsd/feedback-controls` returned 404. The repo does not record whether the task encryption hooks load there.
 
 ## Context
 
