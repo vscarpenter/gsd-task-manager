@@ -1,5 +1,7 @@
 # Spec — Command Palette v9 Rewire
 
+> **Status note, 2026-11-12.** This shipped in #298 on 2026-05-24, and later work extended it past these constraints. `AppShell` mounts the palette once. It shows smart-view actions when the Smart views preference is on, and the topbar has an "Open command palette" button. The `gsd:new-task` listener lives in `components/matrix-simplified/use-matrix-window-events.ts`. For current behavior, read `components/command-palette/README.md`.
+
 **Date:** 2026-05-24
 **Status:** Proposed → implementing
 **Author:** Vinny (with Claude)

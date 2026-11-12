@@ -1,5 +1,7 @@
 # Finish and ship the Editorial restore
 
+> **Status note, 2026-11-12.** This work is finished. The restore shipped in #502 on 2026-08-15, so the steps below are a record and need no action. The theme test is now `tests/data/editorial-theme.test.ts`, and `app/design-lab` no longer exists.
+
 Branch `design/editorial-restore` holds uncommitted changes that re-skin the web app from Violet Frost back to GSD Editorial: warm paper surfaces, graphite ink, the tide accent (#2C6680), and Newsreader serif display over system sans. This realigns the web app with the iOS app, gsdtaskmanager.com, and the brand kit. The work keeps the structural improvements from the Violet Frost era (four-layer quadrant families, the fill and on-color token pairs, 1px rules, the fixed type ramp) and bumps the token version to 1.4.0. It also unifies tertiary ink with iOS: `--ink-3` is now #797368 light and #948A79 dark. DESIGN.md at the repo root was rewritten and is the authority. Do not adjust values back toward Violet Frost.
 
 Every color pairing was checked against WCAG AA before it landed (117 checks on the restore, plus a contrast pass on the ink change). Your job is review, local verification, cleanup, and shipping.

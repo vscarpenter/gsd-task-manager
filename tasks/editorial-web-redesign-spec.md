@@ -1,5 +1,7 @@
 # Spec: Editorial visual language for GSD Web
 
+> **Status note, 2026-11-12.** This shipped in #353 on 2026-06-04 and was later superseded. Violet Frost replaced it (#465), and #502 restored GSD Editorial as Inkwell 1.4.0. Current values live in `app/css/inkwell-tokens.css`, `app/globals.css`, and `DESIGN.md`. Several details below no longer hold: Newsreader loads through `next/font/local` with no italic, `--ink-3` is `#797368` in light, and no `--q*-fill` token exists (the washes are `--q*-wash`).
+
 Source: `design_handoff_web/README.md` + `design_handoff_web/styles/tokens.css`.
 Tier: Non-trivial (shared design tokens). Approach approved by user 2026-06-04.
 

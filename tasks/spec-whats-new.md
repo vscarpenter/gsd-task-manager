@@ -1,6 +1,7 @@
 # Spec: What's New
 
 **Status:** approved 2026-11-05 (owner: "add this to the parity doc and start implementation"). Web first; Apple and Android follow from the briefs in the GSD Project's `parity/roadmap.md`.
+**Web status, 2026-11-12:** the web shipped this in 14.7.0 (#671). In `lib/whats-new/whats-new.json`, the Apple 3.8.0 and Android 0.11.0 notes announce a What's New screen. This repo holds no iOS or Android code, so those notes are the only evidence here for the native clients.
 **Matrix row:** G8. **Tier:** non-trivial (new shared contract, three clients).
 **Contracts:**
 - `lib/whats-new/whats-new.json`: the release notes for every client. This repo is the authority.
@@ -50,6 +51,8 @@ decideWhatsNew({ releases, currentVersion, lastSeenVersion, existingUser }) -> {
 ```
 
 `releases` are one platform's. Versions compare numerically, part by part. A version that isn't three dot-separated non-negative integers is invalid.
+
+**Corpus, 2026-11-12:** the corpus is stricter than that sentence. It also rejects a leading zero (`1.02.0`) and a prerelease suffix (`1.2.0-beta`). `parseVersion` in `lib/whats-new/releases.ts` follows it, and rejects a build suffix too.
 
 1. `currentVersion` invalid: nothing shows, nothing is recorded.
 2. Only releases with `version <= currentVersion` count.

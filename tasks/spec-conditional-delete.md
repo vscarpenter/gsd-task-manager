@@ -3,6 +3,7 @@
 **Status:** draft, 2026-11-07. Spec only; nobody builds it in sprint 2. Lead review, then Vinny.
 **Backlog:** B-47 remainder (SPEC-4). Sprint 1 closed B-47's client half. Each client skips a delete when the server copy changed after it was queued, or after the archived version (web `isStaleDelete`, iOS #49, Android `remoteEditedAfterArchive`).
 **Evidence:** code paths come from reading web `main` at `816a2b7`, iOS `main` at `4c4d44a`, and Android `main` at `8433a23`. PocketBase behavior in section 9 is expected from the documented rule syntax and hasn't been run. Section 9 is the named check that runs it, once owner item 24 lets a pane start a bare server.
+**Status, 2026-11-12:** nothing in this spec is built. No client sends `expect_client_updated_at`, the two schema scripts in section 8 still set the plain owner `deleteRule`, and `docker/pb_migrations/` has no migration for it. Sprint 1's stale check is live on web (`isStaleDelete`, `lib/sync/pb-push.ts`). File and line references are as read at the Evidence commits. Dated notes below mark where web has moved since.
 
 ## 1. Goal
 
@@ -19,6 +20,8 @@ Each client checks for a stale delete, then sends an unconditional `DELETE`:
 | Android | per-drain index, then `remoteEditedAfterQueued` and `remoteEditedAfterArchive` (`SyncEngine.kt:276-280`, `:306-321`) | `remote.deleteTask(recordId)` (`SyncEngine.kt:281`, `PocketBaseApi.kt:119-121`) | the whole drain |
 
 If another device's edit lands between the check and the `DELETE`, the edit is lost on the server. It also comes back on no device: every client pulls the deletion, and the editing device's own row goes with it. The native clients hold the widest window, because their index is fetched once for the whole drain.
+
+**Web today, 2026-11-12:** the delete has its own function, `pushDelete` (`lib/sync/pb-push.ts`). `pushSingleItem` calls `fetchRemoteTaskEntry` and hands the result to `pushDelete`, which runs `isStaleDelete` and then the unconditional delete. The window is still one request per item.
 
 ## 3. The design
 
@@ -49,6 +52,8 @@ The parameter is plain text, compared as text. The client sends the stored strin
 - **CD-7.** An archive's delete takes the same path. B-47's archived-payload rule stays the stale check; the condition only closes the window after it.
 - **CD-8.** Native clients keep the raw `client_updated_at` string in their per-drain index next to the parsed date, because the condition needs the stored text.
 
+**Web today, 2026-11-12:** since this spec, web confirms the session before it drops a delete on a 404 (`beforeDroppingDelete`, #717). A refused token reads as a guest, and a guest's lookup 404s for every task. A build of CD-6's "Gone" branch has to keep that check. Queue writes in the push also go through session-fenced helpers (`dequeueForSession`, `chargeAttemptForSession`).
+
 ### 3.3 Rollout
 
 - **CD-9.** Order is free. A new client against a server without the rule sends a parameter the old rule ignores, so it deletes as today. An old client against a server with the rule omits the parameter, so it deletes as today too. Each side closes the race as it arrives.
@@ -64,15 +69,17 @@ The parameter is plain text, compared as text. The client sends the stored strin
 
 - **Privacy:** the parameter carries a timestamp the server already stores. It carries no task content.
 - **Compatibility:** CD-2 keeps every shipped client and MCP working. Hosted stays hookless.
-- **Cost:** one extra read, only after a refusal, which needs another device's edit inside the window. No extra request on the normal path.
+- **Cost:** one extra read, only after a refusal, which needs another device's edit or delete inside the window. No extra request on the normal path.
 - **Code shape (web):** the delete branch of `pushSingleItem` is already near the 40-line function limit. The build moves it into its own helper (for example `deleteRemoteTask`) rather than growing it. `pb-push.ts` stays under the ~400-line file limit.
+  - **Web today, 2026-11-12:** that helper exists as `pushDelete`, at about 30 lines. `pushSingleItem` checks the session, looks up the remote, charges an attempt when the remote stamp is unusable, and dispatches. `pb-push.ts` is 474 lines on disk. The lint rule counts neither blank lines nor comments, which leaves about 317 by a hand count, so the constraint holds today.
 - **Bundle:** a few lines in a module every route already loads.
-- **Never** run `scripts/update-pocketbase-tasks-schema.sh` without `PB_URL` set: it defaults to production.
+- **Never** run `scripts/update-pocketbase-tasks-schema.sh` or `scripts/setup-pocketbase-collections.sh` without `PB_URL` set: both default to production.
 
 ## 6. Edge cases
 
 - **Offline:** no request goes out, so nothing changes. The item stays queued, as today.
 - **Empty or missing stamp:** a remote entry with no usable `client_updated_at` already fails the version check before any delete (web `hasUsableRemoteVersion`, iOS `recordFailedAttempt`). Nothing new.
+  - **Native today, 2026-11-12:** this holds on web only, where `pushSingleItem` runs the check for every operation. iOS exempts a delete from the missing-version check that calls `recordFailedAttempt`, and its `isStaleDelete` returns false with no stamp (`GSDSync/SyncEngine.swift`). Android's `remoteEditedAfterQueued` and `remoteEditedAfterArchive` do the same. On both, a delete against a remote with no usable stamp goes out today, so that delete has no stamp for CD-4 to send.
 - **Concurrent edits on two devices:** the case this spec exists for. The edit that lands first changes the stamp, and the delete that checked the old stamp is refused, then re-checked (CD-6).
 - **Two devices deleting the same task:** the first delete wins. The second gets a `404` because the record is gone, and its re-read finds nothing, so the item counts as done.
 - **A far-future stamp:** the stale checks treat a stamp past the skew ceiling as not newer, so the delete proceeds. The condition compares text, so it still matches the far-future value the client read.
@@ -86,7 +93,7 @@ The parameter is plain text, compared as text. The client sends the stored strin
 ## 7. Out of scope
 
 - Building any of it in sprint 2.
-- MCP's `delete_task` and bulk delete (`packages/mcp-server/src/write-ops/helpers.ts:93`, `:242`). They delete on the user's explicit command right after a lookup, with no queued stale check. CD-2 keeps them working.
+- MCP's `delete_task` and bulk delete (`packages/mcp-server/src/write-ops/helpers.ts:93`, `:242`). They delete on the user's explicit command right after a lookup, with no queued stale check. CD-2 keeps them working. (2026-11-12: both tools now delete through `deleteTaskInPBById`. Each re-reads the task first and refuses if its stamp no longer matches the copy the tool looked up. The delete that follows is still unconditional, and MCP stays out of scope here.)
 - Updates. A push checks for a newer remote, then sends an unconditional `PATCH`, which has the same window. Last-write-wins with skew limits makes that window rarer and less harmful, and it needs its own decision. The same rule pattern on `updateRule` would close it.
 - Permanent delete from Trash, which is local on every client (ADR 0015).
 - Syncing Trash or Archive.
@@ -97,10 +104,10 @@ The parameter is plain text, compared as text. The client sends the stored strin
 
 | | Change |
 |---|---|
-| Server, hosted | Vinny sets `deleteRule` (section 3.1) in the admin UI, or with `scripts/update-pocketbase-tasks-schema.sh` and `PB_URL` set. A manual step, like the top three fields |
-| Server, scripts | `scripts/setup-pocketbase-collections.sh` (`deleteRule`, line 90) and `scripts/update-pocketbase-tasks-schema.sh` (`.deleteRule = owner_rule`, line 129). Both are hook-protected (`.claude/hooks/block-sensitive-files.sh:22`, owner item 25), so an agent can't edit them. A person makes these `deleteRule` edits, from a patch the build PR proves on scratch copies |
+| Server, hosted | Vinny sets `deleteRule` (section 3.1) in the admin UI, or with `scripts/update-pocketbase-tasks-schema.sh` and `PB_URL` set. A manual step, like the Top three fields (`focus_date`, `focus_rank`) |
+| Server, scripts | `scripts/setup-pocketbase-collections.sh` (`deleteRule`, line 90) and `scripts/update-pocketbase-tasks-schema.sh` (`.deleteRule = owner_rule`, line 148 on 2026-11-12). A Claude Code edit hook protects both (`.claude/hooks/block-sensitive-files.sh:22`, owner item 25), so an agent can't edit them. A person makes these `deleteRule` edits, from a patch the build PR proves on scratch copies |
 | Server, self-hosted Docker | A migration in `docker/pb_migrations/` that sets the same rule, with `tests/docker-migrations.test.ts` |
-| Web | `lib/sync/pb-push.ts`: the delete branch, a raw-stamp read, and the CD-6 re-check. Pass the stamp through the SDK's `delete(id, { query })`, and let AC-2's test pin the `%2B` |
+| Web | `lib/sync/pb-push.ts`: the delete branch (`pushDelete` since 2026-11), a raw-stamp read, and the CD-6 re-check. Pass the stamp through the SDK's `delete(id, { query })`, and let AC-2's test pin the `%2B` |
 | iOS | `GSDWire/PocketBaseTaskWrite.swift` (`deleteTask` takes the stamp; explicit `%2B`), `GSDSync/SyncEngine.swift` (raw stamp in the index; CD-6 on a 404) |
 | Android | `PocketBaseApi.kt` (`deleteTask` takes the stamp and encodes `+` as `%2B`, pinned by AC-2's test), `SyncEngine.kt` (raw stamp in the index; CD-6) |
 | Docs | A web ADR for the rule, and an iOS dated note |

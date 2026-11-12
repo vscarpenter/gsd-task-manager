@@ -2,6 +2,7 @@
 
 **Status:** draft, 2026-10-31. Not implemented on any client. Sprint 2 builds it.
 **Decisions:** D-13 (up to three picks for today, chosen by the user with computed suggestions; `focus_date` and `focus_rank`; one contract change at pull contract 4). It reads the escalation rule from D-11 and D-12. Section 15 lists what this spec decides by reading and Vinny still has to confirm.
+**Web status, 2026-11-12:** the web has shipped this, and the MCP server has it on `main`. The MCP changelog still lists it under Unreleased, with the package at 1.4.1. The rules and corpus test came in #676, the Today strip in #696, `get_top_three` in #698, pull contract 4 in #703 (ADR 0020), and the server fields in #679 and #707. It first shipped on web in 14.8.0. This repo holds no iOS or Android code, and can't show whether hosted has the fields. The only evidence here for the native clients is `lib/whats-new/whats-new.json`: its Apple 4.0.0 notes (2026-11-10) announce the top three, and no Android entry does. Dated lines below mark where the text describes web code from before those changes.
 **Contract:** `tests/fixtures/cross-platform/top-three-corpus.json` (123 cases, version 1). This repo is the authority; iOS and Android copy it byte-identical.
 **Matrix row:** F2.
 **Evidence:** code paths come from reading web `main` at `ed72ca3`, iOS `main`, and Android `feat/saved-parity` at `432e1d9`. Client sync behavior here is read, not run. Server behavior in section 10 was run.
@@ -128,7 +129,7 @@ These are the only new synced fields. `focusDate` is plain text on purpose. It i
 
 Neither field is indexed. Web needs no Dexie version bump, because selectors filter the rows `useTasks` already holds. iOS adds a GRDB migration and Android moves Room from 4 to 5, each with nullable columns and no backfill. Android has been at 4 since #64 (`GsdDatabase.kt:33`, `MIGRATION_3_4` at `:85-89`).
 
-The two fields aren't task content, so self-hosted encryption doesn't cover them. They stay outside the five encrypted fields (`docker/pb_hooks/tasks_encryption.pb.js`), like `due_date`.
+The two fields aren't task content, so self-hosted encryption doesn't cover them. They stay outside the five encrypted fields (`docker/pb_hooks/encryption-core.js`), like `due_date`.
 
 ## 6. Pull contract 4
 
@@ -140,6 +141,13 @@ Saved showed that a same-version merge alone isn't enough (`S-AND-01`, `OWNER-DE
 
 ### Requirements
 
+**Web, 2026-11-12:** the web changes that C4-1, C4-2 (the order), C4-3, C4-4, and C4-6 ask for are on `main`. #703 landed the contract 4 half, and `docs/adr/0020-pull-contract-4-top-three.md` records it. The web bullets below describe the code before those changes, so their "today" and some line numbers point at code that has moved. This note doesn't cover the far-future hold-off. Now:
+- C4-1: `buildSyncConfig` keeps `existingConfig?.pullCursorVersion`. No literal `2` remains. The mentions of that literal in C4-3 and C4-4 describe builds from before the change.
+- C4-2: `fullSync` now calls `runSyncPasses` in `lib/sync/pb-sync-engine.ts`. It pulls first while a backfill is due, and pushes nothing when that pull comes back unauthenticated.
+- C4-3: sign-out in `lib/sync/config/disable.ts` keeps the stored version.
+- C4-4: `unreadFieldRepair` in `lib/sync/pb-pull.ts` copies the focus pair and `savedAt`, under the gates C4-4 gives.
+- C4-6: `upsertRemoteTask` in `lib/sync/pb-push.ts` takes `saved_at`, `focus_date`, and `focus_rank` from the current row through `placementToWire` in `lib/sync/task-mapper.ts`.
+
 **C4-1. The stored version alone decides whether a backfill is due.** A backfill is due when the stored version is missing or below 4. A nil cursor doesn't exempt a device.
 - *Why:* iOS and Android require a cursor today. On iOS, sign-out clears the cursor and the version (`SyncCoordinator.swift:84-87`), and the first sync after sign-in seeds every local row into the queue (`SyncEngine.swift:247`). The pull then runs with no same-version merge, and each row pushes empty fields.
 - *iOS:* drop `load() != nil` from `needsBackfill()`, and stop `clear()` from forgetting the version, so an ordinary sign-out on a current build isn't treated as an older build.
@@ -149,18 +157,18 @@ Saved showed that a same-version merge alone isn't enough (`S-AND-01`, `OWNER-DE
 
 **C4-2. While a backfill is due, no push runs before the pull completes.** If the pull fails, nothing pushes and nothing stamps.
 - *Web:* `fullSync` pushes first (`lib/sync/pb-sync-engine.ts:187-189`). When `mergeSameVersion` is true it must pull, then push. Ordinary syncs keep today's order. A pull that comes back unauthenticated returns rather than throws (`pb-pull.ts`), so the reorder must skip the push in that case too.
-- *Web, reconcile moves too:* `reconcileDeletedTasks` runs inside `pullRemoteChanges` (`pb-pull.ts:172`), so on that one sync it runs before the push and sees tasks whose create hasn't gone out. That's safe by reading: a pending queue row protects a task from reconcile (`classifyRemoteDeletion`, `lib/sync/queue.ts:65-67`), and `pushLocalChanges` only sends pending rows, so a failed-only row gets the same verdict in either order. The named test below proves the create case.
-- *Web, the far-future hold-off:* pulling first brings Sprint 1's S-AND-02 case to web for this one sync. `clampClientTimestamp` caps a far-future remote at now plus the skew window (`lib/sync/task-mapper.ts:29-33`). The capped stamp reads as strictly newer, so the pull would overwrite a row whose edit is still queued. The push still sends that edit, but this row keeps the capped stamp and the remote's content, and the next pull can't repair it. So while a backfill is due, web holds off a far-future remote that has a queued write, as iOS (`hasQueuedWriteHoldingOff`, `GSDSync/SyncEngine.swift:164-167`) and Android (`localWriteWins`, `SyncEngine.kt:143`) already do. C4-4 still runs on that row.
+- *Web, reconcile moves too:* `reconcileDeletedTasks` runs inside `pullRemoteChanges` (`pb-pull.ts:256`), so on that one sync it runs before the push and sees tasks whose create hasn't gone out. That's safe by reading: a pending queue row protects a task from reconcile (`classifyRemoteDeletion`, `lib/sync/queue.ts:65-67`), and `pushLocalChanges` only sends pending rows, so a failed-only row gets the same verdict in either order. The named test below proves the create case.
+- *Web, the far-future hold-off:* pulling first brings Sprint 1's S-AND-02 case to web for this one sync. `clampClientTimestamp` caps a far-future remote at now plus the skew window (`lib/sync/task-mapper.ts:30-35`). The capped stamp reads as strictly newer, so the pull would overwrite a row whose edit is still queued. The push still sends that edit, but this row keeps the capped stamp and the remote's content, and the next pull can't repair it. So while a backfill is due, web holds off a far-future remote that has a queued write, as iOS (`hasQueuedWriteHoldingOff`, `GSDSync/SyncEngine.swift:164-167`) and Android (`localWriteWins`, `SyncEngine.kt:143`) already do. C4-4 still runs on that row.
 - *iOS:* `pushNow` drains with no pull (`SyncEngine.swift:281`, called from `SyncCoordinator.swift:249`). While a backfill is due it must run `sync()` instead. `sync()` itself pulls first, and the seed only enqueues.
 - *Android:* `runSync` already pulls first and skips push when pull throws, and it has no push-only path. Add the test anyway, so it stays that way.
 
 **C4-3. Stamp the version only after a completed pull.** iOS (`GSDSync/SyncEngine.swift:364`, `:370`) and Android (`SyncEngine.kt:175`) do this today. Keep it, and test it.
 - *Web's sign-out doesn't:* it writes the current version with no pull (`lib/sync/config/disable.ts:37`). A device that still owes a backfill and signs out would then skip it. Sign-out must keep the stored version instead, and WEB-SAVED makes that change at contract 3.
-- *Web's other stamps are safe,* because neither leaves rows that a pull stored without a field. A local reset clears every table (`lib/reset-local-data.ts:39`), and the Dexie migrations run on data no pull stored (`lib/db-migrations.ts:82`, `:152`). The literal `2` at sign-in is C4-1's.
+- *Web's other stamps are safe,* because neither leaves rows that a pull stored without a field. A local reset clears every table (`lib/reset-local-data.ts:40`), and the Dexie migrations run on data no pull stored (`lib/db-migrations.ts:82`, `:152`). The literal `2` at sign-in is C4-1's.
 
 **C4-4. A local copy that wins gets only the fields it never knew about.** During the backfill, the local copy wins when it's strictly newer than the remote, or when a queued write holds off a far-future remote (C4-2). In either case:
 - Copy `focusDate` and `focusRank` if the local pair is unset, the remote's is set, and the stored version is below 4. This copy needs no guard: completing or saving a task clears nothing (section 3.1), so a pick on a completed or Saved row is inert, and skipping the copy would let the push clear the server's pick.
-- Copy `savedAt` if the local value is null, the remote's is set, the stored version is below 3, and the row could be Saved, meaning it isn't completed and has no running time entry. Call each client's own check rather than restating it: web `saveTaskForLater` (`lib/tasks/saved.ts:14-17`), iOS `SavedPlacement.canSave` (`GSDModel/SavedPlacement.swift`, which IOS-SAVED extracts from `TaskStore.moveToSaved`), and Android `SavedPlacement.canSave` (`core/model/.../SavedPlacement.kt:12`). When the check fails, the newer completion or timer wins, and the server ends with the task not Saved. A completed row that's also Saved would leave the matrix, never auto-archive, and spread to every client (S-WEB-02).
+- Copy `savedAt` if the local value is null, the remote's is set, the stored version is below 3, and the row could be Saved, meaning it isn't completed and has no running time entry. Call each client's own check rather than restating it: web `savedPlacementBlocker` (`lib/tasks/saved-placement.ts`, which `saveTaskForLater` also calls), iOS `SavedPlacement.canSave` (`GSDModel/SavedPlacement.swift`, which IOS-SAVED extracts from `TaskStore.moveToSaved`), and Android `SavedPlacement.canSave` (`core/model/.../SavedPlacement.kt:12`). When the check fails, the newer completion or timer wins, and the server ends with the task not Saved. A completed row that's also Saved would leave the matrix, never auto-archive, and spread to every client (S-WEB-02).
 - Keep `updatedAt` and every other field. Queue nothing. Don't count a conflict. Run this after the tombstone check, so archived and trashed rows stay untouched.
 - *Why the version gate matters:* a null field means "this build never heard of it" only on a build older than the field. On a contract 3 device, a null `savedAt` on a newer row is a real Return that may not have pushed yet. Android's current `backfill && lacksPlacement` (`core/sync/.../SyncEngine.kt:144`, `:214-216`) is right at contract 3, and at contract 4 it would un-return that task. Contract 4 replaces it with this gate and keeps its `localWriteWins` branch (`:143`) as the hold-off case above.
 - *Item 7 comes first:* WEB-SAVED and IOS-SAVED build the `savedAt` half of this copy at contract 3 (sprint 2 Goal 0). Contract 4 then adds the focus pair on web and iOS.
@@ -204,7 +212,7 @@ Each client writes the test where it fits its suite. The name stays the same, so
 | `a queued item for a row that's gone omits both keys` | C4-6 | yes | yes | yes |
 | `the backfill leaves the queue empty when nothing changed` | C4-4 | yes | yes | yes |
 
-The corpus's `pullMerge` and `pushFocus` ops pin the decisions as pure functions, so each client should factor them out that way. These named tests prove the engine calls them in the right order. The corpus takes no clock or queue input, so the hold-off and the Saved guard live in the engine and only these tests pin them.
+The corpus's `pullMerge` and `pushFocus` ops pin the decisions as pure functions, so each client should factor them out that way. These named tests prove the engine calls them in the right order. Those two ops take no clock or queue input, so the hold-off and the Saved guard live in the engine and only these tests pin them.
 
 The SAVED PRs land the `savedAt` half of the far-future test and the completed-not-Saved test at contract 3. The C4 PRs add the pick half.
 
@@ -212,22 +220,24 @@ The SAVED PRs land the `savedAt` half of the far-future test and the completed-n
 
 ## 7. Backup envelope 2.2.0
 
-`BACKUP_ENVELOPE_VERSION` on web (`lib/tasks/import-export.ts:24`), `TaskExport.currentVersion` on iOS, and Android's `Backup.kt` all move to `2.2.0`.
+`BACKUP_ENVELOPE_VERSION` on web (`lib/tasks/import-export.ts:25`), `TaskExport.currentVersion` on iOS, and Android's `Backup.kt` all move to `2.2.0`.
 
 - Tasks gain optional `focusDate` and `focusRank`, omitted when unset. Archived and trashed rows carry them too, so Restore is honest.
-- Export schemas add both fields. Web's export is `.strict()`, so it fails loudly without them (`lib/schema.ts`).
+- Export schemas add both fields. Web's export is `.strict()` (`lib/schema.ts`). Without them it skips each picked task and counts it as unreadable (`collectExportableTasks`, `lib/tasks/import-export.ts`).
 - On import, an invalid pair becomes unset and the task is kept, as in section 3.5. A bad pick must not refuse a whole backup.
 - An older client importing 2.2.0 drops the fields. Web's import uses `.strip()`, and iOS and Android ignore unknown keys. Confirm each with a test against the new fixture.
 - A restored old date is harmless, since it isn't today. A restored date of today can produce a conflict, and section 3.1 handles that.
+- **Web, 2026-11-12:** envelope 2.2.0 and `web-top-three-2.2.0.json` are on `main`, with `tests/data/top-three-backup.test.ts` and `tests/data/top-three-fixture.test.ts`. The app version did move afterward, to 14.8.0 (#712). The fixture keeps its envelope name.
 - Don't edit a frozen fixture. Add `web-top-three-2.2.0.json` from a real export, byte-identical in all three repos, like `web-saved-14.2.0.json`. It takes the envelope's version rather than the app's, because sprint 2 bumps no app version. The workspace's fixture rules apply.
 
 ## 8. MCP
 
 MCP has no queue, no cursor, and no stored rows, so section 6 doesn't apply to it. It reads the record and writes in one call.
 
-- **Round trip:** `packages/mcp-server/src/types.ts` maps both fields in both directions, as it does `saved_at` (`:178`, `:200`). A test proves `update_task` and the bulk ops keep a pick. MCP 1.4.0 doesn't send the keys, so it can't clear one either. Read, not run.
+- **Round trip:** `packages/mcp-server/src/types.ts` maps both fields in both directions, as it does `saved_at` (`:184`, `:208`). A test proves `update_task` and the bulk ops keep a pick. MCP 1.4.0 doesn't send the keys, so it can't clear one either. Read, not run.
 - **Spawn:** the recurring instance from `complete_task` (MCP-10) starts with neither field.
 - **`get_top_three` (optional, read-only):** returns `picks`, `needsTidy`, and `suggestions`. It takes an optional IANA `timeZone`, defaulting to the system's. It's the twentieth tool, so update `.claude/rules/mcp-server.md` and the tool count in `CLAUDE.md`. The server keeps its own copy of the rules, pinned by this corpus, as with the capture parser. Sonar will flag the duplication, and that's the known design.
+- **Merged, 2026-11-12:** #698 added `get_top_three` in `tools/handlers/top-three-handler.ts`. It also returns `date` and `timeZone`. It uses the 2-day default escalation window, because the setting is per device, and it rejects an unknown zone with an error. On `main`, the mapper in `types.ts` now sends both keys on each task create and update (#703). An update takes them from the record it just read, and the dependency-only patch omits them. The spawn in `write-ops/recurrence.ts` drops both fields.
 - **No write tool in v1.** An agent can't pick for the user. The feature's point is the user's own choice.
 
 ## 9. Widgets
@@ -284,6 +294,8 @@ On 2026-10-31 I ran these on a throwaway PocketBase 0.40.4 with an empty hooks d
 
 The draft is `docker/pb_migration_drafts/1794844800_top_three.js.draft`. It isn't wired in: the Dockerfile copies only `pb_migrations` and `pb_fresh_migrations`, and the suffix keeps it from loading. It can't live in `pb_fresh_migrations`, because `tests/docker-migrations.test.ts:114-118` rejects a fresh-only file and `gsd_build_fresh_migrations` would ship any `.js` file there to new installs.
 
+**Shipped, 2026-11-12:** the draft folder is gone. The migration is `docker/pb_migrations/1794061500_top_three.js` (#679), and `scripts/setup-pocketbase-collections.sh` and `scripts/update-pocketbase-tasks-schema.sh` both carry the two fields with top-level validators (#707). The next paragraph, and step 3 of the hosted list below, describe the plan as written.
+
 Sprint 2 moves it to `docker/pb_migrations/` as a `.js` file with a then-current timestamp. It runs at container boot and needs no copy in `pb_fresh_migrations`. It also adds both fields to `scripts/setup-pocketbase-collections.sh`, with top-level validators rather than that script's `options` shape. In `tests/fixtures/pinned-copies/pb-record-shape.json`, SPEC-2 adds them only to the server records that `fromRecord` reads. WEB-C4 adds them to `wireFields` and `expected`, along with both mappers' mapping, because the file pins the web and MCP mappers against one key list (S-WEB-04).
 
 ### Hosted: a manual step for Vinny
@@ -305,7 +317,7 @@ No agent does this: sprint rules bar `api.vinny.io`. It has to happen **before a
 
 | | Web | Apple | Android |
 |---|---|---|---|
-| Rules | `lib/top-three.ts` | `GSDKit/Sources/GSDModel/TopThree.swift` | `core/model/.../TopThree.kt` |
+| Rules | `lib/top-three.ts`, writes in `lib/tasks/top-three-actions.ts` | `GSDKit/Sources/GSDModel/TopThree.swift` | `core/model/.../TopThree.kt` |
 | Corpus test | `tests/data/top-three-corpus.test.ts` | `GSDModelTests/TopThreeCorpusTests.swift` | `TopThreeCorpusTest.kt` |
 | Model | `lib/types.ts`, `lib/schema.ts` | `GSDModel/Task.swift` | `core/model/.../Task.kt` |
 | Storage | No Dexie change | `GSDStore/Migrations.swift` | `core/store/.../TaskEntity.kt`, `GsdDatabase.kt` 4 to 5, `MigrationTest.kt` |
@@ -314,12 +326,12 @@ No agent does this: sprint rules bar `api.vinny.io`. It has to happen **before a
 | Pull and push | `lib/sync/pb-sync-engine.ts`, `pb-pull.ts`, `pb-push.ts` | `GSDSync/SyncEngine.swift` | `core/sync/.../SyncEngine.kt` |
 | Backup | `lib/tasks/import-export.ts`, `lib/schema.ts` | `GSDModel/TaskExport.swift` | `core/model/.../Backup.kt`, `core/store/.../BackupAssembler.kt` |
 | Spawn and duplicate | `lib/tasks/crud/toggle.ts`, `duplicate.ts` | `GSDModel/RecurrenceEngine.swift`, `GSDStore/TaskStore.swift` (`duplicate`) | `core/model/.../RecurrenceEngine.kt`, `core/store/.../TaskStore.kt` |
-| Surface | New `components/matrix-simplified/` section, `components/task-card/*` | `App/Matrix/` | `app/.../matrix/` |
+| Surface | `components/today-strip/`, mounted from `components/matrix-simplified/index.tsx`, and `components/task-card/*` | `App/Matrix/` | `app/.../matrix/` |
 | Widget | None | `GSDSnapshot/WidgetSnapshot.swift`, `WidgetSnapshotBuilder.swift`, `Widgets/TodaysFocusProvider.swift` | `app/.../widget/WidgetSnapshot.kt`, `GsdWidget.kt`, `notifications/BootReceiver.kt` |
 | Docs | ADR for contract 4, `.claude/rules/pocketbase-sync.md` | `docs/` dated note | `docs/` spec amendment |
 
-**MCP:** `packages/mcp-server/src/types.ts`, `write-ops/`, `tools/handlers/read-handlers.ts`, `tools/schemas/read-tools.ts`.
-**Server:** `docker/pb_migration_drafts/` to `docker/pb_migrations/`, `scripts/setup-pocketbase-collections.sh`, `scripts/update-pocketbase-tasks-schema.sh`.
+**MCP:** `packages/mcp-server/src/types.ts`, `top-three.ts`, `write-ops/`, `tools/handlers/top-three-handler.ts`, `tools/schemas/read-tools.ts`.
+**Server:** `docker/pb_migration_drafts/` to `docker/pb_migrations/` (done, see section 10), `scripts/setup-pocketbase-collections.sh`, `scripts/update-pocketbase-tasks-schema.sh`.
 **Workspace:** the owner adds a top-three corpus row, contract 4, and the Android mechanism to the workspace `CLAUDE.md` contracts table. That file isn't in any repo.
 
 ## 12. Tests (TDD, red first)

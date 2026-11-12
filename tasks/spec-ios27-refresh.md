@@ -1,5 +1,7 @@
 # Spec: iOS 27 refresh follow-on (web)
 
+> **Status note, 2026-11-12.** This shipped in #547 on 2026-09-15, and some details have moved since. `SimplifiedTopbar` takes `quietOnScroll` in place of `hidden`, and calls `useScrollChrome` itself. `AppShell` keeps its `quietChromeOnScroll` opt-in. The gesture lives in `SwipeActionRow`, inside `SwipeableTaskCard`, which wraps `TaskCard`. The card menu has a Snooze submenu with presets (#654) in place of "Snooze 1 hour", and the trailing swipe still snoozes one hour. `handleSnooze` in `components/matrix-simplified/task-actions.ts` takes the minutes from its caller, and the chip reads "Snoozed" plus the time left.
+
 Date: 2026-09-15. Branch: `feat/ios27-refresh`. Source brief:
 `design_handoff_ios27_refresh/gsd-taskmanager.md`. Design approved in chat on 2026-09-15.
 

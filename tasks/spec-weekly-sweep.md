@@ -2,6 +2,7 @@
 
 **Status:** draft, 2026-10-31. Not implemented on any client. Sprint 2 builds it. One input is still missing: the `weekly-review` vote count (section 8).
 **Decisions:** D-14 (the sweep ships everywhere; the web Review page stays web-only and links to it). It reads the escalation rule from D-11 and D-12. Section 13 lists what this spec decides by reading.
+**Web status, 2026-11-12:** the web shipped the sweep in 14.8.0: the rule and per-device state (#685), the retired slug (#695), and the screen, entry, and reminder (#697). This repo holds no iOS or Android code. The only evidence here for the native clients is `lib/whats-new/whats-new.json`: its Apple 4.0.0 notes (2026-11-10) announce the weekly sweep, and no Android entry does. The vote count in section 8 is still not recorded here. Dated lines below mark where the web build differs from the text.
 **Contract:** `tests/fixtures/cross-platform/sweep-corpus.json` (74 cases, version 1). This repo is the authority; iOS and Android copy it byte-identical.
 **Matrix row:** F3.
 **Evidence:** code paths come from reading web `main` at `ed72ca3`, iOS `main`, and Android `feat/saved-parity`. Nothing here has run on a client.
@@ -105,6 +106,8 @@ Both values stay outside the backup envelope and outside sync, like the escalati
 
 A reset must clear both. B-16 is the same mistake made once already, with the feedback draft.
 
+**Web, 2026-11-12:** the keys are `gsd:weekly-sweep-last-swept` and `gsd:weekly-sweep-reminder`. Web also keeps a third per-device key, `gsd:weekly-sweep-reminder-fired`. It records the last occurrence the checker notified for, so one occurrence fires once. `resetWeeklySweepState` in `lib/preferences/weekly-sweep.ts` clears all three. So where this spec says two values, or says a reset clears both (this section and sections 2, 10, and 12), web has three.
+
 ### The entry
 
 ```
@@ -167,17 +170,21 @@ The copy states facts and asks nothing of the reader. It never says behind, negl
 
 **Web route note:** a new App Router route needs three things. Add `/sweep/` to the precached pages in `public/sw.js`, beside `/saved/`, or it fails offline. Vinny deploys the CloudFront function (`scripts/deploy-cloudfront-function.sh`). And it falls under the route budget in `quality:bundle`.
 
+**Web, 2026-11-12:** the route shipped as `app/sweep/page.tsx`. It also needed `ROUTES.SWEEP` and `ROUTE_VARIANTS.SWEEP` in `lib/routes.ts`, and a `/sweep` entry in `scripts/bundle-budget.json`. The CloudFront rewrite in `cloudfront-function-url-rewrite.cjs` is generic, so a new route needs no function deploy. That replaces the deploy named above and in rollout step 5.
+
 ## 8. Retiring the `weekly-review` feedback slug
 
 The sweep is what that roadmap item asked for, so it stops being on offer. Each client removes the item in the build that ships the sweep on that client.
 
 | | Item | Test to update |
 |---|---|---|
-| Web | `lib/feedback/roadmap-items.ts:36` | The feedback tests under `tests/data/` and `tests/ui/feedback-settings.test.tsx` that name the list |
+| Web | `lib/feedback/roadmap-items.ts` (retired in #695, so the item is gone) | The feedback tests under `tests/data/` and `tests/ui/feedback-settings.test.tsx` that name the list |
 | Apple | `GSDKit/Sources/GSDModel/Feedback.swift:61` | `GSDModelTests/FeedbackTests.swift:68` |
 | Android | `core/model/.../Feedback.kt:28` | `FeedbackTest.kt:43` |
 
 This changes no wire shape. The payload keeps its exact seven keys. A stored vote for the retired slug is dropped when the payload is built (web `buildPayload`, and each client's filter), so add a test on each client: `a stored vote for weekly-review isn't sent`. By the iOS parity note, the server enumerates no slugs (`gsd-iosapp/docs/2026-08-29-feedback-parity.md`), so older builds can keep sending it. **Never reuse the slug.**
+
+**Web, 2026-11-12:** `tests/data/feedback-payload.test.ts` holds the named test and asserts the slug is off the list.
 
 **Vote count: pending.** Vinny holds it (`sprint/OWNER-DECISIONS.md` item 3), because reading the feedback collection takes admin access on hosted. Record it here before this leaves draft: `weekly-review` votes as of `<date>`: `<count>`, of `<total>` submissions. D-14 already decides the feature ships, so the number is a record of demand and shouldn't change the plan. If it surprises him, that's a reason to reopen scope with him.
 
@@ -189,9 +196,9 @@ This changes no wire shape. The payload keeps its exact seven keys. A stored vot
 | Corpus test | `tests/data/sweep-corpus.test.ts` | `GSDModelTests/SweepCorpusTests.swift` | `SweepCorpusTest.kt` |
 | Depends on | `lib/escalation.ts` | `GSDModel/Escalation.swift` | `core/model/.../Escalation.kt` |
 | State | `lib/preferences/weekly-sweep.ts`, `lib/reset-local-data.ts` | `AppGroupDefaults.shared` in `GSDStore` | `GsdPrefs` |
-| Screen | New `app/(dashboard)/sweep/page.tsx`, `components/weekly-sweep/` | New `App/Sweep/` | New `app/.../sweep/` |
-| Entry | `components/matrix-simplified/`, command palette, `app/(dashboard)/dashboard/page.tsx` | `App/Matrix/`, `App/Settings/SettingsView.swift` | `app/.../matrix/`, `app/.../settings/SettingsScreen.kt` |
-| Reminder | `lib/notification-checker.ts`, `components/settings/notification-settings.tsx` | `App/Notifications/` | `app/.../notifications/ReminderScheduler.kt`, `BootReceiver.kt`, `app/.../settings/NotificationsGroup.kt` |
+| Screen | New `app/sweep/page.tsx`, `components/weekly-sweep/` | New `App/Sweep/` | New `app/.../sweep/` |
+| Entry | `components/weekly-sweep/sweep-entry.tsx` (mounted by `components/matrix-simplified/index.tsx`), `lib/command-actions.ts`, `components/weekly-sweep/sweep-link.tsx` (mounted by `app/(dashboard)/dashboard/page.tsx`), `components/settings/sweep-reminder-rows.tsx` | `App/Matrix/`, `App/Settings/SettingsView.swift` | `app/.../matrix/`, `app/.../settings/SettingsScreen.kt` |
+| Reminder | `lib/notification-checker.ts`, `lib/notifications/display.ts`, `components/settings/sweep-reminder-rows.tsx` (mounted by `notification-settings.tsx`) | `App/Notifications/` | `app/.../notifications/ReminderScheduler.kt`, `BootReceiver.kt`, `app/.../settings/NotificationsGroup.kt` |
 | Retired slug | Section 8 | Section 8 | Section 8 |
 
 MCP gets nothing in v1. It has no sessions, and the corpus rule can be exposed later with no contract change.
