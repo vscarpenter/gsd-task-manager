@@ -10,6 +10,7 @@ linked source and decision records over duplicating implementation detail here.
 | --- | --- |
 | Project overview, commands, and component/data patterns | [`CLAUDE.md`](CLAUDE.md) |
 | Product model and feature intent | [`PRODUCT.md`](PRODUCT.md) |
+| One diagram of the parts and the boundaries between them | [`docs/uml-diagrams.md`](docs/uml-diagrams.md) |
 | App routes and UI composition | [`app/`](app/) and [`components/`](components/) |
 | Domain types, validation, and IndexedDB schemas | [`lib/types.ts`](lib/types.ts), [`lib/schema.ts`](lib/schema.ts), and [`lib/db.ts`](lib/db.ts) |
 | Task domain operations | [`lib/tasks/`](lib/tasks/) |
