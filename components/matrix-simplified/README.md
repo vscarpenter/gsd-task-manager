@@ -59,7 +59,7 @@ Edit drawer:
 - `Field`, `LimitNote` (`edit-drawer-fields.tsx`): a labeled wrapper (`as` is `"label"` or `"group"`) and a muted caption paragraph.
 - `QuadrantField` (`edit-drawer-fields.tsx`): four `aria-pressed` quadrant buttons. Props are `urgent`, `important`, `onChange(urgent, important)`, and `escalation?`.
 - `DueDateField` (`edit-drawer-fields.tsx`): `DUE_PRESETS` buttons, a custom date chip or date input, and `DueTimeControls`.
-- `TagsField` (`edit-drawer-fields.tsx`): tag chips and a text input. Props are `tags`, `tagInput`, `onTagInputChange`, `onAddTag`, `onRemoveTag`, and `onTagKeyDown`.
+- `TagsField` (`edit-drawer-fields.tsx`): tag chips and a text input. Props are `tags`, `tagInput`, `onTagInputChange`, `onAddTag`, `onRemoveTag`, and `onTagKeyDown`. The input also calls `onAddTag` on blur, so leaving the field commits the typed tag.
 - `RecurrenceField` (`edit-drawer-fields.tsx`): `aria-pressed` buttons for none, daily, weekly, and monthly.
 - `SubtasksField` (`edit-drawer-fields.tsx`): checklist rows with toggle and remove, and an add input that commits on Enter.
 - `EstimateField` (`edit-drawer-fields.tsx`): number input for the estimate in minutes. Props are `value: string` and `onChange(value: string)`.
@@ -258,6 +258,7 @@ Task actions and shared hooks:
 - `index.tsx:subscribeShowCompleted`: adds and removes a window listener for `SHOW_COMPLETED_EVENT` from `@/lib/preferences/show-completed`.
 - `index.tsx:focusQuadrant`: calls `target.focus({ preventScroll: true })`, then `target.scrollIntoView({ block: "nearest", behavior: "auto" })`.
 - `index.tsx:handleDelete`: calls `scheduleCardFocus(nextId)` after a delete. The grid's `onToggleComplete` does the same after a completion.
+- `index.tsx:MatrixSimplified`: the grid's `onSave` calls `captureInputRef.current?.focus()` after `handleSaveForLater` resolves `true`. The `CaptureBar` `onSubmit` reveals the new card with `highlightTaskById(id, { focus: false })`.
 - `app-shell.tsx:openCommandPalette`: dispatches `new CustomEvent(OPEN_COMMAND_PALETTE_EVENT)` on `window`. The constant comes from `@/lib/use-command-palette`.
 - `app-shell.tsx:AppShell`: adds and removes window listeners for `"gsd:open-help"` and `APP_PREFERENCES_EVENT`. It calls `getAppPreferences()` from `@/lib/smart-views` on mount.
 - `app-shell.tsx:AppShell`: calls `useAppShortcuts` from `@/lib/use-app-shortcuts` and `useShellCommandHandlers` from `@/lib/use-shell-command-handlers`.
@@ -265,7 +266,7 @@ Task actions and shared hooks:
 - `icon-rail.tsx:DesktopIconRail`: reads `readRailCollapsed` as initial state and calls `writeRailCollapsed(collapsed)` in an effect. Both come from `@/lib/preferences/icon-rail`.
 - `icon-rail.tsx:DesktopIconRail`, `MobileIconRail`: call `navigateWithTransition(ROUTES[item.routeKey])` from `useViewTransition` for HOME, SAVED, DASHBOARD, SETTINGS, and ABOUT.
 - `matrix-briefing.tsx:WhatsNewCue`: loads `./whats-new-cue` through React `lazy`. `MatrixBriefing` reads the clock with `new Date()` once mounted.
-- `capture-bar.tsx:CaptureBar`: adds and removes a `window` `"keydown"` listener. Key `n` focuses the capture input. Shift+`N` calls `onMoreOptions`.
+- `capture-bar.tsx:CaptureBar`: adds and removes a `window` `"keydown"` listener. Key `n` focuses the capture input. Shift+`N` calls `onMoreOptions`, then clears the text and the quadrant override when the text has visible characters. The Details button (`more-options`) calls `onMoreOptions` and always clears both.
 - `capture-bar.tsx:useAdoptTypedText`: a layout effect reads the input's DOM value after hydration and copies it into state.
 - `use-capture-paste.ts:useCapturePaste` (`onPaste`): reads `e.clipboardData.getData("text")` and calls `e.preventDefault()` for multi-line pastes.
 - `quadrant-pane.tsx:QuadrantPane`: calls `useDroppable({ id: meta.id })` from `@dnd-kit/core` and registers the section node.
@@ -273,6 +274,7 @@ Task actions and shared hooks:
 - `use-smart-view-overflow.ts:useSmartViewOverflow`: creates a `ResizeObserver` on the strip container and disconnects it on cleanup.
 - `drag-layer.tsx:DragLayer`: writes `statusMessage` into an `aria-live="polite"` `role="status"` region.
 - `task-detail-sheet.tsx:TaskDetailContent`: on open, records `document.activeElement` and focuses the close button. On close, calls `restoreFocusOrMainContent` from `@/lib/focus-restoration`.
+- `task-detail-sheet.tsx:DetailActions`: the toggle button renders only when `onToggleComplete` is passed. It calls `onToggleComplete`, then `onClose`, so a toggle closes the sheet. Its label is "Mark not done" for a completed task.
 - `edit-drawer.tsx:useEscapeToClose`: adds and removes a `window` `"keydown"` listener. Escape calls the latest `onClose`.
 - `edit-drawer-dependencies.tsx:Suggestions`: renders the listbox through `createPortal` into `document.body`.
 - `use-edit-draft-state.ts:useAutofocusTitle`: sets a `setTimeout` of `UI_TIMING.FOCUS_DELAY_MS`, then focuses `titleRef.current`. Cleanup clears it.
@@ -285,7 +287,7 @@ Task actions and shared hooks:
 - `use-back-to-close.ts:pushEntry`: calls `window.history.pushState({ gsdOverlay: true }, "")`.
 - `use-back-to-close.ts:onPopState`, `releaseEntryIfIdle`: call `window.history.back()` to step past a stale overlay entry or to release the entry.
 - `use-back-to-close.ts:unregister`: calls `setTimeout(releaseEntryIfIdle, 0)`.
-- `task-actions.ts:reportTaskMutationError`: calls `logError` from `@/lib/error-logger` and `toast.error` with `TOAST_DURATION.LONG`.
+- `task-actions.ts:reportTaskMutationError`: calls `logError` from `@/lib/error-logger` and `toast.error` with `TOAST_DURATION.LONG`. The toast text is `taskValidationMessage(error) ?? userMessage`, so a validation limit message replaces the caller's text.
 - `task-actions.ts:handleCapture`: calls `createTask` from `@/lib/tasks` and shows "Added to {quadrant title}".
 - `task-actions.ts:handleToggle`: calls `toggleCompleted` (and `deleteTask` in undo) from `@/lib/tasks`, and `celebrateCompletion` from `@/lib/confetti`.
 - `task-actions.ts:handleSnooze`, `handleClearSnooze`, `handleDuplicate`: call `snoozeTask`, `clearSnooze`, and `duplicateTask` from `@/lib/tasks`, each with a success toast.
@@ -304,8 +306,8 @@ Task actions and shared hooks:
 - `use-task-highlight.ts:revealTask`: calls `node.scrollIntoView({ block: "center", ... })` and, when asked, `node.focus({ preventScroll: true })`.
 - `help-drawer.tsx:HelpDrawer`: on open, focuses the `[aria-label="Close"]` button. On close, calls `restoreFocusOrMainContent` from `@/lib/focus-restoration`.
 - `help-drawer-sections.tsx`, `help-drawer-parts.tsx:HelpLink`: render `next/link` links to `ROUTES.SAVED`, `ROUTES.DASHBOARD`, `ROUTES.SETTINGS`, `ROUTES.ABOUT`, `"/sync-history"`, and `"/settings#feedback"`. Each calls `onClose` on click.
-- `whats-new-cue.tsx:useWhatsNewCue`: subscribes to `subscribeLastSeenVersion` and `readLastSeenVersion`, and calls `recordLastSeenVersion`, from `@/lib/whats-new/last-seen`.
-- `whats-new-cue.tsx:WhatsNewCue`: renders a `Link` to `"/settings#whats-new"`. Dismiss calls `restoreFocusOrMainContent(null)`, then `recordLastSeenVersion`.
+- `whats-new-cue.tsx:useWhatsNewCue`: subscribes to `subscribeLastSeenVersion` and `readLastSeenVersion`, and calls `recordLastSeenVersion`, from `@/lib/whats-new/last-seen`. It reads the bundled releases with `useWhatsNewReleases` from `@/lib/whats-new/load-releases` when no `releases` prop is passed.
+- `whats-new-cue.tsx:WhatsNewCue`: renders a `Link` to `"/settings#whats-new"`. Dismiss calls `restoreFocusOrMainContent(null)`, then `recordLastSeenVersion`. A click on the link also calls `recordLastSeenVersion` with the running version.
 
 ## Verification
 

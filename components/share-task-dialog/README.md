@@ -35,7 +35,7 @@ It also has the pure text formatters and the tab UI that the dialog uses.
 
 - `index.tsx:handleOpenEmailClient`: creates an `<a>` with a `mailto:` `href`, `target="_blank"`, and `rel="noopener noreferrer"`. It appends the link to `document.body`, clicks it, and removes it.
 - `index.tsx:handleOpenEmailClient`: calls `onOpenChange(false)` after it opens the mail link.
-- `index.tsx:handleCopyDetails`: calls `navigator.clipboard.writeText(taskDetails)`. It shows "Task details copied to clipboard" or "Failed to copy to clipboard" for `TOAST_DURATION.SHORT`.
+- `index.tsx:handleCopyDetails`: calls `navigator.clipboard.writeText(taskDetails)`. It shows "Task details copied to clipboard" or "Failed to copy to clipboard" for `TOAST_DURATION.SHORT`. After a successful copy it calls `onOpenChange(false)`.
 - `index.tsx:handleNativeShare`: calls `navigator.share({ title, text: taskDetails })`. On success it shows a toast and calls `onOpenChange(false)`.
 - `index.tsx:handleNativeShare`: on a failure other than abort, calls `logger.error("Failed to share task", error)` from `createLogger("UI")` and shows an error toast.
 - `format-task-details.ts:formatTaskFooter`: does no I/O. It embeds the literal `https://gsd.vinny.dev` in the shared text.

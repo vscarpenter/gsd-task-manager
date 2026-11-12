@@ -196,9 +196,14 @@ comes from the code or a comment in the named file.
   never reuses a running server.
 - `cloudfront-function-url-rewrite.cjs` appends `/index.html` to extensionless
   paths. It passes `/api` and `/_` through and rewrites a path with a `..`
-  segment to `/index.html`.
+  segment to `/index.html`. It does the same for a path that holds a CR, LF, or
+  NUL character. When the request carries `Accept: text/markdown`, it rewrites
+  a route's `index.html` to `index.md`.
 - `cloudfront-function-response-headers.cjs` adds the `Link` header to HTML and
-  Markdown responses. Security headers come from the response headers policy.
+  Markdown responses. On the same responses it appends `Accept` to the `Vary`
+  header. It sets the content type of every `.md` path to
+  `text/markdown; charset=utf-8`. Security headers come from the response
+  headers policy.
 - `eslint.config.mjs` pins `settings.react.version`. Keep it equal to the
   `react` version in `package.json`.
 
@@ -271,6 +276,17 @@ comes from the code or a comment in the named file.
   `feedback` collection, with no credentials.
 - `scripts/deploy-app.sh` syncs `out/` to S3 with `--delete` and invalidates the
   CloudFront distribution.
+- `scripts/deploy-cloudfront-function.sh` creates or updates two CloudFront
+  functions and publishes them. It then updates the distribution's function
+  associations and invalidates the distribution.
+- `scripts/deploy-cloudfront-response-headers-policy.sh` creates or updates
+  the CloudFront response headers policy.
+- `scripts/fix-discovery-content-types.sh` rewrites the content type and cache
+  metadata of the discovery files in the S3 bucket.
+- `scripts/setup-labels.sh` creates or overwrites ten labels on the GitHub repo
+  of the current directory.
+- `scripts/setup-pocketbase-feedback-collection.sh` also patches server-wide
+  PocketBase settings: rate limits and request log settings.
 - The PocketBase setup scripts in `scripts/` create or patch collections on the
   server named by `PB_URL`, which defaults to production.
 

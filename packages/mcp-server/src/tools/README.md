@@ -13,7 +13,7 @@ Read functions:
 - `getTask(config, taskId)` (`get-task.ts`): calls `listTasks` and returns the task with the matching `id`.
 - `searchTasks(config, query)` (`search-tasks.ts`): returns tasks whose title, description, tags, or subtask titles contain the query, ignoring case.
 - `getSyncStatus(config)` (`sync-status.ts`): returns `{ healthy, taskCount, lastSyncAt }` from a health check and a task count.
-- `getTaskStats(config)` (`sync-status.ts`): returns total, active, and completed counts, with `lastUpdated`, `oldestTask`, and `newestTask`.
+- `getTaskStats(config)` (`sync-status.ts`): returns total, active, and completed counts, with `lastUpdated`, `oldestTask`, and `newestTask`. All three dates come from `client_updated_at` (or `updated`). `newestTask` equals `lastUpdated`, and `oldestTask` is the least recently updated task.
 
 Prompts (`prompts.ts`):
 
@@ -28,8 +28,8 @@ Subdirectories:
 ## Invariants
 
 - `list-tasks.ts:applyTaskFilters`: tasks with `savedAt` are always dropped, even when no filter is passed.
-- `list-tasks.ts:listTasks`: only the unfiltered list is cached. A filtered request filters the cached full list locally.
-- `list-tasks.ts:fetchTaskRecords`: it reads the `tasks` collection sorted by `-client_updated_at`, with no filter expression.
+- `list-tasks.ts:listTasks`: only the unfiltered list is cached. A filtered request filters the cached full list locally. On a cache miss, a filtered request fetches from PocketBase and does not write the cache.
+- `list-tasks.ts:fetchTaskRecords`: it reads the `tasks` collection sorted by `-client_updated_at`, with no filter expression. It replaces any PocketBase error with a generic `Failed to fetch tasks from PocketBase` error that keeps only a numeric `status`.
 - `list-tasks.ts:fetchTasks`: it calls `confirmUsersPrincipal` when zero records return, because a refused token reads as a guest.
 - `list-tasks.ts:fetchTasks`: a record that fails to map is logged and dropped. It does not fail the call.
 - `list-tasks.ts:matchesAnyTag`: stored tags are normalized before the comparison.
@@ -49,8 +49,8 @@ Subdirectories:
 - `list-tasks.ts:listTasksFresh`: always fetches from PocketBase. It does not read or write the cache.
 - `list-tasks.ts:fetchTasks`: can call `confirmUsersPrincipal`, and logs mapping failures to stderr.
 - `get-task.ts:getTask` and `search-tasks.ts:searchTasks`: reach the cache and PocketBase through `listTasks`.
-- `sync-status.ts:getSyncStatus`: calls `requireUsersPrincipal`, `pb.health.check()`, and `getList(1, 1)` on `tasks`.
-- `sync-status.ts:getTaskStats`: calls `getFullList` on `tasks` with a limited field list. It does not use the cache.
+- `sync-status.ts:getSyncStatus`: calls `requireUsersPrincipal`, `pb.health.check()`, and `getList(1, 1)` on `tasks`. It calls `confirmUsersPrincipal` when the count is 0, so an empty account with a refused token reports `healthy: false`.
+- `sync-status.ts:getTaskStats`: calls `getFullList` on `tasks` with a limited field list. It does not use the cache. It calls `confirmUsersPrincipal` when the listing is empty.
 - `sync-status.ts:getSyncStatus` and `getTaskStats`: log errors to stderr.
 - `prompts.ts`: None.
 

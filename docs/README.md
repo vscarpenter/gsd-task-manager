@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory holds the project's documents. It has no source files of its own. Two child directories hold source code next to their documents: diagram generators and formal models. This file lists only those two.
+This directory holds the project's documents. It has no source files of its own. Two child directories hold source code next to their documents: diagram generators and formal models. This file lists only those two. `docs/css` holds four stylesheets and has no README.
 
 ## Subdirectories & Boundaries
 

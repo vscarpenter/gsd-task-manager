@@ -52,17 +52,18 @@ Aggregate (`index.ts`):
 - `analytics-tools.ts:getTagAnalyticsTool` requires `limit` to be an integer of at least 1.
 - `system-tools.ts:getHelpTool` limits `topic` to `tools`, `analytics`, `setup`, `examples`, and `troubleshooting`.
 - `write-tools.ts` takes its maximum lengths and item counts from `SCHEMA_LIMITS` in `../../constants.ts`. The `estimatedMinutes` bounds and the `notifyBefore` minimum are literals.
-- `write-tools.ts:createTaskTool` and `updateTaskTool` cap `title` at 80 characters and `description` at 600.
+- `write-tools.ts:createTaskTool` and `updateTaskTool` cap `title` at 80 characters and `description` at 600. `title` has `minLength: 1`.
+- `write-tools.ts:updateTaskTool`, `completeTaskTool`, and `deleteTaskTool` require `id` to be 1 to 255 characters.
 - `write-tools.ts:createTaskTool` and `updateTaskTool` allow at most 20 tags of 1 to 30 characters each.
 - `write-tools.ts:createTaskTool` allows at most 50 subtasks. Each needs `title` (1 to 100 characters) and `completed`.
-- `write-tools.ts:updateTaskTool` subtasks need `id`, `title`, and `completed`. The `id` is 4 to 255 characters.
+- `write-tools.ts:updateTaskTool` allows at most 50 subtasks. Subtasks need `id`, `title`, and `completed`. The `id` is 4 to 255 characters.
 - `write-tools.ts:createTaskTool` and `updateTaskTool` limit `recurrence` to `none`, `daily`, `weekly`, and `monthly`.
 - `write-tools.ts:createTaskTool` and `updateTaskTool` allow at most 50 dependencies of 1 to 255 characters each.
 - `write-tools.ts:createTaskTool` and `updateTaskTool` require `notifyBefore` to be an integer of at least 0.
 - `write-tools.ts:createTaskTool` and `updateTaskTool` require `estimatedMinutes` to be an integer from 1 to 10080.
-- `write-tools.ts:bulkUpdateTasksTool` accepts 1 to 50 `taskIds`. The schema does not encode the 10-task delete limit that its description states.
+- `write-tools.ts:bulkUpdateTasksTool` accepts 1 to 50 `taskIds` of 1 to 255 characters each. `operation.tags` takes 1 to 20 tags of 1 to 30 characters each. The schema does not encode the 10-task delete limit that its description states.
 - `write-tools.ts:bulkUpdateTasksTool` limits `operation.type` to `complete`, `move_quadrant`, `add_tags`, `remove_tags`, `set_due_date`, and `delete`.
-- `write-tools.ts:deleteTaskTool` describes `dryRun` as defaulting to true. The schema itself sets no default.
+- `write-tools.ts:deleteTaskTool` describes `dryRun` as defaulting to true. The schema itself sets no default. `bulkUpdateTasksTool` does the same for delete operations.
 
 ## Side Effects
 

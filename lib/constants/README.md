@@ -18,6 +18,8 @@ This package holds three files of `as const` configuration objects: schema limit
 - `schema.ts:SCHEMA_LIMITS` sets at most 20 tags, 50 subtasks, 50 dependencies, and 1000 time entries per task. `ID_MIN_LENGTH` is 4.
 - `schema.ts:SCHEMA_LIMITS.MAX_SMART_VIEW_FILTER_TAGS` (200) is deliberately not `MAX_TAGS`. A view filters over the whole workspace vocabulary, so the two limits are unrelated.
 - `schema.ts:SCHEMA_LIMITS` bounds smart view imports: 100 views, depth 6, 10,000 input nodes, and 256 KiB of string bytes. At most 5 views are pinned.
+- `schema.ts:SCHEMA_LIMITS` sets smart view field lengths: id 128, name 80, description 600, icon 64, search 600, date 64, and mode 64 characters.
+- `schema.ts:SCHEMA_LIMITS.DEFAULT_NOTIFY_MINUTES` is 15. It is a default reminder offset in minutes, not a validation limit.
 - `sync.ts:SYNC_CONFIG.PULL_CURSOR_VERSION` is 4. Bump it when a build is the first to read a newly synced field (ADR 0019). Version 2 made `client_updated_at` the only cursor, 3 added `saved_at`, 4 added `focus_date` and `focus_rank` (ADR 0020).
 - `sync.ts:SYNC_CONFIG.SAVED_AT_CONTRACT_VERSION` is 3. Rows stored under an older contract must not send their empty `savedAt` to the server as `""`.
 - `sync.ts:SYNC_CONFIG.FOCUS_CONTRACT_VERSION` is 4, the first contract that read `focus_date` and `focus_rank`.

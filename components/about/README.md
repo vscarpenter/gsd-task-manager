@@ -13,7 +13,7 @@ Two files declare `"use client"`: `scroll-reveal.tsx` (a reveal wrapper) and `te
 - `FooterCta` (`footer-cta.tsx`): renders the closing call to action. Prop `version: string` renders as `v{version}`.
 - `HeroSection` (`hero-section.tsx`): takes no props. It renders the `h1`, intro copy, three calls to action, and a trust-signal row.
 - `MatrixSection` (`matrix-section.tsx`): takes no props. It renders a section with `id="how-it-works"` and four quadrant cards (Q1 to Q4).
-- `McpSection` (`mcp-section.tsx`): takes no props. It renders MCP copy, four example queries, an npm link, and a `TerminalBlock` with a Claude Desktop config string.
+- `McpSection` (`mcp-section.tsx`): takes no props. It renders MCP copy, four example queries, an npm link, and a `TerminalBlock` with a Claude Desktop config string. The install command in `setupHint` pins a `gsd-mcp-server` version as a string literal. The config string `claudeDesktopConfig` holds a hard-coded PocketBase URL for `GSD_POCKETBASE_URL`.
 - `PrivacySection` (`privacy-section.tsx`): takes no props. It renders three paragraphs, a six-item checklist, and a privacy policy link.
 - `ScrollReveal` (`scroll-reveal.tsx`): client wrapper `div` with class `scroll-reveal`. Props are `children`, optional `className`, and `delay` in milliseconds (default 0).
 - `TerminalBlock` (`terminal-block.tsx`): client code panel with a title bar and a copy button. Props are `label: string` and `code: string`.

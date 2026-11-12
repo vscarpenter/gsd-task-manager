@@ -9,7 +9,7 @@ The hooks wrap task mutations with toasts and hold the editor state.
 ## Interface
 
 - `SavedPage` (`saved-page.tsx`, default export): page inside `AppShell title="Saved"`. It filters `useTasks().saved` with `filterTasks(saved, query)` and renders `SavedItem` rows or an empty or loading state.
-- `SavedItem` (`saved-item.tsx`): `<li>` component that takes `SavedItemProps`. It shows title, description, tags, and the Edit notes, Return to matrix, and Delete buttons.
+- `SavedItem` (`saved-item.tsx`): `<li>` component that takes `SavedItemProps`. It shows title, description, tags, and the Edit notes, Return to matrix, and Delete buttons. The `<li>` carries `id={task.id}`, the anchor that the palette link `/saved#<taskId>` from `lib/use-shell-command-handlers.ts:selectTaskInShell` targets.
 - `SavedItemProps` (`saved-item.tsx`): interface `{ task; onNotes(task, notes): Promise<boolean>; onReturn(task, quadrant, dueDate?): Promise<boolean>; onDelete(task): Promise<void> }`.
 - `SavedItemEditor` (`saved-item-editor.tsx`): form component with props `{ task: TaskRecord; editor: ReturnType<typeof useSavedItem> }`. `editor.mode` selects a notes textarea or a quadrant select with a due date input.
 - `useSavedActions` (`use-saved-actions.ts`): `(searchRef: RefObject<HTMLInputElement | null>) => { saveNotes, returnItem, removeItem }`. It wraps the module actions and refocuses the search input on success.

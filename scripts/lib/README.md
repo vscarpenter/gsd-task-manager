@@ -10,8 +10,8 @@ This directory holds two CommonJS helpers that other scripts and the Playwright 
   - Command line: `node scripts/lib/static-export-server.cjs`. It takes no arguments. It reads the `PORT` environment variable (default `DEFAULT_PORT`, 3100). On a startup failure it prints the error and sets `process.exitCode = 1`.
   - `readProductionCsp()`: returns the policy string from `buildCsp('cloudfront')` in `config/csp.cjs`.
   - `resolveExportFile(outputRoot, requestUrl, headers)`: returns the absolute path of the file to serve.
-  - `startStaticExportServer({ outputRoot, port = 0, csp })`: returns a promise of `{ server, rootUrl }`.
-  - `serveProductionExport({ outputRoot, port })`: starts the server with the production policy.
+  - `startStaticExportServer({ outputRoot, port = 0, csp })`: returns a promise of `{ server, rootUrl }`. `outputRoot` defaults to `resolve("out")`, relative to the current directory.
+  - `serveProductionExport({ outputRoot, port })`: starts the server with the production policy. `port` defaults to `PORT`, or `DEFAULT_PORT` when `PORT` is unset.
   - The root `package.json` `start` script, `playwright.export.config.ts`, `scripts/verify-production-csp.cjs`, and `scripts/verify-production-pwa.cjs` use this file.
 - `firefox-test-home.cjs`
   - `withFirefoxTestHome(browserName, runWithEnv, platform = process.platform)`: an `async` function. It calls `runWithEnv` and returns a promise of its result.

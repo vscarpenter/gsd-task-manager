@@ -4,7 +4,7 @@
 `page.tsx` is the client page for the dashboard route. It renders the weekly review inside `AppShell` under the title "Review". `use-dashboard-data.ts` derives every displayed analytics value from the task list.
 
 ## Interface
-- `DashboardPage` (`page.tsx`, default export): renders `AppShell` from `@/components/matrix-simplified/app-shell`, then an `ErrorBoundary` around the private `ReviewBody`.
+- `DashboardPage` (`page.tsx`, default export): renders `AppShell` from `@/components/matrix-simplified/app-shell`, then an `ErrorBoundary` around the private `ReviewBody`. The boundary's `fallback` is `DashboardError` from `@/components/dashboard/dashboard-error`.
 - `ReviewBody` (`page.tsx`, private): reads tasks with `useTasks()` from `@/lib/use-tasks` and calls `useDashboardData`.
 - `useDashboardData(tasks, trendPeriod)` (`use-dashboard-data.ts`, exported): returns `DashboardData`. It calls `calculateMetrics`, `getCompletionTrend`, `getStreakData`, `calculateTimeTrackingSummary`, and `getTimeByQuadrant` from `@/lib/analytics`. It calls no React hooks.
 - `DashboardData` (`use-dashboard-data.ts`, exported interface): metrics, trend and streak data, time summaries, three 7-day series, and the insight strings.

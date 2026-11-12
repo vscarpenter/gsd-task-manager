@@ -43,7 +43,8 @@ Files that end in `.pb.js` register hooks. `encryption-core.js` and `oauth-web-r
 - `account_lifecycle.pb.js:onRecordCreateExecute` requires a task's `owner` to resolve to a `users` record in the same transaction.
 - `account_lifecycle.pb.js` deletes the account in one transaction. It deletes tasks in batches of 100 and the user record last.
 - `feedback_controls.pb.js:onRecordCreateRequest` lets only a superuser set `status`.
-- `feedback_controls.pb.js` refuses a create unless the rate limit and log settings match its constants: 30 requests per 60 seconds, log retention of at most one day, no IP logging, no auth id logging.
+- `feedback_controls.pb.js` refuses a create unless the rate limit and log settings match its constants: 30 requests per 60 seconds, log retention of at most one day, no IP logging, no auth id logging. It also requires `rateLimits.enabled === true` and exactly one rule labelled `feedback:create`, with `audience === ""`. Both `feedback` hooks run this check.
+- `feedback_controls.pb.js` throws three error types on a `feedback` create: `BadRequestError` when a non-superuser sets `status`, `InternalServerError` when the controls are not ready, and `TooManyRequestsError` at the 10,000 record cap.
 - `feedback_controls.pb.js:onRecordCreateExecute` refuses a create when the collection holds 10,000 records.
 - `oauth_web_redirect.pb.js` takes the redirect target from the environment only, never from the request.
 - `oauth-web-redirect.js:callbackLocation` forwards only `code`, `state`, and `error`. It drops empty values and values longer than `MAX_PARAM_LENGTH` (2048).

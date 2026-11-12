@@ -27,7 +27,7 @@ Direct files:
 - `ResetEverythingDialog` (`reset-everything-dialog.tsx`): confirmation dialog that runs the reset. Props are `open`, `onOpenChange`, `onExport: () => Promise<boolean>`, the task counts, `syncEnabled`, and `pendingSync`.
 - `DeleteAccountDialog` (`delete-account-dialog.tsx`): confirmation dialog that deletes the remote account and can erase local data. Props are `open`, `onOpenChange(open)`, `onExport(): Promise<boolean>`, and optional `onDeleted()`.
 - `ImportDialog` (`import-dialog.tsx`): renders an invalid-file dialog or a Merge or Replace choice. Props are `open`, `onOpenChange`, `fileContents: string | null`, `existingTaskCount`, `onImportComplete`, and optional `existingTaskIds`, `archivedCount`, `trashedCount`, and `syncEnabled`.
-- `AppFooter` (`app-footer.tsx`): takes no props. It renders a link to `https://vinny.dev/`, the build number and date, and a `Link` to `/settings#feedback`.
+- `AppFooter` (`app-footer.tsx`): takes no props. It renders a link to `https://vinny.dev/`, the build number and date, and a `Link` to `/settings#feedback`. The build number comes from `NEXT_PUBLIC_BUILD_NUMBER` (fallback `"dev"`) and the date from `NEXT_PUBLIC_BUILD_DATE` (fallback `"unknown"`).
 - `GsdLogo` (`gsd-logo.tsx`): `({ className?, size = 28 })`. It renders an `aria-hidden` SVG of four rects filled `var(--q1)` to `var(--q4)` and a check path.
 - `TaskDescription` (`task-description.tsx`): `{ description: string; className?: string }`. It renders segments from `getDescriptionSegments` as text spans or external links.
 - `TaskTimer` (`task-timer.tsx`): `{ task: TaskRecord; onStartTimer(taskId); onStopTimer(taskId); compact?; className? }`. It renders a start and stop button with live elapsed time, total tracked, and the estimate.
@@ -111,6 +111,8 @@ Subdirectories:
 - `delete-account-dialog.tsx:DeleteAccountDialog.handleDelete`: on the keep-local path, calls `disableSync` from `@/lib/sync/config`, then `onOpenChange(false)` and `onDeleted?.()`.
 - `delete-account-dialog.tsx:eraseLocalDataAndScheduleReload`: calls `resetEverything({ preserveTheme: true })` from `@/lib/reset-everything`.
 - `delete-account-dialog.tsx:eraseLocalDataAndScheduleReload`: sets a `setTimeout` of `UI_TIMING.RESET_RELOAD_DELAY_MS`, then calls `reloadAfterReset` from `@/lib/reset-everything`.
+- `delete-account-dialog.tsx:DeleteAccountDialog.handleDelete`: the erase-local path never calls `disableSync`, `onOpenChange(false)`, or `onDeleted`. On success it shows a success toast that announces the reload, and the dialog stays open until the reload.
+- `delete-account-dialog.tsx:eraseLocalDataAndScheduleReload`: when `resetEverything` reports `!success`, it shows "Cloud account deleted, but local erase was incomplete." and schedules no reload. `handleDelete` then clears `isDeleting` and leaves the dialog open.
 - `delete-account-dialog.tsx:DeleteAccountDialog`: shows Sonner toasts for failure (`failureMessage(result)`) and success ("Account deleted. Your tasks remain on this device.").
 - `reset-everything-dialog.tsx:handleReset`: calls `resetEverything` from `@/lib/reset-everything` with `{ preserveTheme }` and shows a success or error toast.
 - `reset-everything-dialog.tsx:handleReset`: sets a `setTimeout` of `UI_TIMING.RESET_RELOAD_DELAY_MS` that calls `reloadAfterReset`.

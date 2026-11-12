@@ -31,7 +31,7 @@ This package holds the write paths for live tasks: create, update, complete, mov
 - `helpers.ts:runTaskSyncTransaction<T>(mutation): Promise<T>`. Runs a mutation in the shared task and sync transaction.
 - `helpers.ts:scheduleSyncAfterChange(): void`. Schedules a debounced background sync when the manager is running.
 - `helpers.ts:getSyncContext()`. Returns `syncConfig` and `deviceId` (`"local"` when unset).
-- `helpers.ts:enqueueSyncOperation(operation, taskId, data, syncEnabled): Promise<void>`. Enqueues one sync operation outside the transaction wrapper.
+- `helpers.ts:enqueueSyncOperation(operation, taskId, data, syncEnabled): Promise<void>`. Enqueues one sync operation outside the transaction wrapper. It does nothing when `syncEnabled` is false. It calls `scheduleSyncAfterChange()` right after the enqueue.
 - `helpers.ts:SyncOperation`, `helpers.ts:TransactionalSyncEnqueue`, `helpers.ts:TaskSyncTransactionContext`. Types for the wrapper. `SyncOperation` is `"create" | "update" | "delete"`.
 - `validation-error.ts:TaskValidationError`. Error class with `issues` and a static `fromZod(error, summary)`.
 - `validation-error.ts:TaskValidationIssue`. Interface with `path`, `code`, and optional `origin` and `maximum`.
@@ -54,6 +54,7 @@ This package holds the write paths for live tasks: create, update, complete, mov
 - `create.ts:createTask` extracts URLs from the title on every call, so every creation path gets the same link handling. The step is idempotent.
 - `create.ts:createTask` and `update.ts:mergeTaskUpdates` always store a numeric `notifyBefore` (D-10). A missing value resolves to the device default. Off is `notificationEnabled`.
 - `create.ts:createTask` never logs the raw input. Validation failures log field paths and Zod codes only.
+- `update.ts:updateTask` passes the raw `updates` object to `logger.error` on any failure. `lib/logger.ts:sanitizeMetadata` recurses into it and masks the keys `title`, `description`, `tags`, `subtasks`, and `notes` before output.
 - `update.ts:keepUnlessGiven` clears `dueDate`, `estimatedMinutes`, `focusDate`, and `focusRank` when the key is present with `undefined`. An absent key keeps the stored value. For `notifyBefore`, `update.ts:mergeTaskUpdates` resolves an explicit `undefined` to the device default.
 - `update.ts:assertWholeFocusPair` requires `focusDate` and `focusRank` to be set together or not at all.
 - `update.ts:validateUpdatedDraft` moves links to the description only when `updates.title` is given.

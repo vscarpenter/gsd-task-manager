@@ -28,7 +28,8 @@ Each file calls `migrate(up, down)`.
 - `1781100000_harden_task_encryption_cleanup.js` and `1781200000_reencrypt_invalid_prefixed_task_fields.js` write with raw SQL. The comment says this bypasses record hooks and keeps owner and timestamps unchanged.
 - `1781100000_harden_task_encryption_cleanup.js:decodeUtf8` validates UTF-8 strictly and throws on a malformed sequence.
 - `1793030400_saved_tasks.js` and `1794061500_top_three.js` return early when no `tasks` table exists. They add a field only when it is absent.
-- `1793562900_users_auth_token_30_days.js` only raises the duration. It does not change the token secret.
+- `1781100000_harden_task_encryption_cleanup.js` and `1781200000_reencrypt_invalid_prefixed_task_fields.js` also return early when no `tasks` table exists. Each checks the key first, so a bad key still throws.
+- `1793562900_users_auth_token_30_days.js` only raises the duration. It does not change the token secret. Up and down both return without an error when no `users` collection exists.
 - `1794061500_top_three.js` is for the self-hosted image only. Its comment says never to point the hosted binary at this directory.
 
 ## Side Effects

@@ -19,8 +19,8 @@ This package backs the anonymous, opt-in feedback form. It builds the outgoing p
 - `feedback-payload.ts:isDraftEmpty(draft): boolean`. True when there is nothing worth sending.
 - `feedback-payload.ts:buildPayload(draft, options): FeedbackPayload`. Builds and validates the outgoing payload.
 - `feedback-store.ts:FEEDBACK_DRAFT_KEY`, `feedback-store.ts:FEEDBACK_LAST_SENT_KEY`, `feedback-store.ts:FEEDBACK_NUDGE_DISMISSED_KEY`. Storage keys `"gsd:feedback:draft"`, `"gsd:feedback:last-sent"`, and `"gsd:feedback:nudge-dismissed"`.
-- `feedback-store.ts:readDraft()`, `feedback-store.ts:writeDraft(draft)`, `feedback-store.ts:clearDraft()`. Read, write, and clear the stored draft.
-- `feedback-store.ts:toggleVote(draft, slug): FeedbackDraft`. Adds or removes a vote and returns a new draft.
+- `feedback-store.ts:readDraft()`, `feedback-store.ts:writeDraft(draft)`, `feedback-store.ts:clearDraft()`. Read, write, and clear the stored draft. `clearDraft` also notifies subscribers.
+- `feedback-store.ts:toggleVote(draft, slug): FeedbackDraft`. Adds or removes a vote and returns a new draft. It returns the input draft untouched for a slug that is not a roadmap slug.
 - `feedback-store.ts:readLastSentAt()`, `feedback-store.ts:writeLastSentAt(isoTimestamp)`. Read and write the last send time.
 - `feedback-store.ts:readNudgeDismissedAt()`, `feedback-store.ts:writeNudgeDismissedAt(isoTimestamp)`. Read and write the last "Not now" time.
 - `feedback-store.ts:FeedbackState`. Snapshot interface with `draft`, `lastSentAt`, `nudgeDismissedAt`, `submissionId`, and `builtAt`.
@@ -58,6 +58,7 @@ This package backs the anonymous, opt-in feedback form. It builds the outgoing p
 - `submit-feedback.ts:isDuplicateSubmission` treats a 400 with `submission_id.code === "validation_not_unique"` as success. The earlier request already landed.
 - `submit-feedback.ts:submitFeedback` logs only the status code. What the user wrote must never appear in a log line.
 - `nudge-eligibility.ts:shouldShowFeedbackNudge` requires 14 tenure days, 10 completions, and 3 distinct completion days. It stays quiet for 90 days after a send, 180 days after a dismissal, and while a draft exists.
+- `nudge-eligibility.ts:summarizeEngagement` buckets completion days by UTC calendar day (`utcDay`). `lib/analytics` buckets by local day (`completion-day.ts:localDayKey`). The code comment on `utcDay` says the two match.
 - `nudge-eligibility.ts:withinCooldown` treats a missing or unparseable timestamp as an event that never happened.
 
 ## Side Effects

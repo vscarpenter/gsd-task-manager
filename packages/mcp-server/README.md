@@ -894,7 +894,7 @@ This section states the package's contract for developers and AI assistants who 
 - Executable: `package.json` `bin` maps `gsd-mcp-server` to `dist/index.js`, compiled from `src/index.ts`.
 - Flags: `--setup`, `--validate`, `--help`, and `-h` (`src/cli/index.ts:parseCLIArgs`). No flag starts the MCP server on stdio.
 - Environment variables: `GSD_POCKETBASE_URL` and `GSD_AUTH_TOKEN` (`src/server/config.ts:loadConfig`).
-- Optional environment variables: `LOG_LEVEL` and `NODE_ENV` turn on debug logging (`src/utils/logger.ts:createMcpLogger`).
+- Optional environment variables: `LOG_LEVEL` and `NODE_ENV` turn on debug logging (`src/utils/logger.ts:createMcpLogger`). On Windows, `APPDATA` locates the Claude Desktop config file (`src/cli/index.ts:getClaudeConfigPath`).
 - MCP requests: `ListToolsRequestSchema`, `CallToolRequestSchema`, `ListPromptsRequestSchema`, and `GetPromptRequestSchema` (`src/server/setup.ts:registerHandlers`).
 - Read tools (`src/tools/schemas/read-tools.ts:readTools`): `get_sync_status`, `get_task_stats`, `list_tasks`, `get_task`, `search_tasks`, `get_token_status`, `get_top_three`.
 - Analytics tools (`src/tools/schemas/analytics-tools.ts:analyticsTools`): `get_productivity_metrics`, `get_quadrant_analysis`, `get_tag_analytics`, `get_upcoming_deadlines`, `get_task_insights`.

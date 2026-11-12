@@ -12,6 +12,8 @@ This is the Next.js App Router root. `layout.tsx` defines the page metadata, the
 - `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, and `ThemedToaster` render beside the gate.
 - `GlobalError({ error, reset })` (`global-error.tsx`, default export): client fallback that renders its own `<html>` with inline styles.
 - `NotFound` (`not-found.tsx`, default export): client 404 page with a `Link` to `/`.
+- `globals.css`: the stylesheet entry point. It imports `tailwindcss`, `./css/inkwell-tokens.css`, and `./css/inkwell-components.css` (in `layer(components)`), and defines the `dark` and `pinned` custom variants.
+- `css/` holds the three Inkwell stylesheets, and `fonts/newsreader/` holds the Newsreader `woff2` files and `OFL.txt`. Neither directory has a README.
 
 Routes:
 - [(archive)](<./(archive)/README.md>): layout that provides react-query to the archive page.
@@ -29,6 +31,8 @@ Routes:
 - `DevelopmentCspMeta` returns `null` when `NODE_ENV` is `production`. A comment at `isDevelopment` says the hosting layer supplies the strict policy in production.
 - The three `localFont` calls keep the order vietnamese, latin-ext, latin. A comment in `layout.tsx` says the last rule wins where unicode ranges overlap.
 - `configuredPocketBaseOrigin` returns `null` unless `NEXT_PUBLIC_POCKETBASE_URL` parses as an `http:` or `https:` URL.
+- `connectSrc` adds the localhost hosts and `configuredPocketBaseOrigin` only when `NODE_ENV` is `development`. Under any other value, such as `test`, the meta tag ships without them.
+- The meta policy is a hard-coded list in `layout.tsx` (`scriptSrc`, `connectSrc`, `developmentContentSecurityPolicy`). It does not read `config/csp.cjs`.
 - `global-error.tsx` must not depend on app CSS. Its header comment says the root layout, which loads `globals.css`, may have crashed.
 - `useGlobalErrorFallback` sets `data-theme` only when the stored value is exactly `light` or `dark`. Its storage read sits in a try/catch.
 - The "Go home" button in `GlobalError` uses `window.location.href`. A comment says the client router may not be usable.

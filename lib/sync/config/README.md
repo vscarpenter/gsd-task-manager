@@ -35,7 +35,7 @@ This package reads and writes the sync configuration row. The row lives in the D
 - `get-set.ts:getSyncConfig` reads `syncMetadata`. `get-set.ts:updateSyncConfig` writes `syncMetadata`.
 - `get-set.ts:getSyncStatus` reads `syncMetadata` and counts `syncQueue`.
 - `enable.ts:enableSync` calls `getSyncQueue().populateFromExistingTasks()`, which writes sync queue entries. It logs through the `SYNC_CONFIG` logger.
-- `disable.ts:disableSync` writes `syncMetadata`, then clears `syncQueue` and `syncHistory`.
+- `disable.ts:disableSync` writes `syncMetadata`, then clears `syncQueue` and `syncHistory`. With no `sync_config` row it writes nothing to IndexedDB: it calls `clearPocketBase()` and `clearBrowserCaches()` and returns. The queue and history stay, and no Trash delete is remembered.
 - `disable.ts:disableSync` calls `clearPocketBase()`, which clears the PocketBase auth token and its localStorage entry.
 - `disable.ts:clearBrowserCaches` calls `clearAppCaches()` from `lib/browser-cache.ts`. A failure there is logged as a warning and does not stop the sign-out.
 

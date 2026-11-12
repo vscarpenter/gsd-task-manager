@@ -36,7 +36,7 @@ The module header lists the files it models. They sit under `lib/sync/` and `lib
 - Config groups:
   - `SyncConvergence.cfg`: the baseline with `Variant = "code"`. It checks all four invariants.
   - `FastClockHoldOff.cfg`: the baseline with `FastClock = TRUE` and `MaxTime = 3` (the baseline uses 4). It checks `TypeOK` and `UnsentEditStays`.
-  - `Finding*.cfg`: the baseline with one of `OtherTasks`, `PushOverlap`, `RunOut`, or `FastClock` set to `TRUE`.
+  - `Finding*.cfg`: the baseline with one of `OtherTasks`, `PushOverlap`, `RunOut`, or `FastClock` set to `TRUE`. `FindingFastClock.cfg` checks only `TypeOK` and `QuietMeansSameCopy`. Its header says it leaves `QuietMeansNewestEdit` out on purpose. The other three check all four invariants.
   - `Broken*.cfg`: one non-`code` `Variant` each. `BrokenNoHoldOff.cfg` also sets `FastClock = TRUE` and `MaxTime = 3`.
 - `view.mjs` exports `title`, `state(v)`, `group(v)`, `colors`, and `step(action, from, to)`. They are pure functions with no imports.
 

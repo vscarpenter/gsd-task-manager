@@ -160,7 +160,7 @@ Auth, client, and account:
 - `pb-account-deletion.ts:deleteRemoteAccountAndTasks` deletes remote tasks first, then the user record. The `owner` field is plain text, so deleting the user does not cascade.
 - `pb-account-deletion.ts:drainRemoteTasks` reports success only after a complete listing comes back empty. It gives up after 3 passes (`MAX_ERASURE_PASSES`).
 - `pb-account-deletion.ts:isRouteNotDeployed` treats only a real 404 as an absent route. An offline failure reports status 0.
-- `pb-account-deletion.ts` performs the remote operation only. The caller touches local state only after a confirmed remote success.
+- `pb-account-deletion.ts` performs the remote operation only. The caller touches local state only after a confirmed remote success. One exception: its opening `refreshAuthOutcome()` call can clear a refused auth token.
 - `sign-out-everywhere.ts:signOutEverywhere` keeps the user signed in when a failure leaves the other sessions in doubt.
 - `sign-out-everywhere.ts:outcomeOfFailedRevoke` treats a 404 as "this device only" and a 401 on an unexpired token as "already rotated".
 - `sync-session.ts:assertSyncSessionCurrent` must run before the first write, inside a transaction that scopes `syncMetadata`. The check and the write then commit or abort together.
@@ -192,7 +192,8 @@ Push, pull, engine, and realtime:
 - `pb-pull.ts:planRemoteAbsence` protects a task with a push-eligible queue row. It moves a task whose queue rows are all retry-exhausted to Trash (`bulkPut`).
 - `pb-sync-engine.ts:applyRemoteDeletion` uses the same `classifyRemoteDeletion` as the pull, in one transaction over `tasks`, `deletedTasks`, `syncQueue`, and `syncMetadata`.
 - `pb-sync-engine.ts:localCopyHolds` applies a realtime create or update only when the remote is strictly newer. A far-future remote over a pending local write is held off.
-- `pb-push.ts:resolvePushPrincipal` refuses a push when the SDK principal is not the session owner. It throws `StaleSyncSessionError`.
+- `pb-push.ts:resolvePushPrincipal` refuses a push when the SDK principal is not the session owner. It throws `StaleSyncSessionError`. The check runs once, at the start of `pushLocalChanges`, and compares the in-memory SDK principal.
+- The push path's local writes never call `assertSyncSessionCurrent`. This covers `queue.ts:dequeue`, `queue.ts:recordAttemptFailure`, and `pb-push.ts:settleRowOffset` (a write to `tasks`).
 - `pb-push.ts:pushUpsert` and `pb-push.ts:pushDelete` skip and dequeue a stale operation when the remote is strictly newer. They record an attempt failure when the remote lookup failed.
 - `pb-push.ts:isRemoteNewer` never treats a remote stamp beyond now plus `MAX_CLIENT_CLOCK_SKEW_MS` as newer, so a local edit can heal a poisoned record.
 - `pb-push.ts:isStaleDelete` skips an archive's delete when the remote is newer than the archived version (B-46).
@@ -278,8 +279,8 @@ Auth, client, and account:
 - `pb-auth.ts:openOAuthPopup` calls `window.open('about:blank', ...)`.
 - `pb-auth.ts:refreshAuthOutcome` calls `authRefresh` on the `users` collection.
 - `oauth-callback.ts:relayOAuthCallback` and `oauth-callback.ts:waitForOAuthCallback` open the `gsd-oauth-callback` BroadcastChannel and post messages on it.
-- `pb-account-deletion.ts:deleteRemoteAccountAndTasks` sends `DELETE /api/gsd/account`. On a 404 it lists remote tasks, deletes each `tasks` record with a throttle, then deletes the `users` record.
-- `sign-out-everywhere.ts:signOutEverywhere` sends `DELETE /api/gsd/sessions`, then calls `disableSync()`.
+- `pb-account-deletion.ts:deleteRemoteAccountAndTasks` first calls `refreshAuthOutcome()`, which sends `authRefresh` and can clear the local auth token through `forgetRefusedToken`. It then sends `DELETE /api/gsd/account`. On a 404 it lists remote tasks, deletes each `tasks` record with a throttle, then deletes the `users` record.
+- `sign-out-everywhere.ts:signOutEverywhere` sends `DELETE /api/gsd/sessions`, then calls `disableSync()`. When `disableSync()` throws, it calls `clearPocketBase()` before it raises `LocalSignOutIncompleteError`.
 - `sync-session.ts:assertSyncSessionCurrent` reads `syncMetadata`.
 - `notifications.ts` shows `sonner` toasts.
 - These files log through the `SYNC_AUTH` logger.

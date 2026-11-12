@@ -46,24 +46,24 @@ Mutations here reuse `runTaskSyncTransaction` from `crud/helpers.ts`, so a task 
 - `import-export.ts:importTasks` runs one `rw` transaction over `tasks`, `archivedTasks`, `deletedTasks`, `smartViews`, `notificationSettings`, `archiveSettings`, `appPreferences`, and `syncQueue`. A narrower scope would let a partial restore commit (`importTransactionTables`).
 - `import-export.ts:resolveSyncDeps` resolves the sync modules and config before the transaction opens, to avoid detaching the Dexie context.
 - `import-export.ts:applyArchivedTasks` checks a payload archived row against `tasks`, and in merge mode against `archivedTasks`. It does not check `deletedTasks`. `import-export.ts:applyTasks` checks ids against `tasks` only. When a payload lists an id as live and archived, the live copy wins (ADR 0013 rule 1).
-- `import-export.ts:applyArchivedTasks` writes with `put`, never `add`, so a second import cannot raise a `ConstraintError` (ADR 0013 rule 3).
+- `import-export.ts:applyArchivedTasks` writes with `put`, never `add`, so a second import cannot raise a `ConstraintError` (ADR 0013 rule 3). In merge mode it skips a payload row whose id is already archived locally, so the local archived row wins.
 - `import-export.ts:applyArchivedTasks` and `import-export.ts:applyTrashedTasks` treat an absent key as silence, not as an instruction to delete. A `1.0.0` backup leaves the archive alone on replace.
 - `import-export.ts:applyTrashedTasks` skips an id that is already live or archived (ADR 0013, extended by ADR 0015). In merge mode a local Trash row keeps its edits and retention clock.
 - `import-export.ts:applyTasks` in replace mode clears `tasks` and reports removed ids for sync deletes. In merge mode it regenerates colliding ids and remaps references.
 - `import-export.ts:importTasks` applies settings in replace mode only. A merge combines task lists and does not adopt another device's configuration.
 - `import-export.ts:importTasks` never enqueues archived rows. The remote copy is deleted when a task is archived (ADR 0013).
 - `import-export.ts:importTasks` gives every imported live task a numeric `notifyBefore` (D-10). It writes archived and trashed rows as they arrive. Replace uses the backup's default when the payload carries one, else this device's. Merge keeps this device's.
-- `import-export.ts:applySmartViews` validates per row and skips rows it cannot represent. Only new ids count against `SCHEMA_LIMITS.MAX_SMART_VIEWS`.
+- `import-export.ts:applySmartViews` validates per row and skips rows it cannot represent. Only new ids count against `SCHEMA_LIMITS.MAX_SMART_VIEWS`. It overwrites an existing view with the same id.
 - `import-export.ts:collectExportableArchive` validates with `archivedTaskRecordSchema`, not `taskRecordSchema`. The strict task schema declares no `archivedAt` and would reject every archived row (ADR 0014).
 - `import-export.ts:collectExportableTasks` skips a corrupt record instead of throwing, and returns the count.
 - `import-export.ts:withoutUndefinedKeys` strips undefined-valued keys before validation, because a strict schema rejects a key it does not declare.
 - `import-export.ts:collectUserOwnedStores` leaves `syncMetadata` out of the backup. That table carries email, user id, and device id (ADR 0014).
 - `import-export.ts:buildBackup` is the single source for `exportTasks` and `exportToJsonWithReport`.
 - `import-check.ts:checkImportFile` runs the same schema and cap that `importTasks` runs. A file that passes here cannot fail them later.
-- `smart-view-import-bounds.ts:assertRawSmartViewBounds` checks memory bounds only: depth 6, 10,000 nodes, and 256 KiB of string bytes. One bad view must never abort a payload that carries the user's tasks.
-- `saved.ts:saveTaskForLater` changes placement, never identity or completion. It returns early when `savedAt` is already set.
+- `smart-view-import-bounds.ts:assertRawSmartViewBounds` checks memory bounds only: depth 6, 10,000 nodes, and 256 KiB of string bytes. One bad view must never abort a payload that carries the user's tasks. It walks `payload.appPreferences` as well as `payload.smartViews`, and the limits are aggregate across both. An `appPreferences` value over a limit makes it throw, which aborts the whole import.
+- `saved.ts:saveTaskForLater` changes placement, never identity or completion. It returns early when `savedAt` is already set. It throws the string from `savedPlacementBlocker` when that function returns one.
 - `saved-placement.ts:savedPlacementBlocker` blocks a completed task and a task with a running timer. It imports no Dexie or sync code, so the sync layer can use it without an import cycle.
-- `saved.ts:returnSavedTask` validates `quadrant` and `dueDate` before the transaction and resets `notificationSent`, `lastNotificationAt`, and `snoozedUntil`.
+- `saved.ts:returnSavedTask` validates `quadrant` and `dueDate` before the transaction and resets `notificationSent`, `lastNotificationAt`, and `snoozedUntil`. When the task has no `savedAt`, it returns the task unchanged, ignores `quadrant` and `dueDate`, and enqueues nothing.
 - `subtasks.ts:addSubtask` throws when the task already has `SCHEMA_LIMITS.MAX_SUBTASKS` subtasks.
 - `top-three-actions.ts` states these are the only writes top three makes. Each goes through `updateTask` and touches no other field.
 - `top-three-actions.ts:movePick` writes nothing at either end of the list. `top-three-actions.ts:reorderPicks` skips rows whose rank is already right.

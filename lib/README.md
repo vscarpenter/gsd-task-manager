@@ -47,7 +47,7 @@ Database, schema, archive, and trash (`db.ts`, `db-migrations.ts`, `schema.ts`, 
 - `archive.ts:ArchivedStorageStats`. Interface with `count` and `bytes`.
 - `trash.ts:TRASH_RETENTION_DAYS`. The retention window, 30 days.
 - `trash.ts:listTrashedTasks()`, `trash.ts:getTrashCount()`, `trash.ts:getTrashStorageStats()`. Read Trash, its count, and its footprint.
-- `trash.ts:restoreFromTrash(taskId): Promise<void>`. Returns a trashed task to the board.
+- `trash.ts:restoreFromTrash(taskId): Promise<void>`. Returns a trashed task to the board. It returns without throwing when the id is not in Trash.
 - `trash.ts:deleteFromTrashForever(taskId): Promise<void>`. Removes one trashed task for good.
 - `trash.ts:emptyTrash(): Promise<number>`. Clears Trash and returns the count.
 - `trash.ts:purgeExpiredTrash(): Promise<number>`. Drops rows past the retention window.
@@ -119,7 +119,7 @@ Logging, dependencies, filters, quadrants, capture parser, and dates (`logger.ts
 - `quadrants.ts:QuadrantMeta`, `quadrants.ts:RedesignQuadrantKey`, `quadrants.ts:RedesignIconKey`. Supporting types.
 - `smart-views.ts:getSmartViews(): Promise<SmartView[]>`. Returns built-in views first, then valid custom views.
 - `smart-views.ts:getSmartView(id): Promise<SmartView | undefined>`. Returns one view by id.
-- `smart-views.ts:getAppPreferences()`, `smart-views.ts:updateAppPreferences(updates)`. Read and write the app preferences row.
+- `smart-views.ts:getAppPreferences()`, `smart-views.ts:updateAppPreferences(updates)`. Read and write the app preferences row. `updateAppPreferences` returns `Promise<AppPreferences>`, the merged row.
 - `smart-views.ts:APP_PREFERENCES_EVENT`, `smart-views.ts:AppPreferencesEventDetail`. Event name `"gsd:app-preferences"` and its detail type.
 - `capture-parser.ts:parseCapture(input): ParsedCapture`. Parses `!!`, `!`, `*`, and `#tag` tokens from capture text.
 - `capture-parser.ts:extractUrlsFromTitle(title): ExtractedUrls`. Removes safe http and https URLs from a title.
@@ -209,7 +209,7 @@ Database, schema, archive, and trash:
 - `db-migrations.ts:registerDatabaseVersions` sets the current schema version to 17. Version 16 added `deletedTasks`, and version 17 added the `savedAt` index on `tasks`.
 - `db-migrations.ts:DELETED_TASKS` indexes `deletedAt`, because the retention sweep queries a range (ADR 0015).
 - `db-migrations.ts:findResurrectedTaskIds` (version 15) deletes a live duplicate of an archived id only when the task is still archivable: completed, with a `completedAt` before the cutoff.
-- `db-migrations.ts:migratePocketBase` (version 13) clears `syncQueue`, resets `sync_config`, and removes `vectorClock` from task rows.
+- `db-migrations.ts:migratePocketBase` (version 13) clears `syncQueue`, resets `sync_config`, and removes `vectorClock` from `tasks` and `archivedTasks` rows. It deletes the `encryption_salt` row from `syncMetadata`. The reset `sync_config` keeps the existing `deviceId`.
 - `db.ts:getDb` throws when `indexedDB` is undefined.
 - `schema.ts:taskRecordSchema` is `.strict()`. `schema.ts:storedTaskRecordSchema` is `.strip()`, so a record with a harmless extra field is kept.
 - `schema.ts:archivedTaskRecordSchema` is the only strict schema that declares `archivedAt`. Validating archived rows with `taskRecordSchema` rejects every one, silently.
@@ -247,7 +247,7 @@ Reset, sync history, notification checker, caches, and environment:
 - `reset-lock.ts:readStoredMarker` counts an unreadable store as no marker, so a browser with storage disabled never locks for good.
 - `reset-lock.ts:readPendingPreserveTheme` keeps the theme when the marker is missing or malformed.
 - `sync-history.ts:cleanupOldRecords` keeps the newest 100 records (`MAX_HISTORY_RECORDS`). `getRecentHistory` caps its limit at the same value.
-- `notification-checker.ts:processNotifications` returns early while a reset is pending, when notifications are unsupported, or when permission is not granted.
+- `notification-checker.ts:processNotifications` returns early while a reset is pending, when notifications are unsupported, or when permission is not granted. It also returns early when `settings.enabled` is false, after it calls `clearAppBadge()`, and during quiet hours. Neither path updates the badge.
 - `notification-checker.ts:processNotifications` filters `tasks` in memory. `completed` is a boolean, and IndexedDB cannot index booleans.
 - `notification-checker.ts:checkSweepReminder` fires whether task reminders are on or off, and quiet hours do not defer it. One occurrence fires once.
 - `notification-checker.ts:markNotificationSent` reads and writes in one transaction on `tasks` and writes only the reminder fields. `isSameReminder` skips the mark when the task changed.
@@ -257,7 +257,7 @@ Reset, sync history, notification checker, caches, and environment:
 - `sw-cache-logic.ts:classifyRequest` passes through non-GET, cross-origin, authorized, `no-store`, `/api`, and `/_` requests.
 - `sw-cache-logic.ts:getSafePageUrl` strips the fragment. Page fragments are client state and must never become Cache API keys.
 - `sw-cache-logic.ts:getShareCaptureUrl` puts shared content in the fragment, which never reaches a request, a log, or a cache key.
-- `env-config.ts:resolvePocketBaseUrl` maps `gsd.vinny.dev` to `https://api.vinny.io`. An unmapped production host falls back to same-origin, over HTTP or HTTPS, so data never goes to an unrelated default backend.
+- `env-config.ts:resolvePocketBaseUrl` maps `gsd.vinny.dev` to `https://api.vinny.io`. An unmapped production host falls back to same-origin, over HTTP or HTTPS, so data never goes to an unrelated default backend. An unmapped development host over HTTP resolves to a loopback address on PocketBase's default port (8090). With no `window`, it returns that loopback address in development and `""` otherwise.
 - `env-config.ts:getEnvironmentConfig` lets `NEXT_PUBLIC_POCKETBASE_URL` override the resolved URL.
 
 Logging, dependencies, filters, quadrants, capture parser, and dates:
@@ -331,7 +331,7 @@ React hooks:
 - `use-tasks.ts:useTasks` passes no default result to `useLiveQuery`. A default would pin `isLoading` to false and show empty states before IndexedDB is read.
 - `use-tasks.ts:useTasks` keeps saved tasks (`savedAt` set) out of `all` and `byQuadrant`. `stored` holds every valid row.
 - `use-tasks.ts:keepValidTaskRecords` uses the lenient schema, so a record with a harmless legacy field is kept.
-- `use-auto-archive.ts` archives only after a completed pull while sync is on, at most once an hour (B-46). A sweep from stale local data could delete a task that another device reopened.
+- `use-auto-archive.ts` archives only after a completed pull while sync is on, at most once an hour (B-46). A sweep from stale local data could delete a task that another device reopened. While sync is off, `use-auto-archive.ts:runScheduledCheck` archives on mount and hourly, when auto-archive is enabled.
 - `use-auto-archive.ts:runScheduledCheck` always purges trash, on mount and hourly. Trash retention is not gated on the archive toggle (ADR 0015).
 - `use-auto-archive.ts:syncIsOn` assumes sync is on when its state cannot be read, so archiving waits for a pull.
 - `use-app-shortcuts.ts:useAppShortcuts` matches physical key codes, because macOS Option changes `event.key`. It handles Option with Slash, N, R, and digits 1 to 4.
@@ -339,7 +339,7 @@ React hooks:
 - `use-keyboard-shortcuts.ts:useKeyboardShortcuts` ignores keys pressed with Meta, Ctrl, or Alt.
 - `use-command-palette.ts:useCommandPalette` shows task matches only for a search of 2 or more characters, limited to active tasks and `MAX_COMMAND_PALETTE_RESULTS`.
 - `use-command-palette.ts:executeAction` drops the focus return target for a `handoff` action. The destination owns focus.
-- `use-shell-command-handlers.ts:useShellCommandHandlers` dispatches a window event on the matrix route and navigates with a query string elsewhere.
+- `use-shell-command-handlers.ts:useShellCommandHandlers` dispatches a window event on the matrix route and navigates with a query string elsewhere. `onSelectTask` navigates to `/saved#<id>` for a saved task.
 - `use-shell-command-handlers.ts:onImportTasks` only navigates to `/settings#data`. Import needs the merge or replace confirmation there.
 - `use-drag-and-drop.ts:useDragAndDrop` announces the outcome only after the write settles. The drag-end announcement reports intent.
 - `use-drag-and-drop.ts:handleDragEnd` writes nothing when the drop target is not a quadrant or is the task's current quadrant.
@@ -355,7 +355,7 @@ Database, schema, archive, and trash:
 - `db.ts:getDb` opens the IndexedDB database `GsdTaskManager` and keeps the instance in module state.
 - `db-migrations.ts` upgrade functions rewrite rows in `tasks`, `archivedTasks`, `syncQueue`, `syncMetadata`, `deviceInfo`, `archiveSettings`, and `appPreferences` when a version upgrade runs.
 - `archive.ts` reads and writes `tasks`, `archivedTasks`, `archiveSettings`, and `syncQueue`. `getArchiveSettings` writes default settings on first read.
-- `trash.ts` reads and writes `deletedTasks`, `tasks`, `syncQueue`, and the remembered-ids row in `syncMetadata`. It logs through the `TASK_CRUD` logger.
+- `trash.ts` reads and writes `deletedTasks`, `tasks`, `syncQueue`, and the remembered-ids row in `syncMetadata`. `restoreFromTrash` enqueues a sync `create` for the restored task when sync is enabled. It logs through the `TASK_CRUD` logger.
 - `zod.ts` changes Zod's global config on import.
 - `schema.ts`, `types.ts`, `tasks.ts`, `id-generator.ts`, and `constants.ts`: None.
 
@@ -366,7 +366,7 @@ Reset, sync history, notification checker, caches, and environment:
 - `reset-local-data.ts:wipeLocalData` clears every Dexie table, may delete the database, and removes the weekly sweep keys from `localStorage`.
 - `reset-lock.ts` reads and writes the `gsd-reset-pending` key and listens to `storage` events on `window`.
 - `sync-history.ts` reads and writes the `syncHistory` table.
-- `notification-checker.ts:notificationChecker` runs a `setInterval` (1 minute by default), reads `tasks` and `notificationSettings`, updates reminder fields on `tasks`, shows notifications, and sets the app badge.
+- `notification-checker.ts:notificationChecker` runs a `setInterval` (1 minute by default), reads `tasks` and `notificationSettings`, updates reminder fields on `tasks`, shows notifications, and sets the app badge. `checkSweepReminder` reads the `localStorage` keys `gsd:weekly-sweep-reminder` and `gsd:weekly-sweep-reminder-fired`. It writes the second key through `markSweepFired`.
 - `notification-checker.ts:resetTaskNotification` and `snoozeTaskNotification` write `tasks` directly, with no sync queue entry.
 - `backup-download.ts:downloadBackup` creates a Blob URL, clicks a temporary anchor to download `gsd-tasks-{timestamp}.json`, and revokes the URL. `runBackupExport` shows `sonner` toasts.
 - `browser-cache.ts:clearAppCaches` deletes Cache Storage caches.
@@ -396,7 +396,7 @@ React hooks:
 - `use-notification-checker.ts:useNotificationChecker` starts and stops the notification checker's timer.
 - `use-app-shortcuts.ts` and `use-keyboard-shortcuts.ts` add and remove a `keydown` listener on `window`.
 - `use-command-palette.ts:useCommandPalette` listens to `keydown` on `document` and `gsd:open-command-palette` on `window`. It moves focus on close and may dispatch `highlightTask`.
-- `use-shell-command-handlers.ts:useShellCommandHandlers` calls `router.push`, sets the theme, dispatches window events, runs the backup export, and triggers a manual sync.
+- `use-shell-command-handlers.ts:useShellCommandHandlers` calls `router.push`, sets the theme, dispatches window events, runs the backup export, and triggers a manual sync. `onOpenHelp` dispatches a sixth window event, `gsd:open-help`, from an unexported constant.
 - `use-drag-and-drop.ts:handleDragEnd` writes through `moveTaskToQuadrant`.
 - `use-error-handler.ts` logs through `logError` and shows `sonner` toasts.
 - `use-view-transition.ts:navigateWithTransition` calls `document.startViewTransition` and `router.push`.
