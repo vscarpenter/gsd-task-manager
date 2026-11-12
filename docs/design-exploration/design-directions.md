@@ -1,5 +1,7 @@
 # GSD design directions
 
+> **Status note, 2026-11-12.** The `/design-lab` routes and their tests are gone, so the localhost links below do not resolve. The screenshots under `artifacts/design-exploration/` remain. The Refined Evolution hybrid shipped (see the 2026-08-01 spec in `tasks/spec.md`), and GSD Editorial then replaced its Violet Frost tokens. GSD Editorial is not the Editorial Planner direction below: it is the earlier palette, restored (`tasks/editorial-restore-handoff.md`). `DESIGN.md` and `app/css/inkwell-tokens.css` hold the current system.
+
 **Decision package:** 2026-08-01
 
 **Prototype index:** [http://localhost:3000/design-lab](http://localhost:3000/design-lab)

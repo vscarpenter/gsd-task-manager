@@ -1,5 +1,7 @@
 # Coding Standards Audit & Remediation Plan
 
+> **Status note, 2026-11-12.** This audit predates the v9 shell, and `coding-standards.md` is now v18.0. Several files it wants tested or fixed are gone: `components/matrix-board.tsx`, `components/app-header.tsx`, `components/settings-dialog.tsx`, `lib/pwa-detection.ts`, and `lib/use-matrix-dialogs.ts`. ADR 0011 records the v9 change. The code has fixed P0-1 (the import dialog uses a toast), P0-2 (`tailwind-merge` is pinned), and the two health-monitor catches that P2-3 cites. Three items still match the code: four hooks have no return type, `packages/mcp-server/src/cli/validation.ts` has three catches that log nothing, and `lib/utils.ts` has no `toError`. `bun run quality:shape` now enforces the size limits, and `tasks/audit-2026-11-10.md` is the latest whole-repo audit.
+
 **Date:** April 22, 2026  
 **Audited Against:** `coding-standards.md` (v13)  
 **Scope:** All production code in `app/`, `components/`, `lib/`, `packages/`

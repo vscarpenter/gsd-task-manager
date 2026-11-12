@@ -1,5 +1,7 @@
 # Security Review
 
+> **Status note, 2026-11-12.** The code has fixed all five findings, and the line references below have drifted. An unknown host now uses its own origin as the sync backend (`lib/env-config.ts`). Merge import queues the remapped tasks, and a duplicate queues only when sync is on. A pull keeps this device's reminder and snooze state unless the due date moved (`lib/sync/task-mapper.ts`). The Dockerfile calls the `.cjs` script, and the Caddyfile sends CSP, HSTS, and Permissions-Policy. `SECURITY.md` holds the current posture, and `security-review-may2026.md` in this folder is the follow-up review.
+
 Date: 2026-04-18
 
 This document captures the highest-priority issues found during a manual code review and baseline validation run. Items are ordered by remediation priority, with security and data-integrity impact weighted most heavily.

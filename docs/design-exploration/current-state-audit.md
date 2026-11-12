@@ -1,5 +1,7 @@
 # GSD current-state visual and interaction audit
 
+> **Status note, 2026-11-12.** This audit describes the Violet Frost build. The app now ships Inkwell 1.4.0 "GSD Editorial" (`DESIGN.md`, `app/css/inkwell-tokens.css`), and the `/design-lab` routes are gone. The code has fixed the four Critical findings: capture keeps its draft on Escape, Settings switches have names and a 44px touch target, and quadrant titles are `<h2>`. Two High findings still match the code: a first run goes to `/about` before the tour, and a failed Settings load leaves the spinner. The contrast test is now `tests/data/editorial-theme.test.ts`, and the file and line references below have drifted. `tasks/spec.md` holds the spec that implemented the repairs.
+
 **Audit date:** 2026-08-01
 
 **Public baseline:** `https://gsd.vinny.dev/`, reported as v11.0.0 during capture

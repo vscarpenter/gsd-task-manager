@@ -1,5 +1,7 @@
 # GSD Task Manager — Action Checklist
 
+> **Status note, 2026-11-12.** Nobody ticked the boxes below, so they do not show what shipped. The backup now covers every user-owned store (ADR 0014), Trash keeps deletes for 30 days (ADR 0015), and completing a task offers Undo. The edit drawer has recurrence, subtasks, an estimate, due times, snooze, and reminders, so the Phase 0 items that hide those features no longer apply. The code still has no backup nudge and no "Copy diagnostics", and `PRODUCT.md` keeps multi-select and custom smart-view creation off the web on purpose. `tasks/spec-review-remediation-wave-a-b.md` records what the first wave shipped, and the review file named below is not in this repo.
+
 Derived from the review of **web app v11.2.1** on **12 Aug 2026**. Full findings and repro steps: `/home/user/gsd-review/index.html`
 
 Effort estimates assume you're working solo in a codebase you know. Phases are ordered by risk retired per hour spent — Phase 0 is a single afternoon and clears everything that can cost a user data or trust.

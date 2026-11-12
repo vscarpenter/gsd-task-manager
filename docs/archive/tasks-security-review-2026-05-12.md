@@ -1,5 +1,7 @@
 # Security Review — May 2026 (Post-Inkwell)
 
+> **Status note, 2026-11-12.** The code has fixed the eight P1 findings, and the line references below have drifted. Do not paste the P1-7 snippet: sign-in now allows Google, GitHub, and Apple, and uses the manual code flow (`lib/sync/pb-auth.ts`). The CloudFront header policy from P2-13 is in the repo (`cloudfront/response-headers-policy.json`). P2-10 is half fixed: a 429 now stops the push loop and its `Retry-After` is honored, but a user-triggered sync still skips the backoff. The service worker still behaves as P3-13 and P3-14 say. `SECURITY.md` holds the current posture, and `tasks/audit-2026-11-10.md` is the latest whole-repo audit.
+
 **Date:** 2026-05-12
 **Reviewer:** Claude Opus 4.7 (7-agent parallel audit + advisor reconcile)
 **Scope:** Full codebase since commit `e69591e` (May 6 security fix). Covers new Inkwell design system (#266), bookmarklet share-capture (#264), and current state of every attack surface.
