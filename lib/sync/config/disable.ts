@@ -88,7 +88,8 @@ export async function disableSync(): Promise<void> {
   }
 
   // Persist the disabled config before any other awaited step. An in-flight
-  // sync re-reads this row before each write, so it stops at the first await.
+  // sync re-reads this row before each local write and before each pushed row,
+  // so it stops at its next step. A request already sent still completes.
   await resetSyncConfigState(current);
 
   // Clear PocketBase auth state (token + localStorage)

@@ -27,7 +27,7 @@ This package reads and writes the sync configuration row. The row lives in the D
 - `disable.ts:resetSyncConfigState` keeps `pullCursorVersion` unchanged. Only a completed pull may stamp a newer one (ADR 0019).
 - `disable.ts:resetSyncConfigState` remembers the id of every queued Trash delete before it clears the queue. It calls `rememberForResurrect(trashDeleteTaskIds(...))` for this.
 - `disable.ts:resetSyncConfigState` clears `syncHistory` for privacy on shared devices. The next user must not see the previous user's sync metadata, queue, or history.
-- `disable.ts:disableSync` persists the disabled config before any other awaited step. Pull, realtime, reconciliation, resurrection, cursor, and outcome writes re-read the row before each write, so they stop. A push in flight does not re-read it: its remote writes and its `syncQueue` and `tasks` writes continue. The comment in `disable.ts` claims every in-flight sync stops at its first await.
+- `disable.ts:disableSync` persists the disabled config before any other awaited step. Pull, realtime, reconciliation, resurrection, cursor, and outcome writes re-read the row before each write, so they stop. A push in flight re-reads it before each row and inside each `syncQueue` and `tasks` write, so it stops at its next step. A request already sent still completes.
 - `disable.ts:resetSyncConfigState` sets `localTaskOwnerUserId` to the prior `localTaskOwnerUserId`, else the prior `userId`, else `null`.
 
 ## Side Effects

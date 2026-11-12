@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
 import type { TaskRecord } from '@/lib/types';
-import { createMockTask } from '@/tests/fixtures';
+import { createMockSyncConfig, createMockTask } from '@/tests/fixtures';
 
 vi.mock('@/lib/sync/pocketbase-client', () => ({
   getPocketBase: vi.fn(),
@@ -55,6 +55,11 @@ function makeTask(id: string, updatedAt: string): TaskRecord {
     updatedAt,
   });
 }
+
+// A push reads the queue only while sync_config names its session owner.
+beforeEach(async () => {
+  await getDb().syncMetadata.put(createMockSyncConfig({ userId: 'user-1' }));
+});
 
 describe('pushLocalChanges LWW guard', () => {
   beforeEach(async () => {

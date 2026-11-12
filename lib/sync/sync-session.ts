@@ -3,9 +3,12 @@
  *
  * A sync belongs to the account that was signed in when it started. Sign-out,
  * Reset Everything, and a new sign-in all rewrite the persisted sync_config row.
- * Every sync write re-reads that row inside its own Dexie transaction and stops
- * once sync is off or the row names another account. Reading persisted state
- * instead of memory also covers a second tab and a sync that outlives a reload.
+ * Every local sync write, and the push's read of the queue, re-reads that row
+ * inside its own Dexie transaction and stops once sync is off or the row names
+ * another account. Reading persisted state instead of memory also covers a
+ * second tab and a sync that outlives a reload. A transaction cannot span a
+ * network request, so a request already sent is guarded by the server instead:
+ * its rules accept a task write only when `owner` is the signed-in account.
  */
 
 import { getDb } from '@/lib/db';

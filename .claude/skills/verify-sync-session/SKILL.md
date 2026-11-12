@@ -22,14 +22,14 @@ Each rule is an INVARIANT in `SyncSession.tla`.
 
 ## What the model found (2026-11-08)
 
-The code breaks both rules today. Each finding is a constant in `Gaps`, and each has its own config. Every path below was replayed against the real code, and the replay showed the task in the wrong account. None of them is fixed yet.
+The code broke both rules on that date. Each open finding is a constant in `Gaps`, and each has its own config. Every path below was replayed against the real code, and the replay showed the task in the wrong account. Finding 1 was fixed on 2026-11-11. Findings 2 to 4 are not fixed yet.
 
-1. **`push-reads-queue-unfenced`** (`GapPushQueue.cfg`). `pushLocalChanges` checks the SDK principal once, then reads the queue with no `assertSyncSessionCurrent`. TLC's path: you sign in as A, and a sync for A starts. You sign in as B in a dialog left open in another tab. `persistSyncConfig` switches to B, since the device holds no tasks yet. B's task arrives and you edit it. A second sign-in as A saves A's token before its own save refuses it. `resolvePushPrincipal` now passes for A, the push reads B's edit, and `upsertRemoteTask` creates it with `owner: A` under A's token. The server accepts it. A second replay found a way in with no stale dialog. The sync tab's `authRefresh` was in flight while the other tab signed out and signed in as B. Its late response then saved A's token over B's, because `clearPocketBase` only detaches the tab that calls it. The refresh runs on every sync in a token's last seven days.
+1. **`push-reads-queue-unfenced`** (fixed 2026-11-11, so its gap and `GapPushQueue.cfg` are gone). `pushLocalChanges` checked the SDK principal once, then read the queue with no `assertSyncSessionCurrent`. The fix: `readPendingForSession` reads the queue inside a transaction that makes that check, and the push repeats it before each row and inside each queue write. `BrokenPushQueueFence.cfg` removes the queue check and breaks the rule again. The paths below are how it broke before the fix. TLC's path: you sign in as A, and a sync for A starts. You sign in as B in a dialog left open in another tab. `persistSyncConfig` switches to B, since the device holds no tasks yet. B's task arrives and you edit it. A second sign-in as A saves A's token before its own save refuses it. `resolvePushPrincipal` now passes for A, the push reads B's edit, and `upsertRemoteTask` creates it with `owner: A` under A's token. The server accepts it. A second replay found a way in with no stale dialog. The sync tab's `authRefresh` was in flight while the other tab signed out and signed in as B. Its late response then saved A's token over B's, because `clearPocketBase` only detaches the tab that calls it. The refresh runs on every sync in a token's last seven days.
 2. **`sign-out-reads-config-early`** (`GapSignOutRead.cfg`). `disableSync` calls `getSyncConfig()` before `resetSyncConfigState` opens its transaction, then writes the signed-out row from that copy. If A's sign-in saves in between, the row it writes keeps no `localTaskOwnerUserId`. A's task stays on the device with no owner recorded, so B can sign in. Then `populateFromExistingTasks` queues A's task, and B's push uploads it to B. It needs a Sign out click in a dialog that still shows an older session, within the moment A's sign-in takes to save.
 3. **`settings-writes-stale-config`** (`GapSettingsWrite.cfg`). `updateAutoSyncConfig` calls `updateSyncConfig`, which reads the row and puts `{...current, ...updates}` with no transaction. The gap config's path matches finding 2. The code config's shortest break runs the other way. Settings reads A's row while B's sign-in saves, then writes A's row back. B's task now sits on a device whose `sync_config` names A. The toggle shows only while that tab believes sync is on, and the window is one IndexedDB round trip.
 4. **`populate-after-sign-in`** (`GapPopulate.cfg`). `persistSyncConfig` commits its transaction, then `populateFromExistingTasks` reads `db.tasks` and enqueues each task with no session check. If Reset Everything erases local data between that read and the enqueues, A's task is queued into an empty device. B can then sign in, since the guard counts tasks and not queue rows, and B's push uploads A's task. The reset has to fit between a few IndexedDB round trips.
 
-`SyncSessionFixed.cfg` sets `Gaps = {}`, a model of the code with all four fixed. There the push reads the queue inside a fenced transaction, and both config writes read the row inside their own transaction. The sign-in transaction also queues the local tasks itself. Both rules hold there. The fixed model is a guess at the fixes, so when one lands, describe the code that shipped (see "Update the model").
+`SyncSessionFixed.cfg` sets `Gaps = {}`, a model of the code with the three open findings fixed too. There both config writes read the row inside their own transaction. The sign-in transaction also queues the local tasks itself. Both rules hold there. The fixed model is a guess at the fixes, so when one lands, describe the code that shipped (see "Update the model").
 
 ## Run the check
 
@@ -40,22 +40,22 @@ bash docs/formal/sync-session/check.sh
 It runs nine configs through `scripts/tlc.sh`, which pins TLC 1.7.4 by hash and finds Java 21. The first run downloads the jar. The whole check takes about 50 seconds. It prints one line per config, which ends with what that config stands for, and exits 0 only when every line says `ok`:
 
 ```
-ok       SyncSession.cfg          expected DeviceHoldsOnlyTheSignedInAccount  got DeviceHoldsOnlyTheSignedInAccount    101687 states   3s  (the code today: findings 1 to 4)
-ok       SyncSessionFixed.cfg     expected pass                               got pass                                 549924 states  14s  (the code with all four gaps fixed)
-ok       GapPushQueue.cfg         expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             170165 states   5s  (finding 1: push reads the queue unfenced)
-ok       GapSignOutRead.cfg       expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             236717 states   4s  (finding 2: sign-out reads sync_config early)
-ok       GapSettingsWrite.cfg     expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             495088 states   9s  (finding 3: Settings writes a stale sync_config)
-ok       GapPopulate.cfg          expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             421091 states   8s  (finding 4: populate runs after sign-in commits)
+ok       SyncSession.cfg          expected DeviceHoldsOnlyTheSignedInAccount  got DeviceHoldsOnlyTheSignedInAccount    101677 states   1s  (the code today: findings 2 to 4)
+ok       SyncSessionFixed.cfg     expected pass                               got pass                                 549924 states   9s  (the code with findings 2 to 4 fixed too)
+ok       GapSignOutRead.cfg       expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             236717 states   3s  (finding 2: sign-out reads sync_config early)
+ok       GapSettingsWrite.cfg     expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             495088 states   5s  (finding 3: Settings writes a stale sync_config)
+ok       GapPopulate.cfg          expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             421091 states   5s  (finding 4: populate runs after sign-in commits)
 ok       BrokenPullFence.cfg      expected DeviceHoldsOnlyTheSignedInAccount  got DeviceHoldsOnlyTheSignedInAccount      3853 states   1s  (broken: pull without the fence)
-ok       BrokenSignInGuard.cfg    expected DeviceHoldsOnlyTheSignedInAccount  got DeviceHoldsOnlyTheSignedInAccount      1549 states   2s  (broken: sign-in without the owner check)
-ok       BrokenPushPrincipal.cfg  expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount              68777 states   2s  (broken: push without the principal check)
+ok       BrokenSignInGuard.cfg    expected DeviceHoldsOnlyTheSignedInAccount  got DeviceHoldsOnlyTheSignedInAccount      1549 states   1s  (broken: sign-in without the owner check)
+ok       BrokenPushPrincipal.cfg  expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount              68777 states   1s  (broken: push without the principal check)
+ok       BrokenPushQueueFence.cfg expected NoRecordInAnotherAccount           got NoRecordInAnotherAccount             170165 states   3s  (broken: push reads the queue without the fence)
 check.sh: every config matched
 ```
 
-- `SyncSession.cfg` is the code as it is. It must break, and only through the four findings above. TLC stops at the first broken rule, so this line names one.
+- `SyncSession.cfg` is the code as it is. It must break, and only through the three open findings above. TLC stops at the first broken rule, so this line names one.
 - `SyncSessionFixed.cfg` must hold. A change that breaks a rule here is the signal this skill exists for.
 - Each `Gap*.cfg` turns on one finding and checks the server rule. Each must still break it.
-- Each `Broken*.cfg` starts from the fixed model and sets `Broken`, which removes one guard the code has today. The three are the pull's session check, the sign-in owner check, and the push principal check. Each must break the rule its line names, so each rule has been seen to fail.
+- Each `Broken*.cfg` starts from the fixed model and sets `Broken`, which removes one guard the code has today. The four are the pull's session check, the sign-in owner check, the push principal check, and the push's session check on the queue read. Each must break the rule its line names, so each rule has been seen to fail.
 
 A `MISMATCH` line keeps TLC's output and prints the folder it's in. Rerun one config by hand with `bash scripts/tlc.sh docs/formal/sync-session/SyncSession.tla docs/formal/sync-session/<config>`.
 
@@ -116,7 +116,7 @@ To land a step between a read and its write, wrap the next call of a Dexie table
 | `PushChecks`, `CheckLands` | `lib/sync/pb-push.ts`, `lib/sync/pb-sync-helpers.ts` | `createPushSessionCheck` before a create over a 404, `confirmSessionIdentity` (posts to auth-refresh with `pb.send` and saves nothing), `isSessionCheckFailure` stops the loop |
 | | `lib/sync/pocketbase-client.ts` | `getPocketBase`, `clearPocketBase`: the late save lands in a throwaway only in the tab that cleared |
 | | `pocketbase` SDK 0.28.1 | `RecordService.authResponse` saves unconditionally; `LocalAuthStore` reads the shared `pocketbase_auth` key on every access |
-| `PushStarts` | `lib/sync/pb-push.ts`, `lib/sync/queue.ts` | `pushLocalChanges`, `resolvePushPrincipal`, `getPending` |
+| `PushStarts` | `lib/sync/pb-push.ts`, `lib/sync/queue.ts` | `pushLocalChanges`, `resolvePushPrincipal`, `readPendingForSession` (`assertSyncSessionCurrent`, then `getPending`, in one transaction) |
 | `PushSends`, `PushEnds` | `lib/sync/pb-push.ts`, `lib/sync/pb-sync-helpers.ts` | `pushSingleItem`, `upsertRemoteTask` (`owner` from `taskRecordToPocketBase`), `fetchRemoteTaskEntry`; the loop's 429 `break` |
 | | `scripts/setup-pocketbase-collections.sh` | tasks `createRule`, `updateRule`, `deleteRule`: `owner = @request.auth.id` |
 | `PullFetches` | `lib/sync/pb-pull.ts`, `lib/sync/pb-sync-helpers.ts` | `pullRemoteChanges` (`getCurrentUserId`), `fetchBoundedRemoteTasks`; tasks `listRule` |
@@ -129,7 +129,7 @@ To land a step between a read and its write, wrap the next call of a Dexie table
 | `ResetWipes`, `ResetReloads` | `lib/reset-everything.ts`, `lib/reset-local-data.ts` | `resetEverything`, `clearLocalStorage`, `reloadAfterReset`, `wipeLocalData`, `clearTables`, `buildPreservedSyncMetadata` |
 | `YouChangeAutoSync`, `AutoSyncSaves` | `lib/sync/config/get-set.ts`, `components/settings/sync-settings.tsx` | `updateAutoSyncConfig`, `updateSyncConfig` |
 | `YouEditTask`, `EditSaves` | `lib/tasks/crud/helpers.ts`, `lib/tasks/crud/update.ts` | `runTaskSyncTransaction`, `updateTask`; every writer that enqueues through it behaves the same |
-| `Broken` values | `pb-pull.ts`, `use-sync-auth-dialog.ts`, `pb-push.ts` | `pull-skips-fence`, `sign-in-skips-owner-check`, and `push-skips-principal-check` each undo one guard above |
+| `Broken` values | `pb-pull.ts`, `use-sync-auth-dialog.ts`, `pb-push.ts` | `pull-skips-fence`, `sign-in-skips-owner-check`, `push-skips-principal-check`, and `push-skips-queue-fence` each undo one guard above |
 
 These touch the same state, and the model leaves them out on purpose. `updateSyncCursor` and `writeSyncOutcome` (with `RetryManager` inside it) are fenced and keep `enabled`, `userId`, and `localTaskOwnerUserId`. `reconcileDeletedTasks` and `applyRemoteDeletion` only delete rows, and `resurrectOnSight` only restores rows already in Trash. The session checks in `reconcileDeletedTasks` and `resurrectOnSight` are the same `confirmSessionIdentity` as `CheckLands`: a 401 forgets the refused token and ends the sync, and clearing a token only takes a principal away. The push's check before it drops a delete that found nothing (`beforeDroppingDelete`) is left out with the deletes. `deleteRemoteAccountAndTasks` only deletes, through the token's own account. `lib/reset-lock.ts` locks the UI, and no sync path reads it. The archive, Trash, import, and MCP writers enqueue like `EditSaves`.
 
@@ -140,6 +140,8 @@ These touch the same state, and the model leaves them out on purpose. `updateSyn
 The same day, a dry run of this skill made `resetSyncConfigState` write `localTaskOwnerUserId: null`. The check still passed until `SignOutSaves` described that code. Then `SyncSessionFixed.cfg` broke `DeviceHoldsOnlyTheSignedInAccount`, and `BrokenPushPrincipal.cfg` broke it before its own rule. The replay showed B's sync pushing A's task into B's account. On the real code, the same replay stops at "Local tasks belong to a different sync account".
 
 On 2026-11-10 the refused-session change (audit P1 item 2) updated `TokenFresh`, `RefreshLands`, and the push (`PushChecks`, `CheckLands`, `ForgetRefused`), and the check matched. The change adds no guard for these two rules: the tasks rules that `PushSends` models already refuse a create sent with another account's token, and clearing a token only takes a principal away. A scratch run in which the push's check saved its answer still passed `SyncSessionFixed.cfg`. The only other covered change since this commit, `e94022a`, makes `runTaskSyncTransaction`'s scope an async function, which `EditSaves` already assumes. Move this commit to that change's merge commit once it lands on `main`.
+
+On 2026-11-11 the push fence (finding 1) updated `PushStarts`, and the check matched. The gap left `AllGaps`, and `push-skips-queue-fence` joined `BrokenGuards`. The push also checks the session before each row and inside each queue write. The model leaves those checks out, so it allows more than the code does. The sync commit stays at `dd32e08c` until that fix is on `main`.
 
 Move this commit forward only after you've read every change to covered code since it, updated the model where needed, and seen the check match. If the check is blocked, leave the commit where it is and say so. Record a commit on `main`, because a squash merge drops branch commits.
 
