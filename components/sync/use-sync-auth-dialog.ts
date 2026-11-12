@@ -240,12 +240,15 @@ export async function persistSyncConfig(authState: AuthState) {
   }
 
   const db = getDb();
+  // Resolved before the transaction opens, so nothing but Dexie is awaited inside it.
+  const queue = getSyncQueue();
   await db.transaction(
     "rw",
     db.tasks,
     db.archivedTasks,
     db.deletedTasks,
     db.syncMetadata,
+    db.syncQueue,
     async () => {
       const existingConfig = (await db.syncMetadata.get("sync_config")) as
         | PBSyncConfig
@@ -269,9 +272,11 @@ export async function persistSyncConfig(authState: AuthState) {
       }
 
       await db.syncMetadata.put(buildSyncConfig(authState, existingConfig));
+
+      // Queue the local tasks in the same transaction. Queued after it commits,
+      // a reset could erase the device between the read and the enqueues, and
+      // this account's tasks would sit queued for the next account to push.
+      await queue.populateFromExistingTasks();
     },
   );
-
-  const queue = getSyncQueue();
-  await queue.populateFromExistingTasks();
 }

@@ -7,7 +7,6 @@
 import { getDb } from "@/lib/db";
 import { clearPocketBase } from "../pocketbase-client";
 import type { PBSyncConfig } from "../types";
-import { getSyncConfig } from "./get-set";
 import { rememberForResurrect, trashDeleteTaskIds } from "../resurrect-ids";
 import { createLogger } from "@/lib/logger";
 import { clearAppCaches } from "@/lib/browser-cache";
@@ -21,14 +20,21 @@ const logger = createLogger('SYNC_CONFIG');
  * profile must not see the previous user's sync metadata, queued
  * operations, or sync-history entries (which carry device IDs, task
  * counts, and error messages that may contain task content).
+ *
+ * Returns false, and writes nothing, when no sync_config row exists.
  */
-async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
+async function resetSyncConfigState(): Promise<boolean> {
   const db = getDb();
-  const localTaskOwnerUserId = current.localTaskOwnerUserId ?? current.userId ?? null;
 
   // One transaction, the disabled config first: closing the tab partway must
   // never leave Trash deletes queued and unremembered behind a signed-out config.
-  await db.transaction('rw', [db.syncMetadata, db.syncQueue, db.syncHistory], async () => {
+  // The row is read here too. A copy read before the transaction could predate
+  // a sign-in, and the signed-out row would then forget whose tasks these are.
+  return db.transaction('rw', [db.syncMetadata, db.syncQueue, db.syncHistory], async () => {
+    const current = (await db.syncMetadata.get('sync_config')) as PBSyncConfig | undefined;
+    if (!current) return false;
+    const localTaskOwnerUserId = current.localTaskOwnerUserId ?? current.userId ?? null;
+
     await db.syncMetadata.put({
       ...current,
       enabled: false,
@@ -57,6 +63,7 @@ async function resetSyncConfigState(current: PBSyncConfig): Promise<void> {
 
     // Clear sync history, for privacy on shared devices.
     await db.syncHistory.clear();
+    return true;
   });
 }
 
@@ -79,22 +86,14 @@ async function clearBrowserCaches(): Promise<void> {
  * Disable sync (logout)
  */
 export async function disableSync(): Promise<void> {
-  const current = await getSyncConfig();
-
-  if (!current) {
-    clearPocketBase();
-    await clearBrowserCaches();
-    return;
-  }
-
   // Persist the disabled config before any other awaited step. An in-flight
   // sync re-reads this row before each local write and before each pushed row,
   // so it stops at its next step. A request already sent still completes.
-  await resetSyncConfigState(current);
+  const hadConfig = await resetSyncConfigState();
 
   // Clear PocketBase auth state (token + localStorage)
   clearPocketBase();
   await clearBrowserCaches();
 
-  logger.info('Sync disabled');
+  if (hadConfig) logger.info('Sync disabled');
 }

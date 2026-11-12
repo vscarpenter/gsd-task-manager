@@ -16,15 +16,14 @@ spec="$here/SyncSession.tla"
 
 # config | expected outcome | why
 expectations=(
-  "SyncSession.cfg|DeviceHoldsOnlyTheSignedInAccount|the code today: findings 2 to 4"
-  "SyncSessionFixed.cfg|pass|the code with findings 2 to 4 fixed too"
-  "GapSignOutRead.cfg|NoRecordInAnotherAccount|finding 2: sign-out reads sync_config early"
-  "GapSettingsWrite.cfg|NoRecordInAnotherAccount|finding 3: Settings writes a stale sync_config"
-  "GapPopulate.cfg|NoRecordInAnotherAccount|finding 4: populate runs after sign-in commits"
+  "SyncSession.cfg|pass|the code today"
   "BrokenPullFence.cfg|DeviceHoldsOnlyTheSignedInAccount|broken: pull without the fence"
   "BrokenSignInGuard.cfg|DeviceHoldsOnlyTheSignedInAccount|broken: sign-in without the owner check"
   "BrokenPushPrincipal.cfg|NoRecordInAnotherAccount|broken: push without the principal check"
   "BrokenPushQueueFence.cfg|NoRecordInAnotherAccount|broken: push reads the queue without the fence"
+  "BrokenSignOutRead.cfg|NoRecordInAnotherAccount|broken: sign-out reads sync_config early"
+  "BrokenSettingsWrite.cfg|NoRecordInAnotherAccount|broken: Settings writes a stale sync_config"
+  "BrokenPopulate.cfg|NoRecordInAnotherAccount|broken: populate runs after sign-in commits"
 )
 
 out_dir="$(mktemp -d "${TMPDIR:-/tmp}/sync-session-check.XXXXXX")"

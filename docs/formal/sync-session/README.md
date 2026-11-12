@@ -8,7 +8,7 @@ The module header lists the files it models. They sit under `lib/sync/`, plus `l
 
 ## Interface
 
-- `check.sh`: run `bash docs/formal/sync-session/check.sh`. It parses no arguments and always runs all nine configs. It reads `TMPDIR`.
+- `check.sh`: run `bash docs/formal/sync-session/check.sh`. It parses no arguments and always runs all eight configs. It reads `TMPDIR`.
   - It runs `scripts/tlc.sh SyncSession.tla <config>` once per config.
   - `outcome_of` reads the result from the log text: the violated invariant's name, `deadlock`, `pass`, or `tlc-error`.
   - Exit codes: 0 when every config matches, 1 on any mismatch.
@@ -16,20 +16,18 @@ The module header lists the files it models. They sit under `lib/sync/`, plus `l
 
   | Config | Expected result |
   |---|---|
-  | `SyncSession.cfg` | `DeviceHoldsOnlyTheSignedInAccount` |
-  | `SyncSessionFixed.cfg` | `pass` |
-  | `GapSignOutRead.cfg` | `NoRecordInAnotherAccount` |
-  | `GapSettingsWrite.cfg` | `NoRecordInAnotherAccount` |
-  | `GapPopulate.cfg` | `NoRecordInAnotherAccount` |
+  | `SyncSession.cfg` | `pass` |
   | `BrokenPullFence.cfg` | `DeviceHoldsOnlyTheSignedInAccount` |
   | `BrokenSignInGuard.cfg` | `DeviceHoldsOnlyTheSignedInAccount` |
   | `BrokenPushPrincipal.cfg` | `NoRecordInAnotherAccount` |
   | `BrokenPushQueueFence.cfg` | `NoRecordInAnotherAccount` |
+  | `BrokenSignOutRead.cfg` | `NoRecordInAnotherAccount` |
+  | `BrokenSettingsWrite.cfg` | `NoRecordInAnotherAccount` |
+  | `BrokenPopulate.cfg` | `NoRecordInAnotherAccount` |
 
 - `SyncSession.tla` (module `SyncSession`):
-  - Constants: `Gaps` and `Broken`.
-  - `AllGaps`: `sign-out-reads-config-early`, `settings-writes-stale-config`, `populate-after-sign-in`.
-  - `BrokenGuards`: `none`, `pull-skips-fence`, `sign-in-skips-owner-check`, `push-skips-principal-check`, `push-skips-queue-fence`.
+  - Constant: `Broken`.
+  - `BrokenGuards`: `none`, `pull-skips-fence`, `sign-in-skips-owner-check`, `push-skips-principal-check`, `push-skips-queue-fence`, `sign-out-reads-config-early`, `settings-writes-stale-config`, `populate-after-sign-in`.
   - `Next` joins 26 actions in five groups.
     - Sync tab: `SyncStarts` to `PullApplies`.
     - Realtime: `EventArrives` and `EventApplies`.
@@ -38,10 +36,9 @@ The module header lists the files it models. They sit under `lib/sync/`, plus `l
     - Settings and edits: `YouChangeAutoSync`, `AutoSyncSaves`, `YouEditTask`, `EditSaves`.
   - `Spec == Init /\ [][Next]_vars`. It has no fairness condition.
 - Config groups:
-  - `SyncSession.cfg`: all three gaps, `Broken = "none"`.
-  - `SyncSessionFixed.cfg`: `Gaps = {}`, `Broken = "none"`.
-  - `Gap*.cfg`: one gap each. They check `TypeOK` and `NoRecordInAnotherAccount`.
-  - `Broken*.cfg`: `Gaps = {}` and one broken guard each.
+  - `SyncSession.cfg`: `Broken = "none"`, the code as it is. It checks `TypeOK` and both rules.
+  - `Broken*.cfg`: seven configs with one broken guard each.
+  - `BrokenSignOutRead.cfg`, `BrokenSettingsWrite.cfg`, and `BrokenPopulate.cfg` check only `TypeOK` and `NoRecordInAnotherAccount`. The other four check both rules too.
 - `view.mjs` exports `title`, `state(v)`, `group(v)`, `colors`, and `step(action, from, to)`. `state` returns a pair of strings. The functions are pure and have no imports.
 
 ## Invariants
@@ -49,7 +46,7 @@ The module header lists the files it models. They sit under `lib/sync/`, plus `l
 - `SyncSession.tla:TypeOK`: every variable keeps its declared type and domain.
 - `SyncSession.tla:NoRecordInAnotherAccount`: no account's server copy ever holds a task or queued edit from another account.
 - `SyncSession.tla:DeviceHoldsOnlyTheSignedInAccount`: while sync is on for an account, the device holds only that account's tasks and queued edits.
-- `SyncSession.tla:ASSUME`: `Gaps` is a subset of `AllGaps`, and `Broken` is in `BrokenGuards`.
+- `SyncSession.tla:ASSUME`: `Broken` is in `BrokenGuards`.
 - The module defines no temporal property, and no config has a `PROPERTY` line.
 - `check.sh` uses `set -uo pipefail` without `-e`, so the loop continues after a failed TLC run.
 

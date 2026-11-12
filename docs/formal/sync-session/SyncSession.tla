@@ -14,8 +14,7 @@
 \* .claude/skills/verify-sync-session/SKILL.md, and it maps each action to code.
 EXTENDS Naturals, FiniteSets
 
-CONSTANTS
-  Gaps,    \* the gaps the code has today; {} models the code with every gap fixed
+CONSTANT
   Broken   \* "none", or the guard that a broken variant removes
 
 None == "none"
@@ -24,13 +23,16 @@ Accounts == {"A", "B"}
 \* content came from: "A" is a task from account A, or a queued edit of one.
 Tabs == {"sync", "other"}
 
-AllGaps == {
+BrokenGuards == {
+  "none",
+  "pull-skips-fence",              \* applyRemoteRecords without assertSyncSessionCurrent
+  "sign-in-skips-owner-check",     \* persistSyncConfig without the local owner check
+  "push-skips-principal-check",    \* pushLocalChanges without resolvePushPrincipal
+  "push-skips-queue-fence",        \* pushLocalChanges reads the queue with no session check
   "sign-out-reads-config-early",   \* disableSync reads sync_config before its transaction
   "settings-writes-stale-config",  \* updateSyncConfig writes back a row read earlier
   "populate-after-sign-in"         \* populateFromExistingTasks runs after persistSyncConfig commits
 }
-BrokenGuards == {"none", "pull-skips-fence", "sign-in-skips-owner-check", "push-skips-principal-check",
-                 "push-skips-queue-fence"}
 
 Cfg(on, user, lowner) == [on |-> on, user |-> user, lowner |-> lowner]
 SignedOut(lowner) == Cfg(FALSE, None, lowner)
@@ -293,8 +295,10 @@ YouSignIn(t, x) ==
 
 \* persistSyncConfig: one transaction over tasks, archivedTasks, deletedTasks,
 \* and syncMetadata. It refuses when local rows belong to another account, and
-\* handleOAuthSuccess then calls clearPocketBase in this tab. Without the
-\* populate-after-sign-in gap, the same transaction queues the local rows.
+\* handleOAuthSuccess then calls clearPocketBase in this tab. The same
+\* transaction also scopes syncQueue and queues the local rows
+\* (populateFromExistingTasks). The populate-after-sign-in variant queues them
+\* after the transaction commits, in two steps.
 SignInSaves ==
   /\ si = "persist"
   /\ LET lo == LocalOwner(cfg)
@@ -305,14 +309,14 @@ SignInSaves ==
              /\ si' = "idle" /\ siWho' = None
              /\ UNCHANGED <<cfg, queue>>
         ELSE /\ cfg' = Cfg(TRUE, siWho, siWho)
-             /\ IF "populate-after-sign-in" \in Gaps
+             /\ IF Broken = "populate-after-sign-in"
                 THEN si' = "popread" /\ UNCHANGED <<queue, siWho>>
                 ELSE si' = "idle" /\ siWho' = None /\ queue' = queue \cup rows
              /\ UNCHANGED <<tok, rt>>
   /\ UNCHANGED <<rows, srv, sp, pullFirst, owner, pushOwner, pending, pullOwner, fetched, siTab, siRows, soVars, st, ed, ev>>
 
-\* queue.populateFromExistingTasks, after persistSyncConfig commits: it reads
-\* the local tasks...
+\* Broken variant only: queue.populateFromExistingTasks after persistSyncConfig
+\* commits. It reads the local tasks...
 PopulateReads ==
   /\ si = "popread"
   /\ si' = "popwrite" /\ siRows' = rows
@@ -330,20 +334,20 @@ PopulateWrites ==
 \* signOutEverywhere revokes on the server first, which only makes the server
 \* refuse more requests, then runs the same disableSync.
 
-\* disableSync: getSyncConfig() reads the row before resetSyncConfigState opens
-\* its transaction. resetEverything starts with the same disableSync.
+\* disableSync calls resetSyncConfigState and reads nothing first.
+\* resetEverything starts with the same disableSync. The
+\* sign-out-reads-config-early variant reads the row here, before the transaction.
 YouSignOut(t, reset) ==
   /\ so = "idle"
   /\ so' = "commit" /\ soTab' = t /\ soReset' = reset
-  /\ soCfg' = IF "sign-out-reads-config-early" \in Gaps THEN cfg ELSE SignedOut(None)
+  /\ soCfg' = IF Broken = "sign-out-reads-config-early" THEN cfg ELSE SignedOut(None)
   /\ UNCHANGED <<cfg, tok, rows, queue, srv, syncVars, siVars, st, ed, ev>>
 
-\* resetSyncConfigState: one transaction writes the signed-out row, keeping
-\* localTaskOwnerUserId, and clears the queue. Without the
-\* sign-out-reads-config-early gap, it reads the row inside that transaction.
+\* resetSyncConfigState: one transaction reads the row, writes the signed-out
+\* row, keeping localTaskOwnerUserId, and clears the queue.
 SignOutSaves ==
   /\ so = "commit"
-  /\ LET current == IF "sign-out-reads-config-early" \in Gaps THEN soCfg ELSE cfg
+  /\ LET current == IF Broken = "sign-out-reads-config-early" THEN soCfg ELSE cfg
      IN cfg' = SignedOut(LocalOwner(current))
   /\ queue' = {}
   /\ so' = "clear" /\ soCfg' = SignedOut(None)
@@ -378,12 +382,13 @@ ResetReloads ==
 ----------------------------------------------------------------------------
 \* Settings and task edits, in either tab.
 
-\* updateAutoSyncConfig calls updateSyncConfig: getSyncConfig(), then
-\* put({...current, ...updates}) with no transaction. Without the
-\* settings-writes-stale-config gap, the write keeps enabled, userId, and
-\* localTaskOwnerUserId as they are, so it changes nothing this model tracks.
+\* updateAutoSyncConfig calls updateSyncConfig, which reads the row and puts
+\* {...current, ...updates} in one transaction. That write keeps enabled,
+\* userId, and localTaskOwnerUserId as they are, so it changes nothing this
+\* model tracks and is not an action here. The settings-writes-stale-config
+\* variant reads the row first and writes it back in a later step.
 YouChangeAutoSync ==
-  /\ st = {} /\ "settings-writes-stale-config" \in Gaps
+  /\ st = {} /\ Broken = "settings-writes-stale-config"
   /\ st' = {cfg}
   /\ UNCHANGED <<cfg, tok, rows, queue, srv, syncVars, siVars, soVars, ed, ev>>
 
@@ -431,6 +436,6 @@ NoRecordInAnotherAccount == \A x \in Accounts : srv[x] \subseteq {x}
 \* tasks and queued edits.
 DeviceHoldsOnlyTheSignedInAccount == cfg.on => (rows \cup queue) \subseteq {cfg.user}
 
-ASSUME Gaps \subseteq AllGaps /\ Broken \in BrokenGuards
+ASSUME Broken \in BrokenGuards
 
 =============================================================================

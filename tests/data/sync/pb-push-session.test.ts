@@ -184,7 +184,12 @@ describe('pushLocalChanges session fence', () => {
 
     expect(server.create).toHaveBeenCalledTimes(1);
     expect(fetchRemoteTaskEntryMock).toHaveBeenCalledTimes(1);
-    expect(await queuedTaskIds()).toEqual(['t2']);
+    // Two rows queued in the same millisecond have no fixed order. Whichever
+    // went first was sent, and the row that is left is the other one.
+    const sent = server.create.mock.calls[0][0] as { task_id: string };
+    const left = await queuedTaskIds();
+    expect(left).toHaveLength(1);
+    expect(left).not.toContain(sent.task_id);
   });
 
   it('should_keep_a_delete_queued_when_the_session_ends_during_the_request', async () => {
