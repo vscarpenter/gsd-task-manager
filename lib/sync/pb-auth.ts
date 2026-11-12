@@ -15,6 +15,7 @@ import { OAUTH_REDIRECT_PATH, waitForOAuthCallback } from './oauth-callback';
 import { createLogger } from '@/lib/logger';
 import { isSessionRefusal, isTransientSyncFailure } from './error-categorizer';
 import { isTokenExpired } from 'pocketbase';
+import type { RecordModel } from 'pocketbase';
 
 const logger = createLogger('SYNC_AUTH');
 
@@ -355,8 +356,23 @@ export function loginWithApple(options?: OAuthLoginOptions): Promise<AuthState> 
 /**
  * How a token refresh ended. `unreachable` means the request failed for a
  * transient reason (offline, 429, 5xx), which says nothing about the session.
+ * `superseded` means a sign-in or sign-out replaced the token while the request
+ * was in flight, so the answer belongs to a session that is gone.
  */
-export type AuthRefreshOutcome = 'refreshed' | 'no-session' | 'rejected' | 'unreachable';
+export type AuthRefreshOutcome =
+  | 'refreshed'
+  | 'no-session'
+  | 'rejected'
+  | 'unreachable'
+  | 'superseded';
+
+/** The route behind the SDK's `authRefresh`. `confirmSessionIdentity` posts to it too. */
+const AUTH_REFRESH_PATH = '/api/collections/users/auth-refresh';
+
+interface AuthRefreshAnswer {
+  token?: string;
+  record?: RecordModel;
+}
 
 /**
  * Attempt to refresh the auth token and report how it ended.
@@ -365,6 +381,12 @@ export type AuthRefreshOutcome = 'refreshed' | 'no-session' | 'rejected' | 'unre
  * accepts only a token that is still valid: once it has expired the server
  * answers 401, so this must run before expiry (see ensureValidAuth). A token the
  * server refuses with a 401 is forgotten, so the sync dialog offers sign-in.
+ *
+ * The request goes out raw, not through the SDK's `authRefresh`, which saves
+ * every answer. The store reads a localStorage key all tabs share, so a late
+ * answer saved there puts this account's token back over a newer sign-in from
+ * another tab. The answer is saved only while the token that asked is still
+ * the stored one.
  */
 export async function refreshAuthOutcome(): Promise<AuthRefreshOutcome> {
   const pb = getPocketBase();
@@ -374,7 +396,12 @@ export async function refreshAuthOutcome(): Promise<AuthRefreshOutcome> {
   if (!sentToken) return 'no-session';
 
   try {
-    await pb.collection('users').authRefresh();
+    const answer: AuthRefreshAnswer = await pb.send(AUTH_REFRESH_PATH, { method: 'POST' });
+    if (pb.authStore.token !== sentToken) {
+      logger.debug('Auth refresh answer dropped: the session changed in flight');
+      return 'superseded';
+    }
+    if (answer?.token && answer.record) pb.authStore.save(answer.token, answer.record);
     logger.debug('Auth token refreshed successfully');
     return 'refreshed';
   } catch (error) {
@@ -403,6 +430,8 @@ export async function refreshAuth(): Promise<boolean> {
  * - refreshed: true.
  * - unreachable (offline, 429, 5xx): true if the current token is still
  *   valid, since a failed request says nothing about the session.
+ * - superseded: false. Another sign-in or a sign-out owns the store now, and
+ *   this run started for the session that is gone.
  * - rejected (401/403): false, even for an unexpired token, because the
  *   session was revoked (for example by "Sign out of all devices").
  *

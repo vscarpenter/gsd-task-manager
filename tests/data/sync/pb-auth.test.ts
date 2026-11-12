@@ -7,13 +7,15 @@ const mockPb = {
   collection: vi.fn(() => ({
     listAuthMethods: mockListAuthMethods,
     authWithOAuth2Code: mockAuthWithOAuth2Code,
-    authRefresh: mockAuthRefresh,
   })),
+  // The refresh goes out as a raw request, so the SDK never saves the answer.
+  send: mockAuthRefresh,
   authStore: {
     token: 'test-token',
     isValid: true,
     record: { id: 'user-123', email: 'test@example.com' },
     clear: vi.fn(),
+    save: vi.fn(),
   },
   buildURL: vi.fn((path: string) => `https://pb.example.test${path}`),
   cancelRequest: mockCancelRequest,
@@ -454,7 +456,6 @@ describe('PocketBase Auth', () => {
 
       const result = await refreshAuth();
 
-      expect(mockPb.collection).toHaveBeenCalledWith('users');
       expect(mockAuthRefresh).toHaveBeenCalled();
       expect(result).toBe(true);
     });
@@ -534,6 +535,37 @@ describe('PocketBase Auth', () => {
 
       await expect(refreshAuthOutcome()).resolves.toBe('rejected');
       expect(mockPb.authStore.clear).not.toHaveBeenCalled();
+    });
+
+    it('saves the fresh token when the session is unchanged', async () => {
+      const record = { id: 'user-123' };
+      mockAuthRefresh.mockResolvedValue({ token: 'fresh-token', record });
+
+      await expect(refreshAuthOutcome()).resolves.toBe('refreshed');
+      expect(mockAuthRefresh).toHaveBeenCalledWith('/api/collections/users/auth-refresh', { method: 'POST' });
+      expect(mockPb.authStore.save).toHaveBeenCalledWith('fresh-token', record);
+    });
+
+    // WEB-LATE-AUTH-REFRESH: the store reads a key every tab shares, so a saved
+    // late answer would put the old account's token back over the new sign-in.
+    it('drops an answer that lands after another sign-in replaced the token', async () => {
+      mockAuthRefresh.mockImplementationOnce(async () => {
+        mockPb.authStore.token = 'token-from-a-new-sign-in';
+        return { token: 'fresh-token-for-the-old-account', record: { id: 'user-123' } };
+      });
+
+      await expect(refreshAuthOutcome()).resolves.toBe('superseded');
+      expect(mockPb.authStore.save).not.toHaveBeenCalled();
+    });
+
+    it('drops an answer that lands after a sign-out', async () => {
+      mockAuthRefresh.mockImplementationOnce(async () => {
+        mockPb.authStore.token = '';
+        return { token: 'fresh-token-for-the-old-account', record: { id: 'user-123' } };
+      });
+
+      await expect(refreshAuthOutcome()).resolves.toBe('superseded');
+      expect(mockPb.authStore.save).not.toHaveBeenCalled();
     });
 
     it.each([
