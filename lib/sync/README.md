@@ -193,12 +193,15 @@ Push, pull, engine, and realtime:
 - `pb-sync-engine.ts:applyRemoteDeletion` uses the same `classifyRemoteDeletion` as the pull, in one transaction over `tasks`, `deletedTasks`, `syncQueue`, and `syncMetadata`.
 - `pb-sync-engine.ts:localCopyHolds` applies a realtime create or update only when the remote is strictly newer. A far-future remote over a pending local write is held off.
 - `pb-push.ts:resolvePushPrincipal` refuses a push when the SDK principal is not the session owner. It throws `StaleSyncSessionError`. The check runs once, at the start of `pushLocalChanges`, and compares the in-memory SDK principal.
-- The push path's local writes never call `assertSyncSessionCurrent`. This covers `queue.ts:dequeue`, `queue.ts:recordAttemptFailure`, and `pb-push.ts:settleRowOffset` (a write to `tasks`).
+- `pb-push.ts:readPendingForSession` reads the pending rows in one transaction over `syncMetadata` and `syncQueue`, after `assertSyncSessionCurrent`. A `sync_config` that names another account, or sync turned off, ends the push before it reads a row.
+- `pb-push.ts:pushSingleItem` calls `assertPushSessionCurrent` before any request for a row.
+- `pb-push.ts:dequeueForSession`, `pb-push.ts:chargeAttemptForSession`, and `pb-push.ts:settleRowOffset` (a write to `tasks`) each call `assertSyncSessionCurrent` inside their own transaction.
+- A request already sent is not fenced, because a transaction cannot span a network call. The server's `owner = @request.auth.id` rule guards that window.
 - `pb-push.ts:pushUpsert` and `pb-push.ts:pushDelete` skip and dequeue a stale operation when the remote is strictly newer. They record an attempt failure when the remote lookup failed.
 - `pb-push.ts:isRemoteNewer` never treats a remote stamp beyond now plus `MAX_CLIENT_CLOCK_SKEW_MS` as newer, so a local edit can heal a poisoned record.
 - `pb-push.ts:isStaleDelete` skips an archive's delete when the remote is newer than the archived version (B-46).
 - `pb-push.ts:createPushSessionCheck` confirms the session before a create and before dropping a delete that found no remote record. A refused token reads as a guest and 404s every lookup.
-- `pb-push.ts:pushLocalChanges` stops on a session check failure without charging queue rows. A retired row never re-arms.
+- `pb-push.ts:pushLocalChanges` stops on a session check failure without charging queue rows. `isSessionCheckFailure` counts `StaleSyncSessionError` as one. A retired row never re-arms.
 - `pb-push.ts:pushLocalChanges` runs sequentially with `THROTTLE_MS` between items, and aborts the loop when an item throws a 429. A 429 on the per-item lookup (`pb-sync-helpers.ts:fetchRemoteTaskEntry`) charges that row one attempt, and the loop continues.
 - `pb-push.ts:recordItemFailure` persists a stable error code only, never the raw message.
 - `pb-push.ts:upsertRemoteTask` takes `saved_at`, `focus_date`, and `focus_rank` from the current row (`placementToWire`), not the queued payload.

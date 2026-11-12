@@ -18,18 +18,18 @@ The module header lists the files it models. They sit under `lib/sync/`, plus `l
   |---|---|
   | `SyncSession.cfg` | `DeviceHoldsOnlyTheSignedInAccount` |
   | `SyncSessionFixed.cfg` | `pass` |
-  | `GapPushQueue.cfg` | `NoRecordInAnotherAccount` |
   | `GapSignOutRead.cfg` | `NoRecordInAnotherAccount` |
   | `GapSettingsWrite.cfg` | `NoRecordInAnotherAccount` |
   | `GapPopulate.cfg` | `NoRecordInAnotherAccount` |
   | `BrokenPullFence.cfg` | `DeviceHoldsOnlyTheSignedInAccount` |
   | `BrokenSignInGuard.cfg` | `DeviceHoldsOnlyTheSignedInAccount` |
   | `BrokenPushPrincipal.cfg` | `NoRecordInAnotherAccount` |
+  | `BrokenPushQueueFence.cfg` | `NoRecordInAnotherAccount` |
 
 - `SyncSession.tla` (module `SyncSession`):
   - Constants: `Gaps` and `Broken`.
-  - `AllGaps`: `push-reads-queue-unfenced`, `sign-out-reads-config-early`, `settings-writes-stale-config`, `populate-after-sign-in`.
-  - `BrokenGuards`: `none`, `pull-skips-fence`, `sign-in-skips-owner-check`, `push-skips-principal-check`.
+  - `AllGaps`: `sign-out-reads-config-early`, `settings-writes-stale-config`, `populate-after-sign-in`.
+  - `BrokenGuards`: `none`, `pull-skips-fence`, `sign-in-skips-owner-check`, `push-skips-principal-check`, `push-skips-queue-fence`.
   - `Next` joins 26 actions in five groups.
     - Sync tab: `SyncStarts` to `PullApplies`.
     - Realtime: `EventArrives` and `EventApplies`.
@@ -38,7 +38,7 @@ The module header lists the files it models. They sit under `lib/sync/`, plus `l
     - Settings and edits: `YouChangeAutoSync`, `AutoSyncSaves`, `YouEditTask`, `EditSaves`.
   - `Spec == Init /\ [][Next]_vars`. It has no fairness condition.
 - Config groups:
-  - `SyncSession.cfg`: all four gaps, `Broken = "none"`.
+  - `SyncSession.cfg`: all three gaps, `Broken = "none"`.
   - `SyncSessionFixed.cfg`: `Gaps = {}`, `Broken = "none"`.
   - `Gap*.cfg`: one gap each. They check `TypeOK` and `NoRecordInAnotherAccount`.
   - `Broken*.cfg`: `Gaps = {}` and one broken guard each.
