@@ -4,6 +4,8 @@
 - **Status:** Accepted
 - **Deciders:** Vinny Carpenter
 
+> **Status note, 2026-11-12.** The runtime cache is now an allowlist: `/manifest.json`, `/theme-init.js`, `/favicon.svg`, and `/icons/`. A same-origin GET that matches no rule passes through. So do `/api` and `/_` paths, requests with an Authorization header, and `no-store` requests. The worker also handles a same-origin share-target POST (`isShareTargetPost`). `lib/sw-cache-logic.ts` holds the rules, its test file has 45 tests, and `public/sw.js` is 349 lines.
+
 ## Context
 
 The PWA service worker used a single cache (`gsd-cache-v{version}`) for all assets. Every deploy bumped the version, which deleted the entire cache during activation — including content-hashed JS chunks under `/_next/static/` that are immutable by definition (their URL changes when content changes). This forced users to re-download ~2.6MB of chunks on every deploy, even when only 1-2 files changed.

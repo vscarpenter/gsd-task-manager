@@ -6,6 +6,8 @@
 
 > **Amended.** The MCP server keeps its own copy of these rules in `packages/mcp-server/src/analytics/` rather than importing `lib/analytics`; `packages/mcp-server/src/__tests__/pinned-copies/` pins the shared completion metrics to a fixture the root suite also reads. The file limit is 400 lines (`scripts/check-code-shape.cjs`).
 
+> **Status note, 2026-11-12.** `lib/analytics/trends.ts` now holds a per-day completion trend and a recurrence breakdown, not week-over-week comparisons. `metrics.ts` exports `calculateMetrics` and `getQuadrantPerformance`, and no function computes a productivity score. The shared completion-day rule lives in `completion-day.ts`. Several functions read the current time with `new Date()` instead of taking it as an argument.
+
 ## Context
 
 As the analytics dashboard grew to include productivity scores, completion streaks, tag breakdowns, trend analysis, and time-tracking metrics, the calculation logic became a significant portion of the codebase. The initial approach of inline calculations inside dashboard components was difficult to test, reuse, and reason about independently. Analytics also needed to be accessible from the MCP server (ADR-0005), which runs outside the React component tree.

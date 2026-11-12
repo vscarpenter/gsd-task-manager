@@ -6,6 +6,8 @@
 
 > **Amended.** `bun run build` writes the export (there is no `bun run export`), and the rewrite function is `cloudfront-function-url-rewrite.cjs`. It appends `/index.html` to every extensionless path, so a new route needs no function deploy. Fonts are self-hosted through `next/font`. A new service worker calls `skipWaiting()` on install and claims open pages on activate, and CI's `test:pwa` exercises that lifecycle.
 
+> **Status note, 2026-11-12.** [ADR 0012](0012-sw-multi-cache-strategy.md) replaced the single shell cache with three caches. On install, `public/sw.js` precaches only the page routes and a short runtime list (manifest, theme script, icons). It caches `/_next/static/` files when the page first fetches them, then serves them cache-first. Pages and RSC data are network-first, with the cache as the offline fallback. The routing rules live in `lib/sw-cache-logic.ts`.
+
 ## Context
 
 GSD Task Manager is a client-side-only Next.js app (ADR-0001) deployed as a static export to S3/CloudFront. Users expect the app to be available and responsive even without network connectivity — tasks should be readable and editable offline. A distribution mechanism that doesn't require app store approval was also preferred.

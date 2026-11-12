@@ -8,6 +8,8 @@
 
 > **Amended.** Export now writes envelope `2.2.0`, and `assertWithinImportCap` counts live, archived, and trashed tasks against `MAX_IMPORT_TASKS`.
 
+> **Status note, 2026-11-12.** The envelope now carries `deletedTasks` (ADR 0015), so export reads seven stores and the import transaction also scopes `deletedTasks`. A Replace clears the archive, Trash, or smart views only when the backup holds that key. A Merge overwrites a smart view whose id already exists. Import validates smart views one row at a time and gives a task with no `notifyBefore` the default reminder. The code is `lib/tasks/import-export.ts`.
+
 ## Context
 
 JSON export is the only way data leaves this app. There is no server copy by default,

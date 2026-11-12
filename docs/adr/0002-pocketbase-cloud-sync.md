@@ -6,6 +6,8 @@
 
 > **Amended by [ADR 0016](0016-hosted-sync-defers-field-encryption.md).** The hosted service runs without the field encryption hooks, and its operator has technical access to synced task content, so "the user owns the server" holds only for a self-hosted server. Sign-in also offers Apple (`lib/sync/pb-auth.ts`).
 
+> **Status note, 2026-11-12.** Sign-in now uses the OAuth2 manual code flow with PKCE (`lib/sync/pb-auth.ts`, `lib/sync/oauth-callback.ts`), not the SDK's realtime `authWithOAuth2` form. The app refreshes the token itself once it is within 7 days of expiry (`ensureValidAuth`). The Docker image under `docker/` ships `pb_hooks/tasks_encryption.pb.js` and refuses to start without `GSD_TASKS_ENC_KEY`. ADR 0016 records why the hosted service differs.
+
 ## Context
 
 Users requested multi-device sync. The architecture needed to preserve the privacy-first principle (ADR-0001) while enabling optional cross-device data sharing. The sync backend must be self-hostable so the user retains full data ownership.

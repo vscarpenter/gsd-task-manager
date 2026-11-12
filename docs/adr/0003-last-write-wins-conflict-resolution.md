@@ -6,6 +6,8 @@
 
 > **Amended.** Clock skew is bounded by clamping a future `client_updated_at` to now plus five minutes (`clampClientTimestamp` in `lib/sync/task-mapper.ts`, `SYNC_CONFIG.MAX_CLIENT_CLOCK_SKEW_MS`) and by checking remote stamps with `isBeyondClockSkew` (`lib/sync/pb-sync-helpers.ts`), not by ISO timestamps.
 
+> **Status note, 2026-11-12.** Plain last-write-wins now has exceptions. A remote record for an archived or trashed task applies only when it is newer than the tombstone ([ADR 0013](0013-archived-tasks-conditional-tombstone.md), [ADR 0015](0015-trash-with-retention.md)). During a pull contract backfill an equal timestamp also merges, and a winning local copy still takes fields its build never read ([ADR 0019](0019-pull-contract-version-backfill.md), [ADR 0020](0020-pull-contract-4-top-three.md)). A winning remote record keeps this device's `parentTaskId` and, unless the due date moved, its reminder state (`pocketBaseToTaskRecord` in `lib/sync/task-mapper.ts`). A far-future remote stamp does not replace a task with a pending local write (`holdsOffFarFutureRemote` in `lib/sync/pb-sync-helpers.ts`).
+
 ## Context
 
 With multi-device sync (ADR-0002), conflicts are inevitable when the same task is edited on two devices while offline. A conflict resolution strategy was needed that balances correctness, simplicity, and user expectations.

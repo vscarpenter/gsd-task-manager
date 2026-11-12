@@ -4,6 +4,8 @@
 **Status:** Accepted
 **Deciders:** Vinny Carpenter
 
+> **Status note, 2026-11-12.** The data layer does not enforce this rule today. `addDependency` in `lib/tasks/dependencies.ts` writes without a cycle check and has no caller in the app; `updateTask` also does not check. The web check runs in the edit drawer at save: `findDependencyCycleError` (`components/matrix-simplified/edit-drawer-dependencies.tsx`), called from `use-drawer-save.ts`. The MCP server uses its own copy of the check in `packages/mcp-server/src/dependencies.ts`. JSON import and sync pull store dependencies with no cycle check.
+
 ## Context
 
 Tasks can declare dependencies on other tasks (e.g., "Task B cannot start until Task A is done"). This forms a directed graph. If a cycle is introduced — Task A depends on B, B depends on C, C depends on A — the dependency system becomes logically inconsistent and any cycle-traversal code risks infinite loops. The app must validate that adding a dependency edge would not create a cycle before persisting it.
