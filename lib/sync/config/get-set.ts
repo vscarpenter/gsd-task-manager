@@ -20,20 +20,26 @@ export async function getSyncConfig(): Promise<PBSyncConfig | null> {
 }
 
 /**
- * Update sync configuration
+ * Update sync configuration.
+ *
+ * The read and the write share one transaction. A copy read earlier could be
+ * another account's row by the time it is written back, which would hand this
+ * device's tasks to the wrong session.
  */
 export async function updateSyncConfig(updates: Partial<PBSyncConfig>): Promise<void> {
   const db = getDb();
-  const current = await getSyncConfig();
+  await db.transaction("rw", [db.syncMetadata], async () => {
+    const current = (await db.syncMetadata.get("sync_config")) as PBSyncConfig | undefined;
 
-  if (!current) {
-    throw new Error("Sync config not initialized");
-  }
+    if (!current) {
+      throw new Error("Sync config not initialized");
+    }
 
-  await db.syncMetadata.put({
-    ...current,
-    ...updates,
-    key: "sync_config",
+    await db.syncMetadata.put({
+      ...current,
+      ...updates,
+      key: "sync_config",
+    });
   });
 }
 
