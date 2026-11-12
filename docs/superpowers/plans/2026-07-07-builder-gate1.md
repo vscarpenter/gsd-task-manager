@@ -1,5 +1,7 @@
 # Cycle B — Builder + Gate 1 Implementation Plan
 
+> **Status note, 2026-11-12.** This work shipped in PR #424 on 2026-07-07. PR #527 retired the builder on 2026-09-04: `scripts/builder-run.sh` prints a disabled notice and `.claude/commands/build-next.md` refuses to run. Do not follow Tasks 2 to 5 or install the plist. `docs/agents/builder.md` lists the controls a replacement needs.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A local, scheduled Claude routine that claims a `ready-for-agent` contract, writes a risk-scaled plan, stops for a label-swap plan approval (Gate 1), then builds to `coding-standards.md` and opens a PR — never merging.

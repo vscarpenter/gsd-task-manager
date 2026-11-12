@@ -1,5 +1,7 @@
 # Server-Side At-Rest Encryption Implementation Plan
 
+> **Status note, 2026-11-12.** This work shipped in v9.12.0 on 2026-06-20, and the files sit at the planned paths under `docker/pb_hooks/` and `docker/pb_migrations/`. ADR 0016 limits it to the self-hosted Docker image: the hosted service runs without the hooks and stores task content as plaintext. Do not apply the gated at-rest copy in Task 6. The image now pins PocketBase 0.40.4, not 0.26.6.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Encrypt task content (`title`, `description`, `tags`, `subtasks`, `time_entries`) at rest on the self-hosted PocketBase backend via a JS hook, with no web-client / MCP / sync-protocol changes.

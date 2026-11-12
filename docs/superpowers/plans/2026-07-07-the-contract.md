@@ -1,5 +1,7 @@
 # The Contract Implementation Plan
 
+> **Status note, 2026-11-12.** This work shipped in PR #421 on 2026-07-07 and still stands: the issue form, `scripts/parse-risk-tier.cjs`, `.github/workflows/apply-risk-label.yml`, and the PR template. The parser test lives at `tests/parse-risk-tier.test.ts`, not under `scripts/`. The workflow still applies the `risk:*` labels, but the builder that read them is retired (see `docs/agents/builder.md`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add an enforced, machine-parseable GitHub issue contract that carries a risk tier, plus the labels, auto-labeler, and PR template that make it the pipeline's front door.

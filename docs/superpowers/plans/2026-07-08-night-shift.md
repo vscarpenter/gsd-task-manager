@@ -1,5 +1,7 @@
 # Cycle D — The Night Shift Implementation Plan
 
+> **Status note, 2026-11-12.** This work shipped in PR #427 on 2026-07-08. PR #448 added a provenance check, and PR #527 retired the fix loop on 2026-09-04. `scripts/triage-run.sh` now only counts failing bot PRs, and only when `GSD_TRIAGE_BOT_LOGIN` is set, and `.claude/commands/triage-prs.md` refuses to run. Read `docs/agents/night-shift.md` before acting on this plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A nightly local routine that triages failing checks on `claude/*` PRs — auto-fixing mechanical classes on fix PRs, escalating judgment ones, skipping the rest — never merging, with a self-audit report.

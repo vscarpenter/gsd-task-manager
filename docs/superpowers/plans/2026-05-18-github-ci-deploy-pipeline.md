@@ -1,5 +1,7 @@
 # Plan: GitHub Actions CI/CD Deploy Pipeline
 
+> **Status note, 2026-11-12.** Phases 1 to 5 shipped on 2026-05-19 as PRs #289 to #293. PR #540 then retired the development deploy and removed `deploy-dev.yml` and `scripts/deploy-dev.sh`. PR #527 replaced `deploy-prod.yml` with `.github/workflows/deploy-production-release.yml`, which has no `workflow_dispatch` trigger. Read `docs/ops/gate2.md` and `docs/ops/github-actions-iam.md` for the current release path.
+
 | Field | Value |
 |---|---|
 | Date | 2026-05-18 |

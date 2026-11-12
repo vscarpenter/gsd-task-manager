@@ -1,5 +1,7 @@
 # Edit-Drawer Dependencies ("Depends on") Implementation Plan
 
+> **Status note, 2026-11-12.** This work shipped in PR #416 on 2026-07-05 and still stands. The field lives in `components/matrix-simplified/edit-drawer-dependencies.tsx`. The save-time cycle guard now runs from `components/matrix-simplified/use-drawer-save.ts`, and PR #483 moved the picker popup out of the scroll container.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Spec:** `tasks/spec.md` § "Restore dependency-linking ('Depends on') UI in the v9 edit drawer" (2026-07-05). Read it first — acceptance criteria AC1–AC9 referenced below are defined there.

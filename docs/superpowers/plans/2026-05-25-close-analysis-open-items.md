@@ -1,5 +1,7 @@
 # Close Remaining Codebase Analysis Open Items — Implementation Plan
 
+> **Status note, 2026-11-12.** All three PRs shipped on 2026-05-25 as #302, #303, and #304. The `safeParse` migration and `components/global-error-listener.tsx` still stand. PR #566 removed Sentry from the web app and the MCP server under ADR 0017, so do not follow PR 3. ADR 0017 puts replacement telemetry out of scope and asks for a new ADR first.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close the 3 remaining open items from the codebase analysis report: migrate `.parse()` to `.safeParse()`, add a global `unhandledrejection` listener, and integrate `@sentry/browser` for production error tracking.
