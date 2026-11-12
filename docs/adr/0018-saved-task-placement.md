@@ -2,6 +2,8 @@
 
 Status: implemented locally; hosted rollout and iOS support pending.
 
+> **Status note, 2026-11-12.** The iOS model now carries the marker (`GSDKit/Sources/GSDModel/Task.swift` in `gsd-iosapp`). ADR 0019 records Apple devices writing `saved_at` to the hosted server. Sync needed more than this ADR describes: ADR 0019 and ADR 0020 hold the pull contract and the push rules. Saving also refuses a completed task (`lib/tasks/saved-placement.ts`). Escalation, auto-archive, and top three skip Saved tasks, and the weekly sweep gives them a "saved" bucket after 30 days.
+
 ## Decision
 An optional `savedAt` ISO timestamp identifies an item outside the active matrix.
 Keep it in `tasks` with the same id and all existing context. Quadrant and due date

@@ -1,5 +1,7 @@
 # Spec: First-load JavaScript budget and two low-risk splits (PRF-1)
 
+> **Status, 2026-11-12.** Shipped in PR #555 (`5a5885cb`, 2026-09-19). The gate is `scripts/check-bundle-budget.cjs` with its baseline in `scripts/bundle-budget.json`, and the CI `build` job runs `bun run quality:bundle`. The Background numbers are from 2026-09-19. PR #566 has since removed Sentry (ADR 0017), the budget file now lists nine routes, and PR #682 refreshed the baseline. PR #558 stopped the coordinator status poll while sync is idle.
+
 Date: 2026-09-19. Tier: Non-trivial (CI gate, root layout, shared module). Scope
 approved by the owner on 2026-09-19: "budget plus two cheap splits". Audit
 finding PRF-1.

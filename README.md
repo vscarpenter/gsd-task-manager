@@ -23,8 +23,8 @@ offline-first local storage, optional PocketBase sync, and the GSD MCP server.
   Installed on Android, GSD also appears in the share sheet.
 - Due dates, tags, dependency selection, and circular-dependency prevention.
 - Archive, dashboard/review analytics, sync history, settings, and onboarding.
-- Trash with 30-day retention, the Today strip for your top three, the weekly
-  sweep, snooze, and What's New notes.
+- Trash with 30-day retention, the Today strip for your top three tasks, the
+  weekly sweep of tasks that need a decision, snooze, and What's New notes.
 - Local IndexedDB persistence, JSON import/export, offline PWA support, and
   user-controlled update prompts.
 - Optional multi-device PocketBase sync with Google, Apple, or GitHub OAuth and
@@ -69,12 +69,14 @@ canonical shortcut ledger.
 Choose **Move to Saved** on an incomplete task to keep reading material or an idea
 outside the matrix. Saved preserves the title, links, tags, and task context.
 Use **Notes and links** for short annotations (600 characters including links),
-search Saved or the command palette, and choose **Return to matrix** when ready.
+find saved items with the Saved page's search field or the command palette, and
+choose **Return to matrix** when ready.
 Review the quadrant and due date before returning. Saved items do not contribute
 to active task counts, review analytics, reminders, or due badges.
 
-Saved works offline and travels in JSON backups. Saved also works in the iPhone,
-iPad, and Mac app and syncs between them. Very old iOS builds show saved items as
+Saved works offline and travels in JSON backups. Saved also works in the native
+iPhone, iPad, and Mac app (a separate repository). With cloud sync on, saved
+items sync between the web app and the native app. Very old iOS builds show saved items as
 ordinary tasks. See [`tasks/saved-tasks/spec.md`](tasks/saved-tasks/spec.md) for
 the compatibility scope.
 
@@ -108,13 +110,21 @@ bun run quality:bundle
 bun run test:e2e
 ```
 
-Use `bun run test`, not `bun test`; the latter invokes Bun's built-in runner
-instead of Vitest. Playwright covers Chromium, Firefox, and WebKit. The optional
-authenticated PocketBase harness runs with:
+Use `bun run test`, not `bun test`; the latter starts Bun's built-in runner
+instead of Vitest, and a guard script stops it. Playwright covers Chromium,
+Firefox, and WebKit. The optional authenticated PocketBase harness runs with:
 
 ```bash
 bun run test:system:pocketbase
 ```
+
+The harness downloads PocketBase and runs the system tests under
+`packages/mcp-server/src/__tests__/system/` against a disposable instance. One
+test starts the web app in Chromium and drives its sync push, pull, and realtime
+paths, so it needs Playwright's Chromium. That test starts the app with
+`bun run dev:e2e`, which deletes `.next` first. The harness also needs `curl`,
+`unzip`, `python3`, and network access to GitHub for the PocketBase download. It
+supports Linux and macOS on x86_64 and arm64.
 
 To run the CI browser suite locally under the production CSP:
 
@@ -125,9 +135,10 @@ bun run test:pwa
 bun run test:e2e:export -- --workers=2
 ```
 
-`build:e2e` selects the CSP-approved hosted backend at build time; feedback
-tests intercept that endpoint and never submit to it. A plain local build
-defaults to localhost:8090, which the production CSP intentionally blocks.
+`build:e2e` selects the CSP-approved hosted backend at build time. Tests for the
+in-app feedback form intercept its requests and never submit them. A plain local build
+served on localhost defaults to `http://127.0.0.1:8090`, which the production
+CSP intentionally blocks.
 On macOS, Firefox tests use a disposable app-data home to avoid Playwright's
 Firefox 157 profile-launch issue. It is removed after the browser exits;
 the regular browser profile and system privacy permissions are untouched.
@@ -168,7 +179,8 @@ Before changing the release version or announcing a feature:
 1. Compare the README version with `package.json`.
 2. Verify every feature claim in the current shell, not only in retained data
    models or archived ADRs.
-3. Run the canonical checks above and a production static build.
+3. Run the canonical checks above. They include the production static build
+   (`bun run build`).
 4. Update the GitHub release notes, `SECURITY.md`, and the trust-boundary map
    when the release changes their claims.
 5. Treat source, tests, build artifacts, deployment, and live runtime as
@@ -295,7 +307,7 @@ comes from the code or a comment in the named file.
 - Run: `bun run test`
 - Run: `bun typecheck`, `bun run typecheck:tests`, `bun lint`,
   `bun run quality:shape`, and `bun run knip`
-- Run: `bun run build`, then `bun run test:e2e:export` for the browser suite
+- Run: `bun run build:e2e`, then `bun run test:e2e:export` for the browser suite
 
 ## Contributing and security
 

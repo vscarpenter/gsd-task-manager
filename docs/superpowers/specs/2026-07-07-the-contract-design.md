@@ -1,5 +1,7 @@
 # Spec: The Contract — Enforced Issue Templates + Risk Labels
 
+> **Status note, 2026-11-12.** This design shipped and its files are still live: `.github/ISSUE_TEMPLATE/change_request.yml`, `.github/workflows/apply-risk-label.yml`, `scripts/setup-labels.sh`, and `.github/pull_request_template.md`. The builder that was to read the risk tier is retired (see `docs/agents/builder.md`). `deploy-dev.yml` and `deploy-prod.yml` are gone (PRs #540 and #527). Gate 2 now runs in `.github/workflows/deploy-production-release.yml`, and `docs/ops/gate2.md` is the runbook.
+
 - **Date:** 2026-07-07
 - **Status:** Accepted (design approved 2026-07-07; per standing correction, proceeding straight to plan + implementation)
 - **Deciders:** Vinny Carpenter

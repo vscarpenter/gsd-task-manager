@@ -1,5 +1,7 @@
 # Close Remaining Codebase Analysis Open Items
 
+> **Status note, 2026-11-12.** PR 1 and PR 2 shipped and remain: `safeParse` in `lib/tasks/crud/update.ts` and `lib/notifications/settings.ts`, and `components/global-error-listener.tsx`. The listener today shows the throttled toast and does not log. PR 3 (Sentry) shipped and was later removed by ADR 0017 (`docs/adr/0017-remove-sentry-telemetry.md`, PR #566). `lib/sentry.ts`, `@sentry/browser`, and `NEXT_PUBLIC_SENTRY_DSN` no longer exist in the code.
+
 **Date:** 2026-05-25
 **Status:** Approved
 **Deciders:** Vinny Carpenter

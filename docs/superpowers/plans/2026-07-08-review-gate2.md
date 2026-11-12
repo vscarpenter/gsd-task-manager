@@ -1,5 +1,7 @@
 # Cycle C — Review + Gate 2 Implementation Plan
 
+> **Status note, 2026-11-12.** This work shipped in PR #426 on 2026-07-07. PR #449 removed `release-ready.yml` and its label on 2026-07-23, and PR #527 replaced `deploy-prod.yml` with `.github/workflows/deploy-production-release.yml`. The new workflow keeps an evidence job but finds the prior tag with inline `git tag`, so only a test uses `scripts/prev-release-tag.cjs`. `docs/ops/gate2.md` holds the current runbook and rollback command.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A deterministic `release-ready` signal, and a Gate 2 approval enriched with version + preview link + a real rollback command — reusing the existing `production` Environment gate and smoke test.

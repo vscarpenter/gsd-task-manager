@@ -3,7 +3,7 @@
 **Status:** decided, 2026-10-31. Sprint 2 merged it into each repo's `main`: web (#690, `955c63a`), iOS (gsd-iosapp #78, `22acaf0`), Android (gsd-android #75, `b531d30`), and MCP (#684, `84ea42a`).
 **Decision:** D-10, option 1 (`sprint/OWNER-DECISIONS.md` items 9 and 17). Evidence: `sprint/findings/D-10.md`.
 **No new field, no pull contract bump, no backup envelope change, no server change, no corpus.** The rule is one fallback expression, so each client's tests pin it (section 7).
-**Evidence:** code paths come from reading web, iOS, and Android `main` on 2026-10-31. Section 3's import row was rechecked against each `main` on 2026-11-08. The server behavior is S-AND's finding, run on PocketBase 0.40.4. Nothing here has run on a client.
+**Evidence:** code paths come from reading web, iOS, and Android `main` on 2026-10-31. Section 3's import row was rechecked against each `main` on 2026-11-08. The server behavior is S-AND's finding, run on PocketBase 0.40.4. When this note was written, nothing here had run on a client. File and line references are from those reads, and the dated notes in sections 6 and 7 say where the web and MCP code is now.
 
 ## 1. The problem
 
@@ -23,14 +23,14 @@ Nothing migrates at upgrade. A migration would write every row, and to reach oth
 
 | Stored | Who | What happens |
 |---|---|---|
-| Server `0` | Any device | Stays `0`, "at the due time". A real choice and an old null look the same, so it can't be repaired. Those other devices already behave this way, so nothing changes for them |
+| Server `0` | Any device | Stays `0`, "at the due time". A real choice and an old null look the same, so it can't be repaired. Devices that pulled the `0` already behave this way, so nothing changes for them |
 | Local null, server `0` | The device that wrote it | Keeps firing its default through the read fallback, as it does today. The next write of that row resolves it and pushes, and other devices move from `0` to that number |
 | Local null, server holds an old value | iOS or Android, after clearing an offset | Same. The next write replaces the old value |
 | A queued payload with null, from before the upgrade | Any client | Rule 2 at drain. If the row was null too, store the number on the row with no stamp bump and nothing queued, so this device and the server agree |
 | A backup with no offset | Import | Rule 1 applies, with the default in effect once the import finishes. That's the backup's default whenever the import restores the backup's settings, and this device's otherwise. A Replace restores them on every client. A Merge restores them on iOS (`restoreCompanionStores`, `GSDStore/TaskStore.swift:1053`, called for both modes at `:1027` and `:1038`) but not on web (`lib/tasks/import-export.ts:469`) or Android (`ImportApplier.kt:49-53`). A backup with no settings restores none. Whether the three should agree is backlog IMPORT-MERGE-SETTINGS. `notifyBefore` stays optional in the import schemas, so old backups still import |
 | Archived and trashed rows in a backup | Import | Not resolved on import, on all three clients. Nothing schedules a reminder for them. Each one settles on its next write, like any stored row above |
 
-Reads keep `notifyBefore ?? default` for good: local null rows can outlive any one release. It's a data persistence exception, so the fallback isn't a shim to remove later. Pull is unchanged, and a pulled number replaces a local null only by the ordinary strictly-newer rule.
+Reads keep `notifyBefore ?? default` for good: local null rows can outlive any one release. It's the data persistence exception to the no-shims rule in `coding-standards.md`, so the fallback isn't a shim to remove later. Pull is unchanged, and a pulled number replaces a local null only by the ordinary strictly-newer rule.
 
 **Accepted edge:** a device with a cleared cursor re-queues rows, on iOS through its seed. If such a row is null, its push writes this device's default over the server's value at an equal stamp, and other devices treat an equal stamp as a no-op until the next edit. This divergence exists today in a different form, and it clears on the next edit.
 
@@ -40,9 +40,11 @@ Reads keep `notifyBefore ?? default` for good: local null rows can outlive any o
 
 Each client treats a changed offset as a moved reminder, and clears `notificationSent` so it fires again (web `lib/tasks/crud/update.ts:103-107`, iOS `EditorMerge.swift:31-33`, Android `EditorRules.kt:34`). Resolving null to the number it already fires at isn't a move. **Compare effective values:** `old ?? default` against the new value. Otherwise, opening and saving an old task re-fires a reminder the user already saw.
 
+**iOS today, 2026-11-12:** `EditorMerge.merge` compares against the `original` its callers build with `untouched(_:defaultReminder:)`, which resolves null first. It never writes `notificationSent`. Its header comment says the iOS scheduler doesn't read that flag. Web and Android clear it as described.
+
 ## 5. Android's reminder row
 
-Android's first row writes null. AND-36 relabeled it "Default reminder" from "None" (#41), because null fired the default. That row can't exist under this rule, and Android has no way to turn off a task's reminder: nothing in `app/` writes `notificationEnabled`.
+The first row of Android's reminder picker writes null. AND-36 relabeled it "Default reminder" from "None" (#41), because null fired the default. That row can't exist under this rule, and Android has no way to turn off a task's reminder: nothing in `app/` writes `notificationEnabled`.
 
 **It becomes a real None, matching iOS and web.** The row writes `notificationEnabled = false` and keeps the number. Since `notification_enabled` syncs, None now means the same on every device, which null never could.
 
@@ -66,11 +68,21 @@ Android's first row writes null. AND-36 relabeled it "Default reminder" from "No
 
 Make the mapper require the default as a parameter on all three. Then the compiler finds every wire path, including ones this table missed.
 
+**Shipped on web, 2026-11-12 (#690).** The table's web files are right, with one file missing, and the code has moved inside them:
+
+- **Resolve on write:** `createTask`, `updateTask`, `duplicateTask` (`lib/tasks/crud/duplicate.ts`, missing from the table), and the import of live tasks. `defaultInEffectAfter` in `lib/tasks/import-export.ts` picks the import's default.
+- **Wire:** `taskRecordToPocketBase` (`lib/sync/task-mapper.ts`) takes the device default as a required argument. The read schema still accepts null.
+- **Drain:** `resolveNotifyBefore` picks the number, and `settleRowOffset` writes it back (`lib/sync/pb-push.ts`). The write-back is stricter than section 3 says. It runs only while the row still has no offset and its `updatedAt` equals the payload's. A local failure there is logged and doesn't fail the push, and a session that has ended stops the push.
+- **Don't re-arm:** `buildUpdatedRecord` in `lib/tasks/crud/update.ts` compares effective values.
+
+**Native today, 2026-11-12:** two cells differ. iOS `TaskStore.duplicate` and `ingestSynced`, and Android `TaskStore.duplicate`, also resolve on write. The Share Extension doesn't call `TaskStore.readNotificationSettings`: `ShareViewController.swift` reads `AppGroup.defaultReminderKey` from the App Group defaults and falls back to `AppGroup.fallbackDefaultReminder`.
+
 **MCP** (`packages/mcp-server/src/`). It has no queue, no stored rows, and no device settings.
 
 - `types.ts:174` writes `?? 0`, so a task created over MCP with no offset reminds at the due time. Create now writes the shipped default, 15, which is also every client's seeded default (`write-ops/task-operations.ts:113`).
 - Updates keep what they read, so they don't change. `types.ts:137` stays as it is.
 - **Fix the wrong tool text.** `tools/schemas/write-tools.ts:75` and `:174` say "0 disables the reminder". `0` fires at the due time. The text should say so, and point to `notificationEnabled: false` for off.
+- **Shipped, 2026-11-12 (#684):** the first bullet's "reminds at the due time" was the state before this change. `createTask` in `write-ops/task-operations.ts` now writes `DEFAULT_NOTIFY_BEFORE_MINUTES` (15). The mapper in `types.ts` keeps its `?? 0` fallback, and `createTask` never reaches it without a number. Both tool descriptions are fixed.
 
 **Docs:** add a line to `.claude/rules/pocketbase-sync.md`, and the owner updates the workspace `CLAUDE.md` contracts table.
 
@@ -98,6 +110,10 @@ The names stay the same on each client, so they can be compared. Android's `None
 **One real-server run,** on a bare PocketBase 0.40.4 with no hooks, using the `pocketbase` lock: repeat `findings/D-10.md`'s table through each client's mapper. Cases A to D must all store the number that client sent, and clearing an offset must no longer leave `0` or an old value.
 
 The existing web test `tests/data/sync/task-mapper.test.ts:146`, which expects `notify_before` to be null, flips.
+
+**Shipped, 2026-11-12:** web's tests are in `tests/data/notify-before-number.test.ts`, `tests/data/sync/task-mapper.test.ts`, `tests/data/sync/pb-push.test.ts`, and one write-back case in `tests/data/sync/pb-push-session.test.ts`. The mapper test flipped as planned. Two names in the table have no test: web's `any write of a legacy null pushes the resolved number`, and `an MCP update keeps the stored offset`. Two shipped with longer names: `a legacy null fires the default until it's written, then stores it`, and `an MCP create with no offset writes 15, the default every client seeds`.
+
+**iOS, 2026-11-12:** several iOS tests carry other names, so the table's names don't all match there. The two section 4 rows map to `aLegacyNullResolvesToTheDefaultSoOpeningAndSavingIsNoEdit` and `aRealChangeToTheOffsetStillWins` (`EditorMergeTests.swift`). Both assert the offset, and no iOS test in these files reads `notificationSent`. The "any write" row maps to `anyEditorSaveOfALegacyNullSettlesTheDefault` (`NotifyBeforeStoreTests.swift`), which asserts the stored row and not the push. Android matches the table, though its instrumented tests use camelCase function names and carry the table name in a comment.
 
 ## 8. Decided
 

@@ -12,9 +12,11 @@ bun run test:e2e:ui       # interactive runner with watch + time-travel
 bun run test:e2e:debug    # headed, stepping through with the inspector
 ```
 
-The dev server starts automatically via the `webServer` block in `playwright.config.ts`.
-If you already have `bun dev` running, Playwright reuses it. CI doesn't use this
-config; see [CI behaviour](#ci-behaviour).
+The dev server starts automatically via the `webServer` block in `playwright.config.ts`,
+which runs `bun run dev:e2e`. If a server already answers on port 3000, such as
+`bun dev`, Playwright reuses it. Before the first test, `global-setup.ts` requests
+every `app/**/page.tsx` route once and fails the run if one does not load. CI doesn't
+use this config; see [CI behaviour](#ci-behaviour).
 
 Target a single file, project, or test:
 
@@ -29,7 +31,8 @@ bun run test:e2e -- -g "should update task title"          # by test name
 ```
 tests/e2e/
 ├── README.md                       ← this file
-├── fixtures/test-fixtures.ts       ← Playwright fixtures (IndexedDB cleanup)
+├── global-setup.ts                 ← warms every route on the dev server before the suite
+├── fixtures/test-fixtures.ts       ← Playwright fixtures (IndexedDB cleanup, runtime-error check)
 ├── helpers/test-helpers.ts         ← shared utility functions
 ├── pages/matrix-page.ts            ← page-object model for the matrix shell
 ├── task-crud.spec.ts               ← create / read / update / delete / complete
@@ -41,8 +44,11 @@ tests/e2e/
 ├── about.spec.ts                   ← about page smoke tests
 ├── first-time-redirect.spec.ts     ← first-visit /about redirect
 ├── quiet-chrome.spec.ts            ← topbar tucks away on scroll at phone widths
-└── swipe-actions.spec.ts           ← touch swipe: Complete / Snooze / Delete on cards
+├── swipe-actions.spec.ts           ← touch swipe: Complete / Snooze / Delete on cards
+└── *.spec.ts                       ← many more specs, one per surface or behavior
 ```
+
+The tree names only some of the specs. Run `ls tests/e2e/*.spec.ts` for the full list.
 
 ## Conventions
 
@@ -52,8 +58,7 @@ tests/e2e/
 - **Page object model**: encapsulate multi-step UI flows in `pages/matrix-page.ts`.
   Spec files should read like a story, not a sequence of locator strings.
 - **No `page.waitForTimeout` for state**: prefer `waitFor` / `expect.toBeVisible`.
-  The few fixed timeouts that remain are documented at the call site and exist to
-  ride out animations rather than to mask flakes.
+  No spec uses a fixed timeout today.
 
 ## Capture-parser shorthand
 
@@ -74,9 +79,10 @@ Tokens must be space-bounded. `!important` is parsed as a literal word in the ti
 
 ## IndexedDB cleanup
 
-The `clearIndexedDB` fixture in `fixtures/test-fixtures.ts` navigates to the app
-origin and deletes the Dexie database (`GsdTaskManager`, matching `lib/db.ts:31`)
-**before** each test's body runs. Tests opt in by destructuring it:
+The `clearIndexedDB` fixture in `fixtures/test-fixtures.ts` opens a blank page on the
+app origin and deletes the Dexie database (`GsdTaskManager`, matching `lib/db.ts`)
+**before** each test's body runs. It also seeds the first-visit and onboarding flags,
+clears Cache Storage, and leaves the page at `/`. Tests opt in by destructuring it:
 
 ```ts
 test.beforeEach(async ({ page, clearIndexedDB }) => {
@@ -87,23 +93,31 @@ test.beforeEach(async ({ page, clearIndexedDB }) => {
 Playwright contexts are already isolated per test, so this is belt-and-braces:
 the database is gone, then the test reopens it via the app's normal Dexie boot.
 
+The same file holds `runtimeErrors`, a fixture that runs for every test. It fails a
+test that logs a `console.error` or throws a page error. A test that expects one sets
+the `expectedConsoleErrors` option to a pattern.
+
 ## Known gaps versus the original spec
 
 `tasks/e2e-testing-spec.md` was written generically; v9's single-matrix refactor
 (see `docs/adr/0011-v9-single-matrix-refactor.md`) removed several surfaces the
-spec assumed. The following spec stubs are intentionally **not** implemented:
+spec assumed. Some of those surfaces have since returned in a new form. The following
+test stubs from that document are still **not** implemented:
 
 - **Smart views** (`smart-views.spec.ts`) — v9 deleted the pinning UI, 1-9
-  shortcuts, and the `useSmartViewShortcuts` hook. The `smartViews` Dexie table
-  remains for data continuity but has no UI surface.
-- **Search by subtask** — the search filter does include subtask titles, but
-  the v9 edit drawer has no subtask editor (only a count badge on cards).
+  shortcuts, and the `useSmartViewShortcuts` hook. Smart views now show as an
+  opt-in strip above the matrix and in the command palette, off by default.
+  No e2e test file covers that strip yet.
+- **Search by subtask** — the search filter does include subtask titles, and
+  the edit drawer now has a subtask editor (`SubtasksField`). No e2e test
+  file covers subtask search yet.
 - **Archive navigation** — `/archive` exists and is reachable from
   Settings → Archive → View archive, but that link is conditional on
-  `archivedCount > 0`. Covering it requires seeding archived tasks first.
+  `archivedCount > 0`, so covering that link requires seeding archived tasks
+  first. The command palette action "View archived tasks" also opens `/archive`
+  and has no such condition. No e2e test file opens `/archive` yet.
 
-These gaps are tracked in `tasks/todo.md` § "E2E test gaps left by v9 surface
-removal" and would be reopened if the underlying features are resurrected.
+`tasks/todo.md` no longer has a section that tracks these gaps.
 
 ## Adding a new spec
 
@@ -119,17 +133,20 @@ removal" and would be reopened if the underlying features are resurrected.
 ## CI behaviour
 
 CI runs every spec against the production static export. Each browser leg runs
-`bun run build`, then `bun run test:e2e:export -- --project=<browser>`, which serves
+`bun run build:e2e`, then `bun run test:e2e:export -- --project=<browser>`, which serves
 `out/` on port 3100 under the production CSP (`playwright.export.config.ts`). Run the
-same two commands to reproduce a CI failure locally.
+same two commands to reproduce a CI failure locally. Between them, the CI leg also
+runs the PWA check, `bun run test:pwa -- <browser>`. The chromium leg also runs
+`bun run test:csp`.
 
 - `forbidOnly: true`: `.only` calls fail the build.
-- `retries: 2`: flaky tests retry, and the first failure saves a trace, screenshot,
-  and video in `test-results/`.
-- `workers: 2`: each browser leg runs two specs at a time.
+- `retries: 2`: flaky tests retry. A failure saves a screenshot and video in
+  `test-results/`, and the first retry records a trace.
+- `workers: 2`: each browser leg runs two tests at a time.
 
-Locally, retries are disabled and workers size to your CPU count.
+Locally, retries are disabled and Playwright picks its default worker count.
 
 React's dev-only warnings, such as duplicate keys, invalid DOM nesting, and StrictMode
 double effects, appear only on the dev server, so CI no longer fails on them. Run
-`bun run test:e2e -- --project=chromium` before shipping UI work to see them.
+`bun run test:e2e -- --project=chromium` before shipping UI work. On the dev server,
+the `runtimeErrors` fixture fails any test that logs one.

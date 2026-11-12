@@ -74,7 +74,8 @@ GSD must not look or feel like:
 - **Offline-first PWA.** Every surface must render from IndexedDB with no network. Data surfaces
   must distinguish "loading" from "empty" — an empty state asserts something specific and must
   never be shown before the local read resolves.
-- **Static export.** No SSR or API routes; all components are client components.
+- **Static export.** No SSR or API routes. Interactive components are client components. Route
+  files that export `metadata` (for example `app/saved/page.tsx`) carry no `"use client"`.
 
 ## Learned constraints
 
@@ -91,7 +92,7 @@ GSD must not look or feel like:
    Washes are quiet ground. Redundant signalling forces every statement to be timid, which is
    what reads as generic. (2026-07-30)
 3. **Quadrant titles use `--q*-ink`, not `--q*`.** Raw pigments do not all clear AA against their
-   own header at 15px. The ink tokens preserve the approved exact header bands while giving every
+   own header at the title's 19px (`text-h3`). The ink tokens preserve the approved exact header bands while giving every
    title a contrast-safe voice. This supersedes the earlier percentage-based header-tint ladder.
    (2026-07-31)
 4. **Tide means global interaction, not decorative styling.** Use it for actions, active

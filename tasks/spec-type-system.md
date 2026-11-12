@@ -1,5 +1,7 @@
 # Spec: one type system for the web app (`/impeccable typeset`)
 
+> **Status, 2026-11-12.** Shipped. `tasks/todo.md` records it as PR #620, rebase-merged on 2026-10-23 (`96cf79a5` to `01311f65` on `main`). The zoom fix shipped first as PR #619. `tests/data/type-ramp.test.ts` and `tests/data/type-ramp-usage.test.ts` guard the ramp, and `tests/e2e/text-scaling.spec.ts` covers 150% text. Two test stubs shipped differently: a unit test in `tests/ui/task-card-anatomy.test.tsx` pins the pane title's serif H3 class, and no e2e test covers badges or `kbd` at 150%.
+
 Approved by the owner on 2026-10-22: serif weight 600 (DESIGN.md updated), quadrant pane titles move to the serif H3, 13px folds into Small 14, and the iPhone zoom fix ships first in its own PR.
 
 ## Goal

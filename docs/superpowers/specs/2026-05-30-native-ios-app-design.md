@@ -1,5 +1,7 @@
 # GSD Task Manager — Native iOS/iPadOS Product Specification
 
+> **Status note, 2026-11-12.** The native app shipped: `README.md` describes a native iPhone, iPad, and Mac app in a separate repository. Do not read this spec as the current web behavior or shared contract. The web code has since added Trash (ADR 0015), a wider versioned backup envelope (ADR 0014), and Apple sign-in (`lib/sync/pb-auth.ts`). Sync added `saved_at`, `focus_date`, and `focus_rank`, and it now versions the pull contract (ADRs 0018, 0019, and 0020). ADR 0017 removed Sentry.
+
 - **Date:** 2026-05-30
 - **Status:** Draft for review
 - **Author:** Vinny Carpenter (with Claude)

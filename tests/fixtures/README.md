@@ -62,7 +62,12 @@ const subtask = createMockSubtask({
 // Create sync configuration
 const config = createMockSyncConfig({
   userId: 'user-123',
-  token: 'my-token',
+  email: 'me@example.com',
+});
+
+// Create sync history record
+const historyRecord = createMockSyncHistoryRecord({
+  status: 'success',
 });
 
 // Create sync queue item
@@ -128,13 +133,14 @@ global.fetch = vi.fn(async () => response);
 const mockTable = createMockDexieTable<TaskRecord>();
 
 // Use in tests
+// lib/db.ts exports getDb(), so mock that function
 vi.mock('@/lib/db', () => ({
-  db: {
+  getDb: () => ({
     tasks: mockTable,
-  },
+  }),
 }));
 
-// Access internal data for assertions
+// Access internal data for assertions (after the code under test added three rows)
 expect(mockTable._data).toHaveLength(3);
 ```
 
@@ -166,11 +172,11 @@ const consoleMock = mockConsole();
 // Your test code that logs to console
 console.log('This will be mocked');
 
+// Verify console calls before you restore
+expect(console.log).toHaveBeenCalledWith('This will be mocked');
+
 // Restore original console
 consoleMock.restore();
-
-// Or verify console calls
-expect(console.log).toHaveBeenCalledWith('This will be mocked');
 ```
 
 #### Fetch Mocking
@@ -212,11 +218,10 @@ await expectToReject(
 ## Example Test
 
 ```typescript
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createMockTask, createMockSyncConfig, mockDateNow } from '@/tests/fixtures';
-import { fullSync } from '@/lib/sync/pb-sync-engine';
 
-describe('syncTask', () => {
+describe('fixtures', () => {
   let dateMock: ReturnType<typeof mockDateNow>;
   
   beforeEach(() => {
@@ -229,17 +234,26 @@ describe('syncTask', () => {
     dateMock.restore();
   });
   
-  it('should sync a task successfully', async () => {
+  it('should build a task and a sync config', () => {
     const task = createMockTask({ title: 'Test Task' });
     const config = createMockSyncConfig();
     
-    const result = await syncTask(task, config);
-    
-    expect(result.status).toBe('success');
-    expect(result.timestamp).toBe(1234567890);
+    expect(task.title).toBe('Test Task');
+    expect(config.enabled).toBe(true);
+    expect(Date.now()).toBe(1234567890);
   });
 });
 ```
+
+`example-usage.test.ts` in this directory holds more runnable examples.
+
+## Data Fixtures
+
+The directory also holds JSON data that several suites read:
+
+- `cross-platform/`: backup exports and shared case corpora that pin behavior the web app shares with the native apps and the MCP server.
+- `pinned-copies/`: values that two places each keep a copy of, mostly the app and the MCP server. Tests in `tests/data/pinned-copies/` read all of them, and tests in `packages/mcp-server/src/__tests__/pinned-copies/` read the ones the MCP server shares.
+- `inkwell-token-contract.json`: the design token contract that `tests/data/inkwell-token-contract.test.ts` checks.
 
 ## Adding New Fixtures
 

@@ -1,5 +1,7 @@
 # Spec: Cycle C — Review + Gate 2 (packaging)
 
+> **Status note, 2026-11-12.** This design shipped (PR #426), and most of it is gone. PR #449 removed `release-ready.yml` and the `release-ready` label. PR #527 replaced `deploy-prod.yml` with `.github/workflows/deploy-production-release.yml`, which keeps an `evidence` job but computes the previous tag in shell. PR #540 retired `deploy-dev.yml`, so no dev preview exists. The `gh workflow run deploy-prod.yml` rollback command below no longer works: use the repository dispatch in `docs/ops/gate2.md`.
+
 - **Date:** 2026-07-08
 - **Status:** Accepted (design approved 2026-07-08; proceeding to plan + implementation per standing correction)
 - **Deciders:** Vinny Carpenter

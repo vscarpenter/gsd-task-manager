@@ -49,8 +49,8 @@ self-contained degraded fallbacks, and fixed-format assets that cannot consume C
 | Focus halo | `--accent-focus-ring` | `rgba(111, 170, 203, 0.28)` |
 | Strong accent boundary | `--accent-strong-border` | `rgba(111, 170, 203, 0.6)` |
 
-The light tide accent has 6.33:1 contrast on paper. The lifted dark tide accent pairs with dark
-paper ink at 7.20:1. `--on-accent` must switch with the theme; white is not valid text on the
+The light tide accent has 6.33:1 contrast on paper. The lifted dark tide accent pairs with
+`--on-accent` (`#17150F`, the dark canvas value) at 7.20:1. `--on-accent` must switch with the theme; white is not valid text on the
 lifted dark accent.
 
 ### Neutral and shell tokens
@@ -62,14 +62,15 @@ lifted dark accent.
 | `--gray-300` | `#D8D1C1` | `#322D24` | Default boundary |
 | `--gray-500` | `#6E6760` | `#A79F92` | Muted text |
 | `--gray-700` | `#3A372F` | `#C8C0B2` | Secondary strong ink |
-| `--ink-3` | `#797368` | `#948A79` | Quiet chart/glyph ink, not body text |
+| `--ink-3` | `#797368` | `#948A79` | Quiet tertiary text, icons, dotted chart series |
 | `--control-border` | `#938A7B` | `#746A5B` | 3:1+ control boundary |
 | `--pane-border` | `#D8D1C1` | `#322D24` | Quadrant pane boundary |
 | `--rail` | `#F0ECE2` | `#1B1812` | Icon rail |
 | `--topbar` | `#FBF9F3` | `#1B1812` | Top bar |
 
-Light `--gray-500` measures 5.6:1 on paper (4.9:1 on ivory). Do not use `--ink-3` for normal text;
-scoped surfaces may rebind it to `--gray-500` when text contrast is required.
+Light `--gray-500` measures 5.6:1 on paper (4.9:1 on ivory). Light `--ink-3`
+computes to 4.70:1 on paper and 4.17:1 on ivory, so it clears AA on paper only. Body-size text on
+ivory uses `--gray-500` instead.
 
 ### Semantic status families
 
@@ -77,20 +78,21 @@ scoped surfaces may rebind it to `--gray-500` when text contrast is required.
 | --- | --- | --- | --- |
 | Success | `#3E7D52` / `#2F5F44` | `#6FB07F` / `#9CCBA6` | `#FFFFFF` / `#17150F` |
 | Danger | `#B23A2E` / `#98301F` | `#E0705F` / `#E8907F` | `#FFFFFF` / `#17150F` |
-| Warning | `#C78E3F` / `#8A5A1F` | `#D9A55F` / `#D9A55F` | Use the theme's contrast-safe ink |
-| Information | `#2C6680` | `#6FAACB` | Use `--on-accent` |
-| Alternate information | `#4E7E96` | `#7FB0CB` | Use the paired semantic ink |
+| Warning | `#C78E3F` / `#8A5A1F` | `#D9A55F` / `#D9A55F` | No `--on-*` token is defined |
+| Information (`--info`) | `#2C6680` | `#6FAACB` | Use `--on-accent` |
+| Alternate information (`--sky`) | `#4E7E96` | `#7FB0CB` | No `--on-*` token is defined |
 
 Additional destructive control tokens are light `--danger-fill: #B23A2E` and
 `--danger-fill-hover: #98301F`; dark remaps them to `#E0705F` and `#D5614F`. Base pigments
 are suitable for icons, rules, dots, and tinted-surface construction. Text on tints uses the
-`*-d`, `*-dark`, or `*-ink` token.
+family's ink token: `--olive-d`, `--rust-d`, `--warning-dark`, or a `--status-*-ink` alias.
 
 Status aliases:
 
 - Overdue: `--status-overdue`, `--status-overdue-muted`, `--status-overdue-ink` → danger family.
 - Blocked: `--status-blocked`, `--status-blocked-muted`, `--status-blocked-ink` → warning family.
-- Blocking: `--status-blocking`, `--status-blocking-muted`, `--status-blocking-ink` → slate family.
+- Blocking: `--status-blocking`, `--status-blocking-muted`, `--status-blocking-ink` → `--sky` pigment, with a
+  14% `--sky` mix on paper as the muted ground. The ink is `--q4-ink` in light and `--sky` in dark.
 - Success: `--status-success`, `--status-success-muted`, `--status-success-ink` → success family.
 
 ### Quadrant families
@@ -137,7 +139,7 @@ loaded, so serif text never asks for one. It is self-hosted in the static build 
 `--font-newsreader`.
 
 - `--serif`: `--font-newsreader` (Newsreader) feeds the serif chain, standing in for Apple's New
-  York on non-Apple platforms; it carries display and headlines.
+  York on non-Apple platforms; it carries the display and heading steps and stat numerals.
 - `--sans`: the system sans stack — carries body, labels, and working UI.
 - `--mono`: system mono for code and keyboard notation, plus the uppercase kicker voice —
   the `.kicker` component class (11px mono, 0.08em tracking) is the sanctioned eyebrow
@@ -145,14 +147,19 @@ loaded, so serif text never asks for one. It is self-hosted in the static build 
 
 | Token | Size / line-height | Weight | Tracking |
 | --- | --- | --- | --- |
-| `--t-display` | 48px / 1.1 | 500 | −0.02em |
-| `--t-h1` | 32px / 1.2 | 500 | −0.01em |
-| `--t-h2` | 24px / 1.3 | 500 | −0.01em |
-| `--t-h3` | 19px / 1.22 | 500 | −0.008em |
-| `--t-body` | 16px / 1.55 | 430 token | default |
-| `--t-small` | 14px / 1.5 | 430 token | default |
+| `--t-display` | 48px / 1.1 | 600 | −0.02em |
+| `--t-h1` | 32px / 1.2 | 600 | −0.01em |
+| `--t-h2` | 24px / 1.3 | 600 | −0.01em |
+| `--t-h3` | 19px / 1.22 | 600 | −0.008em |
+| `--t-body` | 16px / 1.55 | 430 | default |
+| `--t-small` | 14px / 1.5 | 430 | default |
 | `--t-caption` | 12px / 1.4 | 500 | default |
-| `--t-eyebrow` | 11px / 1 | 500–600 by component | 0.12em |
+| `--t-eyebrow` | 11px / 1 | 600 | 0.12em |
+
+Each `--t-*` type token holds a size only, in rem; the px values assume a 16px root. Line height,
+weight and tracking come from the matching `--text-*` entries in the `@theme` block of
+`app/globals.css`. The vendored `.t-display` to `.t-h3` classes in `app/css/inkwell-components.css`
+still set weight 500, so use the `text-*` utilities.
 
 Use tabular numerals for aligned stats. Balance headings, keep prose to 65–75ch, and do not add
 a second display/body family.
@@ -193,12 +200,13 @@ Light shadows are two-layer warm-ink-tinted stacks:
 Dark shadows are a 1px white ring (6–9% alpha, stepping with elevation) plus a faint black
 blur at 35–45% — the ring carries the edge because black blur alone disappears into the dark
 canvas. `--backdrop` is `rgba(21,18,13,.52)` in light and `rgba(0,0,0,.6)` in dark. Component
-aliases are `--shadow-card`, `--shadow-column`, and `--shadow-fab`.
+shadow tokens are `--shadow-card` and `--shadow-column` (both alias `--shadow-sm`) and `--shadow-fab`.
 
 ## Motion and z-index
 
 - Durations: `--t-fast: 120ms`, `--t-base: 150ms`, `--t-slow: 300ms`.
 - Standard easing: `--ease-out: cubic-bezier(0.2, 0.8, 0.2, 1)`.
 - Expressive easing exists as `--ease-pop`, but bounce is not the default interaction language.
-- Every animation honors `prefers-reduced-motion`.
+- Every animation honors `prefers-reduced-motion`. One deliberate exception: `.animate-spin`
+  keeps a slow 1600ms rotation so loading feedback stays visible.
 - Z-index: base 1, raised 10, sticky 20, overlay 30, modal 50.

@@ -7,6 +7,8 @@
 | Deciders | Vinny Carpenter |
 | Supersedes | Extends ADR 0013 from two lifecycle states to three |
 
+> **Status note, 2026-11-12.** A delete made while signed out queues no remote delete. The id is remembered, and `resurrectOnSight` (`lib/sync/resurrect-on-sight.ts`) can move that task out of Trash after a later pull. Sync also writes into Trash: `reconcileDeletedTasks` and `applyRemoteDeletion` put a task there when the server copy is gone and its queued edits are all retry-exhausted. Trash moves now scope `syncMetadata` too, and the purge runs on mount and every hour. See `.claude/rules/archive-tombstone.md` for the writer list and `tasks/spec-resurrect-on-sight.md` for the resurrect rules.
+
 ## Context
 
 Deleting a task destroyed it. The only recovery was an Undo button on a toast that

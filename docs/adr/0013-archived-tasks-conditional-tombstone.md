@@ -6,6 +6,8 @@
 
 > **Extended by [ADR 0015](0015-trash-with-retention.md),** which adds `deletedTasks` as a third table under the same rules. The current writer list lives in `.claude/rules/archive-tombstone.md`.
 
+> **Status note, 2026-11-12.** Migration v15 now lives in `lib/db-migrations.ts`, not `lib/db.ts`. The pull guard moved from `applyRemoteRecords` into `applyPreparedRecord` in `lib/sync/pb-pull.ts`. Rule 2 has two later changes. `isRemoteNewerThanArchive` never treats a stamp past the clock-skew ceiling as newer, and `mapOverLocalCopy` merges the restored record over the local row it replaces.
+
 ## Context
 
 Archiving moves a task out of `tasks` and into `archivedTasks`, then enqueues a remote delete so other devices drop it too. The sync layer knew nothing about `archivedTasks`. A search for the table name across `lib/sync/` returned no hits.

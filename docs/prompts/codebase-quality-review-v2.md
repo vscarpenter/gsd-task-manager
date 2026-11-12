@@ -1,5 +1,7 @@
 # Codebase Quality Review — Reusable Prompt (v2)
 
+> **Status note, 2026-11-12.** Every command in the toolchain block still exists. The repo has since added gates the block leaves out: `typecheck:tests`, `quality:shape`, `quality:bundle`, `knip`, `license:check`, and `test:e2e:export` (the e2e suite CI runs, per `CLAUDE.md`). `docs/codebase-analysis-report.html` already exists, so a run overwrites it and does not create a new file. Read `package.json` for the current scripts before a run.
+
 > Paste everything below the line into a fresh session. The **Project toolchain** block is the only part you edit to retarget another repo. Designed for an agent with shell + file tools and the ability to fan out subagents.
 
 ---

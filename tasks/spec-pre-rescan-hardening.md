@@ -1,5 +1,7 @@
 # Pre-rescan Hardening
 
+> **Status, 2026-11-12.** Shipped in PR #469 (`0040ba71`, 2026-08-07). The results live in `packages/mcp-server/src/tools/handlers/system-handlers.ts` (redacted diagnostics), `components/matrix-simplified/task-actions.ts` (mutation error reporting), and `components/matrix-simplified/edit-drawer-fields.tsx` (named groups). `tests/data/security-hardening-scripts.test.ts` guards the Bun pin and the doc references. Two things have changed since. The Violet Frost theme is retired, and tokens now live in `app/css/inkwell-tokens.css`. The trust-boundary document is `docs/security-trust-boundaries.md`.
+
 ## Goal
 
 Resolve the five approved follow-up issues before establishing a new audit

@@ -2,8 +2,11 @@
 
 ## Setup (Do Once)
 ```bash
-cd /Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server
+cd /absolute/path/to/gsd-taskmanager/packages/mcp-server
 npm run build
+
+# Back up the config, so the rollback below works
+cp ~/Library/Application\ Support/Claude/claude_desktop_config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json.backup
 ```
 
 **Update Claude Desktop Config:**
@@ -11,9 +14,9 @@ npm run build
 ```json
 {
   "mcpServers": {
-    "gsd-taskmanager": {
+    "gsd-tasks": {
       "command": "node",
-      "args": ["/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server/dist/index.js"],
+      "args": ["/absolute/path/to/gsd-taskmanager/packages/mcp-server/dist/index.js"],
       "env": {
         "GSD_POCKETBASE_URL": "https://api.vinny.io",
         "GSD_AUTH_TOKEN": "YOUR_TOKEN"
@@ -22,6 +25,9 @@ npm run build
   }
 }
 ```
+
+Replace the sample path with your own, and `YOUR_TOKEN` with your auth token
+([QUICKSTART.md](QUICKSTART.md) step 2 says where to copy it).
 
 **Restart Claude Desktop** (Cmd+Q, then reopen)
 
@@ -33,7 +39,7 @@ npm run build
 ```
 "Validate my GSD MCP configuration"
 ```
-All checks pass (PocketBase connectivity, Auth)
+All three checks pass (PocketBase Connectivity, Authentication, Task Access)
 
 ### 2. Read Test
 ```
@@ -54,9 +60,10 @@ Returns completions, streaks, rates
 Task created, note the ID
 
 ```
-"Delete the task we just created"
+"Delete the task we just created, with dryRun false"
 ```
-Task deleted
+Task deleted. Without `dryRun: false`, `delete_task` only previews. A real delete
+is permanent and skips the 30-day Trash.
 
 ### 5. Prompt Test
 ```
@@ -71,7 +78,7 @@ Multi-tool report generated
 ### Configuration
 - "Validate my setup"
 - "Show me all available tools"
-- "Get help with analytics tools"
+- "Get help with analytics"
 
 ### Read Operations
 - "List my urgent and important tasks"
@@ -89,7 +96,7 @@ Multi-tool report generated
 - "Create task: 'Test', urgent=true, important=true"
 - "Update task abc123 to make it not urgent"
 - "Mark task abc123 complete"
-- "Delete task abc123"
+- "Delete task abc123 with dryRun false"
 
 ### Prompts
 - "Run daily-standup"

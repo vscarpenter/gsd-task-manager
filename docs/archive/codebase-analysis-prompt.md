@@ -1,3 +1,5 @@
+> **Status note, 2026-11-12.** `docs/prompts/codebase-quality-review-v2.md` is the later version of this prompt and writes the same report file. The commands and paths named below still exist. The prompt predates gates the repo has since added (`typecheck:tests`, `knip`, `quality:shape`, `quality:bundle`, `license:check`, `test:e2e:export`), and it leaves out the `docker/` self-host files.
+
 Role: You are a skeptical staff engineer performing a read-only audit.
 Report ALL findings, tagged by severity. Do not filter or self-censor based on
 perceived severity — a thorough low-severity list is more useful than a curated one.

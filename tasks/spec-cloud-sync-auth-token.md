@@ -6,12 +6,12 @@ Tier: standard; a bounded Settings action using the existing auth store and clip
 ## Goal and contract
 
 Add an MCP access row after Account and before the Cloud Sync danger zone.
-Use the existing SettingsRow and subtle Button with the label Copy auth token.
-Description: Connect an MCP client to your cloud tasks. Treat this token like a password.
+Use the existing SettingsRow and subtle Button with the label "Copy auth token".
+Description: "Connect an MCP client to your cloud tasks. Treat this token like a password."
 
 The button copies only the current raw PocketBase JWT, read from the SDK auth
 store when clicked. It performs no network refresh. Missing or locally expired
-credentials never reach the clipboard and produce Sign in again to copy your token.
+credentials never reach the clipboard and produce "Sign in again to copy your token."
 Keep token values out of rendered markup, React state, logs and toast messages.
 
 Show the row when an auth token exists, including an expired token so the user
@@ -19,13 +19,23 @@ can receive recovery guidance. Subscribe to auth-store changes so signing out
 hides the row and a new session makes it available. Recheck validity on click
 because expiry may occur without an auth-store change event.
 
-Disable the button while a clipboard write is pending. Show Auth token copied
+Disable the button while a clipboard write is pending. Show "Auth token copied"
 only after it succeeds. If the Clipboard API is unavailable or rejects, show
-Couldn't copy auth token. Please try again. and allow another attempt.
+"Couldn't copy auth token. Please try again." and allow another attempt.
 
 Update the MCP README, quick-start, setup wizard and token-status recovery
 instructions to Settings → Cloud Sync → Copy auth token. Existing credential
 scope, lifetime and MCP configuration remain unchanged.
+
+Shipped, 2026-11-12: the row is `components/settings/sync-auth-token-row.tsx`,
+and it matches this contract with four differences. The row has its own label,
+"MCP access", and the button still reads "Copy auth token". The description
+keeps both sentences above and adds a third: "It expires within 30 days, so copy
+a new one when it does." The pending button reads "Copying…". The setup steps in
+the MCP README and quick-start give the path as Settings → Cloud Sync → MCP
+access → Copy auth token. The setup wizard and token-status text keep the
+shorter path above. So do the About page (`components/about/mcp-section.tsx`),
+the server card, and the README's sample token-status output.
 
 ## Verification
 
@@ -49,7 +59,7 @@ in the follow-up below.
   failed before their text changes. Green: all 10 new UI tests and 66 related
   Settings tests pass.
 - New component coverage: 95.45% statements, 95.23% lines, 83.33% functions,
-  100% branches. Its server snapshot is exercised by the running Next app.
+  100% branches. Its `useSyncExternalStore` server snapshot is exercised by the running Next app.
 - Full root suite: 3,162 passed, 1 skipped, 2 failed. Aggregate coverage passes
   configured thresholds: 88.34% statements, 89.53% lines, 89.20% functions,
   82.02% branches. The failures are unchanged baseline issues, reproduced from
@@ -80,6 +90,7 @@ in the follow-up below.
 
 The user authorized a version bump, commit, push to origin and PR on 2026-09-19.
 App package, README and tracked service-worker cache versions are now 13.1.5.
+(That was the version on 2026-09-19. `package.json` is at 14.8.7 on 2026-11-12.)
 Bun's root lock entry has no version field; the MCP package remains independently
 versioned. Version-sensitive checks (documentation, build configuration, offline
 service worker and the token row) pass: 28 tests. Lint and TypeScript pass.

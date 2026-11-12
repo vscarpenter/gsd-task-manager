@@ -1,5 +1,7 @@
 # Spec: modernization Phase 1, pin the hand-kept copies
 
+> **Status, 2026-11-12.** Shipped on 2026-10-05 as PRs #572 to #576. The fixtures are in `tests/fixtures/pinned-copies/`, with suites in `tests/data/pinned-copies/` and `packages/mcp-server/src/__tests__/pinned-copies/`. The service-worker probe added `sw-cache-rules.json` and `sw-cache-rules.test.ts`. Later phases changed what the fixtures pin. Phase 3 (PR #579) fixed the `encodesDefect` scenarios, removed the longest-streak divergence, and gave the MCP server `ID_MIN_LENGTH`. Phase 5 (PR #586) generates `public/sw-cache-logic.js` from `lib/sw-cache-logic.ts`. The `../gsd-modernize/` folder holds the brief and `CONTRACT_MAP.md`. It sits outside this repo and was not on this machine on 2026-11-12.
+
 Date: 2026-10-05. Tier: non-trivial. The approved design is
 `../gsd-modernize/analysis/gsd-taskmanager/MODERNIZATION_BRIEF.md` (full plan,
 approved by Vinny on 2026-10-05). This spec is the execution contract for its

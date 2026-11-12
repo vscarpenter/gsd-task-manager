@@ -3,6 +3,8 @@
 Status: accepted 2026-10-27; narrowed by ADR 0020. Paired with the iOS change on the same branch name
 (`gsd-iosapp/docs/2026-10-27-synced-field-backfill.md`).
 
+> **Status note, 2026-11-12.** ADR 0020 changed four statements below. A backfill now runs only when the stored version is missing or lower, not whenever it differs. Push did change: a backfill sync pulls before it pushes, and push reads `saved_at` from the current row. A local row that wins a backfill copies only the fields its build never read. The constant is now 4 (`lib/constants/sync.ts`).
+
 ## Context
 Saved placement (ADR 0018) added `saved_at` to the wire record. The web shipped it
 first, then iOS. On October 27 the server held five saved records, all written by

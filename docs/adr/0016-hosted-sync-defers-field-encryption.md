@@ -7,6 +7,8 @@
 | Deciders | Vinny Carpenter |
 | Related | ADR 0002 (PocketBase cloud sync), `docs/superpowers/specs/2026-06-20-server-side-encryption-design.md` |
 
+> **Status note, 2026-11-12.** Both Docker folders have grown since this ADR. `docker/pb_hooks/` gained the web OAuth return route (`oauth_web_redirect.pb.js`) and session revoke (`session_revoke.pb.js`). `docker/pb_migrations/` gained the `saved_at` field, a 30-day auth token setting, the top three fields, and a fourth migration in the encryption set. Step 2 below would now change more than encryption. A comment in `docker/pb_migrations/1794061500_top_three.js` says never to point the hosted binary at that folder.
+
 ## Context
 
 Release v9.12.0 (2026-06-20) shipped field-level encryption for synced tasks.

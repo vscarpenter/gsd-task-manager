@@ -1,5 +1,7 @@
 # Cycle E — Telemetry Implementation Plan
 
+> **Status note, 2026-11-12.** This work shipped in PR #429 on 2026-07-08. PR #449 removed `.github/workflows/telemetry.yml` on 2026-07-23, and manual audits replaced it (see `docs/ops/pipeline-audit.md`). `scripts/telemetry-metrics.cjs` and its test remain, but no workflow calls the helper.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A weekly workflow that computes three pipeline metrics via a pure tested helper, publishes a Pipeline Telemetry issue dashboard, and archives JSON snapshots to a `telemetry` branch — plus a doc bridging audit findings into the existing standards loop.

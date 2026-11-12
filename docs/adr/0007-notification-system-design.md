@@ -4,6 +4,8 @@
 **Status:** Accepted
 **Deciders:** Vinny Carpenter
 
+> **Status note, 2026-11-12.** `lib/notifications/settings.ts` stores one global settings row (`notificationSettings`); per-task `notificationEnabled` and `notifyBefore` are fields on the task. The periodic check is `lib/notification-checker.ts`. It filters the tasks table and reads `notificationSent` as a per-task flag, which a changed due date, a changed offset, or a snooze resets. The badge counts open tasks inside their reminder window, not overdue tasks, and Saved tasks are excluded ([ADR 0018](0018-saved-task-placement.md)). Quiet hours pause the task reminder pass (`isInQuietHours` in `lib/notifications/permissions.ts`), and `lib/notifications/reminder-window.ts` holds the window rules.
+
 ## Context
 
 Users need reminders for tasks with due dates or `notifyBefore` settings. The app is client-side-only (ADR-0001) with no server, so any notification mechanism must run entirely in the browser. Notifications should work when the tab is backgrounded but not when the browser is closed, which is acceptable given the PWA use case.

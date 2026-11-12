@@ -23,9 +23,16 @@ GSD Task Manager is a privacy-first application where all data is stored locally
 
 1. **Local Data Storage by Default**
    - All tasks stored in IndexedDB (client-side)
-   - No background network calls in local-only mode
-   - The one outbound request is the feedback a user chooses to send from
-     Settings; it is never automatic and carries no account, device, or task data
+   - No background network calls in local-only mode. The exception is the
+     app's own origin: the service worker fetches pages and checks for its
+     own update there
+   - Two user actions send a request. The first is the feedback a user chooses
+     to send from Settings; it is never automatic and carries no account,
+     device, or task data
+   - The second is reaching for a sign-in button. Hovering or focusing one
+     fetches the sign-in methods from the PocketBase server before the click
+     (`prepareOAuthLogin` in `lib/sync/pb-auth.ts`). Opening the dialog alone
+     sends nothing
    - PocketBase request logs record client IPs, so operators must keep the log
      retention window short for the feedback route to stay unlinkable
    - Export/import functionality for user-controlled backups
@@ -37,11 +44,12 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    - Try-catch blocks around JSON parsing
 
 3. **Dependency Management**
-   - Blocking `bun audit --audit-level=high` checks for known vulnerabilities
+   - Blocking `bun audit --audit-level=high` checks for known vulnerabilities.
+     CI accepts only the advisory listed under Known Trade-offs
    - Blocking `bun run license:check` policy plus a CycloneDX SBOM artifact in CI
    - Pinned GitHub Action revisions, runner images, and container base digests
-   - Dependency updates are reviewed manually; this repository does not claim
-     Dependabot or Renovate automation without a checked-in configuration
+   - Dependency updates are reviewed manually. No Dependabot or Renovate
+     configuration is checked in
 
 4. **Privacy-Safe Web Capture**
    - Bookmarklets pass task content in a client-only URL fragment:
@@ -58,15 +66,15 @@ GSD Task Manager is a privacy-first application where all data is stored locally
      become a network request, a log line, or a cache key. If site storage is
      cleared while the PWA stays installed, the worker is gone and the POST
      reaches the static host. CloudFront does not log request bodies, but the
-     host has no handler for a POST, so nothing is captured and the person gets
+     host has no handler for a POST, so the share fails and the person gets
      no draft. Opening the app again registers the worker, and sharing works
      again
 
-   **Settings → Bookmarklet** generates this link for the current origin, with
-   optional default tags. It encodes the whole source, because browsers
-   percent-decode a `javascript:` URL before running it. It also opens GSD with
-   `noopener,noreferrer`, so the page's address stays out of the request and the
-   page gets no handle on the GSD tab. Written by hand, the source looks like this:
+   **Settings → Bookmarklet** generates the bookmarklet link for the current
+   origin, with optional default tags. The generator encodes the whole source,
+   because browsers percent-decode a `javascript:` URL before running it. The
+   bookmarklet opens GSD with `noopener,noreferrer`, so the browser sends no
+   `Referer` header and the source page gets no handle on the GSD tab. Written by hand, the source looks like this:
 
    ```js
    javascript:(function(){var p=new URLSearchParams({action:"capture",title:document.title,url:location.href,tags:"readme,todo"});window.open("https://gsd.vinny.dev/#"+p.toString(),"_blank","noopener,noreferrer");})();
@@ -77,8 +85,8 @@ GSD Task Manager is a privacy-first application where all data is stored locally
      browser console only and never leave the device (see ADR 0017)
    - Console log metadata is still masked: tokens, credentials, and other
      secret-shaped keys are replaced before anything is written
-   - The `connect-src` directive names only the sync backend and the OAuth
-     providers, so there is no telemetry origin for the browser to reach
+   - The CloudFront `connect-src` directive names only the sync backend and the Google and
+     GitHub OAuth origins, so there is no telemetry origin for the browser to reach
 
 ## Cloud Sync Security (Optional)
 
@@ -86,9 +94,12 @@ When users enable cloud sync, the following security measures protect their data
 
 ### PocketBase Architecture
 
-Cloud sync talks to one PocketBase server. The app ships pointed at the hosted
-service, and the Docker image under `docker/` lets you run your own. The two
-store task content differently at rest.
+Cloud sync talks to one PocketBase server. The build served at `gsd.vinny.dev`
+points at the hosted service, and the Docker image under `docker/` lets you run
+your own. On any other production host the app uses its own origin, and
+`NEXT_PUBLIC_POCKETBASE_URL` overrides either default (`lib/env-config.ts`).
+The hosted service and the self-host image store task content differently at
+rest.
 
 1. **Hosted Service (`https://api.vinny.io`)**
    - I run this server as a PocketBase binary on an AWS EC2 instance
@@ -113,13 +124,19 @@ store task content differently at rest.
 3. **Data Model**
    - Tasks stored with owner-scoped API rules: `@request.auth.id != "" && owner = @request.auth.id`
    - Each user can only access their own tasks
+   - The update rule also refuses a request that changes `owner`
    - PocketBase enforces row-level security at the API layer
 
 4. **Sync Protocol**
    - Last-write-wins (LWW) conflict resolution using `client_updated_at` timestamps
    - PocketBase SSE (Server-Sent Events) for realtime cross-device updates
    - Echo filtering prevents processing own-device changes
-   - Offline queue replays when connectivity is restored
+   - The offline queue replays on the next sync after connectivity returns.
+     Sign-out clears the queue, and a row that keeps failing retires at
+     `MAX_RETRIES` (`lib/constants/sync.ts`)
+   - A push checks that the sync session still names the signed-in account
+     before it reads the queue and before each row (`lib/sync/pb-push.ts`), so
+     a queued write stays in the account that made it
 
 ### OAuth Authentication
 
@@ -130,26 +147,30 @@ store task content differently at rest.
    - The tab that starts sign-in gets a per-request `state` and PKCE code
      verifier from PocketBase and keeps both in memory
    - The provider returns to `/api/gsd/oauth-callback`, a PocketBase hook
-     that redirects to `/auth/callback/` with the code and state in the URL
-     fragment. The redirect target comes from `GSD_WEB_OAUTH_CALLBACK_URL` or
+     that redirects to `/auth/callback/` with the code, state, or error in the
+     URL fragment. The redirect target comes from `GSD_WEB_OAUTH_CALLBACK_URL` or
      a fixed default, never from the request, so it can't be an open redirect
    - The callback page relays the result over a same-origin
-     `BroadcastChannel`, clears it from the address bar, and closes. Only the
-     tab whose `state` matches exchanges the code, using its own verifier
+     `BroadcastChannel` and clears it from the address bar. It closes once a
+     tab acknowledges the result, and otherwise stays open with a message. Only
+     the tab whose `state` matches exchanges the code, using its own verifier
    - PocketBase's realtime `/api/oauth2-redirect` route answers 404, through
-     a hook on the server and a deny rule in the self-host Caddyfile. That
-     route hands the code to whichever realtime client the `state` names,
-     not to the browser that started sign-in
+     a hook on the server and a deny rule in the self-host Caddyfile. Left
+     enabled, that route would hand the code to whichever realtime client the
+     `state` names, not to the browser that started sign-in
    - Self-hosters register `https://<server>/api/gsd/oauth-callback` with each
      provider (see `docker/README.md`)
 
 3. **Tokens**
    - Auth tokens stored in PocketBase's built-in `authStore` (localStorage)
-   - Tokens auto-refresh via PocketBase SDK
+   - Tokens last 30 days. The app renews one at the start of a sync once it
+     is within 7 days of expiry (`ensureValidAuth` in `lib/sync/pb-auth.ts`)
+   - An expired token can't renew, so the user signs in again
 
 ### Network Security
 
-- HTTPS-only communication with PocketBase server
+- HTTPS communication with the PocketBase server in production. Local
+  development defaults to `http://127.0.0.1:8090`
 - CORS configured at PocketBase level
 - HSTS headers enforce secure connections
 - TLS 1.2+ required
@@ -162,7 +183,13 @@ The MCP server allows Claude Desktop to access and manage tasks via natural lang
 
 1. **PocketBase API Access**
    - MCP server communicates directly with PocketBase using auth token
-   - Auth token stored only in Claude Desktop config file
+   - The server reads the auth token from `GSD_AUTH_TOKEN`, which the Claude
+     Desktop config file supplies. It is the same session token the browser
+     holds
+   - The server refuses a PocketBase superuser token. It also refuses a
+     PocketBase URL that is neither HTTPS nor loopback, or that carries
+     credentials, a query string, or a fragment
+     (`packages/mcp-server/src/server/config.ts`)
    - On a self-hosted Docker server, PocketBase hooks encrypt selected content
      fields before persistence and decrypt them after reads. The hosted
      service stores them as plaintext. API clients receive the normal task
@@ -184,7 +211,7 @@ The MCP server allows Claude Desktop to access and manage tasks via natural lang
 // Claude Desktop config (~/Library/Application Support/Claude/claude_desktop_config.json)
 {
   "mcpServers": {
-    "gsd-taskmanager": {
+    "gsd-tasks": {
       "env": {
         "GSD_POCKETBASE_URL": "https://api.vinny.io",
         "GSD_AUTH_TOKEN": "eyJ..."
@@ -194,28 +221,29 @@ The MCP server allows Claude Desktop to access and manage tasks via natural lang
 }
 ```
 
+This excerpt shows only the two variables. The full entry, with `command` and
+`args`, is in `packages/mcp-server/README.md`.
+
 **Important**: The config file contains the auth token. Ensure appropriate file permissions (`chmod 600`).
 
 ## CloudFront Security Headers
 
 ### Required Headers
 
-The following security headers should be configured at the CloudFront level:
+CloudFront sends the following security headers. Their source of truth is
+`cloudfront/response-headers-policy.json`, and `docker/Caddyfile` sends the same
+set for the self-host image, except where noted:
 
 #### 1. Content Security Policy (CSP)
 
-**Development/Testing:**
-```
-default-src 'self';
-script-src 'self' 'unsafe-inline' 'unsafe-eval';
-style-src 'self' 'unsafe-inline';
-img-src 'self' data: blob:;
-font-src 'self' data:;
-connect-src 'self' https://api.vinny.io https://accounts.google.com https://github.com;
-frame-ancestors 'none';
-base-uri 'none';
-form-action 'self' https://accounts.google.com https://github.com;
-```
+**Development:**
+
+`next dev` has no response-header policy. `app/layout.tsx` adds a looser policy
+as a `<meta>` tag when `NODE_ENV` is not `production`. It allows
+`'unsafe-inline'` and `'unsafe-eval'` scripts for React and Next.js tooling.
+Under `NODE_ENV=development` it also allows local PocketBase origins in
+`connect-src`. The production export omits the tag.
+The export test server and `bun run test:csp` serve the production policy.
 
 **Production (Current):**
 
@@ -266,9 +294,11 @@ Forces HTTPS connections for 2 years and includes subdomains.
 
 #### 5. X-XSS-Protection
 ```
-X-XSS-Protection: 1; mode=block
+X-XSS-Protection: 0
 ```
-Enables browser XSS filtering (legacy but still useful).
+The CloudFront policy turns the legacy browser XSS filter off
+(`"Protection": false`), and the CSP does that job. The self-host Caddyfile
+sends no `X-XSS-Protection` header.
 
 #### 6. Referrer-Policy
 ```
@@ -277,82 +307,65 @@ Referrer-Policy: strict-origin-when-cross-origin
 Controls referrer information sent with requests.
 
 #### 7. Permissions-Policy
+
+The policy denies 17 browser features, including geolocation, microphone,
+camera, and payment, and allows `fullscreen` for the app's own origin. The
+`Permissions-Policy` entry in `cloudfront/response-headers-policy.json` holds
+the full directive list.
+
+#### 8. Cross-Origin-Opener-Policy and Cross-Origin-Resource-Policy
 ```
-Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+Cross-Origin-Resource-Policy: same-origin
 ```
-Disables unnecessary browser features.
+The `docker/Caddyfile` comment records why the opener policy is set, and
+why `Cross-Origin-Embedder-Policy` is not set.
 
 ## Deployment Instructions
 
-### Option 1: AWS Console (Recommended)
+### Deploy script (Recommended)
 
-1. **Navigate to CloudFront Console**
-   - Go to AWS CloudFront in the AWS Console
-   - Click on "Policies" in the left sidebar
-   - Select "Response headers"
+`scripts/deploy-cloudfront-response-headers-policy.sh` applies
+`cloudfront/response-headers-policy.json` from version control. It creates the
+`gsd-security-headers` policy, or updates it with the current ETag. It then
+checks that the distribution's default cache behavior references that policy,
+and exits 1 if it does not.
 
-2. **Create Response Headers Policy**
-   - Click "Create response headers policy"
-   - Name: `gsd-security-headers`
-   - Configure each header using the values above
+```bash
+CLOUDFRONT_DISTRIBUTION_ID=E1T6GDX0TQEP94 \
+  bash scripts/deploy-cloudfront-response-headers-policy.sh
+```
 
-3. **Attach Policy to Distribution**
+The script needs `aws` and `jq`. The `deploy-cloudfront-infra` workflow runs it
+on a push to `main` that changes the policy file or the script, or on a manual
+dispatch that includes the policy. The run waits
+for the security audit and for approval on the `cloudfront-infra` environment.
+
+The script does not attach the policy. On a new distribution the first run
+creates the policy and then exits 1. Attach the policy once in the console
+(next section), then run the script again.
+
+### Attaching the policy in the AWS Console
+
+Do this once per distribution, after the script has created the policy. Edit
+header values in the policy file, not in the console, so the two don't drift.
+
+1. **Attach Policy to Distribution**
    - Go to your CloudFront distribution (e.g., `E1T6GDX0TQEP94`)
    - Edit the default cache behavior
    - Under "Response headers policy", select `gsd-security-headers`
    - Save changes
 
-4. **Create Invalidation**
+2. **Create Invalidation**
    ```bash
    aws cloudfront create-invalidation \
      --distribution-id E1T6GDX0TQEP94 \
      --paths "/*"
    ```
 
-### Option 2: AWS CLI
+### Terraform/CloudFormation
 
-1. **Create the Response Headers Policy:**
-
-   ```bash
-   aws cloudfront create-response-headers-policy \
-     --cli-input-json file://cloudfront-security-headers.json
-   ```
-
-   This will output a policy ID. Save it for the next step.
-
-2. **Get your distribution configuration:**
-
-   ```bash
-   aws cloudfront get-distribution-config \
-     --id E1T6GDX0TQEP94 > dist-config.json
-   ```
-
-3. **Extract the ETag and config:**
-
-   The output contains an `ETag` field - you'll need this for the update.
-   Edit the `DistributionConfig` section and add the policy ID to `DefaultCacheBehavior`:
-
-   ```json
-   {
-     "DefaultCacheBehavior": {
-       "ResponseHeadersPolicyId": "YOUR-POLICY-ID-FROM-STEP-1",
-       ...
-     }
-   }
-   ```
-
-4. **Update the distribution:**
-
-   ```bash
-   aws cloudfront update-distribution \
-     --id E1T6GDX0TQEP94 \
-     --if-match ETAG-FROM-STEP-2 \
-     --distribution-config file://dist-config.json
-   ```
-
-### Option 3: Terraform/CloudFormation
-
-Adapt the header values from Option 1 above into your IaC tool's response headers policy resource.
+Adapt the header values in `cloudfront/response-headers-policy.json` into your IaC tool's response headers policy resource.
 
 ## Security Best Practices
 
@@ -363,10 +376,14 @@ Adapt the header values from Option 1 above into your IaC tool's response header
    bun audit --audit-level=high
    bun run license:check
    ```
+   `bun audit` exits 1 while the accepted `braces` advisory below is open. CI
+   passes the JSON report to `scripts/check-audit-results.cjs`. That script
+   fails the job for any High or Critical advisory it does not accept. CI also runs `bun audit --prod --audit-level=high` with no
+   exceptions.
 
 2. **Keep Dependencies Updated**
-   - Review `bun outdated` regularly; retain the documented TypeScript 6
-     compiler-API compatibility package until downstream tooling supports 7
+   - Review `bun outdated` regularly. Keep `typescript` 6.x beside
+     `@typescript/native` (TypeScript 7) until downstream tooling supports 7
    - Test thoroughly after major version updates
    - Avoid canary/RC versions in production
 
@@ -376,9 +393,10 @@ Adapt the header values from Option 1 above into your IaC tool's response header
    - Check for potential XSS in user-generated content
 
 4. **Testing**
-   - Maintain >80% test coverage
+   - Keep coverage at or above the `vitest.config.ts` thresholds: 80% for
+     statements, lines, and functions, and 75% for branches
    - Include security test cases for data operations
-   - Test CSP headers in staging before production
+   - Run `bun run test:csp` against the built export before a production deploy
 
 ### For Users
 
@@ -470,7 +488,7 @@ executable export-browser cases; two existing native-clipboard cases remain
 skipped. This resolves the local feedback/CSP and Firefox validation blockers,
 without establishing deployment or Aikido clearance.
 
-### Last Audit: 2026-08-10
+### Full Audit: 2026-08-10
 
 - ✅ `bun audit --audit-level=high` reports no known vulnerabilities
 - ✅ Dependency licenses are fail-closed and a CycloneDX SBOM is produced in CI
@@ -479,12 +497,18 @@ without establishing deployment or Aikido clearance.
 - ✅ Owner immutability and row-level task scoping are regression-tested
 - ✅ Full-history Gitleaks runs as a blocking, baseline-aware gate
 
+Since that audit, the Docker image and the system test moved to PocketBase
+0.40.4 (`docker/Dockerfile`). The audit command now reports the accepted
+`braces` advisory listed under Known Trade-offs.
+
 ### Known Trade-offs (Documented)
 
 1. **Auth Token in localStorage**: PocketBase SDK stores auth tokens in localStorage via its built-in `authStore`. Mitigated by React XSS protection, CSP headers, and HTTPS-only communication.
 
 2. **Expired token retained in shared Git history**: Commit `e9230cb` contains
-   an expired PocketBase JWT and associated identity claims. The current tree
+   an expired PocketBase JWT and associated identity claims. `.gitleaksignore`
+   lists the same `jwt` entries under commit `f3e5edf`, so a rewrite must cover
+   both. The current tree
    does not contain the credential, and blocking full-history Gitleaks scans
    allow only the committed content-free fingerprints in `.gitleaksignore`.
    Removing the historical object requires a coordinated history rewrite and

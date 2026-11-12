@@ -4,6 +4,8 @@ Status: accepted 2026-11-07 (sprint 2, WEB-C4). Spec: `tasks/spec-top-three.md` 
 (C4-1 to C4-8) and section 7. Builds on ADR 0019. iOS and Android ship their own contract 4
 in IOS-C4 and AND-C4.
 
+> **Status note, 2026-11-12.** The far-future hold-off now runs on every pull and on realtime, not only the backfill pull (`holdsOffFarFutureRemote` in `lib/sync/pb-sync-helpers.ts`). Only a pending queue row counts. A local reset and two Dexie migrations also write the current version when they create a signed-out config (`lib/reset-local-data.ts`, `lib/db-migrations.ts`). `sprint/findings/saved-at-exposure.md` is not in this repo. It sits in the `sprint/` folder beside the repo checkout. `pb-record-shape.json` is at `tests/fixtures/pinned-copies/`.
+
 ## Context
 Top three adds two synced fields, `focus_date` and `focus_rank`. ADR 0019's backfill, one
 full pull with a same-version merge, was enough to bring `saved_at` to rows an older build

@@ -2,6 +2,8 @@
 
 **Status:** Approved 2026-06-17 · **Tier:** Non-trivial · **Author:** Claude (paired with Vinny)
 
+**Shipped differently, 2026-11-12.** The feature is live. The module now tries one server route first, and the client-side flow below is its fallback. Dated notes under Inputs / Outputs, Constraints, and Test Stubs say what changed. Background, Edge Cases, Out of Scope, and Acceptance Criteria still describe the fallback as first approved. The code is in `lib/sync/pb-account-deletion.ts`, `components/delete-account-dialog.tsx`, and `components/settings/sync-danger-zone.tsx`.
+
 ## Goal
 
 Let a signed-in web user permanently delete their cloud account and all tasks synced to
@@ -50,6 +52,14 @@ Behaviour (mirrors iOS ordering exactly):
    - Other error → `{ ok:false, stage:'account', error }`.
 5. Success → `{ ok:true, stage:'done' }`.
 
+**Shipped, 2026-11-12:**
+
+- The function takes an optional `{ throttleMs }`, and the result adds `remoteTasksErased`.
+- Step 1 calls `refreshAuthOutcome()`, which makes no request without a token. With no `userId` and an unreachable server, the result has `authRejected: false`, so the user can retry.
+- After step 1 the module sends `DELETE /api/gsd/account`, one server transaction (`docker/pb_hooks/account_lifecycle.pb.js`). Success ends the flow. A 404 means the route isn't deployed, and steps 2 to 4 run as the fallback. Any other error returns `stage: 'account'`.
+- The module's header comment says `api.vinny.io` doesn't load that hook, which would make the fallback the production path. This note didn't check the server.
+- The fallback lists and deletes in up to 3 passes. It deletes the user record only after a complete listing comes back empty. If the third listing still finds tasks, it deletes them and then fails with "Remote tasks kept reappearing", without listing again.
+
 **UI — `components/delete-account-dialog.tsx`** (adapted from `reset-everything-dialog.tsx`)
 
 - Props: `{ open: boolean; onOpenChange: (open: boolean) => void; onDeleted?: () => void }`.
@@ -62,10 +72,14 @@ Behaviour (mirrors iOS ordering exactly):
   - `eraseLocal === false` → `disableSync()` (clears auth + sync state; tasks stay → local-only),
     then `onDeleted?.()` and close.
 
+**Shipped, 2026-11-12:** the props add a required `onExport`. Both options are switches, and the export one reads "Export my tasks first (recommended)". With it on, the delete button stays disabled until an export succeeds. If the local erase fails after the remote delete, the dialog says so, stays open, and doesn't reload. On a rejected session the dialog shows a sign-in-again toast and stays open. If the fallback already deleted some tasks, the toast says that first. The dialog clears no auth itself. A token the server refuses with a 401 at step 1 is forgotten there (`forgetRefusedToken`).
+
 **Settings — `components/settings/sync-settings.tsx`**
 
 - A red **"Danger zone"** block at the bottom, rendered only when signed in, with a destructive
   "Delete account…" button that opens the dialog.
+
+**Shipped, 2026-11-12:** the block, button, and dialog live in `components/settings/sync-danger-zone.tsx`, which `sync-settings.tsx` renders. The gate is `settings.syncEnabled` in `components/settings-page/settings-body.tsx`, which is sync turned on, with no check of the auth store.
 
 ## Constraints
 
@@ -73,6 +87,7 @@ Behaviour (mirrors iOS ordering exactly):
   invariant). A network blip must never wipe local while leaving tasks on the server.
 - Throttle remote deletes ~100ms (documented PB rule + iOS parity).
 - No PocketBase server-side hooks/admin token. User's own session only.
+  (2026-11-12: a server hook now exists for the self-host image, and the module tries its route first. Still no admin token.)
 - File size < ~400 lines; functions < ~40 lines (coding-standards).
 - Reuse existing seams: `fetchRemoteTaskIndex`, `getCurrentUserId`, `refreshAuth`, `getPocketBase`,
   `disableSync`, `resetEverything`, `reloadAfterReset`, `Dialog`, `Button`, `sonner` toasts.
@@ -109,7 +124,7 @@ Behaviour (mirrors iOS ordering exactly):
 8. Dialog: the delete button is disabled until `DELETE` is typed.
 9. Dialog: on success with `eraseLocal` checked, `resetEverything` is invoked; unchecked, `disableSync`.
 10. Dialog: on a failed remote delete, an error toast shows and the dialog stays open.
-11. Sync settings shows the "Delete account…" entry only when signed in.
+11. Sync settings shows the "Delete account…" entry only when signed in. (Shipped, 2026-11-12: the gate is `settings.syncEnabled`, with no auth check. See the note under "Settings" in Inputs / Outputs.)
 
 ## Test Stubs
 
@@ -127,3 +142,5 @@ Behaviour (mirrors iOS ordering exactly):
 - `erase_local_checked_calls_resetEverything_on_success`
 - `keep_local_calls_disableSync_on_success`
 - `shows_error_toast_and_stays_open_on_remote_failure`
+
+**Shipped, 2026-11-12:** the four dialog tests exist under these names, with 7 more beside them. `tests/data/pb-account-deletion.test.ts` uses sentence names instead of the seven above. The file covers six of the seven behaviors: five in its 404-fallback block, and the unauthenticated case in a test outside it. The server route is tested with a 401 and a 403, and a fallback task delete with a 403. No test covers a forbidden user-record delete in the fallback. New tests cover the server route, the 100ms throttle, and the refusal when tasks keep reappearing.

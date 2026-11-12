@@ -1,6 +1,7 @@
 # Spec: escalation by due date
 
 **Status:** draft, 2026-10-29. Not yet implemented on any client.
+**Web status, 2026-11-12:** the web shipped this in 14.4.0. The rule is `lib/escalation.ts` and the setting is `lib/preferences/escalation-window.ts`. `lib/whats-new/whats-new.json` also lists it in the Apple 3.7.0 and Android 0.10.2 notes. This repo holds no iOS or Android code, so those notes are the only evidence here for the native clients. Top three (`lib/top-three.ts`) and the weekly sweep (`lib/weekly-sweep.ts`) now read the rule. On web, the tests in section 7 exist and rollout step 1 is done.
 **Decisions:** D-11 (escalation signals; it doesn't move tasks) and D-12 (2-day default window; Off, 1, 2, 3, 7; per device), both settled 2026-10-29. See the GSD Project's `parity/backlog.md` ("Decided") and `parity/roadmap.md` (phase 2).
 **Contract:** `tests/fixtures/cross-platform/escalation-corpus.json` (38 cases, version 1). This repo is the authority; iOS and Android copy it byte-identical.
 **Matrix row:** F1.
@@ -78,6 +79,8 @@ Keep it quiet. PRODUCT.md says "the matrix is the argument", so escalation adds 
 Each corpus test builds a task from the case's `task` object, filling every missing field with the model's default, and asserts all four outputs. `windowDays: null` means Off.
 
 MCP is out of scope for v1. A later version could add an `escalating` field to `list_tasks` and `get_upcoming_deadlines`, computed with the same rule.
+
+**MCP, 2026-11-12:** the MCP server now keeps its own copy of the rule in `packages/mcp-server/src/top-three.ts`, for `get_top_three` suggestions (#698). Its corpus test runs all 38 cases. `get_top_three` uses the 2-day default window, because the setting is per device. No list tool has an `escalating` field.
 
 ## 7. Tests (TDD, red first)
 

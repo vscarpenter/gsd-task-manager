@@ -17,7 +17,7 @@ without it, and the container exits unless it is exactly 32 characters. Skip the
 with the old one. Back the key up apart from the database; a lost key makes
 encrypted tasks unrecoverable.
 
-Open **https://localhost** (accept the self-signed certificate warning on first visit).
+Open **https://localhost** (accept the certificate warning on first visit: Caddy's internal CA signs the default certificate, and your browser doesn't trust that CA).
 
 Step-by-step guide: [docker-setup-and-run.md](docker-setup-and-run.md).
 
@@ -42,19 +42,23 @@ docker run -d --name gsd \
 ```
 
 The first-time setup below uses `docker compose exec gsd`; with `docker run`, use
-`docker exec gsd` instead, and add `-p 127.0.0.1:8090:8090` while you set up.
+`docker exec gsd` instead, and add `-p 127.0.0.1:8090:8090` while you set up. A
+running container can't drop a port. When setup is done, remove the container
+(`docker rm -f gsd`) and run it again without that flag. The `pb_data` volume keeps
+your data.
 
 ### First-Time PocketBase Setup
 
 PocketBase starts with no `tasks` collection and no admin account. Migrations run
-before it serves. Complete these steps once:
+before it serves, but on a new volume they don't create the collection. The setup
+script in step 3 creates it. Complete these steps once:
 
 1. Create or update a PocketBase superuser inside the container:
    ```bash
    docker compose exec gsd pocketbase superuser upsert admin@example.com 'change-this-password' --dir=/pb_data
    ```
-2. Temporarily publish PocketBase on localhost only, then restart
-   (`docker compose up -d`). The setup script signs in as the superuser, and
+2. Temporarily publish PocketBase on localhost only: uncomment the third line below
+   under `ports` in `docker-compose.yml`, then restart (`docker compose up -d`). The setup script signs in as the superuser, and
    Caddy blocks superuser routes on the public origin, so the script can't run
    through `https://localhost`.
    ```yaml
@@ -63,7 +67,8 @@ before it serves. Complete these steps once:
      - "80:80"
      - "127.0.0.1:8090:8090"
    ```
-3. Create the **tasks** collection from the `docker/` directory:
+3. Create the **tasks** collection from the `docker/` directory (the script needs
+   `curl`, `mktemp`, and `python3` on the host):
    ```bash
    PB_URL=http://127.0.0.1:8090 \
    PB_ADMIN_EMAIL=admin@example.com \
@@ -72,8 +77,9 @@ before it serves. Complete these steps once:
    ```
 4. Configure OAuth (Google, Apple, GitHub) if desired in the admin dashboard at
    **http://127.0.0.1:8090/_/**: open the **users** collection's settings, then
-   **Options › OAuth2**. Apple returns with a POST, which `/api/gsd/oauth-callback`
-   accepts.
+   **Options › OAuth2**. Register `https://localhost/api/gsd/oauth-callback` (or the
+   same path on your custom `SITE_ADDRESS`) as the redirect URL with each provider.
+   That route also accepts the POST that Apple sends.
 5. Remove the `127.0.0.1:8090:8090` mapping and restart.
 
 ## Architecture
@@ -91,16 +97,23 @@ Browser (https://localhost)
 └──────────────────────────────┘
 ```
 
+Caddy answers 404 itself for the admin dashboard (`/_/*`) and for a few `/api/*`
+paths: the superuser and legacy admin routes, `/api/gsd/feedback-controls*`, and
+`/api/oauth2-redirect*`. The `Caddyfile` has the full list.
+
 Everything runs behind a single HTTPS origin, so there are no CORS or mixed-content issues.
-The PocketBase admin dashboard is not exposed through the public app origin by default.
-For custom domains, the app now defaults sync to the same origin unless
-`NEXT_PUBLIC_POCKETBASE_URL` is explicitly set.
+The PocketBase admin dashboard is not exposed through the public app origin. To reach
+it, publish PocketBase on localhost as the setup steps above show.
+For custom domains, the app syncs with the same origin unless
+`NEXT_PUBLIC_POCKETBASE_URL` is set when the app is built.
 
 ## Configuration
 
 ### Environment Variables
 
-Set these in `docker-compose.yml` or pass via `docker compose`:
+Set these under `environment` in `docker-compose.yml`. Compose passes only the
+variables listed there, so add a line for any variable the file doesn't list yet.
+`GSD_TASKS_ENC_KEY` is the exception: Compose reads it from `docker/.env` or your shell.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -114,9 +127,13 @@ Set these in `docker-compose.yml` or pass via `docker compose`:
 `TLS_CERT` and `TLS_KEY` with no `TLS_MODE` are read as `custom`, so older
 configurations keep working. Set `TLS_MODE` explicitly in new ones.
 
-If you proxy PocketBase on a different origin instead of the same host, set
-`NEXT_PUBLIC_POCKETBASE_URL` at build time so the static app can target the
-correct backend.
+If you proxy PocketBase on a different origin instead of the same host, the static
+app needs `NEXT_PUBLIC_POCKETBASE_URL` at build time. The `Dockerfile` declares no
+`ARG` or `ENV` for it, and `.dockerignore` keeps `.env` files out of the build. So
+this image always uses the same origin unless you edit the `Dockerfile`'s builder
+stage to set the variable. The `Caddyfile` also sends `connect-src 'self'` in its
+Content-Security-Policy header, so add the other origin there too, or the browser
+blocks the requests.
 
 ### Custom SSL Certificates
 
@@ -151,21 +168,36 @@ Caddy will obtain and renew certificates from Let's Encrypt automatically.
 
 ### Custom PocketBase Version
 
-Override the default PocketBase version at build time:
+The image pins PocketBase 0.40.4 and checks the download against a SHA-256 for
+each CPU type. To build another version, override the version and both checksums.
+A version alone fails the checksum step:
 
 ```bash
-docker compose build --build-arg POCKETBASE_VERSION=0.40.4
+docker compose build \
+  --build-arg POCKETBASE_VERSION=<version> \
+  --build-arg POCKETBASE_SHA256_AMD64=<sha256 of the linux_amd64 zip> \
+  --build-arg POCKETBASE_SHA256_ARM64=<sha256 of the linux_arm64 zip>
 ```
+
+### Private npm Registry
+
+If your npm registry needs sign-in, the build can read your `~/.npmrc` as a BuildKit
+secret named `npmrc`. Uncomment both `secrets` blocks in `docker-compose.yml`: the
+one under `build`, and the one at the end of the file.
 
 ## Data Persistence
 
 PocketBase data (database, uploaded files) is stored in a Docker volume named `pb_data`. Your data survives container rebuilds.
 
-The entrypoint runs migrations with automigration disabled before serving.
-Applied migration files are immutable: fresh volumes use the compatibility
-migration set, while volumes with an existing `tasks` table run the full
-forward-only set and complete any pending encryption cleanup before the API is
-available.
+The entrypoint runs migrations with automigration disabled before serving. You
+don't choose a migration set; the entrypoint does. PocketBase records each file it
+applies and doesn't run it again. A database that already has a `tasks` table
+applies the files in `pb_migrations/`. A database with no `tasks` table applies the
+same files, with the two in `pb_fresh_migrations/` taking the place of their
+namesakes. There the encryption backfill does nothing, because there are no old
+tasks to encrypt, and each migration that adds a `tasks` field skips the missing
+collection. The setup script then creates the collection with every field. Never
+edit a migration file that a database has already applied.
 
 To back up, stop the stack first for a consistent SQLite copy, then copy the
 volume out of the container:
@@ -176,22 +208,23 @@ docker compose start
 ```
 Back up `GSD_TASKS_ENC_KEY` separately; the database is unreadable without it.
 
-## Sessions and Tokens
-
-User tokens last 30 days (set by migration `1793562900_users_auth_token_30_days.js`,
-on fresh and existing installs). On this image, **Settings → Cloud Sync → Sign out
-of all devices** in the web app ends every session for the account, including
-tokens copied into an MCP client (`pb_hooks/session_revoke.pb.js`).
-
-To reset (destroys all data):
+To delete the database and start over (destroys all data in the `pb_data` volume):
 ```bash
 docker compose down -v
 ```
 
+## Sessions and Tokens
+
+User tokens last 30 days (set by migration `1793562900_users_auth_token_30_days.js`,
+on fresh and existing installs). On this image, **Sign out of all devices** in the
+web app's sync dialog ends every session for the account, including
+tokens copied into an MCP client (`pb_hooks/session_revoke.pb.js`).
+
 ## Tasks Collection Schema
 
-`scripts/setup-pocketbase-collections.sh` and the migrations in
-`docker/pb_migrations/` are the source of truth. Use the script rather than
+`scripts/setup-pocketbase-collections.sh` creates the collection, and the migrations
+in `docker/pb_migrations/` add later fields to an existing one. Together they are the
+source of truth. Use the script rather than
 building the collection by hand; this table is a reference and may lag them.
 
 | Field | Type | Required | Notes |
@@ -210,7 +243,7 @@ building the collection by hand; this table is a reference and may lag them.
 | `tags` | JSON | | Array of strings |
 | `subtasks` | JSON | | Array of subtask objects |
 | `dependencies` | JSON | | Array of task IDs |
-| `notification_enabled` | Bool | | Default: true |
+| `notification_enabled` | Bool | | The web app sets true on a new task |
 | `notification_sent` | Bool | | Default: false |
 | `notify_before` | Number | | Minutes |
 | `last_notification_at` | Text | | ISO timestamp |
@@ -219,6 +252,8 @@ building the collection by hand; this table is a reference and may lag them.
 | `time_entries` | JSON | | Array of time entry objects |
 | `saved_at` | Text | | ISO timestamp; empty when the task isn't Saved |
 | `snoozed_until` | Text | | ISO timestamp |
+| `focus_date` | Text | | Top three pick: the local date, `YYYY-MM-DD` |
+| `focus_rank` | Number | | Top three pick: rank 1 to 3, or 0 when the task isn't a pick |
 | `client_updated_at` | Text | | ISO timestamp (for LWW sync) |
 | `client_created_at` | Text | | ISO timestamp |
 | `device_id` | Text | | Originating device |
@@ -232,7 +267,7 @@ building the collection by hand; this table is a reference and may lag them.
 ## Troubleshooting
 
 ### Browser shows certificate warning
-Expected with self-signed certificates. Click **Advanced → Proceed** (or equivalent). For a trusted local cert, use [mkcert](https://github.com/FiloSottile/mkcert) to generate certs and mount them as described above.
+Expected with the default certificate, which Caddy's internal CA signs (`TLS_MODE=internal`). Click **Advanced → Proceed** (or equivalent). For a trusted local cert, use [mkcert](https://github.com/FiloSottile/mkcert) to generate certs and mount them as described above.
 
 ### Port 443 already in use
 Change the host port mapping in `docker-compose.yml`:

@@ -4,6 +4,8 @@
 **Status:** Accepted  
 **Deciders:** Vinny Carpenter
 
+> **Status note, 2026-11-12.** Dexie version registrations and upgrades now live in `lib/db-migrations.ts`, which `lib/db.ts` calls. The JSON export is now a versioned envelope (see [ADR 0014](0014-versioned-backup-envelope.md)). One network path besides sync now leaves the device: the Settings feedback form posts an anonymous payload when the user sends it (`lib/feedback/submit-feedback.ts`).
+
 ## Context
 
 GSD Task Manager needed a data persistence strategy. Options ranged from a traditional server-side database to fully client-side storage. Privacy is a core product value — users should own their data without requiring an account or trusting a third-party server.

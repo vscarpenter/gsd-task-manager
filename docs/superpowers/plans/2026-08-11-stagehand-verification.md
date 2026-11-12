@@ -1,5 +1,7 @@
 # Stagehand Verification Layer + Live Smoke Tests — Implementation Plan
 
+> **Status note, 2026-11-12.** This work shipped in PR #471 on 2026-08-11 and still stands at `tools/stagehand/`. The page scripts already moved to `tools/stagehand/page-scripts/`, so the Task 2 source folder is gone. `package.json` now pins Stagehand to 4.4.0 exactly, so do not rerun the Task 1 install. `tools/stagehand/README.md` describes the current harness.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build `tools/stagehand/` — a shared AI-browser harness with a goal-driven `verify.ts` CLI (for the verify-frontend-change workflow) and a fixed-journey `smoke.ts` runner targeting `https://gsd.vinny.dev`.

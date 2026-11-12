@@ -3,7 +3,7 @@
 [![npm version](https://badge.fury.io/js/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task management** capabilities including create, read, update, and delete operations through Claude Desktop and other MCP-compatible AI assistants. Communicates with a self-hosted PocketBase backend.
+Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task management** capabilities including create, read, update, and delete operations through Claude Desktop and other MCP-compatible AI assistants. Communicates with a PocketBase backend: the hosted service at `https://api.vinny.io`, or a server you run yourself from the Docker image (self-hosted).
 
 ## Quick Start
 
@@ -15,13 +15,16 @@ gsd-mcp-server --setup
 ```
 
 1.4.1 is the current release when this README was written; the npm badge above
-shows the latest. Install that exact version rather than a range or `npx`.
+shows the latest. Install one exact version rather than a range or `npx`.
 
 The wizard validates a normal user account and writes an owner-only configuration
-artifact for Claude Desktop. That generated configuration launches the exact local
-Node executable and package entrypoint used by the wizard; it never asks `npx` to
-select code while passing your bearer token. Open the artifact only in a trusted
-editor and merge it into Claude Desktop. To update, explicitly install another exact
+artifact for Claude Desktop: `~/.gsd-mcp-setup.json`, which only your user account
+can read. That generated configuration launches the exact local Node executable and
+package entrypoint used by the wizard. It doesn't use `npx`, so npm can't pick
+different code to receive your auth token. Open the artifact only in a trusted
+editor and merge it into Claude Desktop. The server deletes the artifact the first
+time it starts with a valid configuration, so merge it before you restart Claude
+Desktop. To update, explicitly install another exact
 reviewed version and rerun the wizard.
 
 See [Installation](#installation) section below for detailed setup instructions.
@@ -29,9 +32,9 @@ See [Installation](#installation) section below for detailed setup instructions.
 ## Features
 
 **Reliability & Performance**
-- ✅ **Rate-limit handling** - Writes are paced and retried once after a 429, honoring Retry-After. Reads are not retried, so ask again after a network error.
-- ✅ **Token Monitoring** - Proactive warnings for expiring tokens (healthy/warning/critical/expired/invalid)
-- ✅ **Caching** - In-memory TTL cache (30s) with automatic invalidation on writes
+- ✅ **Rate-limit handling** - `delete_task` and `bulk_update_tasks` pace their writes and retry once after a 429, honoring Retry-After. `create_task`, `update_task`, and `complete_task` write once with no retry. Reads are not retried, so ask again after a network error.
+- ✅ **Token Monitoring** - `get_token_status` reports when the token expires (healthy/warning/critical/expired/invalid). Nothing warns you unless you ask
+- ✅ **Caching** - In-memory TTL cache (30s), cleared after this server's writes (one exception: see [Pacing and the cache](#pacing-and-the-cache))
 - ✅ **Dry-Run Mode** - Preview all write operations before committing
 - ✅ **Dependency Validation** - Circular dependency detection using BFS algorithm
 - ✅ **Cache Stats Tool** - Monitor cache hit rates and performance
@@ -72,6 +75,7 @@ See [Installation](#installation) section below for detailed setup instructions.
 - ✅ Search tasks by title, description, tags, subtasks
 - ✅ Filter by quadrant, completion status, tags
 - ✅ Get individual task details
+- ✅ Today's top three picks and suggestions (`get_top_three`)
 - ✅ Full CRUD operations: Create, read, update, delete tasks (v0.4.0+)
 
 ## Prerequisites
@@ -83,7 +87,7 @@ See [Installation](#installation) section below for detailed setup instructions.
 
 ## CLI Usage
 
-The MCP server includes interactive tools for easy setup and troubleshooting:
+The MCP server includes commands for setup and troubleshooting:
 
 ```bash
 # Interactive setup wizard (recommended for first-time users)
@@ -105,7 +109,7 @@ gsd-mcp-server
 - ✅ Generates ready-to-use Claude Desktop config
 - ✅ Provides platform-specific config file paths
 
-**Validation Tool Features** (`--validate`; the `validate_config` tool runs the
+**Validation Features** (`--validate`; the `validate_config` tool runs the
 connectivity, authentication, and task-access checks only):
 - ✅ Checks environment variables
 - ✅ Tests PocketBase connectivity and authentication
@@ -155,10 +159,12 @@ Add the MCP server to your Claude Desktop config:
 
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 **Using the exact published package (recommended):** run `gsd-mcp-server --setup`,
-then merge the generated owner-only artifact. The credential-bearing configuration
-is intentionally not reproduced in terminal-oriented instructions.
+then merge the generated artifact, `~/.gsd-mcp-setup.json`. The wizard writes the
+configuration with your token to that file. It prints only a preview with the token
+redacted, so the token stays out of your terminal history.
 
 **Using local build (for development):**
 
@@ -255,7 +261,7 @@ Once configured, you can ask Claude questions like:
 - "Complete all tasks tagged quick-wins"
 - "Change due date of task def456 to next Monday"
 
-Claude will use the MCP tools to fetch real-time data from your PocketBase backend and can now modify your tasks!
+Claude will use the MCP tools to fetch data from your PocketBase backend and can now modify your tasks! Most reads come from a 30-second cache, so a change made in another app can take up to 30 seconds to appear.
 
 Tags are stored lowercase without a leading `#`, the way the apps store them. The
 server normalizes the tags it receives the same way, so `#Work` and `work` are
@@ -267,9 +273,15 @@ Items saved in the apps (Move to Saved) stay out of `list_tasks`, `get_task`,
 `search_tasks`, and the analytics tools, so `get_task` answers "Task not found"
 for a saved ID. `get_sync_status` still counts them; `get_task_stats` doesn't. Updates
 keep an item saved. Completing a saved item is refused, so return it to the
-matrix in the app first. The MCP server can't save an item or return one.
+matrix (the four-quadrant board) in the app first. The MCP server can't move an
+item to Saved or return one.
 
 ## Available Tools
+
+A tool marked **Requires authentication** fails with "Not authenticated as a normal
+users-collection account" when PocketBase refuses the token (see
+[Troubleshooting](#troubleshooting)). The other tools still answer: they report the problem
+or make no server call.
 
 ### `get_sync_status`
 Get sync health information.
@@ -285,7 +297,8 @@ Get sync health information.
 }
 ```
 
-`lastSyncAt` is always null because PocketBase is live. `taskCount` includes Saved items.
+`lastSyncAt` is always null: the server reads PocketBase directly, so it has no last sync time. `taskCount` includes Saved items.
+`authenticated` checks the token's expiry date locally. `healthy` says whether the request to PocketBase succeeded.
 The host is redacted so the output is safe to paste into a chat.
 
 ### `get_task_stats`
@@ -317,7 +330,7 @@ List tasks with optional filtering. Saved items are excluded. **Requires authent
   - `urgent-not-important` (Q3 - Delegate)
   - `not-urgent-not-important` (Q4 - Eliminate)
 - `completed` (optional): Filter by completion status (true/false)
-- `tags` (optional): Array of tags to filter by (matches any; exact match, so use `work`, not `#work`)
+- `tags` (optional): Array of tags to filter by (matches any; whole-tag match after the server lowercases the filter and strips a leading `#`)
 
 **Returns**:
 ```json
@@ -339,10 +352,13 @@ List tasks with optional filtering. Saved items are excluded. **Requires authent
     "recurrence": "none",
     "dependencies": [],
     "createdAt": "2024-12-26T00:00:00.000Z",
-    "updatedAt": "2024-12-27T00:00:00.000Z",
+    "updatedAt": "2024-12-27T00:00:00.000Z"
   }
 ]
 ```
+
+The example is abridged. A task also carries its reminder, time-tracking, and top
+three fields; `src/types.ts` has the full shape.
 
 ### `get_task` (v0.2.0)
 Get a single task by ID. **Requires authentication**.
@@ -360,6 +376,19 @@ Search tasks by text query across titles, descriptions, tags, and subtasks. **Re
 
 **Returns**: Array of matching tasks (same structure as `list_tasks`). Saved items are excluded.
 
+### `get_top_three`
+Read-only. Report today's top three: the tasks you picked in an app and the tasks GSD would suggest. Saved items are excluded. **Requires authentication**.
+
+**Parameters**:
+- `timeZone` (optional): IANA time zone that decides which day is today (e.g., `America/Chicago`). Defaults to this machine's zone.
+
+**Returns**: `date`, `timeZone`, `picks` (the first three of today's picked tasks, in rank order), `needsTidy`
+(true when two picked tasks share a rank or more than three tasks are picked), and `suggestions`
+(up to three tasks). Each task has the same structure as in `list_tasks`.
+
+No tool writes a pick. Picks appear once you make them in an app. The suggestion
+order is in the tool's description in `src/tools/schemas/read-tools.ts`.
+
 ---
 
 ### `get_productivity_metrics` (v0.3.0)
@@ -373,7 +402,7 @@ Get comprehensive productivity metrics. Saved items are excluded. **Requires aut
   "completedThisMonth": 87,
   "activeStreak": 7,
   "longestStreak": 14,
-  "completionRate": 68,
+  "completionRate": 53,
   "quadrantDistribution": {
     "urgent-important": 12,
     "not-urgent-important": 18,
@@ -443,7 +472,7 @@ Get tasks grouped by deadline urgency. **Requires authentication**.
 ### `get_task_insights` (v0.3.0)
 Generate AI-friendly summary of task insights. **Requires authentication**.
 
-**Returns**: Plain text summary with key metrics, streaks, deadlines, and recommendations.
+**Returns**: Plain text summary: task counts, completion rate, current streak, tasks completed today, overdue and due-today counts, the quadrant with the most active tasks, and the most used tag. The task counts and completion rate always appear. Each other line appears only when its value is above zero.
 
 ### `validate_config` (v0.3.0)
 Diagnose the server's connection: PocketBase connectivity, authentication, and
@@ -472,8 +501,9 @@ task access. It doesn't check environment variables; the `--validate` CLI does.
 }
 ```
 
-The host is redacted so the output is safe to paste into a chat. A token the
-server rejects reports `"status": "error"` with `"Token validation failed"`.
+The host is redacted so the output is safe to paste into a chat. A token
+PocketBase rejects reports `"status": "error"` with `"Token validation failed"`.
+A network failure reports the same text.
 Task Access counts exclude Saved items.
 
 ### `get_help` (v0.3.2)
@@ -514,7 +544,7 @@ Check authentication token status including expiration date, days remaining, and
 }
 ```
 
-**Status Levels** (thresholds from `src/auth/token-status.ts`):
+**Status Levels** (thresholds from `src/auth/token-status.ts`, in whole days rounded down):
 - `healthy` - More than 14 days until expiration
 - `warning` - 4-14 days until expiration
 - `critical` - 3 days or fewer until expiration
@@ -548,7 +578,9 @@ Get task cache statistics including hit rate, cache size, and TTL configuration.
 }
 ```
 
-With `reset: true`, the response also includes `"statsReset": true`.
+With `reset: true`, the response also includes `"statsReset": true`. The first note
+is the tool's own text. [Pacing and the cache](#pacing-and-the-cache) has the one
+exception to it.
 
 **Example Usage:**
 - "Show me cache performance"
@@ -559,6 +591,27 @@ With `reset: true`, the response also includes `"statsReset": true`.
 
 ## Write Operation Tools (v0.4.0, enhanced v0.6.0)
 
+### Pacing and the cache
+
+`delete_task` and `bulk_update_tasks` send their writes one at a time, 100 ms apart.
+They retry a write once after a 429, after PocketBase's `Retry-After` time or 200 ms.
+`create_task`, `update_task`, and `complete_task` send each write once, with no
+pacing and no retry. `src/write-ops/write-rate-limiter.ts` holds these numbers.
+
+Completing a recurring task adds a second write, which creates the next instance. No
+tool retries that write. If it fails, the reply says the task is complete and the
+next instance is missing.
+
+Each write tool clears the task cache after it writes. A bulk call clears it at the
+end of the batch. One exception: `delete_task` doesn't clear
+it again after it removes the deleted task's ID from other tasks. A read that runs
+during that cleanup can cache the old dependency for up to 30 seconds.
+
+A write tool answers some failed PocketBase requests with a short code, such as
+`Error: rate_limited`, in place of a sentence. A bulk result lists the code beside a
+task whose write failed.
+See [Troubleshooting](#troubleshooting).
+
 ### `create_task`
 Create a new task from structured fields; the quadrant is derived from `urgent` and `important`. **Requires authentication**.
 
@@ -568,7 +621,7 @@ Create a new task from structured fields; the quadrant is derived from `urgent` 
 - `important` (required): Is this task important? (high-value, strategic)
 - `description` (optional): Task description
 - `dueDate` (optional): Due date as ISO 8601 datetime string (e.g., `"2025-10-27T17:00:00.000Z"`)
-- `tags` (optional): Array of tags, lowercase, without a leading `#` (e.g., `["work", "project-alpha"]`)
+- `tags` (optional): Array of tags (e.g., `["work", "project-alpha"]`). The server lowercases them and strips a leading `#`
 - `subtasks` (optional): Array of subtask objects `{title, completed}`
 - `recurrence` (optional): `'none'` | `'daily'` | `'weekly'` | `'monthly'`
 - `dependencies` (optional): Array of task IDs that must be completed first
@@ -610,11 +663,11 @@ Update an existing task. All fields except ID are optional. **Requires authentic
 - `recurrence` (optional): Change recurrence pattern
 - `dependencies` (optional): Replace all dependencies (validated for circular refs)
 - `completed` (optional): Mark as complete/incomplete. Completing a recurring task also creates its next instance. Refused for a Saved item.
-- `notifyBefore`, `notificationEnabled`, `estimatedMinutes` (optional): Same as `create_task`
+- `notifyBefore`, `notificationEnabled`, `estimatedMinutes` (optional): Same as `create_task`, except that an omitted value keeps the stored one
 - `dryRun` (optional): If true, validate and preview changes without saving (v0.6.0)
 
-The same limits as `create_task` apply. If the task changed in another app since it
-was read, the update fails with a conflict; re-read the task and retry.
+The same limits as `create_task` apply. If the task changes in another app while the
+update runs, the update fails with a conflict; re-read the task and retry.
 
 **Returns**: The updated task object with list of changes (or preview if dryRun)
 
@@ -622,7 +675,7 @@ was read, the update fails with a conflict; re-read the task and retry.
 ```
 Update task abc123:
 - Move to "Schedule" quadrant (urgent=false, important=true)
-- Add tags: project-alpha, q1-goals
+- Set tags: project-alpha, q1-goals
 ```
 
 ### `complete_task`
@@ -653,7 +706,8 @@ Permanently delete a task. **This action cannot be undone.** **Requires authenti
 - `dryRun` (optional, **default `true`**): Shows what would be deleted. Pass `dryRun: false` to delete.
 
 **Returns**: Confirmation with task title and any affected dependent tasks. Dependency
-references on other tasks are cleaned up.
+references on other tasks are cleaned up. If a cleanup write fails, the task stays
+deleted and the reply lists the cleanup errors.
 
 **Example:**
 ```
@@ -682,21 +736,21 @@ Update multiple tasks at once. Limited to 50 tasks per operation, and 10 per del
 **Parameters**:
 - `taskIds` (required): Array of task IDs to update (max 50, or 10 for `delete`)
 - `operation` (required): Operation object with `type` field
-  - `type: 'complete'` - Mark all as complete/incomplete (completing a recurring task also creates its next instance; refused if any task is Saved)
+  - `type: 'complete'` - Mark all as complete/incomplete (completing a recurring task also creates its next instance; if any task is Saved, completing refuses the whole batch before any write)
     - `completed`: boolean
   - `type: 'move_quadrant'` - Move all to a quadrant
     - `urgent`: boolean
     - `important`: boolean
   - `type: 'add_tags'` - Add tags to all tasks
-    - `tags`: string[] (lowercase, without a leading `#`)
+    - `tags`: string[] (the server lowercases them and strips a leading `#`)
   - `type: 'remove_tags'` - Remove tags from all tasks
-    - `tags`: string[]
+    - `tags`: string[] (normalized the same way)
   - `type: 'set_due_date'` - Set due date for all tasks
-    - `dueDate`: ISO 8601 datetime string (empty string to clear)
+    - `dueDate`: ISO 8601 datetime string (empty string, or omit it, to clear)
   - `type: 'delete'` - Delete all tasks (permanent; skips the 30-day Trash on every client)
 - `dryRun` (optional): Preview without saving. **Deletes default to `dryRun: true`**; pass `dryRun: false` to apply them.
 
-**Returns**: `updated`, `deleted`, `errors`, and `conflicts` (task IDs skipped because they changed mid-batch), or a preview when `dryRun` is set.
+**Returns**: A text summary with the updated and deleted counts, the errors, and the conflicts (task IDs skipped because they changed mid-batch), or a preview when `dryRun` is set.
 
 **Examples:**
 ```
@@ -711,15 +765,16 @@ Delete all completed tasks from last year
 
 **🔒 Safety Features**:
 - Maximum 50 tasks per operation, and 10 per delete
-- Clear error messages for each failed task
+- An error code or message for each failed task
 - Not transactional: each task is written separately. A task that changed since the batch was read is skipped and listed under `conflicts`. Failures are listed under `errors`, and the rest of the batch still applies.
+- Two checks run before any write and refuse the whole batch: completing a Saved item, and an `add_tags` that would leave a task with more than 20 tags.
 
 ## Privacy & Security
 
 **What This Server Can Access** (when authenticated):
 - ✅ Sync metadata (timestamps, counts, status)
 - ✅ Task titles, descriptions, quadrants, tags, due dates
-- ✅ Subtasks, checklists, and task dependencies
+- ✅ Subtasks and task dependencies
 - ✅ **Can create, update, and delete tasks**
 
 **Where the data goes**: everything a tool returns, including titles, descriptions,
@@ -743,10 +798,10 @@ conversation. The server itself talks only to your PocketBase URL.
 - Your auth token expired or was revoked. Sign in to the GSD web app again
 - Open **Settings → Cloud Sync → MCP access → Copy auth token**, then replace `GSD_AUTH_TOKEN` in your config
 - Restart Claude Desktop
-- On a self-hosted (Docker) server, **Sign out of all devices** in the web app also ends the MCP token, so copy a new one after using it
+- On a self-hosted (Docker) server, **Sign out of all devices** in the web app also ends the auth token you copied for MCP, so copy a new token after you sign out that way
 
 ### "Cannot reach PocketBase at …"
-- "Your saved credentials were not changed" means it's a network or VPN problem; the token is fine
+- The message goes on to say "Your saved credentials were not changed": it's a network or VPN problem, and the token is fine
 - Try again once you're back online, or run `gsd-mcp-server --validate`
 
 ### "PocketBase URL must use HTTPS"
@@ -761,10 +816,12 @@ conversation. The server itself talks only to your PocketBase URL.
 ### "Task … changed between read and write"
 - The task changed in another app between the read and the write. Re-read the task and retry
 
-### "API request failed: 404 Not Found"
-- Check that `GSD_POCKETBASE_URL` is correct
-- Ensure your PocketBase instance is running and accessible
-- Try accessing the URL in your browser: `{GSD_POCKETBASE_URL}/api/health`
+### "Error: not_found", "Error: rate_limited", and other short error codes
+- A write tool returns one of these codes for some failed requests to PocketBase, reads included. Other failures return a sentence. `src/write-ops/write-rate-limiter.ts` maps each status to its code
+- `not_found`: PocketBase answered 404. Check that `GSD_POCKETBASE_URL` is correct. If it is, the task was deleted while the tool ran, so re-read your tasks and retry
+- `rate_limited`: wait a few seconds, then retry
+- `authentication_failed`: copy a new auth token, as described above
+- `network_error` or `backend_unavailable`: ensure your PocketBase instance is running and accessible
 
 ### "Cannot find module" error
 - **If using an exact installed release**: Reinstall that version and rerun `--setup`
@@ -794,15 +851,26 @@ npm start
 
 Then send MCP protocol JSON over stdin (advanced).
 
-**Publishing to npm**:
+**Publishing to npm**: the `Publish MCP Server` workflow
+(`.github/workflows/publish-mcp-server.yml` in the repository) publishes the package.
+No one runs `npm publish` by hand.
+
 ```bash
-# Update version (patch/minor/major)
+# In packages/mcp-server: update version (patch/minor/major), then merge the change to main
 bun run version:patch   # or version:minor / version:major
 
-# Build and publish
-npm run build
-npm publish
+# On main, push a tag that matches the package.json version
+git tag mcp-vX.Y.Z
+git push origin mcp-vX.Y.Z
 ```
+
+The version script changes only `package.json`. This README, `CHANGELOG.md`, the
+root `bun.lock`, and a few files of the web app also hold the version, so search the repository for the old
+number and update each copy before you tag.
+
+The workflow runs the security audit first. It then checks that the commit is on
+`main` and that the tag matches `package.json`, and runs the typecheck, tests, and
+build before it publishes.
 
 ## Architecture
 
@@ -814,18 +882,26 @@ packages/mcp-server/
 │   ├── auth/              # JWT token status
 │   ├── pocketbase-client.ts # PocketBase SDK client and principal checks
 │   ├── tools.ts           # Backward-compatible re-exports
+│   ├── analytics.ts, cli.ts, write-ops.ts # Re-exports from the folders below
 │   ├── cache.ts           # TTL-based in-memory cache
 │   ├── dependencies.ts    # Circular dependency validation
+│   ├── top-three.ts       # Top three picks and suggestions
+│   ├── types.ts           # Task types and PocketBase record mapping
 │   ├── constants.ts       # Payload limits shared with the web app
-│   ├── errors.ts          # Typed errors (ConflictError)
+│   ├── errors.ts          # Typed errors (ConflictError, SuperuserPrincipalError)
 │   ├── version.ts         # Package version read at runtime
-│   ├── text/              # Capture-parser mirror (URL extraction)
+│   ├── text/              # Capture-parser mirror (URL extraction), tag normalization
 │   ├── utils/             # Logger
 │   ├── api/               # Host redaction; legacy HTTP client and retry (unused by tools)
 │   ├── tools/
+│   │   ├── list-tasks.ts, get-task.ts, search-tasks.ts, sync-status.ts # Read functions
+│   │   ├── prompts.ts     # Built-in prompt templates
 │   │   ├── handlers/      # Tool request handlers
 │   │   │   ├── index.ts   # Handler dispatcher
+│   │   │   ├── input-schemas.ts  # Zod validation of tool arguments
+│   │   │   ├── types.ts
 │   │   │   ├── read-handlers.ts
+│   │   │   ├── top-three-handler.ts
 │   │   │   ├── write-handlers.ts
 │   │   │   ├── analytics-handlers.ts
 │   │   │   └── system-handlers.ts
@@ -839,13 +915,17 @@ packages/mcp-server/
 │   │   ├── types.ts       # Input/output types
 │   │   ├── helpers.ts     # ID generation, PocketBase writes
 │   │   ├── task-operations.ts  # CRUD with dry-run
-│   │   └── bulk-operations.ts  # Bulk updates
+│   │   ├── bulk-operations.ts  # Bulk updates
+│   │   ├── recurrence.ts       # Next instance of a recurring task
+│   │   ├── dependency-cleanup.ts # Dependency cleanup after a delete
+│   │   └── write-rate-limiter.ts # Write pacing, 429 retry, error codes
 │   ├── analytics/         # Analytics calculations
 │   └── cli/               # Setup wizard, validation
 ├── dist/                  # Compiled JavaScript (generated)
 ├── package.json
 ├── tsconfig.json
 ├── README.md              # This file
+├── CHANGELOG.md           # Release history
 ├── QUICKSTART.md          # Quick setup guide (in the repo, not the npm package)
 └── TESTING.md             # Testing procedures (in the repo, not the npm package)
 ```

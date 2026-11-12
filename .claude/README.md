@@ -2,7 +2,7 @@
 
 How this repo's Claude Code configuration works, what each piece does, and the workflows it enables.
 
-> Last reviewed: 2026-04-25 · Baseline established by `claude-code-setup` plugin recommender
+> Last reviewed: 2026-11-11 · Baseline established by `claude-code-setup` plugin recommender
 
 ---
 
@@ -32,7 +32,8 @@ That's it. Open the repo in Claude Code and the hooks, agents, slash commands, a
 | `.claude/settings.local.json` | — | YOUR personal allowlist; gitignored |
 | `.claude/agents/*.md` | ✓ | Specialized reviewer subagents |
 | `.claude/commands/*.md` | ✓ | Project-level slash commands |
-| `.claude/skills/*/SKILL.md` | ✓ | Reusable multi-step workflows |
+| `.claude/skills/*/SKILL.md` | partly | Reusable multi-step workflows. `.gitignore` names the shared skill directories; the rest stay local |
+| `.claude/rules/*.md` | ✓ | Path-scoped rules that load when their globs match |
 | `.claude/hooks/*.sh` | ✓ | Shell scripts invoked by hooks |
 | `.claude/decisions/` | — | Personal decision log; gitignored |
 | `.mcp.json` | — | MCP server config; gitignored (personal) |
@@ -46,7 +47,7 @@ That's it. Open the repo in Claude Code and the hooks, agents, slash commands, a
 
 ## Hooks (automatic — fire without you asking)
 
-Three hooks run automatically. You don't invoke them; Claude Code does.
+Five hooks run automatically: three scripts and two inline `Stop` commands. You don't invoke them; Claude Code does.
 
 ### `PreToolUse` — `block-sensitive-files.sh`
 **Fires before:** every `Edit`, `Write`, or `MultiEdit` operation.
@@ -58,18 +59,22 @@ Three hooks run automatically. You don't invoke them; Claude Code does.
 
 If you genuinely need to edit one of these, tell Claude in plain language and edit it yourself outside the conversation, or extend the script's `case` block.
 
+### `PreToolUse`: `no-main-commits.sh`
+**Fires before:** every `Bash` call.
+**Blocks (exits with code 2):** a `git commit` command while the current branch is `main` or `master`. Create a feature branch first.
+
 ### `PostToolUse` — `lint-on-edit.sh`
 **Fires after:** every successful `Edit`, `Write`, or `MultiEdit` on a `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, or `.cjs` file.
 **Runs:** `bunx eslint --fix <path>` and pipes the last 20 lines back into the conversation.
 **Skips:** files under `node_modules/`, `.next/`, `out/`, `coverage/`, and `next-env.d.ts`.
 
-This catches style violations and auto-fixes safe ones (semicolons, quote style, unused imports) before they pile up.
+This catches lint violations and applies the fixes ESLint can make on its own before they pile up.
 
-### `Stop` — type-check gate
+### `Stop`: type-check and lint gate
 **Fires when:** the conversation ends.
-**Runs:** `bun typecheck` and reports the last 10 lines.
+**Runs:** two commands. The first runs `bun typecheck`. The second runs `bun x eslint` (no `--fix`) on the uncommitted and untracked `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, and `.cjs` files. It compares against `HEAD`, so it skips files you already committed. Each prints nothing on success. On failure each prints the last 40 lines and exits with code 2.
 
-This is a fast last-line-of-defense check (~3-5s) that catches type regressions before you discover them in CI. **Note:** the full Vitest suite is *not* run automatically — that's deliberate (it took 30s+ on every conversation end). Run `bun run test` manually before pushing.
+This is a fast last-line-of-defense check that catches type and lint regressions before you discover them in CI. **Note:** the full Vitest suite is *not* run automatically — that's deliberate (it took 30s+ on every conversation end). Run `bun run test` manually before pushing.
 
 ### Disabling a hook temporarily
 
@@ -87,13 +92,13 @@ Subagents are specialized reviewers that run in isolation. They protect the main
 
 ### `a11y-reviewer`
 **When to use:** after editing any `.tsx`/`.jsx` file in `components/` or `app/`.
-**What it checks:** WCAG AA baseline from `coding-standards.md` Part 2 — semantic HTML, keyboard accessibility (especially dnd-kit and Radix dialogs), form labels, image alt text, color-only state, contrast, modal focus.
+**What it checks:** WCAG AA baseline from `CLAUDE.md` (Design Context) — semantic HTML, keyboard accessibility (especially dnd-kit and Radix dialogs), form labels, image alt text, color-only state, contrast, modal focus.
 **How to invoke:** ask Claude "review the components I just changed for accessibility" or `Use the a11y-reviewer subagent on <files>`.
 **Returns:** structured findings as `file:line — issue — fix`. Read-only — does not modify code.
 
 ### `pb-sync-reviewer`
-**When to use:** after editing anything under `lib/sync/**` or sync-related code in `lib/tasks/**`.
-**What it checks:** all 10 PocketBase v0.23+ gotchas from `CLAUDE.md` — `client_updated_at` (not `updated`) in sort/filter, `_superusers` admin endpoint, LWW resolution, echo filtering, 100ms push throttle, batch lookups (no N+1), proper field mapping via `task-mapper.ts`, structured logging via `lib/logger.ts`.
+**When to use:** after editing anything under `lib/sync/**`, sync-related code in `lib/tasks/**`, import/export paths that enqueue sync work, or MCP task write paths under `packages/mcp-server/src/**`.
+**What it checks:** 16 checks, listed in `.claude/agents/pb-sync-reviewer.md`. The agent treats `.claude/rules/pocketbase-sync.md` and `.claude/rules/archive-tombstone.md` as its spec. The first 10 are PocketBase v0.23+ checks, including `client_updated_at` (not `updated`) in sort/filter, `_superusers` admin endpoint, LWW resolution, echo filtering, 100ms push throttle, batch lookups (no N+1), proper field mapping via `task-mapper.ts`, structured logging via `lib/logger.ts`. The other six are data-loss regression checks.
 **How to invoke:** "review my sync changes" or explicitly name the subagent.
 **Returns:** findings tied to specific gotcha rules. Read-only.
 
@@ -101,7 +106,7 @@ Subagents are specialized reviewers that run in isolation. They protect the main
 
 ## Slash Commands (project-level workflows)
 
-The three commands form a TDD-driven feature workflow when used in order.
+`.claude/commands/` holds six commands. Three form a TDD-driven feature workflow when used in order: `/qspec`, `/tdd`, and `/qcheck`. `/release` runs the release flow (see `.claude/commands/release.md`). `/build-next` and `/triage-prs` are retired and refuse to run (see `docs/agents/`).
 
 ### `/qspec <feature description>`
 Writes a Spec-Driven Development spec to `tasks/spec.md`. Includes Goal, Inputs/Outputs, Constraints, Edge Cases, Out of Scope, Acceptance Criteria, and Test Stubs. **Does not write any code.** Wait for spec approval before moving on.
@@ -120,7 +125,7 @@ Starts a strict red/green/refactor cycle. Writes a failing test first, pauses fo
 ```
 
 ### `/qcheck`
-Skeptical staff-engineer review of changed files. Checks file/function size limits, type safety, test quality, project-specific gotchas (PB, schema `safeParse` vs `parse`, `bun run test` not `bun test`, sonner `toast.error()` not `alert()`), security, and the Definition of Done from `coding-standards.md`.
+Skeptical staff-engineer review of changed files. Checks file/function size limits, type safety, test quality, project-specific gotchas (PB, schema `safeParse` vs `parse`, `bun run test` not `bun test`, sonner `toast.error()` not `alert()`), security, and the tiered exit checklists in `coding-standards.md` Part 7.
 
 **Use it before:** every PR.
 ```
@@ -131,25 +136,26 @@ Skeptical staff-engineer review of changed files. Checks file/function size limi
 
 ## Skills (reusable multi-step workflows)
 
+`.gitignore` re-includes 10 shared skill directories under `.claude/skills/`. This section describes one of them, `pb-collection`, and one local skill, `ui-ux-pro-max`. Each of the other shared skills documents itself in its own `SKILL.md`, including `verify-frontend-change`, which `CLAUDE.md` requires for UI changes.
+
 ### `pb-collection` (user-only)
 End-to-end workflow for adding/modifying a field on the PocketBase `tasks` collection. Walks through 10 ordered steps: Zod schema → task-mapper → PocketBase script → Dexie version bump → CRUD → sync engine → MCP server → tests → verification gate → commit. Codifies all the recurring step-order mistakes.
 
 **When to use:** any change to the synced task schema. Don't use for local-only Dexie fields.
 **Invoke:** `Skill(pb-collection)` (it's marked `disable-model-invocation: true`, so Claude won't auto-trigger — you have to ask for it).
 
-### `ui-ux-pro-max`
+### `ui-ux-pro-max` (user-only, not checked in)
 Reference design system already in your config — 67 styles, 96 palettes, 57 font pairings. Useful when designing new components.
 
 ---
 
 ## MCP Servers
 
-Configured in `.mcp.json` (gitignored). Currently 5 servers:
+Configured in `.mcp.json` (gitignored). The template `.mcp.json.example` defines 4 servers:
 
 | Server | Purpose | Notes |
 |--------|---------|-------|
 | `next-devtools` | Next.js 16 devtools integration | Auto-loaded |
-| `aws-mcp` | AWS docs + API access | For CloudFront/S3 deploy work |
 | `github` | GitHub PRs, issues, releases | **Requires `GITHUB_PAT` env var** |
 | `context7` | Live docs for libraries | Useful for Next.js 16 / React 19 / Zod 4 (post-cutoff) |
 | `playwright` | Browser automation | For "verify in browser" workflows |
@@ -169,8 +175,8 @@ Restart Claude Code after changing the token (MCP servers read env vars at start
 
 Two files contribute to the effective allowlist:
 
-- **`.claude/settings.json`** (checked in) — minimum permissions for everyone on the team. Currently 6 entries: `bun typecheck`, `bun lint`, `bun audit`, `bun outdated`, and two read-only `claude-in-chrome` tools.
-- **`.claude/settings.local.json`** (gitignored) — your personal allowlist. Currently ~101 entries.
+- **`.claude/settings.json`** (checked in) — minimum permissions for everyone on the team. Currently 16 entries: `bun typecheck`, `bun lint`, `bun audit`, `bun outdated`, six entries for `bun run test`, `bun run test:e2e`, and `bun run build` (two forms each), two read-only `claude-in-chrome` tools, and four `chrome-devtools` tools.
+- **`.claude/settings.local.json`** (gitignored) — your personal allowlist.
 
 ### What NOT to add to `settings.json`
 
@@ -195,18 +201,18 @@ A calendar reminder fires on **2026-05-25** to do this. Baseline as of last prun
 
 ### Feature: add a new field that syncs across devices
 1. `/qspec add <field> to tasks` — write the spec
-2. `Skill(pb-collection)` — walks through all 10 layers
+2. `Skill(pb-collection)` — walks through all 10 steps
 3. `/qcheck` — final review before PR
-4. Commit + push + PR (the `commit-push-pr` skill is allowlisted)
+4. Commit + push + PR (the `commit-commands:commit-push-pr` skill)
 
 ### Feature: add a new UI component
 1. `/qspec <component> for <use case>`
 2. `/tdd <component> renders correctly with <prop>` — RGR cycle, auto-invokes `a11y-reviewer`
-3. Manual verification: `bun dev` + Playwright MCP or `claude-in-chrome` to test the golden path
+3. Verify in the running app with the `verify-frontend-change` skill (see `CLAUDE.md`)
 4. `/qcheck` → commit
 
 ### Bug: PocketBase sync misbehaving
-1. Reproduce with a failing test in `tests/data/sync-*.test.ts` (red)
+1. Reproduce with a failing test under `tests/data/sync/` (red)
 2. Diagnose using the `pb-sync-reviewer` subagent on the suspect file
 3. Fix, then re-run the test (green)
 4. `/qcheck` → commit
@@ -237,7 +243,7 @@ A calendar reminder fires on **2026-05-25** to do this. Baseline as of last prun
 - For arbitrary code-execution wildcards (`Bash(node:*)`, `Bash(curl:*)`), accept the prompts rather than allowlist — the friction is the point.
 
 ### "The Stop hook is failing my session"
-- Check the bottom of the conversation for `bun typecheck` errors. Fix them, then start a new conversation.
+- Check the bottom of the conversation for `bun typecheck` or ESLint errors. Fix them, then start a new conversation.
 - If you need to bypass temporarily, comment out the `Stop` block in `settings.json` for that session.
 
 ### "I want to add a new subagent"
@@ -276,6 +282,8 @@ If you're reviewing the initial setup PR, these are the files that should be add
 .claude/hooks/lint-on-edit.sh
 ```
 
+That list is the April 2026 baseline. The repo has since added `.claude/hooks/no-main-commits.sh`, three more commands, `.claude/rules/`, and more shared skills. Run `git ls-files .claude` for the current set.
+
 Plus the sanitized template:
 ```
 .mcp.json.example
@@ -307,6 +315,6 @@ Files that should remain gitignored (handled by `.gitignore`):
 ## Further reading
 
 - `CLAUDE.md` — project conventions Claude loads automatically every session
-- `coding-standards.md` — the full standards Claude enforces (10 parts, ~600 lines)
+- `coding-standards.md` — the full standards Claude enforces (Parts 0 through 7)
 - `tasks/lessons.md` — accumulated learnings from prior sessions
 - [Claude Code docs](https://docs.claude.com/en/docs/claude-code) — hooks, agents, MCP server reference

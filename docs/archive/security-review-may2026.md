@@ -1,5 +1,7 @@
 # Security Review — May 2026
 
+> **Status note, 2026-11-12.** The next review, `tasks-security-review-2026-05-12.md` in this folder, confirmed all 10 findings fixed. The code still shows the fixes for P1-1, P1-2, P2-1, and P2-3, so prior findings #1 and #3 in the table below are closed. Two names below no longer exist: `components/settings/settings-dialog.tsx` and `taskRecordImportSchema`. The import handler is now in `components/settings-page/settings-body.tsx`, and the lenient import schema is `storedTaskRecordSchema` in `lib/schema.ts`. Do not copy the CSP or the PocketBase version from this record. `docker/Caddyfile` and `SECURITY.md` hold the shipped policy, and `docker/Dockerfile` pins PocketBase 0.40.4.
+
 **Date:** 2026-05-06
 **Reviewer:** GitHub Copilot (automated + manual analysis)
 **Scope:** Full codebase review — auth, sync, data import/export, schema validation, service worker, CSP headers, Docker/Caddy configuration, MCP server, and logging.

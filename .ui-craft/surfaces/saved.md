@@ -11,9 +11,14 @@ form controls and the shared shell. A single reading list is sufficient; no new
 visual theme, quadrant pigment, folders, rich text or motion.
 
 Primary verbs: Move to Saved, Edit notes, Return to matrix. Notes and links reuse
-the short 600-character description. Return reviews quadrant and optional due
-date. Both moving and removal offer Undo. Search includes title, description,
+the task description field (600 characters). Return to matrix asks for a quadrant
+and an optional due date. Moving to Saved, returning to the matrix, and deleting
+each offer Undo. Search includes title, description,
 tags and subtasks; global search marks Saved results explicitly.
+
+Completed tasks and tasks with a running timer cannot move to Saved
+(`lib/tasks/saved-placement.ts`). Task cards hide Move to Saved on completed tasks.
+A task with a running timer gets an error toast that gives the reason.
 
 Required states: loading before local data resolves; empty with an explanation;
 no search matches; pending form submission; failed save retaining typed text;

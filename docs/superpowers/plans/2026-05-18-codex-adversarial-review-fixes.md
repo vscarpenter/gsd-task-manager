@@ -1,5 +1,7 @@
 # Codex Adversarial Review Fixes — Implementation Plan
 
+> **Status note, 2026-11-12.** All five fixes shipped on 2026-05-18 as PRs #282 to #286, so do not rebuild them. The push guard now reads the remote record for each queued item (`pushSingleItem` in `lib/sync/pb-push.ts` calls `fetchRemoteTaskEntry`), which this plan ruled out. ADR 0019 added a pull contract version on top of the cursor fix, and ADR 0020 raised it to 4. Read `lib/sync/README.md` for the current sync design.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close five silent data-loss / observability paths surfaced by the Codex adversarial review of 2026-05-18.

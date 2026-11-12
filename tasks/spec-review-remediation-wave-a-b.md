@@ -1,5 +1,7 @@
 # Spec — Review Remediation, Waves A & B
 
+> **Status, 2026-11-12.** All five items shipped on 2026-08-12: W-A1 in PR #473, W-A2 in #474, W-A3 in #475, W-B1 in #476, and W-C1 in #478. PR #493 then reversed W-A3 on purpose, after #490 and #491 made recurrence and subtasks authorable. `tests/ui/about-copy.test.tsx` now pins the plain claims. Later work extended two items. The storage figure also counts Trash (`components/settings-page/use-storage-summary.ts`), and the backup envelope is at 2.2.0 with a `deletedTasks` store (ADRs 0014 and 0015). The drop resolver lives in `lib/dnd-drop-target.ts`. The line references and test names below are from 2026-08-12 and have drifted.
+
 **Status:** Approved 2026-08-12
 **Source:** `docs/audits/ACTION-CHECKLIST-2026-08-12.md`, derived from the external review of web app v11.2.1
 **Tier:** Non-trivial (coordinated changes across four subsystems)
@@ -198,7 +200,7 @@ see the ADR's table.
 
 **Test stubs.**
 ```
-tests/data/import-export.test.ts (or export-full-fidelity.test.ts)
+tests/data/backup-envelope.test.ts
   export
     should_include_archived_tasks_with_archivedAt
     should_include_smart_views_and_settings
@@ -247,7 +249,7 @@ tests/data/dependencies.test.ts
     should_count_only_open_dependents_when_mixed
     should_return_empty_when_no_dependents
 
-tests/ui/task-card-blocking-badge.test.tsx
+tests/ui/task-card-states.test.tsx
     should_hide_blocking_badge_when_all_dependents_completed
     should_show_open_dependent_count_when_some_completed
 
@@ -255,7 +257,7 @@ tests/ui/settings-body.test.tsx
     should_include_archived_tasks_in_storage_count
     should_report_live_count_when_no_archived_tasks
 
-tests/ui/about-features.test.tsx
+tests/ui/about-copy.test.tsx
     should_mark_recurring_and_subtasks_as_unavailable
 
 tests/data/use-drag-and-drop.test.ts

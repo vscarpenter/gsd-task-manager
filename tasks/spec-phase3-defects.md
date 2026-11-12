@@ -1,5 +1,7 @@
 # Spec: modernization Phase 3, fix the defects the owner ticked
 
+> **Status, 2026-11-12.** Shipped in PR #579 (`bbdbd882`, 2026-10-06). PR #583 (`bb5c42ab`) landed one commit that #579 missed. Two results have moved since. The MCP server exposes 20 tools again, because a later change added `get_top_three`. The About snippet now runs `node` with the package entry point as its argument (`components/about/mcp-section.tsx`). The `../gsd-modernize/` folder holds the brief, `RULE_REVIEWS.md`, and `CONTRACT_MAP.md`. It sits outside this repo and was not on this machine on 2026-11-12.
+
 Date: 2026-10-06. Tier: non-trivial. The approved design is
 `../gsd-modernize/analysis/gsd-taskmanager/MODERNIZATION_BRIEF.md` §3 Phase 3,
 with the owner's §7 decisions of 2026-10-06. Where this spec and the brief
@@ -97,8 +99,9 @@ One branch per bundle, cut from `main` at `53418f1`, test first.
 ### E. Agent-facing docs (`fix/agent-facing-docs`)
 
 - `quick-capture` and `triage-inbox` use `dueDate`; `triage-inbox` lists with
-  `completed: false` and no sort argument. The digests in `index.json` follow.
-- `openapi/pocketbase.json` names `description`, `completed` (boolean), and
+  `completed: false` and no sort argument. The digests in
+  `public/.well-known/agent-skills/index.json` follow.
+- `public/.well-known/openapi/pocketbase.json` names `description`, `completed` (boolean), and
   `due_date`.
 - The About page snippet matches the server card: command `gsd-mcp-server`,
   `GSD_POCKETBASE_URL` and `GSD_AUTH_TOKEN`, with a pointer to `--setup`. A

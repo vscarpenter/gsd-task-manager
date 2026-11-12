@@ -6,6 +6,8 @@
 
 > **Partially superseded by [ADR 0011](0011-v9-single-matrix-refactor.md).** v9 removed the header pins, the 1–9 and 0 shortcuts, and `useSmartViewShortcuts`. Smart views remain as an opt-in strip above the matrix (Settings › Features).
 
+> **Status note, 2026-11-12.** The web app can no longer create or save a custom view; only JSON import writes the `smartViews` table (`lib/tasks/import-export.ts`). The table arrived in Dexie version 4 (`lib/db-migrations.ts`), not 13. The built-in views are those in `lib/smart-views/built-in.ts`, for example "Today's Focus", "Overdue Backlog", and "No Deadline". A stored view has no color, and its criteria fields are in `lib/smart-views/types.ts`.
+
 ## Context
 
 Users frequently apply the same complex filter combinations — e.g., "high-priority tasks tagged 'work' due this week" — but rebuilding filters from scratch each time is friction-heavy. A mechanism to save, recall, and quickly switch between filter presets was needed. The feature must be consistent with the keyboard-first, local-first design philosophy of the app.

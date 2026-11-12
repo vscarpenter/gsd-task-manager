@@ -8,10 +8,12 @@ colors:
   raised-light: "#FBF9F3"
   accent-light: "#2C6680"
   accent-light-hover: "#234F63"
+  on-accent-light: "#FFFFFF"
   success-light: "#3E7D52"
   success-light-ink: "#2F5F44"
   danger-light: "#B23A2E"
   danger-light-ink: "#98301F"
+  on-danger-light: "#FFFFFF"
   warning-light: "#C78E3F"
   warning-light-ink: "#8A5A1F"
   q1-light: "#B23A2E"
@@ -43,10 +45,12 @@ colors:
   slate-dark: "#F1ECE2"
   accent-dark: "#6FAACB"
   accent-dark-hover: "#5A93B5"
+  on-accent-dark: "#17150F"
   success-dark: "#6FB07F"
   success-dark-ink: "#9CCBA6"
   danger-dark: "#E0705F"
   danger-dark-ink: "#E8907F"
+  on-danger-dark: "#17150F"
   warning-dark: "#D9A55F"
   warning-dark-ink: "#D9A55F"
   q1-dark: "#E0705F"
@@ -71,6 +75,7 @@ colors:
   neutral-500-dark: "#A79F92"
   neutral-700-dark: "#C8C0B2"
   control-border-dark: "#746A5B"
+  pane-border-dark: "#322D24"
 typography:
   display:
     fontFamily: "ui-serif, 'New York', var(--font-newsreader), Georgia, serif"
@@ -122,6 +127,7 @@ typography:
     fontSize: "40px"
     fontWeight: 600
     lineHeight: 1
+    letterSpacing: "-0.02em"
     fontVariantNumeric: "tabular-nums"
 rounded:
   xs: "4px"
@@ -143,7 +149,7 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.accent-light}"
-    textColor: "#FFFFFF"
+    textColor: "{colors.on-accent-light}"
     rounded: "{rounded.sm}"
     padding: "0 16px"
     height: "38px"
@@ -157,11 +163,11 @@ components:
     height: "38px"
   button-ghost:
     backgroundColor: "transparent"
-    textColor: "{colors.slate-light}"
+    textColor: "{colors.neutral-700-light}"
     rounded: "{rounded.sm}"
   button-danger:
     backgroundColor: "{colors.danger-light}"
-    textColor: "#FFFFFF"
+    textColor: "{colors.on-danger-light}"
     rounded: "{rounded.sm}"
   input:
     backgroundColor: "{colors.paper-light}"
@@ -195,6 +201,10 @@ graphite ink, a serif display voice over a quiet system-sans working voice, and 
 tide-blue interaction color. Four bounded quadrant pigments make the matrix scannable without
 turning the rest of the application into a rainbow. Color communicates hierarchy or state; it is
 not decoration.
+
+Inkwell is the design system vendored under `app/css/`. The app imports `inkwell-tokens.css` and
+`inkwell-components.css` from there. GSD Editorial names Inkwell's brand palette and, in this
+document, the system as GSD ships it.
 
 This is the same visual language the iOS/iPadOS/Mac app, gsdtaskmanager.com, and the brand kit
 ship, so a user moving between devices meets one product. It was restored in August 2026 after a
@@ -241,7 +251,7 @@ global interaction accent, semantic status colors, and four matrix-only quadrant
 
 The light neutral ramp is `#ECE7DC`, `#E3DDD0`, `#D8D1C1`, `#6E6760`, and `#3A372F`
 for `--gray-100` through `--gray-700`. Muted text uses `#6E6760` or darker; it measures
-5.63:1 on paper. Primary ink measures 15.87:1 on paper, and tide measures 6.33:1.
+5.57:1 on paper. Primary ink measures 16.60:1 on paper, and tide measures 6.33:1.
 The stronger control boundary `#938A7B` measures 3.41:1. Tertiary ink `--ink-3` is
 `#797368` (dark `#948A79`), matching the iOS app's `Surface.ink3`: it carries quiet
 tertiary text, icons, and the dotted chart series, and body-size text on ivory steps
@@ -266,8 +276,8 @@ stronger tint family the iOS app and landing page carry.
 
 Dark mode is designed, not inverted. Its surface stack is canvas `#17150F`, raised `#1B1812`,
 paper `#221E17`, and primary ink `#F1ECE2`. Tide lifts to `#6FAACB`, with `#5A93B5` for
-hover/pressed interaction. Text on a filled dark-mode accent uses dark paper ink `#17150F`,
-not white.
+hover/pressed interaction. Text on a filled dark-mode accent uses `#17150F`, the dark canvas
+value, not white.
 
 Dark semantic colors are success `#6FB07F` with ink `#9CCBA6`, danger `#E0705F` with ink
 `#E8907F`, and warning `#D9A55F` (its own text ink). The dark neutral ramp is `#1B1812`,
@@ -303,7 +313,8 @@ a shared hex family does not make two roles interchangeable.
 
 **Display serif:** New York on Apple devices via `ui-serif`, with self-hosted Newsreader
 (exposed as `--font-newsreader` through `next/font`) as the cross-platform stand-in. Carries
-display, headlines, section heads, and card titles.
+the display and heading steps (`text-display` through `text-h3`) and stat numerals. Task-card
+titles stay in the sans (`text-small`).
 
 **Working sans:** The system sans stack carries body, labels, controls, and dense UI — it stays
 legible at the 11–12px chip sizes the matrix leans on.
@@ -326,14 +337,14 @@ gsdtaskmanager.com (Newsreader over system sans).
 - **Small:** 14px/1.5 sans, weight 430.
 - **Caption:** 12px/1.4 sans, weight 500.
 - **Eyebrow:** 11px/1 sans, weight 600, tracking 0.12em, uppercase and used sparingly.
-- **Numeral:** 40px/1 serif, weight 600, `tabular-nums`. Stat values only, such as the Review page's stat
-  cards and streak count (`.text-numeral`). It is the one role off the eight-step reading ramp: a
+- **Numeral:** 40px/1 serif, weight 600, tracking −0.02em, `tabular-nums`. Stat values only, such as the Review page's
+  stats and streak count (`.text-numeral`). It is the one role off the eight-step reading ramp: a
   number set as a figure, the way the iOS dashboard sets it.
 
-The ramp lives in `app/css/inkwell-tokens.css` as `--t-*` in rem, so text follows the browser's
-font-size setting the way iOS Dynamic Type and Android `sp` do. At the default 16px root the steps
-render at exactly the px values above. The serif's one weight is 600, matching the iOS app's
-semibold.
+The ramp lives in `app/css/inkwell-tokens.css` as `--t-display` through `--t-eyebrow` in rem, so
+text follows the browser's font-size setting the way iOS Dynamic Type and Android `sp` do. At the
+default 16px root the steps render at exactly the px values above. Every serif step on the ramp
+uses weight 600, matching the iOS app's semibold.
 
 **The Two-Voice Rule.** The serif carries display and headings; the sans carries working UI.
 Hierarchy inside each voice comes from scale, weight, spacing, and contrast — never from
@@ -356,7 +367,10 @@ Two consequences follow. Do not add a GSD-only alias for a step Inkwell already 
 and `text-label` were exactly that, and both had drifted off the documented values before they were
 removed. And do not reach for an arbitrary `text-[Npx]` — the mechanical detector catches whole-pixel
 arbitrary values, but it cannot see a fractional one or a named Tailwind step, so a new size that is
-genuinely needed gets documented here first.
+genuinely needed gets documented here first. `tests/data/type-ramp-usage.test.ts` fails on
+any arbitrary px size (fractional ones included) and on numeric or px inline `fontSize`. It also
+fails on Tailwind size names with no step behind them. It does not match rem or `clamp()` values. It
+scans `.tsx` and `.ts` files under `components/` and `app/`, not CSS.
 
 ## 4. Elevation
 
@@ -369,7 +383,7 @@ popovers, drawers, dialogs, and other state changes. Shadows are warm ink, low s
 
 - Icon buttons: 8px.
 - Inputs and buttons: 10px.
-- Task and stat cards: 12px.
+- Task cards and the vendored `.stat-card` class: 12px.
 - Quadrant panes and large panels: 14px.
 - Expressive overlays: 20px.
 - Pills: fully rounded.
@@ -386,14 +400,16 @@ popovers, drawers, dialogs, and other state changes. Shadows are warm ink, low s
 
 Components are refined and restrained. Every interactive primitive carries default, hover, focus,
 active, and disabled states. The canonical layer is `components/ui/*` composing the Inkwell
-primitives; deprecated `.matrix-card` and `.rd-*` systems must not be extended.
+primitives. Do not extend the deprecated `.matrix-card` classes. The `.rd-*` system is retired:
+no `.rd-*` class remains in the code, and none should return.
 
 ### Buttons
 
 - Controls are 38px tall on pointer devices and expand to at least 44px on coarse pointers.
-- Primary buttons use tide with white text; dark mode swaps to dark paper text on the lifted accent.
-- Secondary buttons use paper, primary ink, and a control-strength boundary.
-- Destructive buttons use the rust fill with white text; danger text on tints uses `--rust-d`.
+- Primary buttons use tide with white text; dark mode swaps to `#17150F` text on the lifted accent.
+- Secondary buttons (the `subtle` variant) use paper, primary ink, and a control-strength boundary.
+- Destructive buttons use the rust fill with white text (`#17150F` text in dark mode); danger text
+  on tints uses `--rust-d`.
 - Focus uses the global tide ring; active feedback may press to `scale(0.97)`.
 
 ### Chips and badges
@@ -408,7 +424,9 @@ primitives; deprecated `.matrix-card` and `.rd-*` systems must not be extended.
 - Cards use paper on the canvas or on a quadrant wash; panes use the raised/wash layer.
 - Default card radius is 12px; pane radius is 14px.
 - Quiet borders and low resting elevation preserve hierarchy without boxing in every section.
-- Standard internal card padding is 24px; denser stat cards may use 20–22px.
+- Standard internal card padding is 24px; the vendored `.stat-card` class uses 18 to 22px, and
+  no component uses that class. The Review page's stats are a separate component
+  (`components/dashboard/stats-card.tsx`): borderless by design, with no card padding.
 
 ### Inputs and fields
 
@@ -419,14 +437,17 @@ primitives; deprecated `.matrix-card` and `.rd-*` systems must not be extended.
 
 ### Navigation
 
-The v9 shell uses a persistent top bar and icon rail; full-page settings use a sidebar that
-collapses below 1024px. Active navigation uses tide, never Q1 or another quadrant pigment.
+The v9 shell (`docs/adr/0011-v9-single-matrix-refactor.md`) uses a persistent top bar and icon
+rail. Below the `md` breakpoint a bottom tab bar replaces the rail. Full-page settings use a
+sidebar that collapses below 1024px. Active navigation uses tide, never Q1 or another quadrant pigment.
 
 ### Signature component: the matrix
 
 Each quadrant pane uses its exact wash, an exact header band, a 3px pigment rule, a Lucide icon,
-and an ink-safe title. Each task card carries one 3px inset spine plus a completion disc in the
-same quadrant pigment. The matrix is two columns on desktop and one stacked column on mobile.
+and an ink-safe title. Each task card carries one 3px inset spine in the quadrant pigment. Its completion disc
+is neutral at rest and fills with the same pigment once the task is complete. The subtask progress
+bar also fills with the pigment until every subtask is done, then turns success green. The matrix is two
+columns when its own container is at least 696px wide, and one stacked column below that.
 Header and card markers state the quadrant with conviction; tags and general metadata remain
 neutral.
 
@@ -451,6 +472,7 @@ neutral.
 - Don’t color tags or unrelated metadata with their task’s quadrant.
 - Don’t use raw ochre or slate pigments for normal-size text when their ink tokens exist.
 - Don’t drift toward mascots, points, badge economies, feature soup, or cookie-cutter card grids.
-- Don’t extend deprecated `.matrix-card` or `.rd-*` component systems.
+- Don’t extend the deprecated `.matrix-card` classes, and don’t bring back the retired `.rd-*`
+  system.
 - Don’t introduce a third type family, and don’t let the serif leak into dense working UI.
 - Don’t use fluid `clamp()` headings inside the product shell; the fixed scale is intentional.

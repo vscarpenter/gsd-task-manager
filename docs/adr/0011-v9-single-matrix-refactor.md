@@ -4,6 +4,8 @@
 **Status:** Accepted
 **Deciders:** Vinny Carpenter
 
+> **Status note, 2026-11-12.** Four more things changed beyond the "Later changes" section at the end. `components/share-task-dialog/` is back, and the matrix mounts it. Smart views returned as an opt-in strip (`components/matrix-simplified/smart-view-strip.tsx`, switched on in Settings under Features). `snooze-dropdown.tsx` is gone, and `task-card-actions.tsx` defines its snooze menu inline. `settings-page/settings-body.tsx` now lazy-loads `import-dialog.tsx`.
+
 ## Context
 
 Through v8, the GSD UI surface had grown to include a 4-quadrant grid (`MatrixBoard` + `MatrixColumn`), a side filter panel (`FilterPanel`, `FilterPopover`, `FilterDueDate`, `FilterBar`), bulk multi-select (`BulkActionsBar`, `BulkTagDialog`), pinned smart-view chips with 1-9 keyboard shortcuts (`SmartViewPills`, `useSmartViewShortcuts`), a smart-view selector + save dialog, a modular task form (`components/task-form/` with subtasks/dependencies/tags inputs), a tag multiselect, an embedded user-guide accordion + wizard, a modal settings dialog, and a global ⌘K command palette. Each surface had its own tests and supporting hooks.

@@ -1,5 +1,7 @@
 # GSD Design Reference — Web App Compliance Review
 
+> **Status note, 2026-11-12.** Most of this review is closed. The brand assets use the four pigments, the task card takes its quadrant and has the spine, and an onboarding tour and swipe actions shipped. `.rd-serif`, `.redesign-scope`, and `public/css/` are gone, so the cleanup items that name them need no action. `DESIGN.md` and `PRODUCT.md` now describe GSD Editorial. Three findings still match the code: blocked cards are not dimmed (2.5), the matrix gap is `gap-4` (3.1), and switches turn tide (7.2). Tag chips stay neutral on purpose (see the comment in `components/task-card/task-card-metadata.tsx`).
+
 **Date:** 2026-06-14
 **Reviewed against:** `GSD-Design-Reference.html` (v1, post-polish)
 **Scope:** the Next.js PWA (`app/`, `components/`, `lib/`, `public/`)

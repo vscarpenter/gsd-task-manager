@@ -1,5 +1,7 @@
 # Code Review & Standards Audit
 
+> **Status note, 2026-11-12.** Do not delete from the lists below. ADR 0011 (`docs/adr/0011-v9-single-matrix-refactor.md`) recorded what was removed and what stayed, and it is the ADR that Phase 5 asks for. Some files listed as dead are live now: the command palette, `components/share-task-dialog/`, `lib/confetti.ts`, `task-timer.tsx`, and `task-description.tsx`. So `cmdk` and `canvas-confetti` stay too. Most other listed files are gone, `lib/db-migrations.ts` exists, and `coding-standards.md` is now v18.0. `bun run knip` now does the dead-code check, and `tasks/audit-2026-11-10.md` is the latest whole-repo audit.
+
 **Date:** 2026-04-28
 **Branch:** `claude/infallible-neumann-68a882`
 **Audited against:** `coding-standards.md` v13

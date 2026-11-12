@@ -1,5 +1,7 @@
 # Tokens-per-PR Instrumentation Plan (cycle E follow-up)
 
+> **Status note, 2026-11-12.** This work shipped with the telemetry cycle in PR #429 on 2026-07-08. Neither end of it runs now: PR #449 removed `telemetry.yml`, and PR #527 retired the builder that wrote the marker. `scripts/extract-run-tokens.cjs` remains, with no caller outside its test. See `docs/agents/builder.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans. Steps use `- [ ]`.
 
 **Goal:** Record the builder run's token cost against the PR it opens, and report tokens-per-merged-PR in telemetry.

@@ -1,5 +1,7 @@
 # Editorial Restore — Ship Plan
 
+> **Status note, 2026-11-12.** This work shipped in PR #502 on 2026-08-15, and Inkwell 1.4.0 "GSD Editorial" is still the visual system. The branch, the working tree state, and the files Tasks 1 and 2 delete or rename are gone. Commit `37cb2842` removed the design lab on 2026-08-23, and Newsreader now loads from local files in `app/fonts/newsreader/`. `DESIGN.md` is the current design authority.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Review, verify, clean up, and ship the uncommitted GSD Editorial reskin on branch `design/editorial-restore` as a 4-commit PR to main.

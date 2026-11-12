@@ -3,6 +3,7 @@
 **Date:** 2026-08-27
 **Status:** Approved → implementing
 **Author:** Vinny (with Claude)
+**Shipped, 2026-11-12:** live since #516. Dated notes below mark where the code has moved since this spec.
 
 ## Goal
 
@@ -33,7 +34,7 @@ and before they do they can see the exact payload that will leave their device.
 
 | Field | Type | Notes |
 |---|---|---|
-| `submission_id` | string | Fresh nanoid per submission. Idempotency only; never persisted, so it links nothing across submissions. |
+| `submission_id` | string | Fresh nanoid per submission. Idempotency only; never persisted on the device, so it links nothing across submissions. |
 | `sentiment` | `"up" \| "down" \| ""` | Optional. |
 | `category` | `"idea" \| "praise" \| "gripe" \| "bug" \| ""` | Optional. |
 | `message` | string, ≤1000 chars | Optional. |
@@ -41,11 +42,13 @@ and before they do they can see the exact payload that will leave their device.
 | `app_version` | string, ≤20 chars | From the build-time version constant. |
 | `client_submitted_at` | ISO 8601 string | Untrusted client clock for context only; never used for retention or abuse controls. |
 
+2026-11-12: the collection also has a server-only `status` field for triage. The hook rejects a non-empty one on any create that isn't a superuser's, so the client payload is still these seven fields.
+
 ## Constraints
 
 - **No identifier, ever.** No `deviceId`, no PocketBase user id, no email, no IP-derived
   value, no fingerprint. Signed-in sync users and anonymous users are indistinguishable
-  in the collection. The existing `syncMetadata.deviceId` (`lib/db-migrations.ts:75`) must
+  in the collection. The existing `syncMetadata.deviceId` (the `sync_config` row, `lib/db-migrations.ts`; the same migration also writes the id to the `device_info` row) must
   never be read by this feature — reusing it would make feedback joinable against sync
   traffic and sync history.
 - **No task content.** No title, tag, subtask, note, due date, count, or derived statistic
@@ -65,11 +68,14 @@ and before they do they can see the exact payload that will leave their device.
   (`cloudfront/response-headers-policy.json:19`); that string must not change.
 - **No Dexie migration.** Local state lives in `localStorage` under `gsd:feedback:*`,
   following the `lib/preferences/` pattern. The DB stays at version 15.
+  (2026-11-12: Dexie is at version 17. Feedback still adds no migration.)
 - **No nagging.** No modal, no interstitial, no toast asking for feedback, no badge.
   The only surfaces are a permanent Settings section and a command-palette entry.
+  (2026-11-12: the footer and the help drawer also link to the Settings section, and the
+  Review page has the nudge described under Out of Scope.)
 - **Offline-safe.** Drafting works offline. A failed send leaves the draft intact and
   surfaces a retryable error; it never silently discards the user's writing.
-- WCAG 2.1 AA, per `coding-standards.md` Part 2.
+- WCAG 2.1 AA, per `coding-standards.md` Part 2. (2026-11-12: `coding-standards.md` doesn't name WCAG. The WCAG AA baseline is in `CLAUDE.md`, Design Context.)
 
 ## Edge Cases
 
@@ -80,6 +86,8 @@ and before they do they can see the exact payload that will leave their device.
   a retry. No queueing into the sync engine (that path is for tasks and is authenticated).
 - **Rate-limited (429) or rejected (400)** — inline error, draft preserved, no console noise
   beyond the existing logger.
+  (2026-11-12: a 400 for a duplicate `submission_id` counts as success, because the first
+  attempt landed. A 5xx shows an inline error with its own text. See `lib/feedback/submit-feedback.ts`.)
 - **Message at exactly 1000 characters** — accepted. 1001 is refused client-side before
   the request is built, and refused again by the collection's schema.
 - **Voting twice on the same feature** — the toggle is idempotent; the local store holds a
@@ -99,6 +107,7 @@ and before they do they can see the exact payload that will leave their device.
   stat rail (`components/dashboard/feedback-nudge.tsx`), gated by
   `lib/feedback/nudge-eligibility.ts`: tenure ≥14 days, ≥10 completions over ≥3 days,
   quiet for 90 days after a send and 180 after "Not now". Still no modal, toast, or badge.
+  It also stays hidden while a draft is open.
 - The public privacy-policy page at `gsdtaskmanager.com/privacy` (different repo).
 - Any read path from the `feedback` collection into the app. Vote totals are not shown
   back to users; the collection is write-only from the client's perspective.
@@ -106,6 +115,7 @@ and before they do they can see the exact payload that will leave their device.
 - Moderation tooling, email replies, or a feedback inbox UI. Reading happens in the
   PocketBase admin UI at `/_/`.
 - Sentry changes. Bug reports here are a user-authored category, not a crash pipeline.
+  (2026-11-12: Sentry has since been removed, ADR 0017.)
 
 ## Roadmap Candidates (initial list — Vinny to curate)
 
@@ -122,6 +132,10 @@ one-line change to `lib/feedback/roadmap-items.ts`.
 | `task-notes` | Longer notes and attachments on a task |
 | `ios-widgets` | iOS home-screen widgets |
 | `shared-lists` | Share one list with one other person |
+
+2026-11-12: the shipped list has 7 items. `weekly-review` was retired in #695, and a stored
+vote for it is never sent. Four labels are shorter than the ones above, and each item also
+has a description. `lib/feedback/roadmap-items.ts` holds the current list.
 
 `natural-language-dates` is a real gap: `lib/capture-parser.ts` parses tags and the
 urgent/important flags, but no dates.
@@ -147,8 +161,14 @@ urgent/important flags, but no dates.
 11. `bun run test`, `bun typecheck`, `bun lint`, and `bun run quality:shape` all pass.
 12. The pinned PocketBase system test runs the real setup and proves an anonymous
     create succeeds while anonymous list and duplicate submission attempts fail.
+    (The test is `packages/mcp-server/src/__tests__/system/pocketbase-system.test.ts`.)
 
 ## Test Stubs
+
+2026-11-12: the shipped tests use different names from the stubs below, so match them by
+behavior. The UI tests are in `tests/ui/feedback-settings.test.tsx`, because the component
+shipped as `FeedbackSettings`. The `submission_id` retry test is in that UI file. No test
+in the UI or e2e file checks keyboard reach. `tests/e2e/feedback.spec.ts` has 5 tests.
 
 **`tests/data/feedback-payload.test.ts`** — the load-bearing privacy test
 
@@ -165,6 +185,8 @@ urgent/important flags, but no dates.
 - a throwing `localStorage` degrades to in-memory rather than crashing
 - (per `.claude/rules/testing.md`, remove `gsd:feedback:*` keys individually in
   `beforeEach` — `localStorage.clear()` no-ops under jsdom-in-Bun)
+  (2026-11-12: `vitest.setup.ts` now replaces `localStorage`, and `clear()` works. The rule
+  file says so too.)
 
 **`tests/data/submit-feedback.test.ts`**
 

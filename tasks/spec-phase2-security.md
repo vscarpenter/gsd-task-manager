@@ -1,5 +1,7 @@
 # Spec: modernization Phase 2, close the repo's security findings
 
+> **Status, 2026-11-12.** Shipped in PR #578 (`53418f1f`, 2026-10-06), with all six units in one PR. The results live in `docker/Dockerfile` (PocketBase 0.40.4), `docker/pb_hooks/session_revoke.pb.js`, `lib/sync/sign-out-everywhere.ts`, `lib/error-logger.ts`, `.dockerignore`, and `.github/workflows/security-audit.yml`. `next` and `eslint-config-next` are now 16.4.1. The repo can't show whether `main-protection` requires `audit`, because that is a GitHub setting. The `../gsd-modernize/` folder holds the brief and `SECURITY_FINDINGS.md`. It sits outside this repo and was not on this machine on 2026-11-12.
+
 Date: 2026-10-05. Tier: non-trivial. The approved design is
 `../gsd-modernize/analysis/gsd-taskmanager/MODERNIZATION_BRIEF.md` §3 Phase 2,
 with the owner's decisions of 2026-10-05 recorded in its §7. The findings are in
