@@ -26,7 +26,9 @@ The pull cursor is one per account. It follows the newest `client_updated_at` th
 
 ### `WEB-LATE-AUTH-REFRESH` · P2 · a late token refresh can upload one account's task into another
 
-It needs two accounts signed in, one after the other, on one browser. `pushLocalChanges` (`lib/sync/pb-push.ts:287`) checks the SDK's principal once, then reads the queue with no `assertSyncSessionCurrent`. In one replay, a sync tab's `authRefresh` was in flight while another tab signed out and signed in as B. Its late response saved A's token over B's, because `clearPocketBase` (`lib/sync/pocketbase-client.ts:49`) detaches only the tab that calls it. The push then read B's edit and created it in A's account. The refresh runs on every sync in a token's last seven days. A stale sign-in dialog in a second tab gets there too. Fix: read the queue inside a fenced transaction, and drop a refresh response when the session changed while it was in flight. Related: `PUSH-IDENTITY` (P3) asks the same question of iOS. Evidence: `verify-sync-session`, `GapPushQueue.cfg`.
+**Fixed 2026-11-11.** `readPendingForSession` in `lib/sync/pb-push.ts` now reads the queue inside a transaction that calls `assertSyncSessionCurrent`, and the push repeats the check before each row. `BrokenPushQueueFence.cfg` undoes the fix and breaks the rule again. The rest of this entry describes the code before the fix.
+
+It needed two accounts signed in, one after the other, on one browser. `pushLocalChanges` checked the SDK's principal once, then read the queue with no `assertSyncSessionCurrent`. In one replay, a sync tab's `authRefresh` was in flight while another tab signed out and signed in as B. Its late response saved A's token over B's, because `clearPocketBase` (`lib/sync/pocketbase-client.ts:49`) detaches only the tab that calls it. The push then read B's edit and created it in A's account. The refresh runs on every sync in a token's last seven days. A stale sign-in dialog in a second tab gets there too. The planned fix had two parts: read the queue inside a fenced transaction, and drop a refresh response when the session changed while it was in flight. Only the first shipped. A late refresh can still save an old token, and the fenced read now stops the push that follows. Related: `PUSH-IDENTITY` (P3) asks the same question of iOS. Evidence: `verify-sync-session`, `BrokenPushQueueFence.cfg`.
 
 ### `WEB-RETRIED-EDIT-RECREATES` · P2 · a retried edit brings a deleted task back on the server
 
@@ -52,14 +54,14 @@ Check off a daily task, then uncheck it. `toggleCompleted(id, false)` (`lib/task
 
 ### `WEB-SESSION-STALE-READ` · P3 · four writers act on a `sync_config` read taken outside their transaction
 
-Each one needs a second tab or a stale dialog, plus a window of a few IndexedDB round trips.
+Each one needs a second tab or a stale dialog, plus a window of a few IndexedDB round trips. The first three were fixed on 2026-11-11 (#734). The fourth is open and tracked as #735.
 
-- `disableSync` (`lib/sync/config/disable.ts:81`) reads the row before `resetSyncConfigState` opens its transaction. If A's sign-in saves in between, the signed-out row records no `localTaskOwnerUserId`. B can then sign in and upload A's task (`verify-sync-session`, `GapSignOutRead.cfg`).
-- `updateAutoSyncConfig` (`lib/sync/config/get-set.ts:59`) writes `{...current, ...updates}` through `updateSyncConfig` with no transaction. It can write A's row back over B's sign-in (`GapSettingsWrite.cfg`).
-- `persistSyncConfig` (`components/sync/use-sync-auth-dialog.ts:231`) commits, then `populateFromExistingTasks` (`lib/sync/queue.ts:201`) queues every task with no session check. A Reset Everything in between leaves A's task queued on an empty device, and B's push uploads it (`GapPopulate.cfg`).
-- `runTaskSyncTransaction`, `restoreFromTrash` (`lib/trash.ts:43`), and `restoreTask` (`lib/archive.ts:144`) read the row before their transaction. A sign-in from another tab in that gap remembers a delete instead of queuing it, or queues nothing for a restore, and reconcile drops the task (`verify-task-tombstones`, `Finding-6-config-read.cfg` and `Finding-6-config-read-loss.cfg`).
+- Fixed. `disableSync` read the row before `resetSyncConfigState` opened its transaction. If A's sign-in saved in between, the signed-out row recorded no `localTaskOwnerUserId`, and B could then sign in and upload A's task. `resetSyncConfigState` now reads the row inside its transaction (`verify-sync-session`, `BrokenSignOutRead.cfg`).
+- Fixed. `updateAutoSyncConfig` wrote `{...current, ...updates}` through `updateSyncConfig` with no transaction, so it could write A's row back over B's sign-in. `updateSyncConfig` now reads and writes in one transaction (`BrokenSettingsWrite.cfg`).
+- Fixed. `persistSyncConfig` committed, then `populateFromExistingTasks` queued every task with no session check. A Reset Everything in between left A's task queued on an empty device, and B's push uploaded it. The sign-in transaction now queues the local tasks itself (`BrokenPopulate.cfg`).
+- Open (#735). `runTaskSyncTransaction`, `restoreFromTrash` (`lib/trash.ts`), and `restoreTask` (`lib/archive.ts`) read the row before their transaction. A sign-in from another tab in that gap remembers a delete instead of queuing it, or queues nothing for a restore, and reconcile drops the task (`verify-task-tombstones`, `Finding-6-config-read.cfg` and `Finding-6-config-read-loss.cfg`).
 
-Fix: each writer reads the row inside its own transaction, and the sign-in transaction queues the local tasks itself. `SyncSessionFixed.cfg` models that fix.
+Fix for the open bullet: each writer reads the row inside its own transaction. `SyncSession.cfg` models the code with the first three fixed, and it passes both account rules.
 
 ### `WEB-RESTORE-ONE-TABLE` · P3 · two restore paths write a live row beside an archive row
 
