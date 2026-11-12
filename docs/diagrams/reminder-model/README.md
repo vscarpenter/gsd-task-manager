@@ -10,26 +10,26 @@ The `verify-reminders` skill (`.claude/skills/verify-reminders/SKILL.md`) says w
 bash docs/diagrams/reminder-model/check.sh
 ```
 
-It runs every config through `scripts/tlc.sh`, which pins TLC 1.7.4 and checks the jar's hash. It prints one line per config and exits 0 only when each result matches the table. A run takes about five seconds.
+It runs every config through `scripts/tlc.sh`, which pins TLC 1.7.4 and checks the jar's hash. It prints one line per config and a summary line, and exits 0 only when each result matches the table. A run takes about five seconds.
 
 | Config | Model | Expected result |
 |---|---|---|
 | `Reminders.cfg` | before #669, with another device | Breaks `DueReminderStillOwed` when another device moves a due date after the reminder showed. |
 | `RemindersOneDevice.cfg` | before #669, one device | Breaks `DueReminderStillOwed` when a snooze ends before the reminder time. |
-| `RemindersFixed.cfg` | the code now | All five rules hold (76 states). |
+| `RemindersFixed.cfg` | the code now | All five rules hold (76 states): `TypeOK` and the four rules this table names. |
 | `BreakSnoozeKeepsSent.cfg` | now, but `snoozeTask` no longer clears the sent flag | Breaks `SnoozeBringsItBack`. |
 | `BreakSnoozeFiresEarly.cfg` | now, but `isReminderDue` fires a snooze that ends before the reminder time | Breaks `NoEarlyReminder`. |
 | `BreakRawOffsetCompare.cfg` | now, but `updateTask` compares raw offsets, so storing a legacy null as the default re-arms the reminder | Breaks `EachReminderOnce`. |
 
-A check that has never failed proves nothing, so each rule has a config that breaks it. The `Break*` configs set the `Break` constant in `RemindersFixed.tla`, and each value undoes one guard in the code. Each `Break*` config checks only the rule its break should break.
+A check that has never failed proves nothing, so each of those four rules has a config that breaks it. The `Break*` configs set the `Break` constant in `RemindersFixed.tla`, and each value undoes one guard in the code. Each `Break*` config lists `TypeOK` and the one rule its break should break.
 
 `seen`, `seenSnooze`, `shows`, and `early` are ghost variables. The app has no such fields. They record what you've seen, so the rules can say what the app still owes you. `legacyOffset` is real: it's a row whose `notifyBefore` is still null because a build before D-10 stored it.
 
 ## The chart
 
-`view.mjs` and `view-fixed.mjs` turn model states into the labels on the chart. Read every result with the `/pstack:statechart` skill. Give it `view-fixed.mjs` as the view for `RemindersFixed.tla`, or `view.mjs` for `Reminders.tla`, and write its output to a scratch folder outside the repo. The current-code chart has 6 states and 11 arrows. The steps D-10 added change only the stored offset, so they stay inside one label and the chart looks the same as it did at 41 states.
+Each model has one chart. `view.mjs` and `view-fixed.mjs` turn model states into the chart's labels. `check.sh` prints one line per config and draws no chart. To see a config's result as a chart, or a break as a path of steps, run the `/pstack:statechart` skill on that model and config. Give it `view-fixed.mjs` as the view for `RemindersFixed.tla`, or `view.mjs` for `Reminders.tla`, and write its output to a scratch folder outside the repo. The current-code chart has 6 labels and 11 arrows. The steps D-10 added change only the stored offset, so each of those steps starts and ends in the same label. The chart looks the same as it did before D-10, when the model had 41 states.
 
-`../generate-reminder-statechart.py` redraws those charts as `../reminder-statechart.html`. It draws from its own tables, so a change to a chart here means updating that script by hand.
+`../generate-reminder-statechart.py` redraws those charts as `../reminder-statechart.html`. It draws from its own tables, so a change to a chart here means updating that script by hand. The script still prints the 41 from before D-10, not 76.
 
 ## What the models leave out
 

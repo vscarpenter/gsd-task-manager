@@ -5,7 +5,7 @@
 ### 1. Check Server Starts
 
 ```bash
-cd /Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server
+cd /absolute/path/to/gsd-taskmanager/packages/mcp-server
 
 # Set environment variables
 export GSD_POCKETBASE_URL="https://api.vinny.io"
@@ -15,12 +15,15 @@ export GSD_AUTH_TOKEN="your-token-here"
 node dist/index.js
 ```
 
-Expected output:
+Expected output: a JSON log line on stderr whose `message` field is:
 ```
 GSD MCP Server running on stdio
 ```
 
 Press Ctrl+C to stop.
+
+To check the configuration without starting the server, run
+`node dist/index.js --validate` with the same variables set.
 
 ### 2. Test Tool Discovery
 
@@ -76,26 +79,24 @@ After configuring Claude Desktop (see QUICKSTART.md):
 
 1. Open Claude Desktop
 2. Start new conversation
-3. Type: `/mcp-tools` (if available) or just ask a question
+3. Ask: "What GSD tools are available?"
 
-If MCP server is loaded, you'll see tools available.
+If the MCP server is loaded, Claude lists the GSD tools.
 
 ### 2. Functional Tests
 
-Ask Claude these questions to test each tool:
+Ask Claude these questions to test a few of the tools:
 
 **Sync Status**:
 ```
 What's my GSD sync status?
-When was my last sync?
-Do I have any conflicts?
+Is the sync backend healthy?
 ```
 
-**Device List**:
+**Token Status**:
 ```
-Show me all my GSD devices
-What devices are connected?
-Which device was last active?
+When does my MCP token expire?
+Do I need to re-authenticate?
 ```
 
 **Task Stats**:
@@ -109,13 +110,17 @@ What's my total task count?
 
 **Expired Token**:
 1. Use an old/invalid token
-2. Ask for sync status
-3. Should get 401 error message
+2. Ask to list your tasks
+3. Should get "Not authenticated as a normal users-collection account"
+4. Ask for sync status. It reports `"healthy": false` instead of an error
 
 **Wrong PocketBase URL**:
-1. Set GSD_POCKETBASE_URL to invalid URL
-2. Ask for device list
-3. Should get connection error
+1. Set GSD_POCKETBASE_URL to an `https://` host that doesn't exist
+2. Ask to list your tasks
+3. Should get a connection error, such as "Failed to fetch tasks from PocketBase"
+
+A URL that isn't HTTPS (other than localhost) stops the server at startup, so
+Claude Desktop shows no tools at all.
 
 **Missing Config**:
 1. Remove env vars from Claude config
@@ -138,21 +143,15 @@ Get-Content $env:APPDATA\Claude\logs\mcp*.log -Wait
 
 Look for:
 - Server startup messages
-- Tool invocation logs
 - Error messages
-- API request/response info
 
 ### Enable Verbose Logging
 
-Add to index.ts (for development):
-
-```typescript
-console.error('Tool called:', name);
-console.error('Arguments:', args);
-console.error('Response:', JSON.stringify(result));
-```
-
-Rebuild and test.
+The server has no verbose mode today. The logger in `src/utils/logger.ts` reads
+`LOG_LEVEL=debug`, but no code writes a debug line yet. To trace tool calls, create a
+logger with `createMcpLogger` in `src/tools/handlers/index.ts`, call its `debug`
+method where that file handles a call, rebuild, and start the server with
+`LOG_LEVEL=debug`.
 
 ### Test PocketBase API Directly
 
@@ -172,12 +171,13 @@ Should return health status JSON.
 - Restart Claude Desktop completely
 - Check logs for startup errors
 
-### Issue: 401 Unauthorized
-- Token expired - re-authenticate via OAuth
+### Issue: "Not authenticated as a normal users-collection account"
+- Token expired. Sign in to the GSD app again, copy a new token, update the config, and restart Claude Desktop
 - Token format incorrect
-- PocketBase URL wrong - check environment matches
+- PocketBase URL wrong. `GSD_POCKETBASE_URL` must be the server that issued the token
 
 ### Issue: Tools return empty/null data
+- All-null task statistics mean the read failed. An empty account returns zero counts
 - User might not have any synced tasks yet
 - Check PocketBase is running and accessible
 - Verify database has data
@@ -190,7 +190,7 @@ Should return health status JSON.
 ## Success Criteria
 
 - Server starts without errors
-- All tools return valid data when queried
+- The tools you tried return valid data when queried
 - Claude Desktop shows tools available
 - Claude can call tools and get responses
-- Error handling works (401, connection errors, etc.)
+- Error handling works (sign-in error, connection errors, etc.)

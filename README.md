@@ -307,7 +307,7 @@ comes from the code or a comment in the named file.
 - Run: `bun run test`
 - Run: `bun typecheck`, `bun run typecheck:tests`, `bun lint`,
   `bun run quality:shape`, and `bun run knip`
-- Run: `bun run build`, then `bun run test:e2e:export` for the browser suite
+- Run: `bun run build:e2e`, then `bun run test:e2e:export` for the browser suite
 
 ## Contributing and security
 

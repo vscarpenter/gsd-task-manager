@@ -5,7 +5,7 @@ Get your GSD MCP server running in 5 minutes.
 ## 1. Build (if not already done)
 
 ```bash
-cd /Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server
+cd /absolute/path/to/gsd-taskmanager/packages/mcp-server
 npm install
 npm run build
 ```
@@ -15,8 +15,8 @@ npm run build
 **From Browser (Easiest)**
 
 1. Open GSD Task Manager in your browser
-2. Sign in with Google or GitHub to enable cloud sync
-3. Open **Settings → Cloud Sync → Copy auth token**
+2. Sign in with Google, Apple, or GitHub to enable cloud sync
+3. Open **Settings → Cloud Sync → MCP access → Copy auth token**
 
 The button copies the raw token for `GSD_AUTH_TOKEN`. Keep it private: it grants
 access to your synced tasks.
@@ -26,6 +26,7 @@ access to your synced tasks.
 **Find config file location:**
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 **Edit the file** (create if it doesn't exist):
 
@@ -35,7 +36,7 @@ access to your synced tasks.
     "gsd-tasks": {
       "command": "node",
       "args": [
-        "/Users/vinnycarpenter/Projects/GSD/gsd-taskmanager/packages/mcp-server/dist/index.js"
+        "/absolute/path/to/gsd-taskmanager/packages/mcp-server/dist/index.js"
       ],
       "env": {
         "GSD_POCKETBASE_URL": "https://api.vinny.io",
@@ -48,7 +49,7 @@ access to your synced tasks.
 
 **Important**:
 - Replace the `GSD_AUTH_TOKEN` value with your actual token
-- Use absolute path to `dist/index.js`
+- Replace the sample path with the absolute path to `dist/index.js` on your machine
 
 ## 4. Restart Claude Desktop
 
@@ -65,23 +66,30 @@ What's my GSD sync status?
 ```
 
 ```
-Show me all my connected devices
+When does my MCP token expire?
 ```
 
 ```
 How many tasks do I have?
 ```
 
-If working, Claude will respond with actual data from your GSD account!
+If working, Claude will respond with actual data from your GSD account! A working
+setup reports `"healthy": true` for the sync status. A broken one reports
+`"healthy": false` without an error, so check that field. Task counts that come
+back null also mean the read failed.
 
 ## Troubleshooting
 
 **Error: "Configuration error"**
 - Check environment variables are set in Claude config
 - Ensure no trailing spaces in token
+- Use an `https://` URL. Plain `http://` works only for localhost, 127.0.0.1, or [::1]
+- Use the token of a normal account. The server refuses administrator (superuser) tokens
+- Run `node dist/index.js --validate` with both variables set for a full diagnostic
 
-**Error: "401 Unauthorized"**
-- Token expired - re-authenticate via OAuth in the GSD app
+**Error: "Not authenticated as a normal users-collection account"**
+- The token expired or was revoked. Sign in to the GSD app again
+- Copy a new token (step 2), put it in the config (step 3), and restart Claude Desktop
 - Make sure you copied the full token
 
 **Error: "Cannot find module"**
@@ -94,7 +102,7 @@ If working, Claude will respond with actual data from your GSD account!
 
 ## Development Mode
 
-To see debug output:
+To watch the server's log:
 
 ```bash
 export GSD_POCKETBASE_URL="https://api.vinny.io"
@@ -102,14 +110,15 @@ export GSD_AUTH_TOKEN="your-token"
 node dist/index.js
 ```
 
-The server will print "GSD MCP Server running on stdio" when ready.
+The server writes its log to stderr as JSON lines. When ready, it writes a line whose
+`message` is "GSD MCP Server running on stdio".
 
 ## Next Steps
 
 - See [README.md](README.md) for full documentation
 - Try asking Claude complex questions about your tasks
-- Report issues or suggest features
+- Report issues or suggest features at https://github.com/vscarpenter/gsd-task-manager/issues
 
 ---
 
-**Stuck?** Check the full README or ask in the project Discord.
+**Stuck?** Check the full README, or open an issue at the link above.
