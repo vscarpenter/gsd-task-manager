@@ -1,5 +1,7 @@
 # Top Five Audit Risks Remediation
 
+> **Status, 2026-11-12.** Shipped. The gates first appear in PR #469 (`0040ba71`, 2026-08-07). They live in `.github/workflows/security-audit.yml`, `scripts/check-audit-results.cjs`, the `mcp-coverage` and `e2e` jobs in `.github/workflows/ci.yml`, and `lib/sync/task-mapper.ts`. Three things have changed since. CI now blocks on Chromium, Firefox, and WebKit, and runs `bun run test:e2e:export` against the built export. The audit checker accepts one dev-only High advisory (`braces`) until 2027-01-05. `docs/codebase-analysis-report.html` now holds the 2026-09-20 review, so use git history for the 2026-08-05 audit.
+
 ## Goal
 
 Resolve the five risks ranked highest in `docs/codebase-analysis-report.html`:

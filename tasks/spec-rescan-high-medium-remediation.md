@@ -1,5 +1,7 @@
 # Rescan High and Medium Remediation
 
+> **Status, 2026-11-12.** Shipped in PR #469 (`0040ba71`, 2026-08-07). The results live in `scripts/build-static-export.sh`, the Gitleaks step in `.github/workflows/security-audit.yml` with `.gitleaksignore`, `scripts/run-pocketbase-system-test.sh`, `tests/e2e/fixtures/test-fixtures.ts`, `packages/mcp-server/src/tools/handlers/index.ts`, and `scripts/check-code-shape.cjs`. Four things have changed since. The Docker image and the system test now use PocketBase 0.40.4. The "Show Schedule" button's label now starts with "Schedule" (`components/matrix-simplified/matrix-intro.tsx`). CI runs Playwright against the built export with `bun run test:e2e:export`. `docs/codebase-analysis-report.html` now holds the 2026-09-20 review, so use git history for the 2026-08-05 report.
+
 ## Goal
 
 Resolve the current rescan's one High and eight Medium findings with executable

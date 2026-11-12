@@ -1,5 +1,7 @@
 # Audit Findings Remediation — 2026-08-10
 
+> **Status, 2026-11-12.** Shipped in PR #470 (`487f90f5`, 2026-08-10). The gates it added live in `scripts/code-shape-debt.json`, `scripts/check-dependency-licenses.cjs`, and the `test`, `e2e`, and `pocketbase-system` jobs in `.github/workflows/ci.yml`. Firefox and WebKit shipped as a blocking CI matrix, with no scheduled lane. The repo holds no shell or YAML lint command. Three references have moved on. The app is at 14.8.7. `docs/codebase-analysis-report.html` now holds the 2026-09-20 review, so use git history for the August report. `SECURITY.md` records that the audit now reports one accepted `braces` advisory.
+
 ## Goal
 
 Resolve the four Medium and fourteen Low findings from the 2026-08-06

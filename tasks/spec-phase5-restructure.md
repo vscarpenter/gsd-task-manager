@@ -1,5 +1,7 @@
 # Spec: modernization Phase 5, restructure and burn down code shape
 
+> **Status, 2026-11-12.** Partly shipped. Bundles A to D merged on 2026-10-07 as PRs #585 to #588, and bundle E merged as PRs #590 to #594. Bundle F has not shipped: `MatrixSimplified` still declares its own `useIsHydrated`, and none of the new hooks or helpers exist in the code. Most of bundle G's files are still in `scripts/code-shape-baseline.json`, and `tasks/todo.md` leaves F, G, and H unticked. The ceilings in `scripts/code-shape-debt.json` total 125 (30, 4, 0, 91), above the target of 118. One detail shipped differently: the `knip` script runs `knip --production --files --dependencies`, so CI checks unused files and dependencies, not exports. The `../gsd-modernize/` folder holds the brief and `BASELINE.md`. It sits outside this repo and was not on this machine on 2026-11-12.
+
 Date: 2026-10-07. Tier: non-trivial. The approved design is
 `../gsd-modernize/analysis/gsd-taskmanager/MODERNIZATION_BRIEF.md` §3 Phase 5.
 Vinny approved the full plan on 2026-10-05 and asked to start Phase 5 on

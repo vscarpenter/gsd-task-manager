@@ -1,5 +1,7 @@
 # E2E Testing Implementation Spec
 
+> **Status, 2026-11-12.** Partly shipped in PR #269 (`30410b13`, 2026-05-11). The suite lives in `tests/e2e/`, and `tests/e2e/README.md` documents it. Three stubs never shipped: `smart-views.spec.ts`, search by subtask, and archive navigation. The README's "Known gaps versus the original spec" section lists them. The shipped test names differ from the stubs below. CI no longer uses the dev server: it runs `bun run test:e2e:export` against the built `out/` (`playwright.export.config.ts`). Sync and touch specs now exist too, and CI checks the PWA lifecycle with `bun run test:pwa`.
+
 ## Goal
 Implement comprehensive end-to-end tests using Playwright to validate core user workflows in the GSD Task Manager application, ensuring critical functionality works as expected across the entire application stack.
 
@@ -100,7 +102,7 @@ test.describe('Smart Views', () => {
   test('should create and use custom smart view', async () => {})
 })
 
-// tests/e2e/settings.spec.ts
+// tests/e2e/settings-navigation.spec.ts
 test.describe('Settings Navigation', () => {
   test('should open settings page', async () => {})
   test('should navigate between settings sections', async () => {})

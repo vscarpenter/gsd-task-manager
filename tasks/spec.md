@@ -2,6 +2,8 @@
 
 **Date:** 2026-09-04 · **Status:** Approved / in progress · **Tier:** Security-critical
 
+> **Status, 2026-11-12.** PR #527 (`dbc968b5`, 2026-09-04) landed the fixes for this review. The acceptance boxes below were left unticked in this file, so the file does not record which criteria were verified. ADR 0017 (2026-09-28) later removed Sentry error telemetry, so the telemetry clause of the last required outcome has no subject now.
+
 ## Goal
 
 Close all 21 validated review findings at their shared trust boundaries while
@@ -55,6 +57,8 @@ and the existing release gates.
 
 **Date:** 2026-08-01 · **Status:** Implemented · **Tier:** Non-trivial
 
+> **Status, 2026-11-12.** Shipped in PR #466. PR #502 (2026-08-15) then replaced the Violet Frost tokens named below with GSD Editorial (see `DESIGN.md`). The design-lab named under Constraints was removed on 2026-08-23 (`37cb2842`). The concept names under Inputs (Spatial Focus, Native Calm, Precision Utility, Editorial Planner) are the directions in `docs/design-exploration/design-directions.md`.
+
 ## Goal
 
 Evolve the production GSD experience around the approved Refined Evolution
@@ -78,6 +82,11 @@ storage, sync, and drag/drop contracts.
   shortcuts, matched by physical key code and documented in Help.
 - Output: the existing `/dashboard` route reframed as Review with humane weekly
   reflection prompts backed only by current task metrics.
+
+Shipped differently (noted 2026-11-12): since PR #633 the matrix gives the
+detail sheet a "Mark done" / "Mark not done" button. Pressing it saves the
+change through the matrix's toggle handler and closes the sheet. At `md` widths and up the sheet is a right-hand inspector, not a
+mobile-only surface. See `components/matrix-simplified/task-detail-sheet.tsx`.
 
 ## Constraints
 
@@ -175,6 +184,8 @@ storage, sync, and drag/drop contracts.
 # Spec: Explore five visual directions for GSD
 
 **Date:** 2026-08-01 · **Status:** Implemented · **Tier:** Non-trivial
+
+> **Status, 2026-11-12.** The exploration shipped in PR #466. Commit `37cb2842` (2026-08-23) then removed the `/design-lab` routes and the four test files listed under Test stubs. The two documents under `docs/design-exploration/` and the screenshots under `artifacts/design-exploration/` remain. Their links to `/design-lab` routes no longer resolve.
 
 ## Goal
 
@@ -274,6 +285,8 @@ analysis without changing the production matrix or any persisted data path.
 # Spec: Apply Violet Frost across the application
 
 **Date:** 2026-07-31 · **Status:** Implemented · **Tier:** Non-trivial
+
+> **Status, 2026-11-12.** Superseded. PR #465 shipped Violet Frost on 2026-08-01, and PR #502 (2026-08-15) replaced its palette with GSD Editorial, the brand palette of the Inkwell token system. The current contract is `DESIGN.md`, with the primitives in `app/css/inkwell-tokens.css` and the quadrant tokens in `app/globals.css`. An accent named tide (`--accent`, unrelated to the retired Tidewater palette) replaced aubergine as the interaction color, and Albert Sans is gone from the app. The 3px pane header rule, the 3px card spine, and `text-accent` for active navigation survive. `tests/data/violet-frost-theme.test.ts` became `tests/data/editorial-theme.test.ts`, which asserts that the retired Violet Frost colors are absent from the icons, the social image, and the linked report.
 
 ## Goal
 
@@ -397,6 +410,14 @@ tests at the real failure seams and live browser verification for the UI fixes.
 - MCP URLs may contain credentials, queries, or fragments and must not expose them.
 - Tablet and touch fixes must preserve desktop density and mobile navigation.
 
+Current behavior (noted 2026-11-12): `classifyRemoteDeletion` in
+`lib/sync/queue.ts` gives a remote deletion one of three outcomes. A pending row
+protects the task. With no pending row and at least one failed row, the task
+moves to Trash, because its queued local edit never reached the server. Otherwise
+the deletion applies. The matrix grid now switches to two columns with a
+container query at 696px of container width
+(`components/matrix-simplified/matrix-grid.tsx`), not a viewport breakpoint.
+
 ## Out of scope
 
 - New product features, sync-conflict UX redesign, schema migrations, or a visual
@@ -430,6 +451,8 @@ tests at the real failure seams and live browser verification for the UI fixes.
 ---
 
 # Spec: react-doctor score 100 (drive diagnostics to zero)
+
+> **Status, 2026-11-12.** Shipped in PR #407 (`460bd483`, 2026-06-30). The suppression layout has changed since. `doctor.config.jsonc` is the one config file, and the two "Confirmed false positives" headings below both mean it. It holds no file-level ignore list. It holds seven rule-scoped overrides, for sites that cannot take a comment. Its header says other confirmed false positives carry an inline `// react-doctor-disable-next-line <rule> -- <reason>` comment at the code site. `install-pwa-prompt` was removed in PR #514, and onboarding now uses the shared dialog in `components/ui/dialog`, though its override is still in the config.
 
 ## Goal
 Run `npx react-doctor@latest` and fix issues until the score is 100. A score of
@@ -496,12 +519,16 @@ a coverage-instrumentation gap, not missing tests:
   tests but produced no lcov data, so SonarCloud counted every changed line as
   uncovered. Fixed by adding `components/**/*.ts` to the include.
 - The `**/index.ts` coverage exclude (intended for re-export barrels) also matched
-  `index.tsx` in the v8 provider, silently dropping the logic-bearing component
+  `index.tsx` in Vitest's V8 coverage provider, silently dropping the logic-bearing component
   shells (matrix-simplified, settings-page, command-palette). Removed the over-broad
   glob; genuine barrels have no executable lines.
 - Added `sonar.coverage.exclusions` mirroring vitest's documented exclusions
   (`components/ui/**` shadcn wrappers, type/barrel/config/test-helper files) so both
-  tools apply the same coverage policy.
+  tools apply the same coverage policy. As of 2026-11-12 the two lists are close
+  but not identical: `sonar-project.properties` still excludes `**/index.ts`,
+  `**/*.config.mjs`, and two MCP helper scripts. `vitest.config.ts` has none of
+  those four entries. In place of the `**/index.ts` glob it names two barrels,
+  `lib/sync/config.ts` and `lib/tasks/crud.ts`.
 - Added focused tests for the extracted settings-page logic (`use-settings-data`,
   `settings-body`) and the shell command handlers (`use-shell-command-handlers`).
 
@@ -513,6 +540,8 @@ no-lcov residuals counted as uncovered), clearing the 80% gate.
 # Spec: Restore dependency-linking ("Depends on") UI in the v9 edit drawer
 
 **Date:** 2026-07-05 · **Status:** Awaiting approval · **Tier:** Non-trivial (new UI surface, multi-file, behavioral)
+
+> **Status, 2026-11-12.** Shipped in PR #416 (`b759a84d`, 2026-07-05). Later differences are marked below with the date 2026-11-12.
 
 ## Goal
 
@@ -526,11 +555,11 @@ or JSON import.
 
 **Data model (unchanged — no schema or migration work):**
 - `TaskRecord.dependencies: string[]` (`lib/types.ts:36`) — IDs of tasks that must
-  complete first. Validated by `taskDraftSchema` (`lib/schema.ts:40`): array of
-  nanoid strings, max `SCHEMA_LIMITS.MAX_DEPENDENCIES` (50), default `[]`.
+  complete first. Validated by `taskDraftSchema` (`lib/schema.ts:105`): array of
+  ID strings, max `SCHEMA_LIMITS.MAX_DEPENDENCIES` (50), default `[]`.
 - Persistence already flows: `updateTask` merges `updates.dependencies`
-  (`lib/tasks/crud/update.ts:82`); `createTask` defaults to `[]`
-  (`lib/tasks/crud/create.ts:84`); both enqueue sync ops. PocketBase `task-mapper`
+  (`lib/tasks/crud/update.ts:111`); `createTask` defaults to `[]`
+  (`lib/tasks/crud/create.ts:81`); both enqueue sync ops. PocketBase `task-mapper`
   already round-trips the field.
 
 **UI contract changes:**
@@ -550,6 +579,18 @@ or JSON import.
 - Create path: `handleEditSubmit` in `index.tsx` passes
   `dependencies: draft.dependencies.length > 0 ? draft.dependencies : undefined`
   to `createTask` (mirrors existing `tags` handling).
+
+Shipped differently (noted 2026-11-12):
+- `EditDraft` is declared in `components/matrix-simplified/edit-draft.ts` and
+  re-exported from `edit-drawer.tsx`.
+- Since PR #630 the drawers receive `taskContext(stored, all)` from
+  `components/matrix-simplified/task-actions.ts`, not `all`. `stored` is every
+  valid task row from `useTasks()`, including tasks saved for later (`savedAt` set),
+  which `all` leaves out. Saved tasks are therefore candidates too.
+- The submit guard runs in `use-drawer-save.ts`. `findDependencyCycleError` is
+  exported from `edit-drawer-dependencies.tsx`.
+- `DependenciesField` also takes an `error` prop, and its suggestions form a
+  listbox with arrow-key selection (PR #483).
 
 **Behavior (reuses `lib/dependencies.ts` — no new graph logic):**
 - Field label "Depends on" using the existing `Field` primitive; selected
@@ -576,7 +617,10 @@ or JSON import.
   (they may reference tasks not yet synced to this device).
 - **File/function limits:** new field component in its own file (edit-drawer-fields.tsx
   is at 225 lines; adding ~150 would crowd the 350 cap). All files stay ≤350 lines,
-  functions ≤30 lines, nesting ≤3.
+  functions ≤30 lines, nesting ≤3. (2026-11-12: the enforced limits are 400 lines
+  per file and 40 per function, not counting blanks and comments. See
+  `scripts/check-code-shape.cjs`. `edit-drawer-fields.tsx` is now 468 lines with
+  blanks and comments included, so the 225 figure above is stale.)
 - **Bundle:** zero new dependencies; icons from `lucide-react` already in use.
 - **Design (PRODUCT.md / Inkwell):** calm and low-noise — same `Field` label
   treatment, chip styling consistent with tags, no new colors; circular-dependency
@@ -616,6 +660,16 @@ or JSON import.
 10. **Schema migration:** none — `dependencies` has existed since the field was
     introduced; Dexie stays at v14.
 
+Changes since this spec (2026-11-12):
+- Edge case 1: when cycle filtering removed every match, the empty state names
+  the first excluded task (plus "and N more") and says it already depends on
+  this one. This applies in edit mode only. It no longer
+  says "No matching tasks." in that case (`edit-drawer-dependencies.tsx`).
+- Edge case 9: the first Escape closes only the suggestion popup
+  (`use-suggestion-combobox.ts`). A second Escape reaches the drawer, which now
+  runs its discard guard before closing.
+- Edge case 10: Dexie is now at version 17 (`lib/db-migrations.ts`).
+
 ## Out of Scope
 
 - Restoring **subtask editing** in the v9 drawer (also lost in #238) — separate task.
@@ -627,6 +681,13 @@ or JSON import.
 - MCP server, schema, Dexie, or PocketBase changes of any kind.
 - Command-palette integration (palette is not wired into v9).
 - Redesign of the "Blocked by / Blocking" card badges.
+
+Noted 2026-11-12: PR #491 later added subtask editing to the drawer. The
+command palette is now wired into the v9 shell
+(`components/matrix-simplified/app-shell.tsx`), still with no dependency
+actions. The `restoreTask` limitation
+still stands (see the comment in `lib/tasks/crud/restore.ts`), but
+`tasks/todo.md` no longer lists it.
 
 ## Acceptance Criteria
 
@@ -656,6 +717,14 @@ or JSON import.
   no crash) — existing `EditDrawer` tests stay green without passing the new prop.
 
 ## Test Stubs
+
+Some shipped test names differ (noted 2026-11-12). The add-chip test is
+`should_add_id_and_clear_query_when_suggestion_clicked`. The submit-guard test
+ends in `_would_cycle_at_save`. The create-wiring test is "passes
+drawer-selected dependencies to createTask on the create path" in
+`tests/ui/matrix-simplified.test.tsx`; `matrix-simplified-shell.test.tsx` was
+never created. That test asserts only the case with dependencies present. No
+test asserts the "`undefined` when empty" half of AC6.
 
 `tests/ui/edit-drawer-dependencies.test.tsx` (new — field component, prop-driven, no Dexie):
 
@@ -701,6 +770,8 @@ describe("handleEditSubmit create path", () => {
 
 **Date:** 2026-09-11 · **Status:** Approved, in progress · **Tier:** Non-trivial (shared sync code, persisted config)
 **Source:** Aikido "Cross-Tenant Isolation Bypass" (`lib/sync/pb-sync-engine.ts`) and "Incomplete Data Deletion" (`components/reset-everything-dialog.tsx`), both verified against code on 2026-09-11.
+
+> **Status, 2026-11-12.** Shipped in PR #538 (`652ea937`, 2026-09-11). The Background section describes the code before that fix, so its line references no longer resolve. Commit `88e6d006` (2026-11-11) later fenced the push side, which this spec left out of scope. Other differences are marked below with the date 2026-11-12.
 
 ## Goal
 
@@ -774,6 +845,10 @@ still names the account the sync started for.
 8. **Reset result.** `ResetResult` gains `failedSteps`, and the dialog words its
    error from that list instead of one generic line.
 
+Shipped differently (noted 2026-11-12): in item 4 the retry-state and sync-history
+writers kept their signatures. `writeSyncOutcome(ownerId, write)` in
+`lib/sync/pb-sync-engine.ts` runs them inside the guarded transaction instead.
+
 Rejected alternative: an in-memory generation counter like the existing
 `subscriptionGeneration` in `pb-realtime.ts`. It is simpler to bump, but it
 lives in one tab's memory, so it cannot fence a second tab or survive the
@@ -781,16 +856,16 @@ reload that Reset forces.
 
 ## Inputs / Outputs
 
-- `PBSyncResult.status` (`lib/sync/types.ts:112`) gains `'cancelled'`. Consumers
+- `PBSyncResult.status` (`lib/sync/types.ts:128`) gains `'cancelled'`. Consumers
   treat it like `'already_running'`: neither success nor error.
   `SyncCoordinator.getStatus().lastError` stays null for it, and
-  `sync-provider.tsx:294` shows no success toast.
+  `dispatchSyncResult` in `lib/sync/sync-provider.tsx` returns to idle for it.
 - New `lib/sync/sync-session.ts`:
   - `class StaleSyncSessionError extends Error`
   - `getSessionOwner(config: PBSyncConfig | undefined): string | null`
   - `assertSyncSessionCurrent(ownerId: string): Promise<void>`, called inside a
     transaction that includes `db.syncMetadata`
-- `ResetResult` (`lib/reset-everything.ts:31`) gains
+- `ResetResult` (`lib/reset-everything.ts:34`) gains
   `failedSteps: Array<'sync-sign-out' | 'local-data' | 'browser-storage'>`.
   `success` becomes `failedSteps.length === 0`, and `errors` keeps its strings.
 - Reset dialog error copy, each followed by the joined error detail:
@@ -848,8 +923,8 @@ reload that Reset forces.
   stays unfenced in this version.
 - **Delete account:** it calls `disableSync` and `resetEverything`, so it
   inherits the fence.
-- **Several reset steps fail:** the `local-data` wording wins, and every error
-  detail shows.
+- **Several reset steps fail:** when `local-data` is among them, the
+  `local-data` wording wins, and every error detail shows.
 
 ## Out of Scope
 
@@ -861,6 +936,19 @@ reload that Reset forces.
 - The same race in the iOS and Android clients.
 - Finding or cleaning up rows an earlier race may already have pushed into an
   account.
+
+Noted 2026-11-12: commit `88e6d006` (2026-11-11) fenced push-side queue writes.
+See the `ForSession` helpers and `assertPushSessionCurrent` in
+`lib/sync/pb-push.ts`. The "Push in flight at teardown" edge case above no
+longer holds: an in-flight push re-reads the config before each row and each
+queue write, and stops. A request already sent still completes.
+
+The next spec in this file changed what a failed reset looks like, so AC12's
+"keep the dialog open" and the first Out of Scope item no longer hold. The dialog
+itself is unchanged, but `components/reset-lock-gate.tsx` now replaces the whole
+app with a lock screen while a reset runs. A `local-data` failure leaves the
+app locked with Try again, and any other failure reloads after the reset delay.
+The two toast strings are unchanged.
 
 ## Acceptance Criteria
 
@@ -898,6 +986,11 @@ reload that Reset forces.
   `bun run quality:shape`.
 
 ## Test Stubs
+
+Noted 2026-11-12: one stub below shipped in another file.
+`should_keep_tasks_empty_when_in_flight_pull_resolves_after_reset` (AC9) lives
+in `tests/data/reset-everything-stale-sync.test.ts`, not in
+`tests/data/reset-everything.test.ts`. The three AC11 stubs stayed there.
 
 `tests/data/sync/sync-session.test.ts` (new):
 
@@ -998,6 +1091,8 @@ no acceptance criterion changes. Typecheck proves nothing still imports it.
 
 Date: 2026-09-11. Source: Aikido "Incomplete Data Deletion" (group 45233789, sub-issue 669037088, Low). Retest #1 after #538 reported "Not fixed". The owner approved the design on 2026-09-11: lock the whole app, fall back to deleting the database, and offer no way out but deletion.
 
+> **Status, 2026-11-12.** Shipped in PR #543 (`f826cc4c`, 2026-09-11). The Background section describes the code before that change. Later differences are marked below with the date 2026-11-12.
+
 ## Goal
 
 When Reset Everything or account deletion cannot prove that local data is gone, GSD locks the whole app behind a retry screen until deletion succeeds, so nobody at a shared browser can see the previous user's tasks.
@@ -1016,11 +1111,11 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 1. **Reset-pending marker** (`lib/reset-lock.ts`, new). The localStorage key `gsd-reset-pending` holds `{"preserveTheme": boolean}`. An in-memory mirror keeps the current document locked when localStorage throws. The module exposes a store for `useSyncExternalStore` whose snapshot is one of `"unlocked"`, `"running"`, or `"locked"`, and it listens for `storage` events on the marker key. The server snapshot is `"unlocked"`, because the static export prerenders without storage.
 2. **Reset writes the marker first.** `resetEverything` sets the marker and the `"running"` state before `disableSync`. It removes the marker only when the local-data step succeeded. On failure it makes sure the marker is present, since another tab may have removed it, and moves to `"locked"`.
 3. **Verified wipe with a database-delete fallback.** After the clear transaction commits, reset counts every table except `syncMetadata` and confirms that `syncMetadata` holds nothing but the preserved `sync_config` row with a null `userId`. If the clear throws or any row survives, reset deletes the whole `GsdTaskManager` database and confirms it no longer exists. The device ID is lost on that path. The local-data step fails only when the fallback also fails, and then `errors` names both failures.
-4. **Whole-app gate** (`components/reset-lock-gate.tsx`, new). In `AppProviders`, the gate wraps `ClientLayout`, `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister`. `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, `SentryInit`, and `ThemedToaster` stay outside because they hold no task data. `"unlocked"` renders children, `"running"` renders the lock screen's progress state, and `"locked"` renders the lock screen.
-5. **Lock screen.** The heading reads "Reset didn't finish". The body reads "Your tasks are still saved in this browser. GSD stays locked until they're deleted." One primary button, "Try again", reruns `resetEverything` with the stored `preserveTheme` and calls `reloadAfterReset` on success. A failed retry keeps the lock and announces the error in a `role="alert"` region. The footer hint reads "If this keeps failing, clear this site's data in your browser settings." The progress state reads "Deleting your data…" and shows no buttons. There is no cancel, export, or navigation control.
+4. **Whole-app gate** (`components/reset-lock-gate.tsx`, new). In `AppProviders`, the gate wraps `ClientLayout`, `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister`. `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, `SentryInit`, and `ThemedToaster` stay outside because they hold no task data. `"unlocked"` renders children, `"running"` renders the lock screen's progress state, and `"locked"` renders the lock screen. (2026-11-12: PR #566, recorded in ADR 0017, removed `SentryInit`. The other four still sit outside the gate.)
+5. **Lock screen.** The heading reads "Reset didn't finish". The body reads "Your tasks are still saved in this browser. GSD stays locked until they're deleted." (2026-11-12: the shipped body says "stored", not "saved". See `components/reset-lock-gate.tsx`.) One primary button, "Try again", reruns `resetEverything` with the stored `preserveTheme` and calls `reloadAfterReset` on success. A failed retry keeps the lock and announces the error in a `role="alert"` region. The footer hint reads "If this keeps failing, clear this site's data in your browser settings." The progress state reads "Deleting your data…" and shows no buttons. There is no cancel, export, or navigation control.
 6. **Other tabs.** A `storage` event that sets the marker locks every other open tab. A locked tab that sees the marker removed reloads through `reloadAfterReset`, because its in-memory stores and database connection predate the wipe.
 7. **Account deletion copy.** The failure toast in `DeleteAccountDialog` stops sending people to Reset Everything, because the lock screen now owns the retry.
-8. **A thrown step still ends the run.** `resetEverything` ends the lock in a `finally` block. If a step throws past its own error handling, the store leaves `"running"`, reports `"locked"`, and keeps the marker. The error still reaches the caller. Without this, the gate would show the progress state forever with no Try again.
+8. **A thrown step still ends the run.** `resetEverything` ends the run in a `finally` block. If a step throws past its own error handling, the store leaves `"running"`, reports `"locked"`, and keeps the marker. The error still reaches the caller. Without this, the gate would show the progress state forever with no Try again.
 9. **No remount before the reload.** Once a gate instance has shown the lock, a later `"unlocked"` snapshot keeps the lock screen's progress state instead of remounting the app, so item 4's children rule applies only until then. A remount would let `FirstTimeRedirect` and the onboarding tour act on flags the reset just cleared. When the unlock comes from a reset that finished in this document, the gate reloads after `UI_TIMING.RESET_RELOAD_DELAY_MS`. That keeps a success toast readable, and it also reloads runs whose sign-out or browser-storage step failed. A document unlocked by another tab still reloads right away.
 10. **Hydration window.** The static export prerenders with the server snapshot `"unlocked"`. On a page that loads locked, React hydrates the app with that snapshot and runs its child effects once before the gate re-renders locked. Task titles never render, because they wait for IndexedDB, but effects that reach outside the page still run. So the notification checker, `WebMcpRegister`, and `FirstTimeRedirect` each check `isResetPending()` and do nothing while a reset is pending. The notification checker checks again right before it shows a notification, because the lock can begin while it waits for IndexedDB. The design rejects a Suspense hydration hold, because a top-level boundary could change how the whole app hydrates.
 
@@ -1036,18 +1131,18 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 
 - Privacy: the marker holds no task content, account identifier, or timestamp.
 - Sign-out stays step 1. The #538 session fence depends on sync being disabled before local writes stop.
-- No new dependencies. Dexie stays at 4.4.4.
-- Files stay at or under 350 lines and functions at or under 30 lines. `lib/reset-everything.ts` is 271 lines today, so the verify and fallback logic moves to a new module if adding it would cross the limit. `bun run quality:shape` must report no regressions.
+- No new dependencies. Dexie stays at 4.4.4. (It is 4.4.6 as of 2026-11-12.)
+- Files stay at or under 350 lines and functions at or under 30 lines. `lib/reset-everything.ts` is 271 lines today, so the verify and fallback logic moves to a new module if adding it would cross the limit. `bun run quality:shape` must report no regressions. (2026-11-12: that logic shipped in `lib/reset-local-data.ts`, and `lib/reset-everything.ts` is 231 lines. The enforced ratchet is 400 lines per file and 40 per function.)
 - Bundle: the gate is a small client component with no lazy chunk, and the lock screen reuses `Button` and Inkwell tokens.
 - The UI meets WCAG AA and matches the calm, restrained voice in `PRODUCT.md`.
-- Release pair: bump the patch version in `package.json` and `README.md` line 7 together. Leave `public/sw.js` alone: since 2026-10-07 it keeps the `'dev'` placeholder, and the build stamps the cache version into `out/sw.js`.
+- Release pair: bump the patch version in `package.json` and `README.md` line 7 together. Leave `public/sw.js` alone: since 2026-10-07 it keeps the `'dev'` placeholder, and the build stamps the cache version into `out/sw.js`. (Noted 2026-11-12: PR #585 amended this line on 2026-10-07. Before it, the release bump was a trio that included `public/sw.js`.)
 
 ## Edge Cases
 
 - **Tab closed mid-reset.** The marker survives, so the next load opens locked and Try again finishes the job.
 - **localStorage unavailable.** The in-memory mirror locks the current document, but the lock cannot return after a reload. That is an accepted residual risk. A throwing read counts as "no marker", so a browser with storage disabled is never locked permanently.
 - **Malformed marker value.** The app still locks, and Try again uses `preserveTheme: true`.
-- **Sign-out fails but the wipe succeeds.** No lock. The wipe replaces the sync config with a disabled row whose `userId` is null, and the #538 fence rejects stale sync writes. The existing toast still reports the failure.
+- **Sign-out fails but the wipe succeeds.** No lock. The wipe leaves at most one sync config row, disabled and with a null `userId` (it writes the row only when a device ID exists), and the #538 fence rejects stale sync writes. The existing toast still reports the failure.
 - **Only the browser-storage step fails.** No lock, and the existing toast is unchanged.
 - **Another tab holds the database open during the fallback.** Dexie closes its connection in other tabs on `versionchange`. If deletion is still blocked, the step fails, the app stays locked, and Try again can succeed later.
 - **Two tabs retry at once.** Each run writes the marker at start and makes sure it is present on failure, so a success in one tab cannot unlock a tab whose run failed.
@@ -1067,7 +1162,7 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 - Clearing a leftover PocketBase auth token when both sign-out and the browser-storage step fail.
 - Locking on sign-out or browser-storage failures alone.
 - Any other copy in `DeleteAccountDialog` or `ResetEverythingDialog`.
-- A Playwright end-to-end test. Forcing an IndexedDB failure in a real browser is not reliable, so unit tests, UI tests, and a live check cover this change.
+- A Playwright end-to-end test. Forcing an IndexedDB failure in a real browser is not reliable, so unit tests, UI tests, and a live check cover this change. (2026-11-12: a Playwright spec shipped anyway. `tests/e2e/reset-lock.spec.ts` seeds the marker instead of forcing an IndexedDB failure.)
 - Asking Aikido to retest, which happens after merge.
 
 ## Acceptance Criteria
@@ -1088,7 +1183,7 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 14. A failed Try again keeps the lock screen and announces the error in a `role="alert"` region.
 15. The lock screen offers exactly one control, Try again, with no cancel, export, or navigation.
 16. A `storage` event that sets the marker locks the current document, and a locked document reloads when a `storage` event removes the marker.
-17. `app/layout.tsx` places `ClientLayout`, `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister` inside the gate, and `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, `SentryInit`, and `ThemedToaster` outside it.
+17. `app/layout.tsx` places `ClientLayout`, `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister` inside the gate, and `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, `SentryInit`, and `ThemedToaster` outside it. (2026-11-12: `SentryInit` no longer exists, and the guard test lists the other four.)
 18. The local-erase failure toast in `DeleteAccountDialog` no longer mentions Reset Everything.
 19. The existing reset suites still pass: dialog copy, `failedSteps` order, device ID preservation on the normal path, and the stale-sync fence.
 20. After a reset that ran in this document removes the lock, the gate keeps the lock screen instead of remounting the app and reloads after the reset reload delay. A document unlocked by another tab reloads without remounting the app.
@@ -1105,7 +1200,7 @@ When Reset Everything or account deletion cannot prove that local data is gone, 
 5. Gate and lock screen (AC10 to AC16).
 6. Root layout wiring and its source guard test (AC17).
 7. Account deletion copy (AC18).
-8. Release trio bump, then full verification.
+8. Release trio bump, then full verification. (Noted 2026-11-12: the bump is a pair since 2026-10-07. See Constraints.)
 
 ## Test Stubs
 
@@ -1186,12 +1281,21 @@ it("should_not_mention_reset_everything_when_local_erase_fails", async () => {})
 | 23 | should_not_notify_or_mark_a_due_task_when_a_reset_is_pending, should_not_notify_when_a_reset_begins_while_tasks_load, should_not_register_tools_while_a_reset_is_pending, should_not_redirect_or_set_the_launch_flag_while_a_reset_is_pending |
 | 11, 15, 16 | `tests/e2e/reset-lock.spec.ts` (Playwright) covers AC11 and AC15 in a real browser, and AC16 across two tabs |
 
+Noted 2026-11-12: the tests for AC20 to AC23 have no stub above. They live in
+`tests/ui/reset-lock-gate.test.tsx`, `tests/data/reset-everything.test.ts`,
+`tests/data/notification-checker.test.ts`, `tests/ui/webmcp-register.test.tsx`,
+and `tests/ui/remaining-components.test.tsx`. The Playwright spec holds three
+tests. Two cover the ACs in the last row. The third, "should delete stored tasks
+when Try again runs from the lock screen", is not in the map.
+
 ---
 
 # Spec: Run critical journeys against the production static export (E2E-1)
 
 Date: 2026-09-19. Tier: Non-trivial (CI infrastructure, shared scripts). Design
 approved by the owner on 2026-09-19. Audit finding E2E-1.
+
+> **Status, 2026-11-12.** Shipped in PR #554 (`6295abc7`, 2026-09-19). The 2026-10-17 spec below then replaced the journey subset with the full suite. `tests/e2e/export-journeys.ts`, the `testMatch` that read it in `playwright.export.config.ts`, and the two list guard tests (AC7) are gone. The shared server, the export config, and the CI step remain. Three facts changed later. CI builds the export with `bun run build:e2e`, which is `bun run build` with the hosted backend URL set, and the export config's header comment says to do the same. ADR 0017 removed Sentry, so the Background bullet about keeping Sentry off has no subject. The fixture gained a `serviceWorkerEnabled` option, and two export-only groups of tests run with the worker on: all of `share-target.spec.ts` and the "Saved offline" group in `saved-tasks.spec.ts`.
 
 ## Goal
 
@@ -1207,7 +1311,8 @@ under a permissive dev-only CSP meta tag.
 - `prebuild` deletes `.next` and `out`, and `dev:e2e` deletes `.next`. A dev server
   and a build cannot share one Playwright run.
 - `scripts/verify-production-csp.cjs` and `scripts/verify-production-pwa.cjs` each
-  inline the same static server. A third copy would be the third occurrence.
+  inline the same static server. A third copy would be the third occurrence,
+  where `coding-standards.md` says to apply DRY.
 - `cloudfront-function-url-rewrite.cjs` exports its `handler` for tests.
 - Production answers every unknown path with `200 text/html` (the app shell),
   missing JS chunks included. Checked with `curl` against `gsd.vinny.dev` on
@@ -1316,6 +1421,8 @@ Tier: non-trivial (CI infrastructure, guard tests). Branch: `ci/e2e-on-export`.
 Design approved by Vinny on 2026-10-17 in chat: run every spec against the
 export with 2 workers on CI, and drop the dev-server pass from CI.
 
+> **Status, 2026-11-12.** Shipped in PR #609 (`0730fb53`, 2026-10-17). Later differences are marked below with the date 2026-11-12.
+
 ## Goal
 
 Cut CI wall time from 9 to 13 minutes to about 5 to 6 by running every
@@ -1376,6 +1483,20 @@ No task data, schema, or Zod type changes. `lib/schema.ts` is untouched.
 - Bundle impact: none. No application code changes.
 - No version bump. This change ships nothing to users, and releases go out as
   separate `chore(release)` PRs.
+
+Changes since this spec (2026-11-12):
+- The browser install moved into a composite action,
+  `.github/actions/install-playwright`. The guard in
+  `tests/data/e2e-quality-gates.test.ts` asserts that form. A second composite
+  action, `.github/actions/build-static-export`, also exists.
+- Since PR #630 the fixture has a `serviceWorkerEnabled` option. Two export-only
+  groups of tests run with the worker on: all of `share-target.spec.ts` and the
+  "Saved offline" group in `saved-tasks.spec.ts`. The `clearIndexedDB`
+  fixture removes the worker unless `serviceWorkerEnabled` is true.
+- CI builds the export with `bun run build:e2e`, not the plain `bun run build`
+  that AC7 names. It is the same build with the hosted backend URL set.
+- Of the five required checks named above, four are jobs in `ci.yml`. The
+  `audit` job lives in `.github/workflows/security-audit.yml`.
 
 ## Edge Cases
 
@@ -1445,7 +1566,7 @@ verified by the PR's CI run timings, compared with the 2026-10-17 baseline above
 
 ## Amendment, same day: what the first full run on the export found
 
-The first `CI=1` run of all 118 specs on the export had one hard failure (Firefox) and two
+The first `CI=1` run of all 118 tests on the export had one hard failure (Firefox) and two
 flakes (WebKit). Neither was an app defect. Root causes, each confirmed by experiment:
 
 - **The export server served RSC payloads with the wrong type.** It had no `.txt` entry, so

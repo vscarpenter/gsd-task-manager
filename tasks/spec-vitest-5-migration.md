@@ -1,5 +1,7 @@
 # Spec: Vitest 5 migration (root package)
 
+> **Status, 2026-11-12.** Shipped in PR #564 (`aca6a90a`, 2026-09-27). Later dependency updates moved the pins: the root runs Vitest 5.0.5 and `packages/mcp-server` runs 4.1.12, each with a matching `@vitest/coverage-v8`. The live pins are in `package.json` and `packages/mcp-server/package.json`. The "pins dependency overrides and MCP dev tools" test in `tests/data/security-hardening-scripts.test.ts` guards both `vitest` versions. The line numbers and counts below are from 2026-09-27 and have drifted, so find a cited test by its name.
+
 Date: 2026-09-27. Branch: `chore/vitest-5-migration`. Tier: non-trivial (test-runner
 major, shared `vitest.config.ts` used by all 241 test files).
 
