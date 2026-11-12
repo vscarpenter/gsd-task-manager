@@ -280,9 +280,9 @@ Auth, client, and account:
 - `pocketbase-client.ts:getPocketBase` creates the SDK client, which reads and writes the auth token in `localStorage`. It sets an `afterSend` hook that copies `Retry-After` into a 429 body as `retryAfterMs`.
 - `pb-auth.ts:loginWithProvider` calls `listAuthMethods` and `authWithOAuth2Code` on the `users` collection, navigates a popup to the provider, and sets a timeout.
 - `pb-auth.ts:openOAuthPopup` calls `window.open('about:blank', ...)`.
-- `pb-auth.ts:refreshAuthOutcome` calls `authRefresh` on the `users` collection.
+- `pb-auth.ts:refreshAuthOutcome` posts to `/api/collections/users/auth-refresh` with `pb.send`. It saves the answer only while the token that asked is still the stored one, and reports `superseded` otherwise.
 - `oauth-callback.ts:relayOAuthCallback` and `oauth-callback.ts:waitForOAuthCallback` open the `gsd-oauth-callback` BroadcastChannel and post messages on it.
-- `pb-account-deletion.ts:deleteRemoteAccountAndTasks` first calls `refreshAuthOutcome()`, which sends `authRefresh` and can clear the local auth token through `forgetRefusedToken`. It then sends `DELETE /api/gsd/account`. On a 404 it lists remote tasks, deletes each `tasks` record with a throttle, then deletes the `users` record.
+- `pb-account-deletion.ts:deleteRemoteAccountAndTasks` first calls `refreshAuthOutcome()`, which posts to auth-refresh and can clear the local auth token through `forgetRefusedToken`. It then sends `DELETE /api/gsd/account`. On a 404 it lists remote tasks, deletes each `tasks` record with a throttle, then deletes the `users` record.
 - `sign-out-everywhere.ts:signOutEverywhere` sends `DELETE /api/gsd/sessions`, then calls `disableSync()`. When `disableSync()` throws, it calls `clearPocketBase()` before it raises `LocalSignOutIncompleteError`.
 - `sync-session.ts:assertSyncSessionCurrent` reads `syncMetadata`.
 - `notifications.ts` shows `sonner` toasts.
