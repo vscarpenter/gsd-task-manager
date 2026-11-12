@@ -24,7 +24,7 @@ bun dev
 
 Use test-driven development for behavior changes: first reproduce the gap,
 then make the smallest fix, then refactor with the test green. Run Vitest via
-`bun run test`; `bun test` selects Bun's different built-in runner.
+`bun run test`; `bun test` starts Bun's built-in runner, and a guard script stops it.
 
 ## Required verification
 
@@ -53,17 +53,26 @@ bun run --cwd packages/mcp-server test:coverage
 bun run --cwd packages/mcp-server build
 ```
 
-The production-export browser suite uses `bun run build:e2e`, followed by
-`bun run test:csp`, `bun run test:pwa`, and `bun run test:e2e:export`.
+CI runs the production-export browser suite: `bun run build:e2e`, followed by
+`bun run test:pwa`, `bun run test:csp`, and `bun run test:e2e:export`.
 The dedicated build selects a backend origin allowed by the production CSP;
 feedback requests are stubbed, with no live submissions. See README.md for
-the macOS Firefox app-data isolation used by both browser suites and PWA checks.
+the macOS Firefox app-data isolation used by `bun run test:e2e`, the export
+suite, and the PWA checks.
 
 PocketBase/sync changes require the disposable authenticated system harness:
 
 ```bash
 bun run test:system:pocketbase
 ```
+
+The harness downloads PocketBase and runs the system tests under
+`packages/mcp-server/src/__tests__/system/` against a disposable instance. One
+test starts the web app in Chromium and drives its sync push, pull, and realtime
+paths, so it needs Playwright's Chromium. That test starts the app with
+`bun run dev:e2e`, which deletes `.next` first. The harness also needs `curl`,
+`unzip`, `python3`, and network access to GitHub for the PocketBase download. It
+supports Linux and macOS on x86_64 and arm64.
 
 Frontend changes must be verified in the running application. A source diff,
 unit test, or screenshot of stale service-worker output is not runtime proof.

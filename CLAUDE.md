@@ -34,6 +34,7 @@ Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work 
 
 ### Development
 - `bun install` - Install dependencies
+- `bun dev` - Start the dev server at `http://localhost:3000`
 
 ### Testing & Quality
 - `bun run test` - Run Vitest tests in CI mode (`bun test` invokes bun's built-in runner, not vitest)
@@ -43,6 +44,7 @@ Strategic design intent lives in `PRODUCT.md` (root). Read it before UI/UX work 
 - `bun run quality:bundle` - Check first-load JavaScript per route against `scripts/bundle-budget.json` (needs a built `out/`; refresh with `node scripts/check-bundle-budget.cjs --write-baseline` after `bash scripts/build-local.sh`)
 
 ### Build & Deployment
+- `bun run build` - Build the static export into `out/`
 - `./scripts/deploy-cloudfront-function.sh` - Deploy CloudFront Function for SPA routing
 
 **CloudFront Edge Routing**: S3 doesn't serve `index.html` for directory paths, so `cloudfront-function-url-rewrite.cjs` appends `/index.html` to every extensionless path. The rule is generic, so a new App Router route needs no function deploy. The app deploy uploads the route's `index.html`, and the route works. Run the script only when a function file changes; the `deploy-cloudfront-infra` workflow already does that on `main`. A manual run needs `CLOUDFRONT_DISTRIBUTION_ID` (production is `E1T6GDX0TQEP94`, as in `scripts/deploy-prod.sh`). A route whose page is missing returns the root page with a 200, so check a new route by its `<title>`, not its status code.
@@ -59,7 +61,7 @@ Tasks are classified by `urgent` and `important` boolean flags:
 Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ### Key Patterns
-- **Client-side only**: All components use `"use client"` - no server rendering
+- **Client-side only**: Static export with no runtime server and no API routes. Interactive components use `"use client"`; a few pages and `app/layout.tsx` have no directive and prerender at build time
 - **Live reactivity**: `useTasks()` returns live data via `useLiveQuery`
 - **Validation**: All task operations validate with Zod schemas before persisting
 - **Keyboard shortcuts (v9)**: n=new task, /=search; help-drawer documents others
@@ -68,8 +70,8 @@ Logic in `lib/quadrants.ts` with `resolveQuadrantId()` and `quadrantOrder`.
 
 ### PWA, Cloud Sync, MCP Server
 Architecture details for these subsystems live in path-scoped rules:
-- PWA / service-worker cache strategy → `.claude/rules/sw-cache.md` (auto-loads on `public/sw*.js`, `lib/sw-cache-logic.ts`)
-- PocketBase sync + OAuth → `.claude/rules/pocketbase-sync.md` (auto-loads on `lib/sync/**`)
+- PWA / service-worker cache strategy → `.claude/rules/sw-cache.md` (auto-loads on `public/sw.js`, `public/sw-*.js`, `lib/sw-cache-logic.ts`, `components/pwa-register.tsx`, `public/manifest.json`)
+- PocketBase sync + OAuth → `.claude/rules/pocketbase-sync.md` (auto-loads on `lib/sync/**`, `lib/schema.ts`, `scripts/setup-pocketbase-collections.sh`)
 - MCP server package → `.claude/rules/mcp-server.md` (auto-loads on `packages/mcp-server/**`)
 - Archive/sync tombstone invariant → `.claude/rules/archive-tombstone.md` (auto-loads on `lib/archive.ts`, `lib/trash.ts`, `lib/tasks/**`, `lib/sync/**`, `lib/db.ts`, `lib/db-migrations.ts`, `app/(archive)/**`)
 
@@ -87,7 +89,7 @@ Architecture details for these subsystems live in path-scoped rules:
 ### E2E Testing
 - Playwright tests in `tests/e2e/` with auto-starting dev server (`playwright.config.ts`)
 - Tests run against Chromium, Firefox, WebKit
-- `bun run test:e2e:export` runs every spec against the built `out/` under the production CSP (`playwright.export.config.ts`, port 3100, 2 workers on CI). This is the suite CI runs; the dev-server config stays for local iteration. Run `bun run build:e2e` first so the compiled backend matches the production CSP; feedback requests are intercepted by the tests. React's dev-only warnings (duplicate keys, invalid nesting, StrictMode double effects) no longer fail CI, so run `bun run test:e2e -- --project=chromium` before shipping UI work.
+- `bun run test:e2e:export` runs every spec against the built `out/` under the production CSP (`playwright.export.config.ts`, port 3100, 2 workers on CI). This is the suite CI runs; the dev-server config stays for local iteration. Run `bun run build:e2e` first so the compiled-in backend URL matches the production CSP; feedback requests are intercepted by the tests. React's dev-only warnings (duplicate keys, invalid nesting, StrictMode double effects) no longer fail CI, so run `bun run test:e2e -- --project=chromium` before shipping UI work.
 - IndexedDB is cleared between tests automatically; root URL redirects to the about page on first load
 - Use `data-testid` attributes on components for stable selectors
 - Page Object Model for maintainable test fixtures
@@ -107,13 +109,13 @@ After editing any `.tsx`/`.jsx` under `components/` or `app/` — matrix, dashbo
 
 These packages are not self-explanatory from their names alone:
 
-- **`@tanstack/react-virtual`** — Virtual scrolling for large task lists; only renders visible DOM rows, preventing performance degradation when lists grow into hundreds of tasks.
+- **`@tanstack/react-virtual`** — Virtual scrolling for the archive and sync-history lists; only renders visible DOM rows, preventing performance degradation when lists grow into hundreds of tasks.
 - **`@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`** — Accessible, headless drag-and-drop primitives. Supports screen readers and full keyboard navigation, unlike most DnD libraries.
-- **`recharts`** — Lightweight, composable chart library used for dashboard analytics (completion trends, quadrant distribution). Chosen for small bundle size and React-native API.
+- **`recharts`** — Lightweight, composable chart library used for dashboard analytics (the completion trend chart). Chosen for small bundle size and React-native API.
 - **`sonner`** — Accessible toast notifications (ARIA live regions, focus management). The app uses `toast.error()` for user-facing errors instead of `window.alert()`.
 - **`babel-plugin-react-compiler`** — Enables the React compiler for automatic memoization optimization, reducing manual `useMemo`/`useCallback` boilerplate.
 - **`canvas-confetti`** — Task completion celebration animation. Pinned to exact version `1.9.4` for reproducible builds (the API changed in v2).
-- **`nanoid`** — Cryptographically-secure unique ID generation for tasks and smart views. Produces URL-safe IDs smaller than UUIDs.
+- **`nanoid`** — Cryptographically-secure unique ID generation for tasks, subtasks, and other local records (`lib/id-generator.ts`). Produces URL-safe IDs smaller than UUIDs.
 
 ### Schema & Database
 - Task schema changes require updating `lib/schema.ts`, export/import logic, and test fixtures
@@ -124,7 +126,7 @@ These packages are not self-explanatory from their names alone:
 
 ### Dependencies System
 - Always validate circular dependencies before adding relationships
-- Clean up references when deleting tasks (`removeDependencyReferences()`)
+- Clean up references when deleting tasks (`removeDependencyReferences()`, or `removeDependencyReferencesInTransaction()` inside an open transaction, as `deleteTask` does)
 - Consider blocking/blocked relationships for dependency-aware features
 
 ### Navigation & UI
@@ -160,7 +162,7 @@ Detail moved to path-scoped rules — see `.claude/rules/pocketbase-sync.md` and
 - Static export mode means no API routes or SSR
 
 ### Testing
-Detail moved to `.claude/rules/testing.md` — auto-loads when editing `tests/**` or test setup. TL;DR: use `bun run test` (not `bun test`), `fake-indexeddb` is auto-imported, `localStorage.clear()` doesn't work in jsdom-under-Bun.
+Detail moved to `.claude/rules/testing.md` — auto-loads when editing `tests/**` or test setup. TL;DR: use `bun run test` (not `bun test`), `fake-indexeddb` is auto-imported, `vitest.setup.ts` replaces jsdom-under-Bun's broken `localStorage` stub with an in-memory store, so `clear()` and `removeItem()` both work.
 
 ## Git Workflow
 
@@ -182,4 +184,4 @@ Default label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-h
 
 ### Domain docs
 
-Single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `docs/agents/domain.md`.
+Single-context repo: `docs/adr/` at the root, plus one root `CONTEXT.md` once it exists (none yet). See `docs/agents/domain.md`.

@@ -1,3 +1,28 @@
+# Sync session fixes, README contracts, and the system overview (2026-11-11)
+
+All of it is on `main` and v14.8.7 is live on gsd.vinny.dev. No branch is open.
+
+## Resuming From Here
+
+- [x] README contracts for every code directory (#733), checked against source by a drift pass. Its 59 wrong statements and 95 gaps are fixed.
+- [x] Sync session findings 1 to 4 fixed (advisory merge and #734). The formal model has no open finding, and `check.sh` matches on eight configs.
+- [x] Advisory GHSA-87g5-994j-7c5w closed. v14.8.7 tagged, released, and deployed. The live service worker reports 14.8.7.
+- [x] `docs/uml-diagrams.md` cut to one container diagram (#736), and `ARCHITECTURE.md` links to it.
+- [x] Branch cleanup: `main` is the only branch, local and remote. One working tree, no stashes.
+- **Next, picked by the owner for 2026-11-12:**
+  - #724: a backup import can leave one task id in two lifecycle tables. `applyArchivedTasks` and `applyTasks` in `lib/tasks/import-export.ts` do not check every table. Simplest trigger: export, archive or delete a task, import the same file with Merge. Write the failing test first. Read `.claude/rules/archive-tombstone.md` before touching it.
+  - #735: task writers read "is sync on" before their transaction opens (`lib/tasks/crud/helpers.ts`, `lib/trash.ts`, `lib/archive.ts`, `lib/tasks/import-export.ts`). Move the read inside. `archive.ts` and `import-export.ts` need `syncMetadata` added to their transaction scope. Update `YouEditTask` in the sync session model to match.
+  - Both touch `lib/tasks/import-export.ts`, so plan them together.
+- **Open issues from the drift pass, not started:** #725 to #732.
+- **Not done:**
+  - Nobody replayed the four sync session paths in a browser or against a real PocketBase. The tests use fake IndexedDB and a mocked SDK.
+  - Production PocketBase rules were not compared with `scripts/setup-pocketbase-collections.sh`.
+  - The sync commit in `.claude/skills/verify-sync-session/SKILL.md` still says `dd32e08c`. Move it to the #734 merge (`7a5276ff`) after reading the changes since.
+  - `tests/ui/toast-action-hint.test.tsx` leaks a toast timer that fails the SonarCloud coverage run now and then.
+  - `docs/architecture.html` and `docs/cloud-sync-explainer.html` still carry the drift the old UML page had (DOC-1 and DOC-20 in `tasks/audit-2026-11-10.md`).
+  - Two system findings from the review have no issue: web never re-arms a retry-exhausted queue row, and last write wins discards the losing copy.
+- **Blockers:** none.
+
 # OAuth sign-in: flow polish (2026-11-11)
 
 Branch: `feat/oauth-signin-flow-polish`, stacked on `fix/oauth-signin-failure-paths` (PR #722). Standard tier: items 6, 7, and 8 from the same review.

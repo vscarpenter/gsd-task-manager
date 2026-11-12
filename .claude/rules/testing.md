@@ -18,8 +18,9 @@ paths:
 ## Test Layout
 
 - `tests/ui/` — UI/component tests (React Testing Library)
-- `tests/data/` — data logic, schemas, mappers
-- `tests/pb/` — PocketBase at-rest encryption (core crypto, adapters, backfill migration)
+- `tests/data/` — data logic, schemas, mappers; most sync tests live in `tests/data/sync/`
+- `tests/sync/` — a few older sync tests, such as the engine and coordinator suites
+- `tests/pb/` — PocketBase hooks and migrations (at-rest encryption, OAuth redirect, session revoke, account lifecycle, feedback controls)
 - `tests/e2e/` — Playwright (auto-starts dev server via `playwright.config.ts`)
 - `packages/mcp-server/src/__tests__/` — MCP server tests
 
@@ -33,9 +34,9 @@ paths:
 ## Testing Gotchas
 
 - **`fake-indexeddb`** is auto-imported in `vitest.setup.ts` — no per-test setup needed.
-- **`localStorage`** is polyfilled in-memory. Use `localStorage.removeItem(key)` in `beforeEach` — `localStorage.clear()` doesn't work in jsdom under Bun.
-- **`lib/sync/` tests**: mock the SDK with `vi.mock('pocketbase')`. Follow the pattern in existing sync tests.
-- **E2E**: IndexedDB is cleared between tests automatically. Root URL redirects to the about page on first load.
+- **`localStorage`** and `sessionStorage` are replaced in `vitest.setup.ts` with an in-memory store, because jsdom under Bun gets a broken stub. Both `removeItem(key)` and `clear()` work on the replacement.
+- **`lib/sync/` tests**: most mock the client wrapper with `vi.mock('@/lib/sync/pocketbase-client')`. Only `tests/data/sync/pocketbase-client.test.ts` mocks the SDK with `vi.mock('pocketbase')`. Follow the pattern in existing sync tests.
+- **E2E**: each test gets a fresh browser context, and specs that use the `clearIndexedDB` fixture also delete the database first. Root URL redirects to the about page on first load.
 - Use `data-testid` attributes for stable Playwright selectors.
 
 ## TDD Workflow (Default)

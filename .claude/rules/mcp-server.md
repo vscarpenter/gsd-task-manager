@@ -15,7 +15,7 @@ paths:
 
 - **Schemas**: `src/tools/schemas/` — MCP `Tool` definitions (JSON Schema) advertised to clients; Zod input validation lives in `src/tools/handlers/input-schemas.ts`
 - **Handlers**: `src/tools/handlers/` — implementation
-- **Tool files**: `src/tools/<name>.ts` — wires schema + handler
+- **Tool files**: `src/tools/*.ts` — the read functions (list, get, search, sync status) and the prompt templates; the dispatcher in `src/tools/handlers/` routes each tool call
 - **Write ops**: `src/write-ops/` — task-operations + bulk-operations with dryRun support
 
 ## 20 Tools Currently Exposed

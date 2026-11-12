@@ -14,9 +14,9 @@ standard dev/test/build commands are documented in `CLAUDE.md` (`bun dev`,
 `bun run test`, `bun typecheck`, `bun lint`, `bun run build`). Use `bun run test`
 (not `bun test`, which invokes Bun's own runner instead of Vitest).
 
-**Dev server.** `bun dev` serves at http://localhost:3000. The app is 100%
-client-side (every component is `"use client"`; no SSR/API routes; static
-export). On first load the root URL redirects to `/about` (onboarding); enter the
+**Dev server.** `bun dev` serves at http://localhost:3000. The app runs
+client-side as a static export with no runtime server and no API routes.
+Interactive components use `"use client"`; a few pages prerender at build time. On first load the root URL redirects to `/about` (onboarding); enter the
 matrix via the onboarding "Open App" CTA. All data lives in the browser's
 IndexedDB (Dexie), so a fresh browser profile starts empty — there is no backend
 to seed for basic task CRUD.

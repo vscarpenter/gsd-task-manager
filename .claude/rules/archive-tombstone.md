@@ -42,15 +42,20 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `applyRemoteRecords` | `lib/sync/pb-pull.ts` | Archive guard, un-archives on a newer edit and maps it over the archive or Trash row (`mapOverLocalCopy`), so this device's reminder state survives; session check first, with `syncMetadata` in scope |
 | `applyRemoteChange` | `lib/sync/pb-sync-engine.ts` | Same guard and merge, realtime path; session check first, with `syncMetadata` in scope |
 | Migration v15 | `lib/db-migrations.ts` | Deletes only duplicates that stay archivable |
+| `deleteArchivedTask` | `lib/archive.ts` | Deletes one archive row; no other table |
+| `applyTasks` | `lib/tasks/import-export.ts` | Runs inside the import transaction; replace mode clears `tasks` then `bulkAdd`s, merge mode first regenerates ids that clash with live tasks only |
 | `applyArchivedTasks` | `lib/tasks/import-export.ts` | Idempotent `put`; live copy wins on a contradictory payload; absent key ≠ delete |
 | `deleteTask` | `lib/tasks/crud/delete.ts` | Moves live → `deletedTasks` in one transaction; idempotent `put` |
 | `restoreFromTrash` | `lib/trash.ts` | One transaction; clears the trash row |
 | `restoreTask` (undo) | `lib/tasks/crud/restore.ts` | `put` + clears any trash row for the same id |
 | `purgeExpiredTrash` | `lib/trash.ts` | Deletes only rows with a `deletedAt` past the window |
+| `deleteFromTrashForever` | `lib/trash.ts` | One transaction over deletedTasks+syncMetadata; forgets the id for resurrect on sight |
+| `emptyTrash` | `lib/trash.ts` | One transaction over deletedTasks+syncMetadata; clears Trash and forgets every id |
 | `applyTrashedTasks` | `lib/tasks/import-export.ts` | Skips ids already live or archived; absent key ≠ delete |
 | `reconcileDeletedTasks` | `lib/sync/pb-pull.ts` | One transaction over tasks+deletedTasks+syncQueue+syncMetadata; session check first; idempotent `bulkPut`; only a task whose queue rows are all retry-exhausted is preserved in trash |
 | `resurrectOnSight` | `lib/sync/resurrect-on-sight.ts` | One transaction over tasks+archivedTasks+deletedTasks+syncQueue+syncMetadata; session check first; moves a remembered id out of Trash only when the account lists it, removing the tombstone in the same step; an archive row stands |
 | `applyRemoteDeletion` | `lib/sync/pb-sync-engine.ts` | Same guard, realtime path; session check first, with `syncMetadata` in scope; idempotent `put`; drops the released rows in the same transaction |
+| `settleRowOffset` | `lib/sync/pb-push.ts` | The push's only `tasks` write (stores the resolved `notifyBefore`); one transaction over tasks+syncMetadata; session check first; skips a row edited since the push read it |
 
 Adding a writer? Add it to this table and give it a test for each rule that applies.
 

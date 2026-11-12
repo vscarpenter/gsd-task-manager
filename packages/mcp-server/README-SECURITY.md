@@ -7,9 +7,10 @@ The following files contain sensitive credentials and should **NEVER** be commit
 - `claude-config.json` - Contains real JWT tokens
 - `test-*.sh` - Test scripts with hardcoded credentials
 - `debug-*.sh` - Debug scripts with hardcoded credentials
+- `*-token*.sh` and `*-passphrase*.sh` - Helper scripts that hold a token or passphrase
 - Any file with real tokens or secrets
 
-These files are listed in `.gitignore` to prevent accidental commits.
+`.gitignore` lists the named patterns to prevent accidental commits.
 
 ## Creating Test Scripts
 
@@ -19,7 +20,7 @@ These files are listed in `.gitignore` to prevent accidental commits.
    ```
 
 2. Edit the copied file and replace placeholders:
-   - `YOUR_JWT_TOKEN_HERE` → Your actual JWT token
+   - `YOUR_AUTH_TOKEN_HERE` → Your actual JWT token
 
 3. **NEVER** commit the file without `.example` extension
 
@@ -34,29 +35,30 @@ Use `claude-config.example.json` as a template, but keep your real credentials i
 
 ## Token Lifetime, Revocation, and the Setup Artifact
 
-The MCP server authenticates with your **primary PocketBase session JWT** — the
-same token your browser session uses. A PocketBase superuser token is refused
-before any tool is registered — a superuser JWT declares its own collection, so
-that check decodes the token locally, needs no network, and the process exits
-after printing recovery steps to stderr. Every other principal check runs on the
-first account-scoped call: before any write, and before `get_sync_status`. A
-backend that cannot be reached never stops the server — tools stay registered and
-each call reports the connection problem without changing your saved credentials.
-Anything that can read an accepted user token has full read/write/delete access to
-that account's tasks until it expires. Tokens last 30 days (the `users`
+The MCP server authenticates with your **primary PocketBase session JWT**, the
+same token your browser session uses. The MCP server refuses a PocketBase
+superuser token before it registers any tool. A superuser JWT names its own
+collection, so that check decodes the token locally and needs no network. On a
+superuser token, the process prints recovery steps to stderr and exits.
+Confirming that a token belongs to a user account needs PocketBase. The
+user-account check runs before any write and before `get_sync_status`. An
+unreachable PocketBase never stops the MCP server. Tools stay registered, and each call reports the connection problem without
+changing your saved credentials. Anything that can read a user token has full
+read/write/delete access to that account's tasks until the token expires. Tokens last 30 days (the `users`
 collection's auth duration, set by `docker/pb_migrations/1793562900_users_auth_token_30_days.js`),
 and the MCP server never renews the one in its config. Know the limits:
 
 - **Revoking a token.** Signing out in the browser clears that browser's copy
   but does **not** invalidate other copies of the token. On a self-hosted
-  (Docker) server, Settings → Cloud Sync → Sign out of all devices rotates your
-  token key, which ends every session, MCP tokens included
+  (Docker) server, the sync dialog's Sign out of all devices button rotates your
+  account's token key. That ends every session for your account, including the
+  copy of the token in the MCP config
   (`docker/pb_hooks/session_revoke.pb.js`). On the hosted service that button
   signs out only the current device, and an issued token stays valid until it
   expires (at most 30 days). The server operator can end it sooner by rotating
-  the users collection's token secret. Accounts sign in with Google, Apple, or
+  the users collection's token secret, which signs out every user. Accounts sign in with Google, Apple, or
   GitHub, so there is no account password to change.
-- **The setup wizard writes a token-bearing file** (`~/.gsd-mcp-setup.json`,
+- **The setup wizard (`gsd-mcp-server --setup`) writes a token-bearing file** (`~/.gsd-mcp-setup.json`,
   mode 0600) for you to copy into the Claude Desktop config. It is deleted
   automatically the first time the MCP server starts with valid env config —
   including an offline start —
@@ -64,20 +66,21 @@ and the MCP server never renews the one in its config. Know the limits:
   yourself (`rm ~/.gsd-mcp-setup.json`) if you abandon setup partway.
   The wizard never prints the full token or identifying token fragments. Open
   the artifact only in a trusted editor; do not print it to terminal history or logs.
-- **The generated launch configuration is pinned locally.** It invokes the exact
-  Node executable and package entrypoint that generated it, rather than selecting
+- **The Claude Desktop entry the wizard generates is pinned locally.** It invokes
+  the exact Node executable and package entrypoint that ran the wizard, rather than selecting
   the latest package from npm on every credentialed start. Updating is an explicit
   exact-version install followed by another setup run.
-- **The token lives permanently in the Claude Desktop config**
-  (`claude_desktop_config.json`). Treat that file as a credential store:
+- **The token stays in the Claude Desktop config until you replace it**
+  (`claude_desktop_config.json`). When it expires, copy a fresh one from the
+  web app. Treat that file as a credential store:
   don't back it up to shared locations, sync it, or paste it into chats.
 
 ## If You Accidentally Commit Credentials
 
 1. **Immediately revoke the exposed credentials**:
    - For JWT tokens: signing out on one device is **not** enough (see above).
-     On a self-hosted server, use Settings → Cloud Sync → Sign out of all
-     devices. On the hosted service, ask the operator to rotate the users
+     On a self-hosted server, use Sign out of all devices in the sync
+     dialog. On the hosted service, ask the operator to rotate the users
      collection's token secret. Then sign in again for a fresh token
 
 2. **Remove from git history**:

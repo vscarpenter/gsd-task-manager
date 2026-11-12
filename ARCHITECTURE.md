@@ -12,12 +12,12 @@ linked source and decision records over duplicating implementation detail here.
 | Product model and feature intent | [`PRODUCT.md`](PRODUCT.md) |
 | One diagram of the parts and the boundaries between them | [`docs/uml-diagrams.md`](docs/uml-diagrams.md) |
 | App routes and UI composition | [`app/`](app/) and [`components/`](components/) |
-| Domain types, validation, and IndexedDB schemas | [`lib/types.ts`](lib/types.ts), [`lib/schema.ts`](lib/schema.ts), and [`lib/db.ts`](lib/db.ts) |
+| Domain types, validation, and IndexedDB schemas | [`lib/types.ts`](lib/types.ts), [`lib/schema.ts`](lib/schema.ts), [`lib/db.ts`](lib/db.ts), and [`lib/db-migrations.ts`](lib/db-migrations.ts) (stores, indexes, and versions) |
 | Task domain operations | [`lib/tasks/`](lib/tasks/) |
 | PocketBase sync, realtime, and conflict handling | [`lib/sync/`](lib/sync/), [ADR 0002](docs/adr/0002-pocketbase-cloud-sync.md), and [ADR 0003](docs/adr/0003-last-write-wins-conflict-resolution.md) |
 | PWA and service-worker caching | [`lib/sw-cache-logic.ts`](lib/sw-cache-logic.ts), [ADR 0004](docs/adr/0004-pwa-architecture.md), and [ADR 0012](docs/adr/0012-sw-multi-cache-strategy.md) |
 | MCP server | [`packages/mcp-server/README.md`](packages/mcp-server/README.md) and [ADR 0005](docs/adr/0005-mcp-server-integration.md) |
 | Self-hosting and deployment | [`docker/README.md`](docker/README.md), [`docs/ops/`](docs/ops/), and [`README.md`](README.md) |
-| Testing and definition of done | [`coding-standards.md`](coding-standards.md), [`CLAUDE.md`](CLAUDE.md#testing-guidelines), and [`tests/e2e/README.md`](tests/e2e/README.md) |
+| Testing and exit checklists | [`coding-standards.md`](coding-standards.md), [`CLAUDE.md`](CLAUDE.md#testing-guidelines), and [`tests/e2e/README.md`](tests/e2e/README.md) |
 | Security posture and trust boundaries | [`SECURITY.md`](SECURITY.md) and [`docs/security-trust-boundaries.md`](docs/security-trust-boundaries.md) |
 | Architecture decision history | [`docs/adr/`](docs/adr/) |
