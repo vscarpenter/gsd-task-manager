@@ -23,7 +23,7 @@ import {
 } from './pb-sync-helpers';
 import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
-import { StaleSyncSessionError } from './sync-session';
+import { StaleSyncSessionError, assertSyncSessionCurrent } from './sync-session';
 import type { RemoteTaskIndexEntry, SyncQueueItem } from './types';
 
 const logger = createLogger('SYNC_ENGINE');
@@ -58,6 +58,44 @@ export interface PushResult {
   retryAfterMs?: number | null;
 }
 
+/**
+ * The queue carries no owner of its own, and sign-out clears it in the same
+ * transaction that rewrites sync_config. So a row is this session's row only
+ * while sync_config still names `ownerId`. Every queue read and write below
+ * checks that in its own transaction, as the pull does for its writes.
+ */
+async function readPendingForSession(ownerId: string): Promise<SyncQueueItem[]> {
+  const db = getDb();
+  return db.transaction('r', [db.syncMetadata, db.syncQueue], async () => {
+    await assertSyncSessionCurrent(ownerId);
+    return getSyncQueue().getPending();
+  });
+}
+
+async function writeQueueForSession(ownerId: string, write: () => Promise<void>): Promise<void> {
+  const db = getDb();
+  await db.transaction('rw', [db.syncMetadata, db.syncQueue], async () => {
+    await assertSyncSessionCurrent(ownerId);
+    await write();
+  });
+}
+
+function dequeueForSession(ownerId: string, id: string): Promise<void> {
+  return writeQueueForSession(ownerId, () => getSyncQueue().dequeue(id));
+}
+
+function chargeAttemptForSession(ownerId: string, id: string, errorMessage: string): Promise<void> {
+  return writeQueueForSession(ownerId, () => getSyncQueue().recordAttemptFailure(id, errorMessage));
+}
+
+/** Stop before any request for a row once the session it was read under has ended. */
+async function assertPushSessionCurrent(ownerId: string): Promise<void> {
+  const db = getDb();
+  await db.transaction('r', [db.syncMetadata], async () => {
+    await assertSyncSessionCurrent(ownerId);
+  });
+}
+
 type QueuedTask = NonNullable<SyncQueueItem['payload']>;
 
 /**
@@ -82,18 +120,21 @@ async function resolveNotifyBefore(
  * stamp bump and nothing queued: other devices already hold this task at the same
  * stamp. Guarded in one transaction, so an edit saved while the push was in
  * flight is never overwritten. The server already has the number, so a local
- * failure here is logged and does not fail the push.
+ * failure here is logged and does not fail the push. A session that has ended
+ * is not a local failure: the row may be another account's, so the push stops.
  */
-async function settleRowOffset(task: QueuedTask): Promise<void> {
+async function settleRowOffset(task: QueuedTask, ownerId: string): Promise<void> {
   const db = getDb();
   try {
-    await db.transaction('rw', db.tasks, async () => {
+    await db.transaction('rw', [db.tasks, db.syncMetadata], async () => {
+      await assertSyncSessionCurrent(ownerId);
       const row = await db.tasks.get(task.id);
       if (row && row.notifyBefore === undefined && row.updatedAt === task.updatedAt) {
         await db.tasks.update(task.id, { notifyBefore: task.notifyBefore });
       }
     });
   } catch (error) {
+    if (error instanceof StaleSyncSessionError) throw error;
     logger.warn('Could not store the resolved reminder offset on the row', {
       taskId: task.id,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
@@ -126,7 +167,7 @@ async function upsertRemoteTask(
     recordId = (await pb.collection('tasks').create(pbData)).id;
   }
 
-  if (storeOnRow) await settleRowOffset(task);
+  if (storeOnRow) await settleRowOffset(task, ownerId);
   return recordId;
 }
 
@@ -171,9 +212,12 @@ function createPushSessionCheck(ownerId: string): PushSessionCheck {
 /**
  * The session check failed, not this row. Charging the row would retire it after
  * MAX_RETRIES, and nothing re-arms a retired row, so the push stops instead.
+ * A session that ended mid-push counts too: the row is no longer this push's.
  */
 function isSessionCheckFailure(error: unknown): boolean {
-  return error instanceof SessionRejectedError || error instanceof SessionIdentityMismatchError;
+  return error instanceof SessionRejectedError
+    || error instanceof SessionIdentityMismatchError
+    || error instanceof StaleSyncSessionError;
 }
 
 interface PushContext {
@@ -188,15 +232,12 @@ function hasUsableRemoteVersion(value: unknown): value is string {
     && !Number.isNaN(new Date(value).getTime());
 }
 
-async function recordUnusableRemoteVersion(item: SyncQueueItem): Promise<void> {
+async function recordUnusableRemoteVersion(item: SyncQueueItem, ownerId: string): Promise<void> {
   logger.warn('Skipping mutation: remote task version is missing or malformed', {
     taskId: item.taskId,
     operation: item.operation,
   });
-  await getSyncQueue().recordAttemptFailure(
-    item.id,
-    'Remote task version is missing or malformed',
-  );
+  await chargeAttemptForSession(ownerId, item.id, 'Remote task version is missing or malformed');
 }
 
 /**
@@ -222,14 +263,15 @@ function isStaleDelete(item: SyncQueueItem, remoteAt: string): boolean {
  * deliver the newer remote version, restoring correctness on this device.
  */
 async function pushSingleItem(item: SyncQueueItem, ctx: PushContext): Promise<PushItemOutcome> {
+  await assertPushSessionCurrent(ctx.ownerId);
   const lookup = await fetchRemoteTaskEntry(ctx.ownerId, item.taskId);
 
   if (lookup.entry && !hasUsableRemoteVersion(lookup.entry.clientUpdatedAt)) {
-    await recordUnusableRemoteVersion(item);
+    await recordUnusableRemoteVersion(item, ctx.ownerId);
     return 'index_unavailable';
   }
 
-  if (item.operation === 'delete') return pushDelete(item, lookup, ctx.session);
+  if (item.operation === 'delete') return pushDelete(item, lookup, ctx);
   return pushUpsert(item, lookup, ctx);
 }
 
@@ -238,10 +280,9 @@ async function pushUpsert(
   { entry: remote, fetchSucceeded }: RemoteLookup,
   ctx: PushContext,
 ): Promise<PushItemOutcome> {
-  const queue = getSyncQueue();
   if (!item.payload) {
     // Invalid queue state — payload is required for create/update.
-    await queue.dequeue(item.id);
+    await dequeueForSession(ctx.ownerId, item.id);
     return 'skipped';
   }
 
@@ -254,7 +295,8 @@ async function pushUpsert(
       taskId: item.taskId,
       operation: item.operation,
     });
-    await queue.recordAttemptFailure(
+    await chargeAttemptForSession(
+      ctx.ownerId,
       item.id,
       'Remote task index unavailable for upsert LWW verification',
     );
@@ -268,22 +310,21 @@ async function pushUpsert(
       remoteAt: remote.clientUpdatedAt,
       localAt: item.payload.updatedAt,
     });
-    await queue.dequeue(item.id);
+    await dequeueForSession(ctx.ownerId, item.id);
     return 'skipped';
   }
 
   if (!remote) await ctx.session.beforeCreate();
   await upsertRemoteTask(item.payload, remote?.pbRecordId, ctx.ownerId, ctx.deviceId);
-  await queue.dequeue(item.id);
+  await dequeueForSession(ctx.ownerId, item.id);
   return 'pushed';
 }
 
 async function pushDelete(
   item: SyncQueueItem,
   { entry: remote, fetchSucceeded }: RemoteLookup,
-  session: PushSessionCheck,
+  { ownerId, session }: PushContext,
 ): Promise<PushItemOutcome> {
-  const queue = getSyncQueue();
   if (remote) {
     if (isStaleDelete(item, remote.clientUpdatedAt)) {
       logger.info('Skipping stale delete: remote modified after the deleted version', {
@@ -291,23 +332,23 @@ async function pushDelete(
         remoteAt: remote.clientUpdatedAt,
         deletionQueuedAt: new Date(item.timestamp).toISOString(),
       });
-      await queue.dequeue(item.id);
+      await dequeueForSession(ownerId, item.id);
       return 'skipped';
     }
     await getPocketBase().collection('tasks').delete(remote.pbRecordId);
-    await queue.dequeue(item.id);
+    await dequeueForSession(ownerId, item.id);
     return 'pushed';
   }
 
   if (!fetchSucceeded) {
     logger.warn('Skipping delete dequeue: remote index unavailable', { taskId: item.taskId });
-    await queue.recordAttemptFailure(item.id, 'Remote task index unavailable for delete verification');
+    await chargeAttemptForSession(ownerId, item.id, 'Remote task index unavailable for delete verification');
     return 'index_unavailable';
   }
 
   // The remote record is gone and the session is the owner's, so the local delete is a no-op.
   await session.beforeDroppingDelete();
-  await queue.dequeue(item.id);
+  await dequeueForSession(ownerId, item.id);
   return 'pushed';
 }
 
@@ -349,7 +390,7 @@ function resolvePushPrincipal(sessionOwnerId: string): string | null {
  * Charge one row for a failed push. Persists a stable error code only, never the
  * raw message, which for a 4xx can echo task content back from PocketBase.
  */
-async function recordItemFailure(item: SyncQueueItem, error: unknown): Promise<string> {
+async function recordItemFailure(item: SyncQueueItem, error: unknown, ownerId: string): Promise<string> {
   const errorCode = sanitizeSyncError(error);
   const context = { taskId: item.taskId, operation: item.operation, errorCode };
   if (isTransientSyncFailure(error)) {
@@ -357,7 +398,7 @@ async function recordItemFailure(item: SyncQueueItem, error: unknown): Promise<s
   } else {
     logger.error('Push failed for item', makeSafePushError(errorCode), context);
   }
-  await getSyncQueue().recordAttemptFailure(item.id, errorCode);
+  await chargeAttemptForSession(ownerId, item.id, errorCode);
   return errorCode;
 }
 
@@ -365,6 +406,8 @@ async function recordItemFailure(item: SyncQueueItem, error: unknown): Promise<s
  * Push all pending local changes to PocketBase on behalf of `sessionOwnerId`,
  * the account sync_config names as the enabled session. A session the server
  * refuses throws SessionRejectedError and leaves every remaining row as it was.
+ * A session that ended, or that now belongs to another account, throws
+ * StaleSyncSessionError before the queue is read and before each later row.
  */
 export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResult> {
   const ownerId = resolvePushPrincipal(sessionOwnerId);
@@ -373,8 +416,7 @@ export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResu
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: false };
   }
 
-  const queue = getSyncQueue();
-  const pending = await queue.getPending();
+  const pending = await readPendingForSession(ownerId);
   if (pending.length === 0) {
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
   }
@@ -403,7 +445,7 @@ export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResu
       if (isSessionCheckFailure(error)) throw error;
       failedCount++;
       // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer
-      lastError = await recordItemFailure(item, error);
+      lastError = await recordItemFailure(item, error, ownerId);
 
       // 429 means the server is under load. Abort the push loop early so
       // we don't hammer it through the remaining queue items at 100ms

@@ -236,6 +236,8 @@ describe('pb-sync-engine', () => {
       const db = getDb();
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
         key: 'sync_config',
+        enabled: true,
+        userId: 'user-123',
         deviceId: 'device-1',
       });
 
@@ -268,6 +270,8 @@ describe('pb-sync-engine', () => {
       const db = getDb();
       (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
         key: 'sync_config',
+        enabled: true,
+        userId: 'user-123',
         deviceId: 'device-1',
       });
 
