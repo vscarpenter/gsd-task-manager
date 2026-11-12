@@ -884,3 +884,60 @@ MIT - Same as GSD Task Manager
 ---
 
 **Current release:** 1.4.1. See [CHANGELOG.md](CHANGELOG.md) for every release.
+
+## Package contract
+
+This section states the package's contract for developers and AI assistants who change the code. The source contracts start at [src/README.md](./src/README.md).
+
+### Interface
+
+- Executable: `package.json` `bin` maps `gsd-mcp-server` to `dist/index.js`, compiled from `src/index.ts`.
+- Flags: `--setup`, `--validate`, `--help`, and `-h` (`src/cli/index.ts:parseCLIArgs`). No flag starts the MCP server on stdio.
+- Environment variables: `GSD_POCKETBASE_URL` and `GSD_AUTH_TOKEN` (`src/server/config.ts:loadConfig`).
+- Optional environment variables: `LOG_LEVEL` and `NODE_ENV` turn on debug logging (`src/utils/logger.ts:createMcpLogger`). On Windows, `APPDATA` locates the Claude Desktop config file (`src/cli/index.ts:getClaudeConfigPath`).
+- MCP requests: `ListToolsRequestSchema`, `CallToolRequestSchema`, `ListPromptsRequestSchema`, and `GetPromptRequestSchema` (`src/server/setup.ts:registerHandlers`).
+- Read tools (`src/tools/schemas/read-tools.ts:readTools`): `get_sync_status`, `get_task_stats`, `list_tasks`, `get_task`, `search_tasks`, `get_token_status`, `get_top_three`.
+- Analytics tools (`src/tools/schemas/analytics-tools.ts:analyticsTools`): `get_productivity_metrics`, `get_quadrant_analysis`, `get_tag_analytics`, `get_upcoming_deadlines`, `get_task_insights`.
+- Write tools (`src/tools/schemas/write-tools.ts:writeTools`): `create_task`, `update_task`, `complete_task`, `delete_task`, `bulk_update_tasks`.
+- System tools (`src/tools/schemas/system-tools.ts:systemTools`): `validate_config`, `get_help`, `get_cache_stats`.
+- Prompts (`src/tools/prompts.ts:allPrompts`): `daily-standup`, `weekly-review`, `focus-mode`, `upcoming-deadlines`, `productivity-report`, `tag-analysis`.
+- Module exports: `package.json` `exports` maps `.` to `dist/index.js` and `./types` to `dist/types.js`.
+- `src/index.ts` exports no symbols. It runs `main()` when loaded.
+- Runtime dependencies (`package.json`): `@modelcontextprotocol/sdk` 1.32.1, `pocketbase` 0.27.3, `zod` 4.6.7.
+- Local scripts in this directory: `decode-jwt.cjs`, `test-env-vars.js`, and `test-in-claude.sh`. `package.json` `files` leaves them out of the published package.
+
+### Invariants
+
+- Stdout carries JSON-RPC frames in server mode. Diagnostic output goes to stderr only (`src/server/startup.ts` module comment, `src/utils/logger.ts:writeLog`).
+- Startup depends only on local state, so a PocketBase outage does not stop tool registration (`src/server/startup.ts` module comment).
+- The PocketBase URL uses HTTPS, or `http` to a loopback host, with no credentials, query, or fragment (`src/server/config.ts:isSafePocketBaseUrl`).
+- A PocketBase superuser token is refused before any request (`src/server/config.ts:isSuperuserAuthToken`, `src/pocketbase-client.ts:getPocketBase`).
+- Every tool call passes Zod validation before its handler runs (`src/tools/handlers/index.ts:createToolRunner`).
+- The server advertises 20 tools, and the dispatcher handles the same 20 names (`src/tools/schemas/index.ts:allTools`, `src/tools/handlers/input-schemas.ts:toolArgSchemas`).
+- Field limits come from one constant (`src/constants.ts:SCHEMA_LIMITS`): title 80, description 600, tag 30, 20 tags, 50 subtasks, 50 dependencies.
+- A bulk call accepts at most 50 task IDs, and a bulk delete at most 10 (`src/write-ops/bulk-operations.ts:validateBulkRequest`).
+- `delete_task` and a bulk `delete` are dry runs unless the caller passes `dryRun: false` (`src/write-ops/task-operations.ts:deleteTask`, `src/write-ops/bulk-operations.ts:bulkUpdateTasks`).
+- An update or delete fails with `ConflictError` if the record changed since the read (`src/write-ops/task-operations.ts:assertFreshUpdatePreflight`, `deletePrimaryTask`).
+- An empty listing or a 404 counts only after `confirmUsersPrincipal` succeeds (`src/tools/list-tasks.ts:fetchTasks`, `src/write-ops/helpers.ts:isConfirmedNotFound`).
+- The build is strict TypeScript (`tsconfig.json` `strict: true`), and it leaves test files out of `dist`.
+- Coverage minimums are 80% statements, 75% branches, 80% functions, and 80% lines (`vitest.config.ts` `coverage.thresholds`).
+- `src/write-ops/**` needs 98% statements, 95% branches, 100% functions, and 98% lines (`vitest.config.ts` `coverage.thresholds`).
+- The package needs Node 18 or later (`package.json` `engines`).
+
+### Side Effects
+
+- Network: the server calls the PocketBase URL through the PocketBase SDK (`src/pocketbase-client.ts:getPocketBase`). The setup wizard and `--validate` also send a GET to `/api/health`.
+- PocketBase writes: creates, updates, and deletes records in the `tasks` collection (`src/write-ops/helpers.ts`).
+- PocketBase auth: calls `authRefresh` on the `users` collection (`src/pocketbase-client.ts:refreshPrincipal`).
+- Disk: the setup wizard writes `~/.gsd-mcp-setup.json` with mode `0o600` (`src/cli/setup-wizard.ts:writeConfigurationFile`). The file holds the plaintext token.
+- Disk: server startup deletes `~/.gsd-mcp-setup.json` if it exists (`src/server/startup.ts:prepareStartup`).
+- Disk: the version module reads `package.json` at load (`src/version.ts:readVersion`).
+- Process state: a task cache singleton and a PocketBase client singleton live for the life of the process (`src/cache.ts:cacheInstance`, `src/pocketbase-client.ts:pbInstance`).
+- Streams: server mode uses stdin and stdout for JSON-RPC and stderr for logs. Setup, validate, and help modes print to stdout. A setup failure and a fatal error print to stderr (`src/cli/setup-wizard.ts:runSetupWizard`, `src/index.ts`).
+- Exit codes: `src/index.ts:main` exits with 0 after help, setup, or validate, and with 1 on a startup failure.
+- `decode-jwt.cjs` reads the Claude Desktop config file and prints the decoded token payload to stdout.
+- `test-in-claude.sh` runs `npm run build` and writes a backup copy of the Claude Desktop config file.
+
+### Verification
+
+- Run: `bun run --cwd packages/mcp-server test`

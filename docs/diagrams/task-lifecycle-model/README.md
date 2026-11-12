@@ -54,3 +54,38 @@ The lifecycle chart hides Undo on "Task deleted" when you've already moved the t
 ## What the model leaves out
 
 Only the newest Undo toast is modeled. sonner stacks toasts, so an older Undo can still be tapped for its 5 seconds. The model counts next copies instead of tracking each one, so Undo removes "a" copy rather than the exact one it spawned; with the one-copy bound of the board chart, that's the same thing. Completing a next copy (which spawns the one after it) is left out, so the chain is one task deep. The Archive page's own Undo buttons, sync, other devices, edits, dependencies, and subtasks are out of scope. Sync and Trash across devices live in the verify skills under `docs/formal/`.
+
+## Directory contract
+
+This section records the contract of the source files here: `TaskLifecycle.tla`, the three `.cfg` files, and the two view files.
+
+### Interface
+
+- `TaskLifecycle.tla` (module `TaskLifecycle`): constant `Recurring`. Variables `task`, `before`, `copies`, `strays`, and `toast`.
+  - `Places` is `none`, `open`, `done`, `saved`, `archived`, `trash`, and `gone`.
+  - `Next` joins 17 actions, including `YouCapture`, `YouComplete`, `YouUncheck`, `YouUndoComplete`, `YouDelete`, `YouUndoDelete`, `YouRestoreFromTrash`, `TrashEmpties`, `AutoArchive`, and `ToastExpires`.
+  - The module defines `Spec`, but every config names `INIT Init` and `NEXT Next` instead.
+- `TaskLifecycle.cfg`: `Recurring = FALSE`, `CONSTRAINT Bound`.
+- `TaskLifecycleRecurring.cfg`: `Recurring = TRUE`, `CONSTRAINT Bound`.
+- `TaskLifecycleRecurringBoard.cfg`: `Recurring = TRUE`, `CONSTRAINT BoardBound`.
+- All three configs check `TypeOK`, `OneOpenCopy`, and `TrashHoldsOnlyYourDeletes`.
+- `view.mjs` exports `title`, `state(v)`, `group(v)`, `colors`, and `step(action, from, to)`. `step` returns `null` for `ToastExpires` and `Done`.
+- `view-recurring.mjs` exports the same functions from `view.mjs` again, with its own `title`.
+
+### Invariants
+
+- `TaskLifecycle.tla:TypeOK`: every variable keeps its declared type.
+- `TaskLifecycle.tla:OneOpenCopy`: the open task plus `copies` never exceeds 1.
+- `TaskLifecycle.tla:TrashHoldsOnlyYourDeletes`: `strays = 0`.
+- `TaskLifecycle.tla:Bound` limits `copies` and `strays` to 2. `BoardBound` keeps `task` in `none`, `open`, or `done` and limits both counts to 1. Both are state constraints, not checked rules.
+- `TaskLifecycle.tla:Snapshot` keeps `before` only while the task is in Trash or the delete toast is open.
+- `TaskLifecycle.tla:Done` is an explicit stutter step at the end state. No config turns off the deadlock check.
+
+### Side Effects
+
+- None. The module, the configs, and the view files perform no I/O.
+- This directory has no runner script. `scripts/tlc.sh` runs the model. See [scripts](../../../scripts/README.md).
+
+### Verification
+
+- No automated check found. Run the model by hand with `bash scripts/tlc.sh`, as "Run the model" above shows.
