@@ -19,8 +19,8 @@ All of it is on `main` and v14.8.7 is live on gsd.vinny.dev. No branch is open.
   - Production PocketBase rules were not compared with `scripts/setup-pocketbase-collections.sh`.
   - The sync commit in `.claude/skills/verify-sync-session/SKILL.md` still says `dd32e08c`. Move it to the #734 merge (`7a5276ff`) after reading the changes since.
   - `tests/ui/toast-action-hint.test.tsx` leaks a toast timer that fails the SonarCloud coverage run now and then.
-  - `docs/architecture.html` and `docs/cloud-sync-explainer.html` still carry the drift the old UML page had (DOC-1 and DOC-20 in `tasks/audit-2026-11-10.md`).
   - Two system findings from the review have no issue: web never re-arms a retry-exhausted queue row, and last write wins discards the losing copy.
+- **Document refresh (2026-11-12), PR #737 on `docs/doc-refresh-2026-11`, awaiting CI and the owner merge:** every spec, design doc, ADR, plan, audit record, and HTML page was checked against the code. It changed documents only. `egm-review/doc-refresh/open-items.md` lists 13 owner questions and the possible code defects the reviewers found. Nothing in that list was run or filed as an issue.
 - **Blockers:** none.
 
 # OAuth sign-in: flow polish (2026-11-11)
