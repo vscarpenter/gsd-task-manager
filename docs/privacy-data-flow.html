@@ -126,12 +126,14 @@
     <p class="lede">
       How a task&rsquo;s content (title, notes, subtask text, tags) is created, held in client state,
       persisted, &ldquo;encrypted,&rdquo; and optionally synced &mdash; traced through the real code.
-      Every row links to the exact file and line, pinned to one commit so the evidence stays verifiable.
+      Most rows link to a file and line pinned to the commit of the original review.
+      The text was corrected against the current code on 2026-11-12. Rows added or rewritten then link to the file on <code>main</code>, and a pinned link can show older code than its row describes.
     </p>
     <div class="meta">
       <span class="chip">Repo <code>vscarpenter/gsd-task-manager</code></span>
       <span class="chip">Pinned <code>d004f1f</code></span>
       <span class="chip">Reviewed <code>2026-06-20</code></span>
+      <span class="chip">Text corrected <code>2026-11-12</code></span>
       <span class="chip ok">Next.js server touchpoints: 0</span>
     </div>
   </header>
@@ -139,9 +141,11 @@
   <section aria-labelledby="diagram-h">
     <h2 id="diagram-h"><span class="num">01</span>The flow, in three zones</h2>
     <p class="section-note">
-      Data lives almost entirely in the green zone. The amber zone is deliberately honest: there is
-      <em>no application-level encryption</em> &mdash; only the browser/OS at rest and TLS on the wire.
-      The red zone is reached <strong>only when a user opts in</strong> to cloud sync or wires up the MCP server.
+      Data lives almost entirely in the green zone. The amber zone is deliberately honest: the browser app adds
+      <em>no application-level encryption</em>, only the browser/OS at rest and TLS on the wire.
+      The hosted sync server stores task content as plaintext. Only the self-hosted Docker image encrypts task fields at rest (ADR 0016).
+      Task content reaches the red zone <strong>only when a user opts in</strong> to cloud sync or wires up the MCP server.
+      Two smaller flows need neither: the feedback form, which sends the user&rsquo;s message and no task data, and a preconnect to the hosted sync server, which carries no task data.
     </p>
     <div class="legend">
       <span class="key"><span class="swatch sw-device"></span> On-device only</span>
@@ -151,7 +155,7 @@
     <div class="diagram">
 <svg viewBox="0 0 1060 912" role="img" aria-labelledby="svg-title svg-desc" font-family="ui-sans-serif, system-ui, sans-serif">
   <title id="svg-title">GSD task-content data-flow across three privacy zones</title>
-  <desc id="svg-desc">Task content is created in the matrix UI, held in React state, validated, and written to IndexedDB — all on-device. There is no application-level encryption at rest or in transit. Only when a user opts into cloud sync or the MCP server does content cross the network to PocketBase, OAuth providers, Sentry, or the AI client. The Next.js app itself has zero server touchpoints.</desc>
+  <desc id="svg-desc">Task content is created in the matrix UI, held in React state, validated, and written to IndexedDB, all on-device. The browser app adds no application-level encryption at rest or in transit. Only when a user opts into cloud sync or the MCP server does task content cross the network to PocketBase or the AI client. OAuth providers receive no task content. The feedback form sends the user's message and no task content. The Next.js app itself has zero server touchpoints.</desc>
   <style>
     .nt { font-size: 13px; font-weight: 600; fill: #1d2430; }
     .ns { font-size: 10.5px; fill: #5a6573; }
@@ -177,7 +181,7 @@
   <!-- zone tabs -->
   <rect x="16" y="54" width="186" height="26" rx="12" fill="#2f7d5b"/><text class="zt" x="34" y="71">ON-DEVICE ONLY</text>
   <rect x="16" y="370" width="296" height="26" rx="12" fill="#9a6b12"/><text class="zt" x="34" y="387">&#8220;ENCRYPTED&#8221; AT REST / IN TRANSIT</text>
-  <rect x="16" y="536" width="288" height="26" rx="12" fill="#b1452f"/><text class="zt" x="34" y="553">NETWORK / SERVER &mdash; OPT-IN ONLY</text>
+  <rect x="16" y="536" width="288" height="26" rx="12" fill="#b1452f"/><text class="zt" x="34" y="553">NETWORK / SERVER &middot; DATA OPT-IN</text>
 
   <!-- ===== ZONE 1: ON-DEVICE ===== -->
   <!-- top create flow -->
@@ -188,7 +192,7 @@
   <rect class="n n-device" x="438" y="108" width="186" height="56" rx="9"/>
   <text class="nt" x="450" y="132">createTask / updateTask</text><text class="ns" x="450" y="149">+ Zod validation</text>
   <rect class="n n-device" x="660" y="108" width="352" height="56" rx="9"/>
-  <text class="nt" x="672" y="132">IndexedDB &mdash; GsdTaskManager (v14)</text><text class="ns" x="672" y="149">object stores: tasks &middot; archivedTasks &mdash; stored plaintext</text>
+  <text class="nt" x="672" y="132">IndexedDB &mdash; GsdTaskManager (v17)</text><text class="ns" x="672" y="149">tasks &middot; archivedTasks &middot; deletedTasks: stored plaintext</text>
 
   <path d="M226,136 L258,136" stroke="#2f7d5b" stroke-width="1.6" fill="none" marker-end="url(#ah-d)"/>
   <path d="M402,136 L434,136" stroke="#2f7d5b" stroke-width="1.6" fill="none" marker-end="url(#ah-d)"/>
@@ -218,11 +222,11 @@
   <line x1="30" y1="410" x2="30" y2="466" stroke="#9a6b12" stroke-width="2"/>
 
   <text class="restH" x="548" y="424" fill="#7a540b">IN TRANSIT</text>
-  <text class="restB" x="548" y="443"><tspan font-weight="700" fill="#7a540b">TLS only</tspan> &mdash; not end-to-end. The sync server</text>
-  <text class="restB" x="548" y="459">receives and stores task content as plaintext.</text>
+  <text class="restB" x="548" y="443"><tspan font-weight="700" fill="#7a540b">TLS only</tspan>, not end-to-end. The hosted sync</text>
+  <text class="restB" x="548" y="459">server stores task content as plaintext (ADR 0016).</text>
   <line x1="538" y1="410" x2="538" y2="466" stroke="#9a6b12" stroke-width="2"/>
 
-  <text x="40" y="497" font-size="12" font-weight="700" fill="#8c3422">&#9888; No application-level or E2E encryption anywhere &mdash; the old AES/PBKDF2 layer was removed in the PocketBase migration.</text>
+  <text x="40" y="497" font-size="12" font-weight="700" fill="#8c3422">&#9888; No end-to-end encryption anywhere. Only the self-hosted Docker image encrypts task fields at rest, on its own server.</text>
 
   <!-- egress arrow zone1 -> zone3 -->
   <path d="M930,164 C930,300 200,360 135,586" stroke="#b1452f" stroke-width="2.4" fill="none" marker-end="url(#ah-n)"/>
@@ -253,13 +257,13 @@
 
   <!-- row B targets -->
   <rect class="n n-net" x="40"  y="712" width="224" height="56" rx="9"/>
-  <text class="nt" x="52" y="736">OAuth &rarr; Google &middot; GitHub</text><text class="ns" x="52" y="753">auth token only &middot; no content</text>
+  <text class="nt" x="52" y="736">OAuth sign-in</text><text class="ns" x="52" y="753">Google &middot; GitHub &middot; Apple &middot; no content</text>
   <rect class="n n-net" x="288" y="712" width="300" height="56" rx="9"/>
-  <text class="nt" x="300" y="736">Sentry &rarr; *.ingest.us.sentry.io</text><text class="ns" x="300" y="753">errors only &middot; content allowlist-gated</text>
+  <text class="nt" x="300" y="736">Feedback form &rarr; sync server</text><text class="ns" x="300" y="753">user-sent &middot; no account &middot; no task content</text>
   <rect class="n n-net" x="612" y="712" width="400" height="56" rx="9"/>
-  <text class="nt" x="624" y="736">MCP &rarr; PocketBase &rarr; Claude Desktop &rarr; Anthropic</text><text class="ns" x="624" y="753">full task content &mdash; only when MCP server is configured</text>
+  <text class="nt" x="624" y="736">PocketBase &rarr; MCP &rarr; Claude Desktop &rarr; Anthropic</text><text class="ns" x="624" y="753">full task content &mdash; only when MCP server is configured</text>
 
-  <text class="ns" x="40" y="800" fill="#7a8493">Enforced by CSP <tspan font-family="ui-monospace, monospace" fill="#5a6573">connect-src</tspan>: the only external origins the app may contact are the four boxes above &mdash; no analytics or tracker origins are allowed.</text>
+  <text class="ns" x="40" y="800" fill="#7a8493">The hosted site&rsquo;s CSP <tspan font-family="ui-monospace, monospace" fill="#5a6573">connect-src</tspan> allows three external origins: api.vinny.io, accounts.google.com, and github.com. It allows no analytics or tracker origin.</text>
 </svg>
     </div>
   </section>
@@ -319,7 +323,7 @@
           </tr>
           <tr>
             <td>5</td>
-            <td><span class="what">Subtask mutations</span><span class="sub">write subtask titles via <code>db.tasks.put</code> &mdash; note: skips <code>taskDraftSchema</code> validation</span></td>
+            <td><span class="what">Subtask mutations</span><span class="sub">validate a new subtask with <code>subtaskSchema</code>, then write subtask titles via <code>db.tasks.put</code></span></td>
             <td>write IndexedDB</td>
             <td class="content-yes">Content</td>
             <td><span class="ztag z-device">on-device</span></td>
@@ -327,7 +331,7 @@
           </tr>
           <tr>
             <td>6</td>
-            <td><span class="what">Dexie object stores</span><span class="sub"><code>tasks</code>, <code>archivedTasks</code> hold the full <code>TaskRecord</code> &mdash; free-text fields persisted, indexes prove plaintext</span></td>
+            <td><span class="what">Dexie object stores</span><span class="sub"><code>tasks</code>, <code>archivedTasks</code>, and <code>deletedTasks</code> (Trash) hold the full <code>TaskRecord</code> &mdash; free-text fields persisted, indexes prove plaintext</span></td>
             <td>persist at rest</td>
             <td class="content-yes">Content</td>
             <td><span class="ztag z-device">on-device</span></td>
@@ -343,7 +347,7 @@
           </tr>
           <tr>
             <td>8</td>
-            <td><span class="what">Archive</span><span class="sub"><code>db.archivedTasks.bulkAdd</code> + <code>db.tasks.bulkDelete</code></span></td>
+            <td><span class="what">Archive</span><span class="sub"><code>db.archivedTasks.bulkPut</code> + <code>db.tasks.bulkDelete</code></span></td>
             <td>write IndexedDB</td>
             <td class="content-yes">Content</td>
             <td><span class="ztag z-device">on-device</span></td>
@@ -359,7 +363,7 @@
           </tr>
           <tr>
             <td>10</td>
-            <td><span class="what">JSON export</span><span class="sub"><code>JSON.stringify</code> all tasks &rarr; <code>Blob</code> &rarr; <code>&lt;a download&gt;</code>. No upload &mdash; local file save only</span></td>
+            <td><span class="what">JSON export</span><span class="sub"><code>JSON.stringify</code> live, archived, and trashed tasks plus smart views and settings &rarr; <code>Blob</code> &rarr; <code>&lt;a download&gt;</code>. No upload &mdash; local file save only</span></td>
             <td>export to file</td>
             <td class="content-yes">Content</td>
             <td><span class="ztag z-device">on-device</span></td>
@@ -367,7 +371,7 @@
           </tr>
           <tr>
             <td>11</td>
-            <td><span class="what">JSON import</span><span class="sub">native file picker &rarr; <code>file.text()</code> &rarr; <code>JSON.parse</code> &rarr; <code>db.tasks.bulkAdd</code></span></td>
+            <td><span class="what">JSON import</span><span class="sub">native file picker &rarr; <code>file.text()</code> &rarr; <code>importFromJson</code> writes tasks, archive, Trash, and smart views; a full restore also writes settings</span></td>
             <td>import from file</td>
             <td class="content-yes">Content</td>
             <td><span class="ztag z-device">on-device</span></td>
@@ -375,7 +379,7 @@
           </tr>
           <tr>
             <td>12</td>
-            <td><span class="what">Logger &rarr; console</span><span class="sub">logs a structured, secret-masked object; the only 6 <code>console.*</code> sites never interpolate task fields</span></td>
+            <td><span class="what">Logger &rarr; console</span><span class="sub">logs a structured object with secrets and task-content keys masked; the 6 <code>console.*</code> sites in <code>lib/</code> (4 here, 2 in <code>lib/error-logger.ts</code>) never interpolate task fields. The service worker (<code>public/sw.js</code>) has 2 more that bypass this logger and print an error name or error object</span></td>
             <td>log to console</td>
             <td class="content-no">No content</td>
             <td><span class="ztag z-device">on-device</span></td>
@@ -401,11 +405,11 @@
             <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/task-mapper.ts#L57">task-mapper.ts:57</a></td>
           </tr>
 
-          <tr><td colspan="6" style="background:#f7e8e3;color:#8c3422;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:7px 12px">Network / server &mdash; reached only on opt-in</td></tr>
+          <tr><td colspan="6" style="background:#f7e8e3;color:#8c3422;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;padding:7px 12px">Network / server: task content only on opt-in</td></tr>
 
           <tr>
             <td>15</td>
-            <td><span class="what">Sync field mapping</span><span class="sub"><code>taskRecordToPocketBase</code> maps 24 fields incl. title, description, tags, subtasks &mdash; all plaintext</span></td>
+            <td><span class="what">Sync field mapping</span><span class="sub"><code>taskRecordToPocketBase</code> maps every synced task field, incl. title, description, tags, subtasks, and time entries. The client sends them all as plaintext</span></td>
             <td>transmit (shape)</td>
             <td class="content-yes">Content</td>
             <td><span class="ztag z-net">network</span></td>
@@ -421,7 +425,7 @@
           </tr>
           <tr>
             <td>17</td>
-            <td><span class="what">Sync pull</span><span class="sub"><code>getFullList</code> returns full remote task records for the owner</span></td>
+            <td><span class="what">Sync pull</span><span class="sub">paged <code>getList</code> calls return full remote task records for the owner</span></td>
             <td>receive from server</td>
             <td class="content-yes">Content</td>
             <td><span class="ztag z-net">server</span></td>
@@ -437,7 +441,7 @@
           </tr>
           <tr>
             <td>19</td>
-            <td><span class="what">Sync opt-in gate</span><span class="sub"><code>config?.enabled || false</code> &mdash; off by default; nothing transmits until the user signs in</span></td>
+            <td><span class="what">Sync opt-in gate</span><span class="sub"><code>config?.enabled || false</code> &mdash; off by default; no task content transmits until the user signs in</span></td>
             <td>gate (off by default)</td>
             <td class="content-no">&mdash;</td>
             <td><span class="ztag z-net">network</span></td>
@@ -445,46 +449,38 @@
           </tr>
           <tr>
             <td>20</td>
-            <td><span class="what">OAuth login</span><span class="sub"><code>authWithOAuth2</code> (Google/GitHub); stores a JWT &mdash; no task content</span></td>
+            <td><span class="what">OAuth login</span><span class="sub"><code>authWithOAuth2Code</code> (Google, GitHub, or Apple); stores a JWT, and keeps the account id, email, and provider in the local sync config. No task content</span></td>
             <td>auth</td>
-            <td class="content-no">Token only</td>
+            <td class="content-no">Token &middot; account id &middot; email</td>
             <td><span class="ztag z-net">network</span></td>
             <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/pb-auth.ts#L140">pb-auth.ts:140</a></td>
           </tr>
           <tr>
             <td>21</td>
-            <td><span class="what">CSP egress allowlist</span><span class="sub"><code>connect-src</code> permits only api.vinny.io, Google, GitHub, *.ingest.us.sentry.io &mdash; blocks tracker origins</span></td>
+            <td><span class="what">CSP egress allowlist</span><span class="sub">the hosted site&rsquo;s <code>connect-src</code> permits only api.vinny.io, accounts.google.com, and github.com, so tracker origins are blocked. The host sends the policy as a response header. The self-hosted image allows only its own origin</span></td>
             <td>policy (enforced)</td>
             <td class="content-no">&mdash;</td>
             <td><span class="ztag z-net">network</span></td>
-            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/app/layout.tsx#L43">app/layout.tsx:43</a></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/main/config/csp.cjs">config/csp.cjs</a></td>
           </tr>
           <tr>
             <td>22</td>
-            <td><span class="what">Sentry capture</span><span class="sub">DSN-gated; sends error name/message/stack + allowlisted context to Sentry SaaS</span></td>
-            <td>transmit (errors)</td>
-            <td class="content-no">Gated</td>
+            <td><span class="what">Feedback form</span><span class="sub">a bare <code>fetch</code> POST to the sync server&rsquo;s <code>feedback</code> collection, with no auth token and no cookies. Sends the typed message, sentiment, category, roadmap votes, app version, a one-time submission id, and a timestamp. Needs no sign-in</span></td>
+            <td>transmit (user-sent)</td>
+            <td class="content-read">Typed message</td>
             <td><span class="ztag z-net">server</span></td>
-            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sentry.ts#L36">lib/sentry.ts:36</a></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/main/lib/feedback/submit-feedback.ts">feedback/submit-feedback.ts</a></td>
           </tr>
           <tr>
             <td>23</td>
-            <td><span class="what">Sentry content allowlist</span><span class="sub"><code>SENTRY_SAFE_METADATA_KEYS</code> &mdash; strips everything except ~18 diagnostic keys; task <code>input</code>/<code>record</code> dropped</span></td>
-            <td>gate (strips content)</td>
-            <td class="content-no">Diagnostic only</td>
-            <td><span class="ztag z-net">server</span></td>
-            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/logger.ts#L212">lib/logger.ts:212</a></td>
+            <td><span class="what">Preconnect hint</span><span class="sub"><code>&lt;link rel="preconnect"&gt;</code> to api.vinny.io on every page, with sync on or off. It opens a connection and sends no task data. The host is hard-coded, so a self-hosted build emits it too</span></td>
+            <td>connect (no payload)</td>
+            <td class="content-no">No content</td>
+            <td><span class="ztag z-net">network</span></td>
+            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/main/app/layout.tsx">app/layout.tsx</a></td>
           </tr>
           <tr>
             <td>24</td>
-            <td><span class="what flag">&#9888; Sentry allowlist bypass</span><span class="sub"><code>captureException(error, { ...loggedError })</code> goes <em>around</em> the logger allowlist &mdash; safe today by caller-discipline, not structurally</span></td>
-            <td>transmit (errors)</td>
-            <td class="content-read">Potential content</td>
-            <td><span class="ztag z-net">server</span></td>
-            <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/error-logger.ts#L59">error-logger.ts:59</a></td>
-          </tr>
-          <tr>
-            <td>25</td>
             <td><span class="what">MCP read</span><span class="sub">separate Node process fetches tasks from PocketBase over HTTPS (cannot read browser IndexedDB)</span></td>
             <td>receive from server</td>
             <td class="content-yes">Content</td>
@@ -492,7 +488,7 @@
             <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/packages/mcp-server/src/tools/list-tasks.ts#L52">mcp/list-tasks.ts:52</a></td>
           </tr>
           <tr>
-            <td>26</td>
+            <td>25</td>
             <td><span class="what">MCP transport</span><span class="sub"><code>JSON.stringify(tasks)</code> &rarr; stdio JSON-RPC &rarr; Claude Desktop &rarr; Anthropic model</span></td>
             <td>transmit to AI client</td>
             <td class="content-yes">Content</td>
@@ -500,7 +496,7 @@
             <td><a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/packages/mcp-server/src/tools/handlers/read-handlers.ts#L86">mcp/read-handlers.ts:86</a></td>
           </tr>
           <tr>
-            <td>27</td>
+            <td>26</td>
             <td><span class="what">MCP write</span><span class="sub"><code>create_task</code>/<code>update_task</code> push content to PocketBase</span></td>
             <td>transmit to server</td>
             <td class="content-yes">Content</td>
@@ -519,7 +515,7 @@
 
       <div class="claim confirmed">
         <h3>Local-first <span class="verdict ok">Confirmed</span></h3>
-        <p class="code-note">IndexedDB is the system of record. The entire create &rarr; validate &rarr; persist &rarr; read loop is local Dexie calls with zero <code>fetch</code> in the path. On a fresh install with no sign-in, task content never leaves the browser.</p>
+        <p class="code-note">IndexedDB is the system of record. The entire create &rarr; validate &rarr; persist &rarr; read loop is local Dexie calls with zero <code>fetch</code> in the path. On a fresh install with no sign-in, task content never leaves the browser. Each page still preconnects to the hosted sync server, which sends no task data.</p>
         <ul>
           <li>Persistence is <code>db.tasks.add/put</code> only &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/tasks/crud/create.ts#L41">crud/create.ts:41</a></li>
           <li>Reads via local live query &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/use-tasks.ts#L18">use-tasks.ts:18</a></li>
@@ -529,13 +525,13 @@
 
       <div class="claim confirmed">
         <h3>No server-side storage of task content <span class="verdict ok">Confirmed</span> <span class="verdict warn">with one caveat</span></h3>
-        <p class="code-note">The shipped app has <strong>zero Next.js server touchpoints</strong> &mdash; no Server Actions, no <code>app/api</code> route handlers, no middleware. <code>output:&nbsp;'export'</code> makes a server runtime structurally impossible, and the build emits no server/edge functions. The app cannot store your content because it has no server to store it on.</p>
+        <p class="code-note">The shipped app has <strong>zero Next.js server touchpoints</strong> &mdash; no Server Actions, no <code>app/api</code> route handlers, no middleware. <code>output:&nbsp;'export'</code> makes a server runtime structurally impossible, and the build emits no server/edge functions. The Next.js app cannot store your content because it has no server runtime to store it on.</p>
         <ul>
-          <li><code>rg "use server"</code> &rarr; 0 real hits; <code>app/</code> is 10 <code>page</code>/<code>layout</code>/<code>error</code> files, no <code>route.ts</code>, no <code>middleware.ts</code></li>
+          <li><code>rg "use server"</code> &rarr; 0 real hits; <code>app/</code> holds 14 <code>page</code>, <code>layout</code>, <code>global-error</code>, and <code>not-found</code> files, no <code>route.ts</code>, no <code>middleware.ts</code></li>
           <li>Static export confirmed &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/next.config.ts#L8">next.config.ts:8</a></li>
         </ul>
         <div class="callout" style="margin-top:12px">
-          <strong>Caveat &mdash; the claim is scope-sensitive.</strong> When a user <em>opts into</em> cloud sync, full task content (title, notes, tags, subtasks) <strong>is stored as plaintext</strong> on the PocketBase backend at <code>api.vinny.io</code> (<a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/task-mapper.ts#L54">task-mapper.ts:54</a>), and the MCP server reads/writes it there. That is server-side storage &mdash; on a self-hosted server, opt-in, but real. Recommend the public claim read <em>&ldquo;no server storage unless you enable sync.&rdquo;</em>
+          <strong>Caveat &mdash; the claim is scope-sensitive.</strong> When a user <em>opts into</em> cloud sync, full task content (title, notes, tags, subtasks) <strong>is stored as plaintext</strong> on the PocketBase backend at <code>api.vinny.io</code> (<a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/sync/task-mapper.ts#L54">task-mapper.ts:54</a>), and the MCP server reads/writes it there. That is server-side storage: opt-in, but real, on a server run by GSD&rsquo;s developer, who has technical access to it (ADR 0016). The self-hosted Docker image encrypts task fields at rest instead. The about page now says no server receives your data by default.
         </div>
       </div>
 
@@ -543,19 +539,19 @@
         <h3>No third-party trackers <span class="verdict ok">Confirmed</span></h3>
         <p class="code-note">No Google Analytics/GTM, Plausible, Fathom, Vercel Analytics, Segment, PostHog, Mixpanel, Hotjar, or Pixel in source or dependencies. Fonts are self-hosted (no runtime Google Fonts). The CSP <code>connect-src</code> enforces this at the policy layer.</p>
         <ul>
-          <li>Egress allowlist is 4 origins only &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/app/layout.tsx#L43">app/layout.tsx:43</a></li>
-          <li><strong>Note:</strong> Sentry is present as <em>error telemetry</em> (not behavioral tracking) and is content-allowlist-gated; Google/GitHub are contacted only for OAuth. None profile usage.</li>
+          <li>The hosted egress allowlist is 3 external origins: api.vinny.io, accounts.google.com, and github.com. See <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/main/config/csp.cjs">config/csp.cjs</a></li>
+          <li><strong>Note:</strong> Sentry error telemetry was removed (ADR 0017). Errors now go to the local console only. Google, GitHub, and Apple are contacted only for OAuth sign-in. Sign-in opens the provider&rsquo;s page as a navigation, which <code>connect-src</code> does not govern. None profile usage.</li>
         </ul>
       </div>
 
       <div class="claim attention">
-        <h3>Stated in-app: &ldquo;End-to-end encrypted &middot; zero-knowledge&rdquo; <span class="verdict warn">Needs attention</span></h3>
-        <p class="code-note">This is the one place the UI <strong>contradicts the code.</strong> There is no application-level or E2E encryption anywhere &mdash; content is plaintext in IndexedDB and plaintext-over-TLS to the server. The marketing copy overstates the guarantee.</p>
+        <h3>Formerly stated in-app: &ldquo;End-to-end encrypted &middot; zero-knowledge&rdquo; <span class="verdict warn">Corrected in the app</span></h3>
+        <p class="code-note">The June 2026 review found the about page <strong>contradicted the code.</strong> The app&rsquo;s copy has since been corrected. There is still no end-to-end encryption: content is plaintext in IndexedDB and plaintext-over-TLS to the server.</p>
         <ul>
-          <li><span class="flag">&#9888;</span> &ldquo;End-to-end encrypted sync&hellip; the server never sees your data&rdquo; &mdash; false &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/about/features-section.tsx#L84">features-section.tsx:84</a></li>
-          <li>&ldquo;encrypted in transit&rdquo; is TLS-true but framed to imply more &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/about/privacy-section.tsx#L30">privacy-section.tsx:30</a></li>
-          <li>Stale <code>ENCRYPTION_PASSPHRASE</code> in MCP docs (no code reads it) &mdash; <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/components/about/mcp-section.tsx#L16">mcp-section.tsx:16</a></li>
-          <li>Secondary: route <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/d004f1f/lib/error-logger.ts#L59">error-logger.ts:59</a> through the Sentry allowlist so content-exclusion is structural, not by convention.</li>
+          <li>The cloud sync card now reads &ldquo;on a server run by GSD&rsquo;s developer. Sent over TLS, and other accounts can&rsquo;t see your tasks.&rdquo; See <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/main/components/about/features-section.tsx">features-section.tsx</a></li>
+          <li>The privacy section now says signing in uploads your tasks to that server, and that connections use TLS. See <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/main/components/about/privacy-section.tsx">privacy-section.tsx</a></li>
+          <li>The MCP config example lists only <code>GSD_POCKETBASE_URL</code> and <code>GSD_AUTH_TOKEN</code>. <code>ENCRYPTION_PASSPHRASE</code> is gone. See <a class="loc" href="https://github.com/vscarpenter/gsd-task-manager/blob/main/components/about/mcp-section.tsx">mcp-section.tsx</a></li>
+          <li>The Sentry path is gone (ADR 0017). <code>lib/error-logger.ts</code> writes to the local console only.</li>
         </ul>
       </div>
 
@@ -567,10 +563,11 @@
     <ol>
       <li>Six parallel read-only passes over the working tree at commit <code>d004f1f</code>: the write path (UI&rarr;state&rarr;IndexedDB), encryption, PocketBase sync, server touchpoints, analytics/telemetry/logging, and export/import + MCP.</li>
       <li>Load-bearing claims were spot-checked directly: <code>rg "use server"</code>, <code>find app -name route.*</code> and middleware globs (server touchpoints); crypto-term grep + <code>package.json</code> (no encryption); and verbatim reads of the stale about-page copy.</li>
-      <li>Every <span style="white-space:nowrap">file&nbsp;:&nbsp;line</span> link is pinned to <code>d004f1f</code>, so anchors stay accurate even as <code>main</code> moves on.</li>
+      <li>The original <span style="white-space:nowrap">file&nbsp;:&nbsp;line</span> links are pinned to <code>d004f1f</code>, so they show the code as reviewed.</li>
+      <li>On 2026-11-12 the text was checked against the current code and corrected. That pass removed the Sentry rows (ADR 0017), added the feedback form and the preconnect, and split hosted from self-hosted storage (ADR 0016). Its links point at <code>main</code> with no line number.</li>
     </ol>
     <p style="margin-top:14px">
-      <strong>Runtime caveats.</strong> Zones are static-analysis truths; at runtime the red zone is entered only by user action (enabling sync, configuring MCP). &ldquo;Encrypted at rest&rdquo; here means application-controlled encryption &mdash; browser/OS disk encryption and TLS still apply but are outside the app&rsquo;s control. The PocketBase backend is self-hosted; &ldquo;server&rdquo; means a server you (or the operator) run, not a third party.
+      <strong>Runtime caveats.</strong> Zones are static-analysis truths; at runtime task content enters the red zone only by user action (enabling sync, configuring MCP). The amber zone puts &ldquo;encrypted&rdquo; in quotes because the browser app adds no encryption of its own. Browser/OS disk encryption and TLS still apply but are outside the app&rsquo;s control. On gsd.vinny.dev the PocketBase backend is the hosted service at api.vinny.io, run by GSD&rsquo;s developer. You can run your own with the Docker image under <code>docker/</code>.
     </p>
   </footer>
 
