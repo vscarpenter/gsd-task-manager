@@ -81,7 +81,7 @@
       <div class="diagram">
     <svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="gsd-overview-title gsd-overview-desc">
       <title id="gsd-overview-title">How GSD Task Manager fits together</title>
-      <desc id="gsd-overview-desc">Architecture overview showing the GSD web app saving tasks to a local IndexedDB store in the browser, static hosting delivering the app through a service worker, and optional sync through an AWS-hosted PocketBase database shared with other devices and with an MCP server that answers Claude Desktop.</desc>
+      <desc id="gsd-overview-desc">Architecture overview showing the GSD web app saving tasks to a local IndexedDB store in the browser, static hosting delivering the app through a service worker, and optional sync through an AWS-hosted cloud database shared with other devices and with an MCP server that answers Claude Desktop.</desc>
       <defs>
         <marker id="ov-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6e6760"/></marker>
         <marker id="ov-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2c6680"/></marker>
@@ -171,13 +171,13 @@
       <text x="696" y="153" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Other devices</text>
       <text x="696" y="167" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">iOS · Android · browsers</text>
 
-      <!-- Node: AWS Database (optional) -->
+      <!-- Node: Cloud Database (optional) -->
       <rect x="616" y="224" width="160" height="64" rx="6" fill="#f4f1e9"/>
       <rect x="616" y="224" width="160" height="64" rx="6" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
       <rect x="624" y="230" width="32" height="12" rx="2" fill="transparent" stroke="rgba(33,30,26,0.22)" stroke-width="0.8"/>
       <text x="640" y="239" fill="#797368" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">SYNC</text>
-      <text x="696" y="260" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">AWS Database</text>
-      <text x="696" y="276" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">PocketBase · self-hosted</text>
+      <text x="696" y="260" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Cloud Database</text>
+      <text x="696" y="276" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">self-hosted on AWS</text>
 
       <!-- Node: MCP server (optional) -->
       <rect x="616" y="392" width="128" height="64" rx="6" fill="#f4f1e9"/>
@@ -218,7 +218,7 @@
       <text x="776" y="562" fill="#6e6760" font-size="8.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Sync / live</text>
     </svg>
       </div>
-      <figcaption>The web app saves every task to an IndexedDB store on the device. Static hosting delivers the app through a service worker so it keeps working offline. Sync through the AWS database, other devices, and the MCP server for Claude Desktop are all optional.</figcaption>
+      <figcaption>The web app saves every task to an IndexedDB store on the device. Static hosting delivers the app through a service worker so it keeps working offline. Sync through the cloud database, other devices, and the MCP server for Claude Desktop are all optional.</figcaption>
     </figure>
 
     <figure>
@@ -227,7 +227,7 @@
       <div class="diagram">
     <svg viewBox="0 0 1120 840" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="gsd-detail-title gsd-detail-desc">
       <title id="gsd-detail-title">GSD Task Manager in detail</title>
-      <desc id="gsd-detail-desc">Detailed architecture showing the web app internals (app shell, service worker, local IndexedDB store, backup, sync engine, sign-in), AWS hosting through CloudFront, S3, edge functions and the agent-discovery files, the AWS-hosted PocketBase database as the sync hub, third-party OAuth providers, the MCP server and Claude Desktop, and the iOS and Android apps each with a local store and sync module.</desc>
+      <desc id="gsd-detail-desc">Detailed architecture showing the web app internals (app shell, service worker, local IndexedDB store, backup, sync engine, sign-in), AWS hosting through CloudFront, S3, edge functions and the agent-discovery files, the AWS-hosted cloud database as the sync hub, third-party OAuth providers, the MCP server and Claude Desktop, and the iOS and Android apps each with a local store and sync module.</desc>
       <defs>
         <marker id="dt-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6e6760"/></marker>
         <marker id="dt-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2c6680"/></marker>
@@ -363,8 +363,8 @@
       <rect x="552" y="352" width="144" height="56" rx="6" fill="rgba(33,30,26,0.02)" stroke="rgba(33,30,26,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
       <rect x="560" y="358" width="20" height="12" rx="2" fill="transparent" stroke="rgba(33,30,26,0.22)" stroke-width="0.8"/>
       <text x="570" y="367" fill="#797368" font-size="7" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle" letter-spacing="0.08em">DB</text>
-      <text x="624" y="385" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">AWS Database</text>
-      <text x="624" y="399" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">PocketBase on EC2</text>
+      <text x="624" y="385" fill="#211e1a" font-size="12" font-weight="600" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="middle">Cloud Database</text>
+      <text x="624" y="399" fill="#6e6760" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace" text-anchor="middle">self-hosted on EC2</text>
       <rect x="856" y="352" width="144" height="56" rx="6" fill="#f4f1e9"/>
       <rect x="856" y="352" width="144" height="56" rx="6" fill="rgba(33,30,26,0.03)" stroke="rgba(33,30,26,0.30)" stroke-width="1"/>
       <rect x="864" y="358" width="24" height="12" rx="2" fill="transparent" stroke="rgba(33,30,26,0.22)" stroke-width="0.8"/>
@@ -440,7 +440,7 @@
       <text x="780" y="794" fill="#6e6760" font-size="8.5" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" text-anchor="start">Sync / async</text>
     </svg>
       </div>
-      <figcaption>Web app internals on the left, AWS hosting and the PocketBase database in the middle, third-party services and the Claude Desktop assistant on the right, and the two native apps along the bottom. Every client keeps its own on-device store and syncs through the same database.</figcaption>
+      <figcaption>Web app internals on the left, AWS hosting and the cloud database in the middle, third-party services and the Claude Desktop assistant on the right, and the two native apps along the bottom. Every client keeps its own on-device store and syncs through the same database.</figcaption>
     </figure>
 
     <p class="colophon">GSD Task Manager · diagram-design · GSD Editorial profile · 2026-09-07</p>
