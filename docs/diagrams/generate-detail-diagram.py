@@ -1,7 +1,7 @@
 """Regenerate the detail architecture diagram inside docs/diagrams/architecture.html.
 
 The overview figure in that file is hand-authored SVG and is left alone. The
-detail figure (22 nodes, four zones) is emitted from the tables below and
+detail figure (20 nodes, four zones) is emitted from the tables below and
 spliced over the second <svg> block in place, so edits are a matter of changing
 a tuple and re-running:
 
@@ -45,7 +45,6 @@ NODES = [
     ("sw", 256, 112, 144, 56, "store", "PWA", "Service worker", "3 caches · offline"),
     ("store", 56, 192, 144, 56, "focal", "DATA", "Local store", "Dexie · IndexedDB"),
     ("backup", 56, 272, 144, 56, "backend", "FILE", "Backup", "JSON export · import"),
-    ("errors", 256, 272, 144, 56, "backend", "LOG", "Error reporting", "content redacted"),
     ("sync", 256, 352, 144, 56, "backend", "SYNC", "Sync engine", "queue · retry · realtime"),
     ("signin", 256, 432, 144, 56, "backend", "AUTH", "Sign-in", "Google · GitHub · Apple"),
     ("cf", 456, 112, 144, 56, "external", "CDN", "CloudFront", "gsd.vinny.dev"),
@@ -53,9 +52,8 @@ NODES = [
     ("edge", 456, 192, 144, 56, "backend", "FN", "Edge functions", "URL rewrite · headers"),
     ("agent", 648, 192, 144, 56, "backend", "API", "Agent discovery", "/.well-known · MCP card"),
     ("db", 552, 352, 144, 56, "optional", "DB", "AWS Database", "PocketBase on EC2"),
-    ("sentry", 856, 272, 144, 56, "external", "EXT", "Sentry", "error monitoring"),
     ("oauth", 856, 352, 144, 56, "external", "EXT", "OAuth providers", "Google · GitHub · Apple"),
-    ("mcp", 856, 448, 144, 56, "optional", "MCP", "MCP server", "stdio · 19 tools"),
+    ("mcp", 856, 448, 144, 56, "optional", "MCP", "MCP server", "stdio · 20 tools"),
     ("claude", 856, 528, 144, 56, "external", "AI", "Claude Desktop", "natural language"),
     ("ios", 72, 640, 128, 56, "backend", "IOS", "iOS app", "SwiftUI · GSDKit"),
     ("iosstore", 240, 640, 128, 56, "store", "DATA", "iOS local store", "GRDB · SQLite"),
@@ -69,7 +67,7 @@ NODES = [
 ZONES = [
     (40, 72, 376, 440, "WEB APP · BROWSER"),
     (440, 72, 368, 360, "AWS · HOSTING & BACKEND"),
-    (840, 232, 176, 368, "OTHER SERVICES · YOUR COMPUTER"),
+    (840, 312, 176, 288, "OTHER SERVICES · YOUR COMPUTER"),
     (56, 600, 1000, 128, "NATIVE APPS · iOS & ANDROID"),
 ]
 
@@ -86,7 +84,6 @@ ARROWS = [
     ("M 400,380 H 552", "muted", 1.0, True),  # sync -> db          SYNC · LIVE
     ("M 400,460 H 576 Q 584,460 584,452 V 408", "link", 1.2, False),  # signin -> db  OAUTH
     ("M 696,380 H 856", "link", 1.2, False),  # db -> oauth         IDENTITY
-    ("M 400,300 H 856", "muted", 1.0, True),  # errors -> sentry    REDACTED
     ("M 856,492 H 656 Q 648,492 648,484 V 408", "link", 1.2, False),  # mcp -> db     API
     ("M 928,528 V 504", "muted", 1.2, False),  # claude -> mcp       ASKS
     ("M 200,668 H 240", "muted", 1.2, False),  # ios -> iosstore
@@ -110,7 +107,6 @@ LABELS = [
     ("SYNC · LIVE", 476, 360, 64, "muted"),
     ("OAUTH", 488, 440, 40, "link"),
     ("IDENTITY", 776, 360, 56, "link"),
-    ("REDACTED", 628, 280, 48, "muted"),
     ("API", 756, 472, 28, "link"),
     ("ASKS", 952, 510, 32, "muted"),
     ("SYNC", 452, 560, 32, "muted"),
@@ -144,7 +140,7 @@ def render():
     out = []
     out.append('    <svg viewBox="0 0 1120 840" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="gsd-detail-title gsd-detail-desc">')
     out.append("      <title id=\"gsd-detail-title\">GSD Task Manager in detail</title>")
-    out.append("      <desc id=\"gsd-detail-desc\">Detailed architecture showing the web app internals (app shell, service worker, local IndexedDB store, backup, sync engine, sign-in, error reporting), AWS hosting through CloudFront, S3, edge functions and the agent-discovery files, the AWS-hosted PocketBase database as the sync hub, third-party OAuth providers, Sentry, the MCP server and Claude Desktop, and the iOS and Android apps each with a local store and sync module.</desc>")
+    out.append("      <desc id=\"gsd-detail-desc\">Detailed architecture showing the web app internals (app shell, service worker, local IndexedDB store, backup, sync engine, sign-in), AWS hosting through CloudFront, S3, edge functions and the agent-discovery files, the AWS-hosted PocketBase database as the sync hub, third-party OAuth providers, the MCP server and Claude Desktop, and the iOS and Android apps each with a local store and sync module.</desc>")
     out.append("      <defs>")
     for role, mid in MARK.items():
         out.append(f'        <marker id="{mid}" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="{STROKE[role]}"/></marker>')
