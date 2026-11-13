@@ -51,7 +51,7 @@ NODES = [
     ("s3", 648, 112, 144, 56, "store", "S3", "S3 bucket", "static export"),
     ("edge", 456, 192, 144, 56, "backend", "FN", "Edge functions", "URL rewrite · headers"),
     ("agent", 648, 192, 144, 56, "backend", "API", "Agent discovery", "/.well-known · MCP card"),
-    ("db", 552, 352, 144, 56, "optional", "DB", "AWS Database", "PocketBase on EC2"),
+    ("db", 552, 352, 144, 56, "optional", "DB", "Cloud Database", "self-hosted on EC2"),
     ("oauth", 856, 352, 144, 56, "external", "EXT", "OAuth providers", "Google · GitHub · Apple"),
     ("mcp", 856, 448, 144, 56, "optional", "MCP", "MCP server", "stdio · 20 tools"),
     ("claude", 856, 528, 144, 56, "external", "AI", "Claude Desktop", "natural language"),
@@ -140,7 +140,7 @@ def render():
     out = []
     out.append('    <svg viewBox="0 0 1120 840" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="gsd-detail-title gsd-detail-desc">')
     out.append("      <title id=\"gsd-detail-title\">GSD Task Manager in detail</title>")
-    out.append("      <desc id=\"gsd-detail-desc\">Detailed architecture showing the web app internals (app shell, service worker, local IndexedDB store, backup, sync engine, sign-in), AWS hosting through CloudFront, S3, edge functions and the agent-discovery files, the AWS-hosted PocketBase database as the sync hub, third-party OAuth providers, the MCP server and Claude Desktop, and the iOS and Android apps each with a local store and sync module.</desc>")
+    out.append("      <desc id=\"gsd-detail-desc\">Detailed architecture showing the web app internals (app shell, service worker, local IndexedDB store, backup, sync engine, sign-in), AWS hosting through CloudFront, S3, edge functions and the agent-discovery files, the AWS-hosted cloud database as the sync hub, third-party OAuth providers, the MCP server and Claude Desktop, and the iOS and Android apps each with a local store and sync module.</desc>")
     out.append("      <defs>")
     for role, mid in MARK.items():
         out.append(f'        <marker id="{mid}" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="{STROKE[role]}"/></marker>')
