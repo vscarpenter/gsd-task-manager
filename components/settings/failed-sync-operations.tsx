@@ -57,8 +57,8 @@ function FailureRow({ row, ownerId }: { row: SyncQueueItem & { label: string }; 
         <p className="break-words text-sm font-medium">{row.label}</p>
         <p className="break-words text-xs text-foreground-muted">{row.operation} · {row.lastError ?? 'Sync failed'} · {row.retryCount} attempts</p>
       </div>
-      <button type="button" disabled={busy} onClick={() => void recover('retry')} className="touch-target rounded border border-border px-3 py-2 text-sm disabled:opacity-50">Retry</button>
-      <button type="button" disabled={busy} onClick={() => void recover('dismiss')} className="touch-target rounded border border-border px-3 py-2 text-sm disabled:opacity-50">Dismiss</button>
+      <button type="button" aria-label={`Retry ${row.label}`} disabled={busy} onClick={() => void recover('retry')} className="touch-target rounded border border-border px-3 py-2 text-sm disabled:opacity-50">Retry</button>
+      <button type="button" aria-label={`Dismiss ${row.label}`} disabled={busy} onClick={() => void recover('dismiss')} className="touch-target rounded border border-border px-3 py-2 text-sm disabled:opacity-50">Dismiss</button>
     </li>
   );
 }

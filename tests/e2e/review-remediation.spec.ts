@@ -118,8 +118,8 @@ test.describe('failed sync recovery', () => {
     await page.goto('/settings#sync');
     const region = page.getByRole('region', { name: 'Failed sync operations' });
     await expect(region).toContainText(local.title);
-    await expect(region.getByRole('button', { name: 'Retry', exact: true })).toBeEnabled();
-    await region.getByRole('button', { name: 'Dismiss', exact: true }).click();
+    await expect(region.getByRole('button', { name: `Retry ${local.title}`, exact: true })).toBeEnabled();
+    await region.getByRole('button', { name: `Dismiss ${local.title}`, exact: true }).click();
     await expect(region).toHaveCount(0);
     expect(await stored(page, 'tasks', local.id)).toBeUndefined();
     expect(await stored(page, 'deletedTasks', local.id)).toMatchObject({ title: local.title });

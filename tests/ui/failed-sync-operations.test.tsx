@@ -29,6 +29,7 @@ describe('failed sync operations', () => {
     const region = await screen.findByRole('region', { name: /failed sync operations/i });
     expect(within(region).getByText('Read later')).toBeInTheDocument();
     expect(within(region).getByText(/validation_failed/)).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: 'Retry Read later' })).toBeInTheDocument();
     await userEvent.click(within(region).getByRole('button', { name: /retry/i }));
     await waitFor(() => expect(requestSync).toHaveBeenCalledWith('user'));
     expect((await getDb().syncQueue.toArray())[0].status).toBe('pending');
