@@ -1606,3 +1606,22 @@ Tier: Standard per PR. Every PR branched from `origin/main`, TDD, one concern ea
   - A skipped record is not re-fetched, so the archive-sweep gate holds for one pull only (noted in `lib/sync/sync-coordinator.ts`).
 - Blockers: none.
 - Assumptions: web and MCP version bumps and the MCP publish stay with Vinny; two PRs that each pass CI can still break `main` together, so run the full suite after a merge that touches the same mocks.
+
+# P1/P2 review remediation (2026-11-14)
+
+Non-trivial; owner approved review items 1–14 in chat. Branch `fix/review-p1-p2`.
+Contract and ordered plan: `tasks/spec-review-p1-p2-2026-11-14.md`.
+
+- [ ] A: import lifecycle, replace queue, remote validation, fresh execution state
+- [ ] B: atomic PocketBase mutations and web/MCP/system verification
+- [ ] C: deployment retention and cache metadata
+- [ ] D: palette, pending subtasks, timer controls, failed sync recovery
+- [ ] E: periodic reminder engine
+- [ ] F: bundle reductions and complete verification
+
+## Resuming From Here
+
+- Done: current sources and boundaries rechecked; scope authorized, spec and plan recorded.
+- Next: regressions for batch A, then implementation and independent batch commits.
+- Assumptions: prepare local fixes and backend-first rollout instructions; live deployment
+  and remote publication remain separate actions. P3 focus restoration is not requested.
