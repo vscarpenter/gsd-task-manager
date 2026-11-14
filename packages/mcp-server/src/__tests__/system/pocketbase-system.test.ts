@@ -547,6 +547,41 @@ describeSystem('PocketBase authenticated system boundary', () => {
     }
   });
 
+  it('atomically rejects concurrent stale task updates and deletes', async () => {
+    const admin = new PocketBase(baseUrl);
+    await admin.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
+    await ensureUsersCollection(admin);
+    const user = await admin.collection('users').create({
+      email: 'conditional-owner@example.test', password: USER_PASSWORD,
+      passwordConfirm: USER_PASSWORD, verified: true,
+    });
+    const client = new PocketBase(baseUrl);
+    client.autoCancellation(false);
+    await client.collection('users').authWithPassword('conditional-owner@example.test', USER_PASSWORD);
+    const stamp = new Date().toISOString();
+    const record = await client.collection('tasks').create({
+      task_id: `atomic-${randomBytes(6).toString('hex')}`, owner: user.id,
+      title: 'Conditional original', quadrant: 'not-urgent-not-important',
+      client_updated_at: stamp, client_created_at: stamp,
+    });
+    const path = `/api/gsd/tasks/${record.id}`;
+    const writes = await Promise.allSettled(['First writer', 'Second writer'].map((title, i) => client.send(path, {
+      method: 'PATCH', body: { expected_version: stamp, data: {
+        title, client_updated_at: new Date(Date.parse(stamp) + i + 1).toISOString(),
+      } },
+    })));
+    expect(writes.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(writes.find((result) => result.status === 'rejected')).toMatchObject({ reason: { status: 412 } });
+    const updated = await client.collection('tasks').getOne(record.id);
+    expect(['First writer', 'Second writer']).toContain(updated.title);
+    await expect(client.send(path, { method: 'DELETE', body: { expected_version: stamp } })).rejects.toMatchObject({ status: 412 });
+    await expect(client.send(path, { method: 'PATCH', body: {
+      expected_version: updated.client_updated_at, data: { owner: 'different-owner' },
+    } })).rejects.toMatchObject({ status: 400 });
+    await client.send(path, { method: 'DELETE', body: { expected_version: updated.client_updated_at } });
+    await expect(client.collection('tasks').getOne(record.id)).rejects.toMatchObject({ status: 404 });
+  });
+
   it('proves MCP writes, owner isolation, realtime delivery, and ciphertext at rest', async () => {
     const unknownResponse = await handleToolCall('not_registered', {}, {
       pocketBaseUrl: baseUrl,
@@ -755,11 +790,10 @@ describeSystem('PocketBase authenticated system boundary', () => {
       const appPort = await availablePort();
       const appUrl = `http://127.0.0.1:${appPort}`;
       appProcess = spawn(
-        'bun',
+        process.execPath,
         [
-          'run',
-          'dev:e2e',
-          '--',
+          join(REPO_ROOT, 'node_modules/next/dist/bin/next'),
+          'dev', '--webpack',
           '--hostname',
           '127.0.0.1',
           '--port',

@@ -120,13 +120,14 @@ describe('deleteTask', () => {
 
     expect(result.dryRun).toBe(false);
     expect(result.dependenciesCleaned).toBe(1);
-    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-blocker');
+    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-blocker', expect.any(String));
     expect(helpers.updateTaskDependenciesInPBById).toHaveBeenCalledWith(
       config,
       'record-dependent',
       [],
       expect.any(String),
-      'device-1'
+      'device-1',
+      expect.any(String)
     );
   });
 
@@ -157,7 +158,7 @@ describe('deleteTask', () => {
 
     await deleteTask(config, 'blank-stamp', { dryRun: false });
 
-    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-blank-stamp');
+    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-blank-stamp', '');
   });
 
   it('refuses to delete a blank-stamp record that another device has since stamped', async () => {
@@ -263,7 +264,7 @@ describe('deleteTask', () => {
 
     const result = await deleteTask(config, 'blocker', { dryRun: false });
 
-    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-blocker');
+    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-blocker', expect.any(String));
     expect(helpers.updateTaskDependenciesInPBById).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       partial: true,
@@ -291,7 +292,8 @@ describe('deleteTask', () => {
       'record-dependent',
       ['fresh-dependency'],
       expect.any(String),
-      'device-1'
+      'device-1',
+      expect.any(String)
     );
   });
 
@@ -326,7 +328,7 @@ describe('deleteTask', () => {
 
     expect(result.partial).toBe(false);
     expect(helpers.fetchSinglePBTaskFresh).toHaveBeenCalledTimes(2);
-    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-standalone');
+    expect(helpers.deleteTaskInPBById).toHaveBeenCalledWith(config, 'record-standalone', expect.any(String));
   });
 
   it('refuses to delete a primary task changed after the fresh list snapshot', async () => {

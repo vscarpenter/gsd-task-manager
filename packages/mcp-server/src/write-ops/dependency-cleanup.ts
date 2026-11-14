@@ -58,7 +58,7 @@ async function cleanDependencySnapshot(
       const dependencies = current.dependencies.filter((id) => !deletedIds.has(id));
       if (dependencies.length !== current.dependencies.length) {
         await updateTaskDependenciesInPBById(
-          config, fresh.pbRecordId, dependencies, new Date().toISOString(), deviceId
+          config, fresh.pbRecordId, dependencies, new Date().toISOString(), deviceId, fresh.clientUpdatedAt
         );
       }
       return { kind: 'cleaned', taskId: snapshot.taskId };

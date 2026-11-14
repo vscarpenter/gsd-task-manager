@@ -141,7 +141,16 @@ const pb = {
   authStore: new BaseAuthStore(),
   collection,
   /** A raw request, as the session check posts to auth-refresh without saving the answer. */
-  send: async (path: string) => {
+  send: async (path: string, options?: { method?: string; body?: { expected_version?: string; data?: Record<string, unknown> } }) => {
+    if (path.startsWith('/api/gsd/tasks/')) {
+      const id = decodeURIComponent(path.split('/').pop()!);
+      const current = state.records.get(id);
+      if (!current || state.refused) throw notFound();
+      if (current.client_updated_at !== options?.body?.expected_version) {
+        throw Object.assign(new Error('Task changed'), { status: 412 });
+      }
+      return options?.method === 'DELETE' ? tasks.delete(id) : tasks.update(id, options?.body?.data ?? {});
+    }
     if (path !== AUTH_REFRESH_PATH) throw new Error(`Unexpected request: ${path}`);
     return authRefreshAnswer();
   },

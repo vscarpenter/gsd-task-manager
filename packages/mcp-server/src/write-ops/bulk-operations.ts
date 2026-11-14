@@ -168,10 +168,10 @@ async function processBulkTask(
         return { kind: 'conflict', taskId: task.id };
       }
       if (operation.type === 'delete') {
-        await deleteTaskInPBById(config, preflight.pbRecordId);
+        await deleteTaskInPBById(config, preflight.pbRecordId, preflight.clientUpdatedAt);
         return { kind: 'deleted', taskId: task.id };
       }
-      await updateTaskInPBById(config, preflight.pbRecordId, updated!, ownerId, deviceId);
+      await updateTaskInPBById(config, preflight.pbRecordId, updated!, ownerId, deviceId, preflight.clientUpdatedAt);
       const spawnFailed = !(await spawnNextInstance(config, task, operation, ownerId, deviceId));
       return { kind: 'updated', taskId: task.id, ...(spawnFailed && { spawnFailed }) };
     });

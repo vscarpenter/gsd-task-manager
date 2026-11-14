@@ -1612,16 +1612,17 @@ Tier: Standard per PR. Every PR branched from `origin/main`, TDD, one concern ea
 Non-trivial; owner approved review items 1–14 in chat. Branch `fix/review-p1-p2`.
 Contract and ordered plan: `tasks/spec-review-p1-p2-2026-11-14.md`.
 
-- [ ] A: import lifecycle, replace queue, remote validation, fresh execution state
-- [ ] B: atomic PocketBase mutations and web/MCP/system verification
-- [ ] C: deployment retention and cache metadata
+- [x] A: import lifecycle, replace queue, remote validation, fresh execution state
+- [x] B: atomic PocketBase mutations and web/MCP/system verification
+- [x] C: deployment retention and cache metadata
 - [ ] D: palette, pending subtasks, timer controls, failed sync recovery
 - [ ] E: periodic reminder engine
 - [ ] F: bundle reductions and complete verification
 
 ## Resuming From Here
 
-- Done: current sources and boundaries rechecked; scope authorized, spec and plan recorded.
-- Next: regressions for batch A, then implementation and independent batch commits.
+- Done: A and C committed; B passes web/MCP tests and the real PocketBase concurrency harness.
+  D and E implementations pass unit coverage; frontend production verification is next.
+- Next: build and unchanged bundle budgets, seeded browser regressions, CSP/PWA, final checks.
 - Assumptions: prepare local fixes and backend-first rollout instructions; live deployment
   and remote publication remain separate actions. P3 focus restoration is not requested.

@@ -2,6 +2,14 @@
 
 Run the full GSD Task Manager stack locally — static PWA, PocketBase sync backend, and HTTPS — in a single container.
 
+## Atomic write contract rollout
+
+New web and MCP clients require `pb_hooks/task_conditional_writes.pb.js` and
+`pb_hooks/task-write-contract.js` on the backend. This image includes both.
+For a separately hosted backend, install both hooks and restart PocketBase
+before releasing the clients. Missing routes refuse updates and deletes.
+See [ADR 0021](../docs/adr/0021-atomic-task-mutations.md).
+
 ## Quick Start
 
 ```bash

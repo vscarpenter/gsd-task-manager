@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => {
   };
   const users = { authRefresh: vi.fn() };
   const pb = {
+    send: vi.fn(async () => undefined),
     authStore: { token: 'token', record: { id: 'owner-1' } as { id: string } | null },
     collection: vi.fn((name: string) => (name === 'users' ? users : tasks)),
   };
@@ -134,6 +135,14 @@ describe('filter and identity helpers', () => {
 });
 
 describe('PocketBase mutation helpers', () => {
+  it('sends the caller snapshot as an atomic server precondition', async () => {
+    await updateTaskInPBById(config, 'record-2', task, 'owner-1', 'device-1', 'observed-v1');
+    expect(mocks.pb.send).toHaveBeenCalledWith('/api/gsd/tasks/record-2', {
+      method: 'PATCH', body: { expected_version: 'observed-v1', data: { mapped: true } },
+    });
+    expect(mocks.tasks.update).not.toHaveBeenCalled();
+  });
+
   it('creates mapped fields and invalidates the task cache', async () => {
     await createTaskInPB(config, task, 'owner-1', 'device-1');
 
@@ -143,35 +152,35 @@ describe('PocketBase mutation helpers', () => {
   });
 
   it('looks up, updates, and invalidates by client task id', async () => {
-    await updateTaskInPB(config, { ...task, id: 'quote"id' }, 'owner-1', 'device-1');
+    await updateTaskInPB(config, { ...task, id: 'quote"id' }, 'owner-1', 'device-1', 'observed-v1');
 
     expect(mocks.tasks.getFirstListItem).toHaveBeenCalledWith('task_id = "quote\\"id"');
-    expect(mocks.tasks.update).toHaveBeenCalledWith('record-1', { mapped: true });
+    expect(mocks.pb.send).toHaveBeenCalledWith('/api/gsd/tasks/record-1', { method: 'PATCH', body: { expected_version: 'observed-v1', data: { mapped: true } } });
     expect(mocks.invalidate).toHaveBeenCalledOnce();
   });
 
   it('deletes by client task id, maps only 404, and preserves retryable status errors', async () => {
-    await deleteTaskInPB(config, 'task-1');
-    expect(mocks.tasks.delete).toHaveBeenCalledWith('record-1');
+    await deleteTaskInPB(config, 'task-1', 'observed-v1');
+    expect(mocks.pb.send).toHaveBeenCalledWith('/api/gsd/tasks/record-1', { method: 'DELETE', body: { expected_version: 'observed-v1' } });
     expect(mocks.invalidate).toHaveBeenCalledOnce();
 
     mocks.tasks.getFirstListItem.mockRejectedValueOnce({ status: 404 });
-    await expect(deleteTaskInPB(config, 'missing')).rejects.toThrow(
+    await expect(deleteTaskInPB(config, 'missing', 'observed-v1')).rejects.toThrow(
       'Task not found in PocketBase: missing'
     );
     expect(mocks.confirmUsersPrincipal).toHaveBeenCalledWith(config);
 
     const rateLimited = { status: 429, response: { retryAfterMs: 2000 } };
     mocks.tasks.getFirstListItem.mockRejectedValueOnce(rateLimited);
-    await expect(deleteTaskInPB(config, 'rate-limited')).rejects.toBe(rateLimited);
+    await expect(deleteTaskInPB(config, 'rate-limited', 'observed-v1')).rejects.toBe(rateLimited);
   });
 
   it('updates and deletes by known record id without invalidating the batch cache', async () => {
-    await updateTaskInPBById(config, 'record-2', task, 'owner-1', 'device-1');
-    await deleteTaskInPBById(config, 'record-2');
+    await updateTaskInPBById(config, 'record-2', task, 'owner-1', 'device-1', 'observed-v1');
+    await deleteTaskInPBById(config, 'record-2', 'observed-v1');
 
-    expect(mocks.tasks.update).toHaveBeenCalledWith('record-2', { mapped: true });
-    expect(mocks.tasks.delete).toHaveBeenCalledWith('record-2');
+    expect(mocks.pb.send).toHaveBeenCalledWith('/api/gsd/tasks/record-2', { method: 'PATCH', body: { expected_version: 'observed-v1', data: { mapped: true } } });
+    expect(mocks.pb.send).toHaveBeenCalledWith('/api/gsd/tasks/record-2', { method: 'DELETE', body: { expected_version: 'observed-v1' } });
     expect(mocks.invalidate).not.toHaveBeenCalled();
   });
 
@@ -181,14 +190,15 @@ describe('PocketBase mutation helpers', () => {
       'record-2',
       ['dependency-1'],
       '2026-08-10T15:00:00.000Z',
-      'device-1'
+      'device-1',
+      'observed-v1'
     );
 
-    expect(mocks.tasks.update).toHaveBeenCalledWith('record-2', {
+    expect(mocks.pb.send).toHaveBeenCalledWith('/api/gsd/tasks/record-2', { method: 'PATCH', body: { expected_version: 'observed-v1', data: {
       dependencies: ['dependency-1'],
       client_updated_at: '2026-08-10T15:00:00.000Z',
       device_id: 'device-1',
-    });
+    } } });
     expect(mocks.invalidate).not.toHaveBeenCalled();
   });
 });
@@ -231,7 +241,7 @@ describe('fresh read helpers', () => {
     mocks.tasks.getFirstListItem.mockRejectedValue({ status: 404 });
 
     await expect(fetchSinglePBTaskFresh(config, 'task-1')).rejects.toBe(signIn);
-    await expect(deleteTaskInPB(config, 'task-1')).rejects.toBe(signIn);
+    await expect(deleteTaskInPB(config, 'task-1', 'observed-v1')).rejects.toBe(signIn);
     expect(mocks.tasks.delete).not.toHaveBeenCalled();
   });
 

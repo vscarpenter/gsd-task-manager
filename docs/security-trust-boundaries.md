@@ -20,6 +20,16 @@ operator guidance.
 | Runtime errors to the browser console | `lib/error-logger.ts`, `lib/logger.ts` | No error-reporting SDK; log to the local console only; mask credentials, tokens, and credential-bearing query values in metadata; keep task content out of the human-readable log line | `tests/data/error-logger.test.ts`, `tests/data/logger.test.ts`, `tests/data/security-headers-policy.test.ts` |
 | Requests to the PWA cache | `public/sw.js`, `lib/sw-cache-logic.ts` | Pass through cross-origin, authenticated, non-GET, API, admin, and no-store requests, except the share-target POST the worker answers itself; never persist capture fragments; rotate page/runtime caches by release | `tests/data/sw-cache-logic.test.ts`, `tests/data/service-worker-privacy.test.ts`, `tests/data/service-worker-offline.test.ts` |
 
+## Atomic task mutations
+
+Web and MCP updates/deletes use the owner-checked, transactional route in
+`docker/pb_hooks/task_conditional_writes.pb.js` and `task-write-contract.js`.
+The expected version is compared inside the same transaction that validates
+and saves/deletes the record. Missing hooks fail closed. Deployment order and
+legacy-client limits are documented in `docs/adr/0021-atomic-task-mutations.md`.
+Negative coverage: `tests/pb/conditional-writes-pocketbase-adapter.test.ts` and
+the real concurrent/stale-delete system test in the MCP workspace.
+
 ## Change rule
 
 When adding an entry point to any boundary above, update this map and add a

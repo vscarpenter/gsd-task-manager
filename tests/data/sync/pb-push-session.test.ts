@@ -44,9 +44,9 @@ function makeTask(id: string): TaskRecord {
 }
 
 interface FakeServer {
-  create: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-  remove: ReturnType<typeof vi.fn>;
+  create: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
+  update: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
+  remove: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
 }
 
 /** Runs while a request is in flight, before the server answers. */
@@ -66,7 +66,12 @@ function serveAsUserOne(onCreate?: InFlight, onRemove?: InFlight): FakeServer {
   };
   (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
     authStore: { token: 'token-1', clear: vi.fn() },
-    send: vi.fn(async () => ({ record: { id: 'user-1' } })),
+    send: vi.fn(async (path: string, options?: { method?: string; body?: { data?: unknown } }) => {
+      if (path.startsWith('/api/gsd/tasks/')) {
+        return options?.method === 'DELETE' ? server.remove() : server.update(path.split('/').pop(), options?.body?.data);
+      }
+      return { record: { id: 'user-1' } };
+    }),
     collection: () => ({ create: server.create, update: server.update, delete: server.remove }),
   });
   return server;

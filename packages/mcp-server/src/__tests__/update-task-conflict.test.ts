@@ -55,6 +55,12 @@ function pbRecord(
   };
 }
 
+function conditionalSend(path: string, options: { method: string; body: { data: Record<string, unknown> } }) {
+  const id = path.split('/').pop()!;
+  const tasks = pbClient.getPocketBase(config).collection('tasks');
+  return options.method === 'DELETE' ? tasks.delete(id) : tasks.update(id, options.body.data);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(pbClient, 'requireUsersPrincipal').mockImplementation(async (currentConfig) => ({
@@ -78,6 +84,7 @@ describe('updateTask conflict detection', () => {
       );
 
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
+      send: vi.fn(conditionalSend),
       collection: () => ({ getFirstListItem, update: updateSpy, create: vi.fn() }),
       authStore: {
         record: { id: 'user-1', collectionName: 'users' },
@@ -102,6 +109,7 @@ describe('updateTask conflict detection', () => {
       .mockResolvedValueOnce(pbRecord('t1', stable));
 
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
+      send: vi.fn(conditionalSend),
       collection: () => ({ getFirstListItem, update: updateSpy, create: vi.fn() }),
       authStore: {
         record: { id: 'user-1', collectionName: 'users' },
@@ -129,6 +137,7 @@ describe('updateTask conflict detection', () => {
       .mockRejectedValueOnce(notFound);
 
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
+      send: vi.fn(conditionalSend),
       collection: () => ({ getFirstListItem, update: updateSpy, create: vi.fn() }),
       authStore: {
         record: { id: 'user-1', collectionName: 'users' },
@@ -155,6 +164,7 @@ describe('updateTask conflict detection', () => {
       .mockRejectedValueOnce(serverErr);
 
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
+      send: vi.fn(conditionalSend),
       collection: () => ({ getFirstListItem, update: updateSpy, create: vi.fn() }),
       authStore: {
         record: { id: 'user-1', collectionName: 'users' },
@@ -195,6 +205,7 @@ describe('bulkUpdateTasks conflict detection', () => {
       .mockResolvedValueOnce(preflightB);
 
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
+      send: vi.fn(conditionalSend),
       collection: () => ({
         getFullList,
         getFirstListItem,
@@ -239,6 +250,7 @@ describe('bulkUpdateTasks conflict detection', () => {
       .mockRejectedValueOnce(notFound);
 
     vi.spyOn(pbClient, 'getPocketBase').mockReturnValue({
+      send: vi.fn(conditionalSend),
       collection: () => ({
         getFullList,
         getFirstListItem,

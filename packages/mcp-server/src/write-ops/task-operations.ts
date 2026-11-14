@@ -316,7 +316,7 @@ async function applyUpdate(
   // their change.
   const { ownerId, deviceId } = await getAuthInfo(config);
   const preflight = await assertFreshUpdatePreflight(config, input, fresh.clientUpdatedAt);
-  await updateTaskInPBById(config, preflight.pbRecordId, updatedTask, ownerId, deviceId);
+  await updateTaskInPBById(config, preflight.pbRecordId, updatedTask, ownerId, deviceId, preflight.clientUpdatedAt);
   // updateTaskInPBById skips the cache invalidation done in updateTaskInPB, so
   // invalidate here explicitly (matches the contract callers expect).
   getTaskCache().invalidate();
@@ -382,7 +382,7 @@ async function deletePrimaryTask(
     if (freshStamp !== task.updatedAt) {
       throw new ConflictError(task.id, task.updatedAt, freshStamp);
     }
-    await deleteTaskInPBById(config, fresh.pbRecordId);
+    await deleteTaskInPBById(config, fresh.pbRecordId, fresh.clientUpdatedAt);
   });
   getTaskCache().invalidate();
 }
