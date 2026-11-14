@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { OPEN_SYNC_EVENT } from "@/components/sync/open-sync-event";
-import { Onboarding } from "./onboarding";
+import dynamic from "next/dynamic";
+
+const Onboarding = dynamic(() => import('./onboarding').then((module) => module.Onboarding));
 
 /** localStorage flag marking the welcome tour as seen. */
 export const ONBOARDING_SEEN_KEY = "gsd-onboarding-seen";
@@ -87,5 +89,5 @@ export function OnboardingGate() {
     window.dispatchEvent(new Event(OPEN_SYNC_EVENT));
   };
 
-  return <Onboarding open={open} onClose={close} onSignIn={signIn} />;
+  return open ? <Onboarding open onClose={close} onSignIn={signIn} /> : null;
 }

@@ -70,11 +70,8 @@ test.describe("Today strip at phone width", () => {
 
   test("fits the screen with three picks and logs no errors", async ({ page, clearIndexedDB }) => {
     void clearIndexedDB;
-    const errors: string[] = [];
-    page.on("console", (message) => {
-      if (message.type() === "error") errors.push(message.text());
-    });
-    page.on("pageerror", (error) => errors.push(error.message));
+    // The automatic runtimeErrors fixture checks both channels and recognizes
+    // Firefox's canceled local-font requests during navigation.
     const matrix = new MatrixPage(page);
     await matrix.goto();
     for (const title of ["Plan the launch with the whole team", "Book the venue", "Send the invites"]) {
@@ -90,6 +87,5 @@ test.describe("Today strip at phone width", () => {
     expect(overflows).toBe(false);
     await expect(page.getByRole("menuitem")).toHaveCount(0);
     await strip.screenshot({ path: process.env.TODAY_STRIP_SHOT ?? "test-results/today-strip-390.png" });
-    expect(errors).toEqual([]);
   });
 });

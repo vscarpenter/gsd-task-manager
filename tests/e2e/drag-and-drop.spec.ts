@@ -348,6 +348,9 @@ test.describe("Drag and Drop Between Quadrants", () => {
 async function keyboardDragOut(page: Page, dragHandle: Locator) {
   const overOtherQuadrant = page.getByText(/Over (Do First|Schedule|Delegate)\./);
 
+  // The sensor measures card rectangles when lifting. Wait for final font
+  // metrics so a late swap cannot move the destination after that measurement.
+  await page.evaluate(async () => { await document.fonts.ready; });
   await dragHandle.focus();
   await page.keyboard.press("Space");
   await expect(page.locator("[data-testid='drag-overlay']")).toBeVisible();
@@ -360,7 +363,8 @@ async function keyboardDragOut(page: Page, dragHandle: Locator) {
   // steps needed depend on sub-pixel card geometry: a 2px change to the drag
   // handle's box was enough to flip this test red without touching drag at all.
   for (let press = 0; press < 8; press += 1) {
-    await page.keyboard.press("ArrowUp");
+    // Pinned and scrolling layouts expose different neighboring drop targets.
+    await page.keyboard.press(["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"][press % 4]);
     const crossed = await overOtherQuadrant
       .first()
       .waitFor({ state: "attached", timeout: 500 })

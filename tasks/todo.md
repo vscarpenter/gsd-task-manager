@@ -1617,14 +1617,16 @@ Contract and ordered plan: `tasks/spec-review-p1-p2-2026-11-14.md`.
 - [x] C: deployment retention and cache metadata
 - [x] D: palette, pending subtasks, timer controls, failed sync recovery
 - [x] E: periodic reminder engine
-- [ ] F: bundle reductions and complete verification
+- [x] F: bundle reductions and complete verification
 
 ## Resuming From Here
 
-- Done: A and C committed; B passes web/MCP tests and the real PocketBase concurrency harness.
-  D passed all 15 targeted production-browser checks across Chromium, Firefox and WebKit.
-  E passes worker unit and real Chromium worker checks, including delivery-state and dedup.
-  Full production browser suite passed: 540 tests, 24 expected skips.
-- Next: build and unchanged bundle budgets, seeded browser regressions, CSP/PWA, final checks.
+- Done: all 14 P1/P2 findings implemented and locally verified. App 4,973 tests; MCP
+  544 tests; PocketBase seven system tests; production browser suite 540 passed,
+  24 declared skips. Final affected browser suites: 25 passed, two skips.
+  Build, unchanged budgets, CSP/PWA, types, lint, shape, knip and dependency checks pass.
+- Next: no implementation work remains for this request. Backend-first rollout
+  requires a separately authorized deployment.
+- Resolution/evidence: `tasks/review-p1-p2-resolution-2026-11-14.md`.
 - Assumptions: prepare local fixes and backend-first rollout instructions; live deployment
   and remote publication remain separate actions. P3 focus restoration is not requested.

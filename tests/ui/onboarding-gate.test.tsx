@@ -19,9 +19,10 @@ describe("OnboardingGate", () => {
     pathname = "/";
   });
 
-  it("auto-opens for a first-time visitor on the app", () => {
+  it("auto-opens for a first-time visitor on the app", async () => {
     render(<OnboardingGate />);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    // Cold lazy imports also run through coverage instrumentation in the full suite.
+    expect(await screen.findByRole("dialog", {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it("does not auto-open once the tour has been seen", () => {
@@ -36,21 +37,21 @@ describe("OnboardingGate", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("re-opens when the replay event fires, even after being seen", () => {
+  it("re-opens when the replay event fires, even after being seen", async () => {
     localStorage.setItem(ONBOARDING_SEEN_KEY, "true");
     render(<OnboardingGate />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     act(() => {
       window.dispatchEvent(new Event(REPLAY_ONBOARDING_EVENT));
     });
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 
   it("dismisses an automatic first-run tour immediately when Skip is pressed", async () => {
     const user = userEvent.setup();
     render(<OnboardingGate />);
 
-    await user.click(screen.getByRole("button", { name: /skip/i }));
+    await user.click(await screen.findByRole("button", { name: /skip/i }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(localStorage.getItem(ONBOARDING_SEEN_KEY)).toBe("true");
@@ -60,6 +61,7 @@ describe("OnboardingGate", () => {
     const user = userEvent.setup();
     render(<OnboardingGate />);
 
+    await screen.findByRole("dialog");
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -69,10 +71,10 @@ describe("OnboardingGate", () => {
     const user = userEvent.setup();
     render(<OnboardingGate />);
 
-    await user.click(screen.getByRole("button", { name: /next/i }));
-    await user.click(screen.getByRole("button", { name: /next/i }));
-    await user.click(screen.getByRole("button", { name: /next/i }));
-    await user.click(screen.getByRole("button", { name: /start using gsd/i }));
+    await user.click(await screen.findByRole("button", { name: /next/i }));
+    await user.click(await screen.findByRole("button", { name: /next/i }));
+    await user.click(await screen.findByRole("button", { name: /next/i }));
+    await user.click(await screen.findByRole("button", { name: /start using gsd/i }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
@@ -94,7 +96,7 @@ describe("OnboardingGate", () => {
     const trigger = screen.getByRole("button", { name: /replay welcome tour/i });
 
     await user.click(trigger);
-    await user.click(screen.getByRole("button", { name: /skip/i }));
+    await user.click(await screen.findByRole("button", { name: /skip/i }));
 
     await waitFor(() => expect(trigger).toHaveFocus());
   });
@@ -106,9 +108,9 @@ describe("OnboardingGate", () => {
     render(<OnboardingGate />);
 
     for (let i = 0; i < 3; i++) {
-      await user.click(screen.getByRole("button", { name: /next/i }));
+      await user.click(await screen.findByRole("button", { name: /next/i }));
     }
-    await user.click(screen.getByRole("button", { name: /sign in to sync/i }));
+    await user.click(await screen.findByRole("button", { name: /sign in to sync/i }));
 
     window.removeEventListener(OPEN_SYNC_EVENT, opened);
     expect(opened).toHaveBeenCalledTimes(1);

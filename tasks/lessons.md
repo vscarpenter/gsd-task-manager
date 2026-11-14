@@ -470,3 +470,12 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **A zero-parameter `vi.fn(() => x)` types every call as an empty tuple**, so `mock.calls[0][0]` fails. Give the implementation the parameters its caller passes.
 - **Next's global types make `NODE_ENV` required on `ProcessEnv`** in any program that imports Next, tests included. A minimal child-process `env` has to carry it.
 - **TypeScript infers a JS function's options from its destructuring defaults.** `startStaticExportServer` lost `csp`, which has no default, until a JSDoc `@param` named it. Fix the JSDoc, not the test.
+
+## P1/P2 remediation (2026-11-14)
+
+- **A preflight is not a compare-and-write.** Keep the version check and mutation in one server transaction and use a dedicated route so old servers fail closed. Preserve model hooks when writing.
+- **A retry is not a new edit.** Read the current local task, replace queue IDs to invalidate captured snapshots, and preserve an old delete intent's timestamp. Explicit dismissal needs a durable copy of unsynced content.
+- **Test the actual worker, not just its pure rules.** The default Chromium headless shell denied notification permission despite a grant. The full Chromium headless channel exercised real APIs; assert permission first, and distinguish an accepted request from an OS notification-center UI.
+- **Publish the reset fence before waiting for the notification lock.** Otherwise an already-running worker can keep delivering while Reset Everything waits. A blocked DB open also needs to close a connection that arrives after abandonment.
+- **Check generated files under the CI runtime.** Bun 1.3.14 and 1.4.4 renamed shadowed locals differently. Explicit local names kept this worker byte-identical without adding a dependency.
+- **Measure every route after shared-code changes.** Sync code increased the auth callback's initial bundle even while optional Help code reduced the main routes. Keep budgets fixed and reduce eager work.

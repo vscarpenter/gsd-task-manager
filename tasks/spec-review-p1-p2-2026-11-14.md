@@ -1,6 +1,9 @@
 # P1/P2 review remediation — 2026-11-14
 
 Status: approved for implementation by the owner in this chat ("Let’s resolve all of the P1 and P2 items").
+Implementation: complete locally; verification and rollout prerequisites are recorded in
+`tasks/review-p1-p2-resolution-2026-11-14.md`.
+
 Tier: non-trivial: browser, MCP, PocketBase and deployment behavior change together.
 Base: main at 89ada2812a7062392bfea106bd4ee8bc375a5074.
 
