@@ -346,12 +346,12 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
     await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Edit from a fast clock' });
   });
 
-  // A retry-exhausted write never pushes, so holding off for it would split the device for good.
+  // Manual retry makes exhausted rows recoverable; retain the latest content for that retry.
   it.each([
     ['an ordinary pull', { mergeSameVersion: false }],
     ['a backfill', { mergeSameVersion: true }],
-  ] as const)("%s whose queued write is retry-exhausted doesn't hold off a far-future remote", async (_name, options) => {
-    await expect(pullFarFutureOver('failed', options)).resolves.toBe('Edit from a fast clock');
+  ] as const)("%s preserves a retry-exhausted edit against a far-future remote", async (_name, options) => {
+    await expect(pullFarFutureOver('failed', options)).resolves.toBe('Local edit');
   });
 
   it('a failed backfill pull pushes nothing and stamps nothing', async () => {

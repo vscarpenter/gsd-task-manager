@@ -1615,14 +1615,15 @@ Contract and ordered plan: `tasks/spec-review-p1-p2-2026-11-14.md`.
 - [x] A: import lifecycle, replace queue, remote validation, fresh execution state
 - [x] B: atomic PocketBase mutations and web/MCP/system verification
 - [x] C: deployment retention and cache metadata
-- [ ] D: palette, pending subtasks, timer controls, failed sync recovery
+- [x] D: palette, pending subtasks, timer controls, failed sync recovery
 - [ ] E: periodic reminder engine
 - [ ] F: bundle reductions and complete verification
 
 ## Resuming From Here
 
 - Done: A and C committed; B passes web/MCP tests and the real PocketBase concurrency harness.
-  D and E implementations pass unit coverage; frontend production verification is next.
+  D passed all 15 targeted production-browser checks across Chromium, Firefox and WebKit.
+  E passes worker unit tests; final complete-suite verification is running.
 - Next: build and unchanged bundle budgets, seeded browser regressions, CSP/PWA, final checks.
 - Assumptions: prepare local fixes and backend-first rollout instructions; live deployment
   and remote publication remain separate actions. P3 focus restoration is not requested.

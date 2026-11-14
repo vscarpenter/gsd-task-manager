@@ -2,7 +2,7 @@
 
 import { toast } from "sonner";
 
-import { createTask, toggleCompleted, deleteTask, snoozeTask, clearSnooze, updateTask, duplicateTask, moveTaskToQuadrant } from "@/lib/tasks";
+import { createTask, toggleCompleted, deleteTask, snoozeTask, clearSnooze, updateTask, duplicateTask, moveTaskToQuadrant, startTimeTracking, stopTimeTracking } from "@/lib/tasks";
 import { saveTaskForLater, returnSavedTask } from "@/lib/tasks/saved";
 import { celebrateCompletion } from "@/lib/confetti";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
@@ -33,6 +33,22 @@ export function reportTaskMutationError(
 
 // Pure capture/toggle handlers — they close over no component state, so they
 // live at module scope (stable identity for memoized children).
+export async function handleStartTimer(taskId: string): Promise<void> {
+  try {
+    await startTimeTracking(taskId);
+  } catch (error) {
+    reportTaskMutationError(error, "start_timer", "Failed to start timer", taskId);
+  }
+}
+
+export async function handleStopTimer(taskId: string): Promise<void> {
+  try {
+    await stopTimeTracking(taskId);
+  } catch (error) {
+    reportTaskMutationError(error, "stop_timer", "Failed to stop timer", taskId);
+  }
+}
+
 export async function handleCapture({ title, urgent, important, tags }: CapturePayload): Promise<TaskRecord | null> {
   try {
     const { cleanTitle, urls } = extractUrlsFromTitle(title);

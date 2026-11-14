@@ -101,7 +101,7 @@ export class HealthMonitor {
       type: 'failed_items',
       severity: 'error',
       message: `${failed.length} sync ${failed.length === 1 ? 'operation has' : 'operations have'} failed and need attention`,
-      suggestedAction: 'Review failed items in sync history. They will not retry automatically until cleared.',
+      suggestedAction: 'Open Settings → Cloud sync → Failed sync operations to retry or dismiss them.',
     };
   }
 

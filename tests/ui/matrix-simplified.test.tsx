@@ -60,6 +60,11 @@ vi.mock("@/lib/tasks", () => ({
   // completion, including the instance a recurring task spawns.
   toggleCompleted: vi.fn(async () => ({ task: null, recurringInstance: null })),
   updateTask: vi.fn(async () => undefined),
+  startTimeTracking: vi.fn(async () => undefined),
+  stopTimeTracking: vi.fn(async () => undefined),
+  hasRunningTimer: (task: TaskRecord) => task.timeEntries?.some((entry) => !entry.endedAt) ?? false,
+  getRunningEntry: (task: TaskRecord) => task.timeEntries?.find((entry) => !entry.endedAt),
+  formatTimeSpent: (minutes: number) => `${minutes}m`,
   deleteTask: vi.fn().mockResolvedValue(undefined),
   restoreTask: vi.fn().mockResolvedValue(undefined),
   snoozeTask: vi.fn().mockResolvedValue(undefined),
@@ -172,7 +177,7 @@ vi.mock("@/components/matrix-simplified/app-shell", () => ({
 }));
 
 import { MatrixSimplified } from "@/components/matrix-simplified";
-import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask, snoozeTask } from "@/lib/tasks";
+import { createTask, toggleCompleted, updateTask, deleteTask, restoreTask, snoozeTask, startTimeTracking, stopTimeTracking } from "@/lib/tasks";
 import { celebrateCompletion } from "@/lib/confetti";
 import { useAutoArchive } from "@/lib/use-auto-archive";
 import { useNotificationChecker } from "@/lib/use-notification-checker";
@@ -212,6 +217,18 @@ describe("<MatrixSimplified>", () => {
 
   // The app layout owns these timers. A second mount here would also stop the
   // app-wide reminder checker whenever the matrix unmounts.
+  it("wires start and stop timer controls through the actual matrix", async () => {
+    const task = makeTask({ id: "timed-task", estimatedMinutes: 30 });
+    tasksFixture.current = [task];
+    const { rerender } = render(<MatrixSimplified />);
+    await userEvent.click(screen.getByRole("button", { name: /start timer/i }));
+    expect(startTimeTracking).toHaveBeenCalledWith(task.id);
+    tasksFixture.current = [{ ...task, timeEntries: [{ id: "entry-1", startedAt: new Date().toISOString() }] }];
+    rerender(<MatrixSimplified />);
+    await userEvent.click(screen.getByRole("button", { name: /stop timer/i }));
+    expect(stopTimeTracking).toHaveBeenCalledWith(task.id);
+  });
+
   it("leaves reminders and the archive sweep to the app layout", () => {
     vi.mocked(useAutoArchive).mockClear();
     vi.mocked(useNotificationChecker).mockClear();
@@ -872,6 +889,9 @@ describe("<MatrixSimplified>", () => {
     );
     await revealCompleted();
     expect(screen.getByText("Done bravo")).toBeInTheDocument();
+    act(() => window.dispatchEvent(new CustomEvent("highlightTask", { detail: { taskId: "active" } })));
+    await waitFor(() => expect(screen.getByText("Active alpha")).toBeInTheDocument());
+    expect(screen.getByTestId("task-card")).toHaveClass("ring-4");
   });
 
   describe("show-completed preference", () => {

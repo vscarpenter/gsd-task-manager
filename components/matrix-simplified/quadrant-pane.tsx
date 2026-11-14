@@ -68,6 +68,8 @@ interface QuadrantPaneProps {
   onToggleComplete: (task: TaskRecord, completed: boolean) => void | Promise<void>;
   onDelete: (task: TaskRecord) => void | Promise<void>;
   onShare: (task: TaskRecord) => void;
+  onStartTimer?: (taskId: string) => Promise<void>;
+  onStopTimer?: (taskId: string) => Promise<void>;
   onSave?: (task: TaskRecord) => Promise<void> | void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onClearSnooze?: (taskId: string) => Promise<void>;
@@ -89,6 +91,7 @@ export function QuadrantPane({
   onToggleComplete,
   onDelete,
   onShare, onSnooze, onSave, onDuplicate, onMoveTo, onClearSnooze, onMarkUrgent,
+  onStartTimer, onStopTimer,
   onAddInQuadrant,
   highlightedTaskId,
   onTaskRef,
@@ -118,6 +121,7 @@ export function QuadrantPane({
     setShowCompletedHere(true);
   }
   const cardHandlers: CardHandlers = {
+    onStartTimer, onStopTimer,
     onEdit, onInspect, onDelete, onShare, onSnooze, onSave, onDuplicate, onMoveTo, onClearSnooze, onMarkUrgent, onToggleComplete, highlightedTaskId, onTaskRef,
   };
   return (
@@ -357,7 +361,7 @@ function CompletedDisclosure({
 
 type CardHandlers = Pick<
   QuadrantPaneProps,
-  "onEdit" | "onInspect" | "onDelete" | "onShare" | "onSnooze" | "onSave" | "onDuplicate" | "onMoveTo" | "onClearSnooze" | "onMarkUrgent" | "onToggleComplete" | "highlightedTaskId" | "onTaskRef"
+  "onEdit" | "onInspect" | "onDelete" | "onShare" | "onSnooze" | "onSave" | "onDuplicate" | "onMoveTo" | "onClearSnooze" | "onMarkUrgent" | "onToggleComplete" | "highlightedTaskId" | "onTaskRef" | "onStartTimer" | "onStopTimer"
 >;
 
 /** A run of task cards. Shared by the active list and the completed disclosure. */
@@ -381,6 +385,8 @@ function TaskCardList({
           onInspect={handlers.onInspect}
           onDelete={handlers.onDelete}
           onShare={handlers.onShare}
+          onStartTimer={handlers.onStartTimer}
+          onStopTimer={handlers.onStopTimer}
           onSnooze={handlers.onSnooze}
           onSave={handlers.onSave}
           onDuplicate={handlers.onDuplicate}

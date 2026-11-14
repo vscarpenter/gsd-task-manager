@@ -45,7 +45,7 @@ export function useDrawerSave({ task, draft, baseline, allTasks, onSubmit, setDe
     savingRef.current = true;
     setSaving(true);
     try {
-      const current = draft.toDraft();
+      const current = draft.toDraft(true);
       if (task) await onSubmit(current, task.id, changedDraftFields(baseline ?? current, current));
       else await onSubmit(current, undefined);
     } finally {

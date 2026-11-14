@@ -10,6 +10,7 @@ import { SettingsRow, SettingsSelectRow } from "./shared-components";
 import { SyncDangerZone } from "./sync-danger-zone";
 import { SyncAccountRow } from "./sync-account-row";
 import { SyncAuthTokenRow } from "./sync-auth-token-row";
+import { FailedSyncOperations } from "./failed-sync-operations";
 
 const logger = createLogger("UI");
 
@@ -161,11 +162,13 @@ export function SyncSettings({
 				<ChevronRightIcon className="w-4 h-4 text-foreground-muted/50" />
 			</button>
 
-			<SyncAccountRow />
-
-			<SyncAuthTokenRow />
+			<SyncAccountControls />
 
 			<SyncDangerZone onExport={onExport} onAccountDeleted={onAccountDeleted} />
 		</>
 	);
+}
+
+function SyncAccountControls() {
+	return <><SyncAccountRow /><SyncAuthTokenRow /><FailedSyncOperations /></>;
 }

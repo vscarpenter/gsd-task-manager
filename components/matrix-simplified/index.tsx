@@ -1,6 +1,6 @@
 "use client";
 
-import { handleSaveForLater, taskContext } from "./task-actions";
+import { handleSaveForLater, handleStartTimer, handleStopTimer, taskContext } from "./task-actions";
 
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { DndContext, closestCorners } from "@dnd-kit/core";
@@ -175,7 +175,7 @@ export function MatrixSimplified() {
 
   const { highlightedTaskId, handleTaskRef, highlightTaskById } = useTaskHighlight(
     visibleTasks,
-    clearSearch
+    handleClearFilter
   );
 
   const focusQuadrant = useCallback((key: RedesignQuadrantKey) => {
@@ -382,6 +382,8 @@ export function MatrixSimplified() {
             }}
             onDelete={handleDelete}
             onShare={handleShareOpen}
+            onStartTimer={handleStartTimer}
+            onStopTimer={handleStopTimer}
             onSnooze={handleSnooze} onSave={(task) => handleSaveForLater(task, handleSuccess).then((saved) => { if (saved) captureInputRef.current?.focus(); })} onDuplicate={handleDuplicate} onClearSnooze={handleClearSnooze} onMoveTo={(task, quadrant) => handleMoveTo(task, quadrant, handleSuccess).then(() => {})} onMarkUrgent={(task) => handleMarkUrgent(task, handleSuccess).then(() => {})}
             onAddInQuadrant={handleAddInQuadrant}
             highlightedTaskId={highlightedTaskId}

@@ -293,7 +293,7 @@ export function isBeyondClockSkew(iso: string | undefined, nowMs: number = Date.
 export async function holdsOffFarFutureRemote(rawUpdatedAt: string | undefined, taskId: string): Promise<boolean> {
   if (!isBeyondClockSkew(rawUpdatedAt)) return false;
   const rows = await getDb().syncQueue.where('taskId').equals(taskId).toArray();
-  return rows.some(isPendingSyncQueueItem);
+  return rows.some((row) => isPendingSyncQueueItem(row) || row.status === 'failed');
 }
 
 export function isRemoteNewerThanArchive(
