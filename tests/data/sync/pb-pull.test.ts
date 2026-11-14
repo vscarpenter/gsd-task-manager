@@ -136,7 +136,7 @@ describe('pullRemoteChanges cursor clamping', () => {
     mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
-        getList: vi.fn(async () => [pbRecord('t1', '3000-01-01T00:00:00.000Z')]),
+        getList: vi.fn(async () => [pbRecord('task1', '3000-01-01T00:00:00.000Z')]),
       }),
     });
 
@@ -151,7 +151,7 @@ describe('pullRemoteChanges cursor clamping', () => {
     mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
-        getList: vi.fn(async () => [pbRecord('t1', twoMinutesAhead)]),
+        getList: vi.fn(async () => [pbRecord('task1', twoMinutesAhead)]),
       }),
     });
 
@@ -160,7 +160,7 @@ describe('pullRemoteChanges cursor clamping', () => {
   });
 
   it('does not include invalid (un-applied) records in the cursor', async () => {
-    const badRecord = pbRecord('t1', '2099-12-31T00:00:00.000Z');
+    const badRecord = pbRecord('task1', '2099-12-31T00:00:00.000Z');
     badRecord.updated = '2099-12-31T00:00:00.000Z';
     // Force `pocketBaseToTaskRecord` to reject by stripping a required field.
     delete (badRecord as Record<string, unknown>).title;
@@ -168,7 +168,7 @@ describe('pullRemoteChanges cursor clamping', () => {
     mockPocketBase({
       collection: () => ({
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
-        getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
+        getList: vi.fn(async () => [badRecord, pbRecord('task2', '2026-05-18T00:00:00.000Z')]),
       }),
     });
 
@@ -180,11 +180,11 @@ describe('pullRemoteChanges cursor clamping', () => {
   });
 
   it('reports how many fetched records it could not apply', async () => {
-    const badRecord = pbRecord('t1', '2026-05-18T00:00:00.000Z');
+    const badRecord = pbRecord('task1', '2026-05-18T00:00:00.000Z');
     delete (badRecord as Record<string, unknown>).title;
     mockPocketBase({
       collection: () => ({
-        getList: vi.fn(async () => [badRecord, pbRecord('t2', '2026-05-18T00:00:00.000Z')]),
+        getList: vi.fn(async () => [badRecord, pbRecord('task2', '2026-05-18T00:00:00.000Z')]),
         authRefresh: vi.fn(async () => ({ record: { id: 'user-1' } })),
       }),
     });

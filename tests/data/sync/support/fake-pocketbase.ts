@@ -175,7 +175,7 @@ export const AUTH = { isLoggedIn: true, userId: 'user-1', email: 'one@example.co
 
 export function localRow(updatedAt: string, extra: Partial<TaskRecord> = {}): TaskRecord {
   return {
-    id: 't-a', title: 'Read later', description: '', urgent: false, important: true,
+    id: 'task-a', title: 'Read later', description: '', urgent: false, important: true,
     quadrant: 'not-urgent-important', completed: false, createdAt: CREATED, updatedAt,
     recurrence: 'none', tags: [], subtasks: [], dependencies: [], notificationEnabled: true,
     notificationSent: false, timeSpent: 0, timeEntries: [], ...extra,
@@ -184,7 +184,7 @@ export function localRow(updatedAt: string, extra: Partial<TaskRecord> = {}): Ta
 
 export function serverRow(overrides: Record<string, unknown> = {}): ServerRow {
   return {
-    id: 'rec_a', collectionId: 'tasks', collectionName: 'tasks', task_id: 't-a', owner: 'user-1',
+    id: 'rec_a', collectionId: 'tasks', collectionName: 'tasks', task_id: 'task-a', owner: 'user-1',
     title: 'Read later', description: '', urgent: false, important: true,
     quadrant: 'not-urgent-important', due_date: '', completed: false, completed_at: '',
     recurrence: 'none', tags: [], subtasks: [], dependencies: [], notification_enabled: true,
@@ -222,7 +222,7 @@ export async function seed(options: { config: PBSyncConfig; local?: TaskRecord[]
 }
 
 export const serverField = (field: string): unknown => state.records.get('rec_a')?.[field];
-export const localTask = async (): Promise<TaskRecord | undefined> => getDb().tasks.get('t-a');
+export const localTask = async (): Promise<TaskRecord | undefined> => getDb().tasks.get('task-a');
 export const storedVersion = async (): Promise<number | undefined> =>
   ((await getDb().syncMetadata.get('sync_config')) as PBSyncConfig | undefined)?.pullCursorVersion;
 /** True when any push sent `field` as `value`, such as saved_at as "". */

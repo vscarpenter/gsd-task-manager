@@ -176,13 +176,13 @@ describe("notification checker on a real database", () => {
 
 		it("should_remind_again_after_another_device_moves_the_due_date", async () => {
 			const firstDue = start.getTime() + 30 * MS_PER_MINUTE;
-			await getDb().tasks.put(createMockTask({ id: "t", dueDate: new Date(firstDue).toISOString(), notifyBefore: 15 }));
+			await getDb().tasks.put(createMockTask({ id: "task-t", dueDate: new Date(firstDue).toISOString(), notifyBefore: 15 }));
 			at(firstDue - 14 * MS_PER_MINUTE);
 			await notificationChecker.checkAndNotify();
 
 			// A pull applies the other device's edit through the mapper's merge.
 			const movedDue = new Date(firstDue + 2 * 24 * 60 * MS_PER_MINUTE).toISOString();
-			const local = await getDb().tasks.get("t");
+			const local = await getDb().tasks.get("task-t");
 			const remote = { ...taskRecordToPocketBase(local!, "owner", "other-device", 15), due_date: movedDue };
 			await getDb().tasks.put(pocketBaseToTaskRecord(remote as unknown as RecordModel, local)!);
 			at(Date.parse(movedDue) - 14 * MS_PER_MINUTE);
@@ -193,8 +193,8 @@ describe("notification checker on a real database", () => {
 
 		it("should_remind_at_the_reminder_time_after_a_snooze_that_ended_before_it", async () => {
 			const due = start.getTime() + 24 * 60 * MS_PER_MINUTE;
-			await getDb().tasks.put(createMockTask({ id: "t", dueDate: new Date(due).toISOString(), notifyBefore: 15 }));
-			await snoozeTask("t", 60);
+			await getDb().tasks.put(createMockTask({ id: "task-t", dueDate: new Date(due).toISOString(), notifyBefore: 15 }));
+			await snoozeTask("task-t", 60);
 			at(start.getTime() + 61 * MS_PER_MINUTE);
 			await notificationChecker.checkAndNotify();
 			const shownAtSnoozeEnd = shownCount();

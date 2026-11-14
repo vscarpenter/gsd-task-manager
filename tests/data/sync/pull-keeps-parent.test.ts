@@ -59,7 +59,7 @@ const OVERWRITES = [
 ] as const;
 
 async function expectEditedWithLink(): Promise<void> {
-  await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Edited elsewhere', parentTaskId: ROOT });
+  await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Edited elsewhere', parentTaskId: ROOT });
 }
 
 beforeEach(async () => {
@@ -81,7 +81,7 @@ describe.each(COPIES)('a newer server copy over %s', (_name, place) => {
 it('the resurrect step keeps the link on a task it brings back from Trash', async () => {
   // Trashed while signed out, after the server's last edit: the pull leaves it, the step brings it back.
   await getDb().deletedTasks.put({ ...toTrashedRecord(instance(SAVED)), deletedAt: NEWER });
-  await rememberForResurrect(['t-a']);
+  await rememberForResurrect(['task-a']);
 
   await fullSync('auto');
 
@@ -91,7 +91,7 @@ it('the resurrect step keeps the link on a task it brings back from Trash', asyn
 it('the resurrect step keeps the link when it takes a newer server copy over a live row', async () => {
   // Restored here while signed out: the step runs on its own so the pull can't overwrite the row first.
   await getDb().tasks.put(instance(OLDER));
-  await rememberForResurrect(['t-a']);
+  await rememberForResurrect(['task-a']);
 
   await resurrectOnSight('user-1');
 

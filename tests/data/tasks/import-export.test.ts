@@ -108,6 +108,8 @@ describe('Task Import/Export Operations', () => {
         toArray: vi.fn().mockResolvedValue([]),
         clear: vi.fn(),
         put: vi.fn(),
+        delete: vi.fn(),
+        bulkDelete: vi.fn(),
         toCollection: vi.fn(() => ({
           primaryKeys: vi.fn().mockResolvedValue([]),
         })),
@@ -117,6 +119,8 @@ describe('Task Import/Export Operations', () => {
         toArray: vi.fn().mockResolvedValue([]),
         clear: vi.fn(),
         put: vi.fn(),
+        delete: vi.fn(),
+        bulkDelete: vi.fn(),
         toCollection: vi.fn(() => ({
           primaryKeys: vi.fn().mockResolvedValue([]),
         })),
@@ -132,6 +136,7 @@ describe('Task Import/Export Operations', () => {
       archiveSettings: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
       appPreferences: { get: vi.fn().mockResolvedValue(undefined), put: vi.fn() },
       syncQueue: {
+        toArray: vi.fn().mockResolvedValue([]),
         add: vi.fn(),
         clear: vi.fn(),
       },
@@ -558,6 +563,7 @@ describe('Task Import/Export Operations', () => {
           mockDb.archiveSettings,
           mockDb.appPreferences,
           mockDb.syncQueue,
+          mockDb.syncMetadata,
         ],
         expect.any(Function)
       );

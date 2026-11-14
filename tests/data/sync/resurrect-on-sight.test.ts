@@ -66,20 +66,20 @@ describe('remembering', () => {
     if (hasConfig) await getDb().syncMetadata.put(signedOut(CURRENT));
     await getDb().tasks.add(localRow(SAVED));
 
-    await deleteTask('t-a');
+    await deleteTask('task-a');
 
-    await expect(remembered()).resolves.toEqual(['t-a']);
+    await expect(remembered()).resolves.toEqual(['task-a']);
     await expect(getSyncQueue().getPendingCount()).resolves.toBe(0);
   });
 
   // Sign-in rewrites the sync_config row from a fresh literal, so the ids need a key of their own.
   it('sign-in keeps the remembered ids', async () => {
     await seed({ config: signedOut(CURRENT), local: [localRow(SAVED)] });
-    await deleteTask('t-a');
+    await deleteTask('task-a');
 
     await persistSyncConfig(AUTH);
 
-    await expect(remembered()).resolves.toEqual(['t-a']);
+    await expect(remembered()).resolves.toEqual(['task-a']);
   });
 
   it('sign-out remembers the Trash deletes it clears from the queue', async () => {
@@ -98,13 +98,13 @@ describe('remembering', () => {
   it("an archive made while signed out stays archived and isn't remembered", async () => {
     await seed({ config: signedOut(CURRENT), local: [localRow(SAVED, { completed: true })], server: [serverRow({ saved_at: '' })] });
 
-    await archiveTaskNow('t-a');
+    await archiveTaskNow('task-a');
     await persistSyncConfig(AUTH);
     await fullSync('auto');
 
     await expect(remembered()).resolves.toEqual([]);
-    await expect(getDb().archivedTasks.get('t-a')).resolves.toBeDefined();
-    await expect(getDb().tasks.get('t-a')).resolves.toBeUndefined();
+    await expect(getDb().archivedTasks.get('task-a')).resolves.toBeDefined();
+    await expect(getDb().tasks.get('task-a')).resolves.toBeUndefined();
   });
 
   // S-WEB-05: an id matters only while its Trash row exists, so each way out forgets it.
@@ -112,12 +112,12 @@ describe('remembering', () => {
     beforeEach(async () => {
       await getDb().syncMetadata.put(signedOut(CURRENT));
       await getDb().tasks.bulkAdd([localRow(SAVED), localRow(SAVED, { id: 't-b' })]);
-      await deleteTask('t-a');
+      await deleteTask('task-a');
       await deleteTask('t-b');
     });
 
     it('restore from Trash', async () => {
-      await restoreFromTrash('t-a');
+      await restoreFromTrash('task-a');
       await expect(remembered()).resolves.toEqual(['t-b']);
     });
 
@@ -127,7 +127,7 @@ describe('remembering', () => {
     });
 
     it('delete forever', async () => {
-      await deleteFromTrashForever('t-a');
+      await deleteFromTrashForever('task-a');
       await expect(remembered()).resolves.toEqual(['t-b']);
     });
 
@@ -137,7 +137,7 @@ describe('remembering', () => {
     });
 
     it('the 30-day purge, which keeps a row still in its window', async () => {
-      await getDb().deletedTasks.update('t-a', { deletedAt: '2020-01-01T00:00:00.000Z' });
+      await getDb().deletedTasks.update('task-a', { deletedAt: '2020-01-01T00:00:00.000Z' });
 
       await purgeExpiredTrash();
 
@@ -146,7 +146,7 @@ describe('remembering', () => {
   });
 
   it('erasing local data forgets every remembered id', async () => {
-    await rememberForResurrect(['t-a', 't-b']);
+    await rememberForResurrect(['task-a', 't-b']);
 
     await wipeLocalData();
 
@@ -158,12 +158,12 @@ describe('the step after the pull', () => {
   it('a remembered delete comes back when the account lists the task', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '', title: 'From the account' })] });
     await getDb().deletedTasks.put(trashedHere());
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
 
     await fullSync('auto');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'From the account' });
-    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeUndefined();
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'From the account' });
+    await expect(getDb().deletedTasks.get('task-a')).resolves.toBeUndefined();
     await expect(remembered()).resolves.toEqual([]);
   });
 
@@ -178,21 +178,21 @@ describe('the step after the pull', () => {
       ...toTrashedRecord(localRow(SAVED, { dueDate: due, timeEntries: [entry], ...reminded })),
       deletedAt: NEWER,
     });
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
 
     await fullSync('auto');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ ...reminded, timeEntries: [entry] });
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ ...reminded, timeEntries: [entry] });
   });
 
   it('a remembered delete with no server copy keeps its Trash copy and is forgotten', async () => {
     await seed({ config: signedIn(CURRENT) });
     await getDb().deletedTasks.put(trashedHere());
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
 
     await fullSync('auto');
 
-    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
+    await expect(getDb().deletedTasks.get('task-a')).resolves.toBeDefined();
     await expect(remembered()).resolves.toEqual([]);
   });
 
@@ -202,47 +202,47 @@ describe('the step after the pull', () => {
       local: [localRow(NEWER, { title: 'Restored and edited here' })],
       server: [serverRow({ saved_at: '', title: 'Older on the account' })],
     });
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
 
     await fullSync('auto');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Restored and edited here' });
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Restored and edited here' });
     await expect(remembered()).resolves.toEqual([]);
   });
 
   it('a dead session forgets no remembered delete', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
     await getDb().deletedTasks.put(trashedHere());
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
     fake.state.authRefreshUserId = null;
 
     await fullSync('auto');
 
-    await expect(remembered()).resolves.toEqual(['t-a']);
-    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
+    await expect(remembered()).resolves.toEqual(['task-a']);
+    await expect(getDb().deletedTasks.get('task-a')).resolves.toBeDefined();
   });
 
   it('an unauthenticated pull forgets no remembered delete', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
     await getDb().deletedTasks.put(trashedHere());
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
     auth.userId = null;
 
     await fullSync('auto');
 
-    await expect(remembered()).resolves.toEqual(['t-a']);
+    await expect(remembered()).resolves.toEqual(['task-a']);
   });
 
   it('an incomplete listing forgets no remembered delete', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
     await getDb().deletedTasks.put(trashedHere());
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
     fake.state.failListing = true;
 
     await fullSync('auto');
 
-    await expect(remembered()).resolves.toEqual(['t-a']);
-    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
+    await expect(remembered()).resolves.toEqual(['task-a']);
+    await expect(getDb().deletedTasks.get('task-a')).resolves.toBeDefined();
   });
 
   it('a held-off remembered id stays for the next run', async () => {
@@ -253,70 +253,70 @@ describe('the step after the pull', () => {
       queued: [restored],
       server: [serverRow({ saved_at: '', title: 'Edit from a fast clock', client_updated_at: FAR_FUTURE })],
     });
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
     fake.state.failUpdate = true;
 
     await fullSync('auto');
 
-    await expect(remembered()).resolves.toEqual(['t-a']);
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Restored and edited here' });
+    await expect(remembered()).resolves.toEqual(['task-a']);
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Restored and edited here' });
 
     fake.state.failUpdate = false;
     await fullSync('auto');
 
     await expect(remembered()).resolves.toEqual([]);
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Restored and edited here' });
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Restored and edited here' });
   });
 
   it("another account's session forgets no remembered delete", async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
     await getDb().deletedTasks.put(trashedHere());
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
     fake.state.authRefreshUserId = 'user-2';
 
     await fullSync('auto');
 
-    await expect(remembered()).resolves.toEqual(['t-a']);
+    await expect(remembered()).resolves.toEqual(['task-a']);
   });
 
   // Rule 4 forgets it, found or not, as Android does. Keeping it would list the account on every sync.
   it('a remembered id whose server copy is unreadable keeps its Trash row and is forgotten', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '', title: '' })] });
     await getDb().deletedTasks.put(trashedHere());
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
 
     await fullSync('auto');
 
     await expect(remembered()).resolves.toEqual([]);
-    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
+    await expect(getDb().deletedTasks.get('task-a')).resolves.toBeDefined();
   });
 
   // pb-sync-reviewer: deleting it again while signed in is the user's latest act.
   it('a remembered id with a pending delete stays in Trash and is kept', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
     await getDb().deletedTasks.put(trashedHere());
-    await getSyncQueue().enqueue('delete', 't-a', null);
-    await rememberForResurrect(['t-a']);
+    await getSyncQueue().enqueue('delete', 'task-a', null);
+    await rememberForResurrect(['task-a']);
 
     await resurrectOnSight('user-1');
 
-    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
-    await expect(getDb().tasks.get('t-a')).resolves.toBeUndefined();
-    await expect(remembered()).resolves.toEqual(['t-a']);
+    await expect(getDb().deletedTasks.get('task-a')).resolves.toBeDefined();
+    await expect(getDb().tasks.get('task-a')).resolves.toBeUndefined();
+    await expect(remembered()).resolves.toEqual(['task-a']);
   });
 
   // pb-sync-reviewer: the push already committed, so a failed step must not fail the sync.
   it('a step that fails forgets nothing and leaves the sync successful', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '' })] });
     await getDb().deletedTasks.put(trashedHere());
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
     vi.spyOn(getDb().deletedTasks, 'delete').mockRejectedValueOnce(new Error('QuotaExceededError'));
 
     const result = await fullSync('auto');
 
     expect(result.status).toBe('success');
-    await expect(remembered()).resolves.toEqual(['t-a']);
-    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeDefined();
+    await expect(remembered()).resolves.toEqual(['task-a']);
+    await expect(getDb().deletedTasks.get('task-a')).resolves.toBeDefined();
   });
 
   it('nothing remembered means no extra listing', async () => {
@@ -331,12 +331,12 @@ describe('the step after the pull', () => {
   it('a remembered id with an archive row stays archived', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow({ saved_at: '', title: 'From the account' })] });
     await getDb().archivedTasks.put({ ...localRow(SAVED, { completed: true }), archivedAt: NEWER });
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
 
     await fullSync('auto');
 
-    await expect(getDb().archivedTasks.get('t-a')).resolves.toBeDefined();
-    await expect(getDb().tasks.get('t-a')).resolves.toBeUndefined();
+    await expect(getDb().archivedTasks.get('task-a')).resolves.toBeDefined();
+    await expect(getDb().tasks.get('task-a')).resolves.toBeUndefined();
     await expect(remembered()).resolves.toEqual([]);
   });
 });
@@ -345,12 +345,12 @@ describe('end to end', () => {
   it('a task trashed signed out comes back out of Trash after the next sign-in', async () => {
     await seed({ config: signedOut(CURRENT), local: [localRow(SAVED)], server: [serverRow({ saved_at: '' })] });
 
-    await deleteTask('t-a');
+    await deleteTask('task-a');
     await persistSyncConfig(AUTH);
     await fullSync('auto');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toBeDefined();
-    await expect(getDb().deletedTasks.get('t-a')).resolves.toBeUndefined();
+    await expect(getDb().tasks.get('task-a')).resolves.toBeDefined();
+    await expect(getDb().deletedTasks.get('task-a')).resolves.toBeUndefined();
     expect(fake.state.events).not.toContain('delete');
     expect(fake.state.records.has('rec_a')).toBe(true);
   });
@@ -362,14 +362,14 @@ describe('end to end', () => {
     await persistSyncConfig(AUTH);
     await fullSync('auto');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toBeDefined();
+    await expect(getDb().tasks.get('task-a')).resolves.toBeDefined();
     expect(fake.state.events).not.toContain('delete');
   });
 
   it('a delete made while signed in still deletes on the server', async () => {
     await seed({ config: signedIn(CURRENT), local: [localRow(SAVED)], server: [serverRow({ saved_at: '' })] });
 
-    await deleteTask('t-a');
+    await deleteTask('task-a');
     await fullSync('auto');
 
     expect(fake.state.records.has('rec_a')).toBe(false);

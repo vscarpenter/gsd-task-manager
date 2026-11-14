@@ -84,7 +84,7 @@ describe('an upgrade from a build that never read saved_at', () => {
 
   it('a6: a fresh edit before the backfill keeps the server saved_at', async () => {
     await seed({ config: signedIn(), local: [localRow(SAVED)], server: [serverRow()] });
-    await updateTask('t-a', { title: 'Read this weekend' });
+    await updateTask('task-a', { title: 'Read this weekend' });
 
     await fullSync('auto');
 
@@ -187,7 +187,7 @@ describe('a real Return', () => {
       local: [localRow(SAVED, { savedAt: SAVED })],
       server: [serverRow()],
     });
-    await returnSavedTask('t-a', 'urgent-important', undefined);
+    await returnSavedTask('task-a', 'urgent-important', undefined);
 
     await fullSync('auto');
 
@@ -283,7 +283,7 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
 
     await fullSync('auto');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit', updatedAt: NEWER });
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Local edit', updatedAt: NEWER });
     expect(fake.state.records.get('rec_a')).toMatchObject({ title: 'Local edit', client_updated_at: NEWER });
   });
 
@@ -296,7 +296,7 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
 
     expect(sentEmptySavedAt()).toBe(false);
     expect(serverSavedAt()).toBe(SAVED);
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit', savedAt: SAVED });
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Local edit', savedAt: SAVED });
   });
 
   // WEB-HOLDOFF (S-AND-02): a push doesn't always drain the queue (a 429, an unavailable index,
@@ -307,7 +307,7 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
     const [queued] = await getDb().syncQueue.toArray();
     await getDb().syncQueue.update(queued.id, { status });
     await pullRemoteChanges(null, options);
-    return (await getDb().tasks.get('t-a'))?.title;
+    return (await getDb().tasks.get('task-a'))?.title;
   }
 
   it.each([
@@ -325,7 +325,7 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
 
     await applyRemoteChange(action, farFuture as unknown as RecordModel, 'user-1');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Local edit' });
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Local edit' });
   });
 
   it("a held-off record doesn't move the pull cursor", async () => {
@@ -343,7 +343,7 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
 
     await applyRemoteChange('update', farFuture as unknown as RecordModel, 'user-1');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toMatchObject({ title: 'Edit from a fast clock' });
+    await expect(getDb().tasks.get('task-a')).resolves.toMatchObject({ title: 'Edit from a fast clock' });
   });
 
   // A retry-exhausted write never pushes, so holding off for it would split the device for good.
@@ -372,7 +372,7 @@ describe('pull contract: order while a backfill is owed (C4-2, C4-3)', () => {
 // first, so the first run's push is rate-limited. Web has no conflict count: a no-op pull applies nothing.
 describe('far-future hold-off: the device converges (S-AND-02)', () => {
   const serverTitle = (): unknown => fake.state.records.get('rec_a')?.title;
-  const localTitle = async (): Promise<string | undefined> => (await getDb().tasks.get('t-a'))?.title;
+  const localTitle = async (): Promise<string | undefined> => (await getDb().tasks.get('task-a'))?.title;
   const cursor = async (): Promise<string | null | undefined> =>
     ((await getDb().syncMetadata.get('sync_config')) as PBSyncConfig | undefined)?.lastClientUpdatedAt;
 

@@ -268,10 +268,10 @@ describe('task-mapper', () => {
       expect(result!.notificationSent).toBe(true);
     });
 
-    it('should keep device-local reminder state when the due date string is unchanged, even unparseable', () => {
+    it('should reject an unparseable remote due date even when unchanged', () => {
       const existingLocal = buildLocalTask({ dueDate: 'not-a-date', notificationSent: true });
       const result = pocketBaseToTaskRecord(buildPBRecord({ due_date: 'not-a-date' }), existingLocal);
-      expect(result!.notificationSent).toBe(true);
+      expect(result).toBeNull();
     });
 
     it('should keep device-local reminder state when the pulled due date is the same instant written differently', () => {

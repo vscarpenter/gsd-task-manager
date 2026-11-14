@@ -9,7 +9,7 @@
 import type { TaskRecord, Subtask, TimeEntry } from '@/lib/types';
 import type { RecordModel } from 'pocketbase';
 import { z } from '@/lib/zod';
-import { quadrantIdSchema, recurrenceTypeSchema, subtaskSchema, timeEntrySchema } from '@/lib/schema';
+import { quadrantIdSchema, recurrenceTypeSchema, storedTaskRecordSchema, subtaskSchema, timeEntrySchema } from '@/lib/schema';
 import { SCHEMA_LIMITS } from '@/lib/constants/schema';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { createLogger } from '@/lib/logger';
@@ -247,7 +247,7 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
   }
 
   const r = parsed.data;
-  return {
+  const mapped: TaskRecord = {
     id: r.task_id,
     title: r.title,
     description: r.description,
@@ -273,6 +273,7 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
     ...localReminderState(existingLocal, r.due_date || undefined),
     parentTaskId: existingLocal?.parentTaskId,
   };
+  return validateMappedTask(mapped);
 }
 
 type PlacementWire = Pick<PBTaskRecord, 'saved_at' | 'focus_date' | 'focus_rank'>;
@@ -297,3 +298,17 @@ function focusFromWire(wire: { focus_date: string; focus_rank: number }): Pick<T
 
 function savedTimestampToWire(savedAt?: string): string { return savedAt ?? ""; }
 function savedTimestampFromWire(savedAt: string): string | undefined { return savedAt || undefined; }
+
+/** Reject mapped rows before the cursor can acknowledge invisible tasks. */
+function validateMappedTask(mapped: TaskRecord): TaskRecord | null {
+  // The pull cursor must never acknowledge a row the matrix would quarantine.
+  const stored = storedTaskRecordSchema.safeParse(mapped);
+  if (!stored.success) {
+    logger.warn('Remote task violates local storage contract, skipping', {
+      taskId: mapped.id,
+      fields: stored.error.issues.map((issue) => issue.path.join('.')).join(','),
+    });
+    return null;
+  }
+  return stored.data;
+}
