@@ -46,12 +46,27 @@ echo -e "${BLUE}[1/3]${NC} Syncing to S3 (${S3_BUCKET})..."
 echo "  → Syncing static assets (JS, CSS, images)..."
 aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
   --no-follow-symlinks \
-  --delete \
-  --exclude "*.html" \
-  --exclude "sw.js" \
-  --exclude "sw-cache-logic.js" \
-  --exclude "theme-init.js" \
+  --exclude "*" \
+  --include "_next/static/*" \
   --cache-control "public,max-age=31536000,immutable"
+
+echo "  → Syncing mutable assets and service worker..."
+aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
+  --no-follow-symlinks \
+  --delete \
+  --exclude "_next/static/*" \
+  --exclude "*.html" \
+  --cache-control "public,max-age=0,must-revalidate"
+
+# Sync skips unchanged bodies even when their old metadata is unsafe. Reupload
+# stable paths so an existing manifest or RSC response loses its immutable TTL.
+echo "  → Refreshing mutable cache metadata..."
+aws s3 cp "$BUILD_DIR/" "$S3_BUCKET/" \
+  --recursive \
+  --no-follow-symlinks \
+  --exclude "_next/static/*" \
+  --exclude "*.html" \
+  --cache-control "public,max-age=0,must-revalidate"
 
 echo "  → Syncing HTML files and service worker..."
 aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
@@ -59,9 +74,6 @@ aws s3 sync "$BUILD_DIR/" "$S3_BUCKET/" \
   --delete \
   --exclude "*" \
   --include "*.html" \
-  --include "sw.js" \
-  --include "sw-cache-logic.js" \
-  --include "theme-init.js" \
   --cache-control "public,max-age=0,must-revalidate"
 
 # Releases before v12 shipped no public/theme-init.js. A rollback runs this
