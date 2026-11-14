@@ -15,6 +15,7 @@ import { createLogger } from "@/lib/logger";
 import { resetFeedbackState } from "@/lib/feedback/feedback-store";
 import { wipeLocalData } from "@/lib/reset-local-data";
 import { RESET_PENDING_KEY, endResetLock, startResetLock } from "@/lib/reset-lock";
+import { setBackgroundResetPending, withNotificationLock } from "@/lib/notifications/coordination";
 
 const logger = createLogger("DB");
 
@@ -198,7 +199,13 @@ export async function resetEverything(
 	startResetLock(preserveTheme);
 	let localDataDeleted = false;
 	try {
-		const result = await runResetSteps(preserveTheme);
+		// Publish before waiting: an active worker checks this between deliveries.
+		await setBackgroundResetPending(true);
+		const result = await withNotificationLock(async () => {
+			const reset = await runResetSteps(preserveTheme);
+			if (!reset.failedSteps.includes("local-data")) await setBackgroundResetPending(false);
+			return reset;
+		});
 		localDataDeleted = !result.failedSteps.includes("local-data");
 
 		logger.info("Reset complete", {

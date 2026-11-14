@@ -36,8 +36,8 @@ export function reminderWindow(
 ): ReminderWindow {
   const due = new Date(dueIso);
   if (timeOf(dueIso)) {
-    const fire = new Date(due.getTime() - notifyBeforeMinutes * NOTIFICATION_TIMING.MS_PER_MINUTE);
-    const deferred = deferPastQuietHours(fire, quiet);
+    const timedFire = new Date(due.getTime() - notifyBeforeMinutes * NOTIFICATION_TIMING.MS_PER_MINUTE);
+    const deferred = deferPastQuietHours(timedFire, quiet);
     return { fire: deferred, expires: new Date(Math.max(due.getTime(), deferred.getTime()) + GRACE_MS) };
   }
   const wholeDays = Math.floor(notifyBeforeMinutes / NOTIFICATION_TIMING.MINUTES_PER_DAY);
@@ -53,14 +53,19 @@ function minutesOfDay(hhmm: string): number {
   return h * 60 + m;
 }
 
+export function isQuietAt(quiet: QuietHours, now: Date): boolean {
+  if (!quiet.start || !quiet.end) return false;
+  const start = minutesOfDay(quiet.start);
+  const end = minutesOfDay(quiet.end);
+  const at = now.getHours() * 60 + now.getMinutes();
+  return start > end ? at >= start || at < end : at >= start && at < end;
+}
+
 /** Quiet hours are a half-open window that may cross midnight. A fire inside one waits for its end. */
 function deferPastQuietHours(fire: Date, quiet: QuietHours): Date {
   if (!quiet.start || !quiet.end) return fire;
-  const start = minutesOfDay(quiet.start);
   const end = minutesOfDay(quiet.end);
-  const at = fire.getHours() * 60 + fire.getMinutes();
-  const inWindow = start > end ? at >= start || at < end : at >= start && at < end;
-  if (!inWindow) return fire;
+  if (!isQuietAt(quiet, fire)) return fire;
   const endToday = new Date(fire.getFullYear(), fire.getMonth(), fire.getDate(), Math.floor(end / 60), end % 60);
   return endToday > fire
     ? endToday
@@ -83,7 +88,7 @@ export function isReminderDue(args: {
   const { now, quiet = {} } = args;
   const snoozed = args.snoozedUntil ? new Date(args.snoozedUntil) : undefined;
   if (snoozed && snoozed > now) return false;
-  const within = ({ fire, expires }: ReminderWindow) => now >= fire && now < expires;
+  const within = (window: ReminderWindow) => now >= window.fire && now < window.expires;
   const planned = reminderWindow(args.dueIso, args.notifyBefore, quiet);
   if (within(planned)) return true;
   if (!snoozed) return false;

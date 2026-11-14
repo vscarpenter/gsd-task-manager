@@ -105,6 +105,23 @@ describe('reset-everything', () => {
   });
 
   describe('resetEverything', () => {
+    it('fences the worker before waiting for an active notification pass', async () => {
+      const entries = new Map();
+      vi.stubGlobal('caches', { open: async () => ({
+        put: async (key: string, value: Response) => entries.set(key, value),
+        delete: async (key: string) => entries.delete(key),
+      }) });
+      vi.stubGlobal('navigator', { locks: { request: async (_name: string, run: () => Promise<unknown>) => {
+        expect(entries.has('/.gsd-reset-pending')).toBe(true);
+        return run();
+      } } });
+      try {
+        await resetEverything();
+        expect(entries.size).toBe(0);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
     it('should clear all IndexedDB tables and localStorage on success', async () => {
       const result = await resetEverything();
 

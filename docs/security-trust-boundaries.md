@@ -30,6 +30,18 @@ legacy-client limits are documented in `docs/adr/0021-atomic-task-mutations.md`.
 Negative coverage: `tests/pb/conditional-writes-pocketbase-adapter.test.ts` and
 the real concurrent/stale-delete system test in the MCP workspace.
 
+## Local periodic reminders
+
+The periodic entry in `public/sw.js` loads the generated reminder worker. It
+requires granted notification permission and enabled stored settings; reads an
+existing database without creating/upgrading it; shares a Web Lock with page
+checks and reset; and respects a durable reset marker. It makes no network call.
+Only successful display requests are marked, and stale task snapshots cannot
+overwrite newer edits while marking. Negative coverage lives in
+`tests/data/background-notifications.test.ts`, `notification-coordination.test.ts`,
+and `reset-everything.test.ts`; the real-worker check is
+`tests/e2e/background-reminders.spec.ts`. See ADR 0022 for limits.
+
 ## Change rule
 
 When adding an entry point to any boundary above, update this map and add a

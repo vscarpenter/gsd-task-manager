@@ -11,6 +11,8 @@ const config = [
             ".cursor/**",
             ".pi/**",
             "out/**",
+            // Bundled copy of linted TS; byte-for-byte drift and classic-script syntax tested.
+            "public/sw-notifications.js",
             "**/coverage/**",
             "worker/.wrangler/**",
             "packages/mcp-server/dist/**",

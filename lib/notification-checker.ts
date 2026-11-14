@@ -19,24 +19,10 @@ import { isResetPending } from "@/lib/reset-lock";
 import { markSweepFired, readSweepFired, readSweepReminder } from "@/lib/preferences/weekly-sweep";
 import { dueSweepOccurrence } from "@/lib/weekly-sweep";
 import { isReminderDue, reminderWindow, type QuietHours } from "@/lib/notifications/reminder-window";
+import { withNotificationLock } from "@/lib/notifications/coordination";
+import { sameReminder } from "@/lib/notifications/background-db";
 
 const logger = createLogger("NOTIFICATIONS");
-
-/**
- * Whether a stored task still wants the reminder that was checked for it. A
- * task completed, already marked, snoozed, or given a new due date or reminder
- * offset in the meantime has a different reminder (or none), so the mark is skipped.
- */
-function isSameReminder(current: TaskRecord, checked: TaskRecord): boolean {
-	return (
-		!current.completed &&
-		!current.savedAt &&
-		!current.notificationSent &&
-		current.dueDate === checked.dueDate &&
-		current.notifyBefore === checked.notifyBefore &&
-		current.snoozedUntil === checked.snoozedUntil
-	);
-}
 
 /**
  * NotificationChecker class
@@ -55,7 +41,7 @@ class NotificationChecker {
 		this.isChecking = true;
 
 		try {
-			await this.processNotifications();
+			await withNotificationLock(() => this.processNotifications());
 		} catch (error) {
 			logger.error("Error in notification checker", error instanceof Error ? error : new Error(String(error)));
 		} finally {
@@ -186,7 +172,7 @@ class NotificationChecker {
 		// so an edit saved while the reminder was showing isn't overwritten.
 		await db.transaction("rw", db.tasks, async () => {
 			const current = await db.tasks.get(checked.id);
-			if (!current || !isSameReminder(current, checked)) return;
+			if (!current || !sameReminder(current, checked)) return;
 
 			await db.tasks.update(checked.id, {
 				notificationSent: true,
