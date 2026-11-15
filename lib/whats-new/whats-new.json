@@ -4,6 +4,18 @@
   "releases": [
     {
       "platform": "web",
+      "version": "14.9.2",
+      "date": "2026-11-15",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [],
+      "fixed": [
+        "This maintenance release includes the sync, reminder, backup, and quick-entry fixes described in the 14.9.0 notes below."
+      ]
+    },
+    {
+      "platform": "web",
       "version": "14.9.0",
       "date": "2026-11-14",
       "notable": true,
