@@ -15,7 +15,8 @@ import { useBackToClose } from "./use-back-to-close";
 import { useDrawerSave } from "./use-drawer-save";
 import { useEditDraftState } from "./use-edit-draft-state";
 import { useEscalation } from "@/components/task-card/use-escalation";
-import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, SubtasksField, EstimateField } from "./edit-drawer-fields";
+import { Field, QuadrantField, DueDateField, TagsField, RecurrenceField, EstimateField } from "./edit-drawer-fields";
+import { SubtasksField } from "./edit-drawer-subtasks-field";
 import { ReminderField } from "./edit-drawer-reminder-field";
 import { SnoozeField } from "./edit-drawer-snooze-field";
 import { DependenciesField } from "./edit-drawer-dependencies";
@@ -89,7 +90,8 @@ function EditDrawerForm({ task, initialDraft, allTasks = [], onClose, onSubmit }
   // The draft as the form opened. Render reads it for the dirty check, so it
   // lives in state rather than a ref; the form remounts per task, so it never resets.
   const [baseline] = useState(() => draft.toDraft());
-  const dirty = JSON.stringify(draft.toDraft()) !== JSON.stringify(baseline) || draft.tagInput.trim() !== "";
+  const dirty = JSON.stringify(draft.toDraft()) !== JSON.stringify(baseline) ||
+    draft.tagInput.trim() !== "" || draft.subtaskInput.trim() !== "";
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   const { saving, submit } = useDrawerSave({
     task,
@@ -402,6 +404,8 @@ function TaskDetailFields({ draft }: { draft: ReturnType<typeof useEditDraftStat
 
       <SubtasksField
         subtasks={draft.subtasks}
+        entry={draft.subtaskInput}
+        onEntryChange={draft.setSubtaskInput}
         onAdd={draft.addSubtask}
         onToggle={draft.toggleSubtask}
         onRemove={draft.removeSubtask}

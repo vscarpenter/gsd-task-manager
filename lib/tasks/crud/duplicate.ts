@@ -57,6 +57,8 @@ function buildDuplicateRecord(original: TaskRecord, defaultReminder: number): Ta
     updatedAt: now,
     completed: false,
     completedAt: undefined,
+    timeEntries: [],
+    timeSpent: 0,
     notificationSent: false,
     lastNotificationAt: undefined,
     snoozedUntil: undefined,

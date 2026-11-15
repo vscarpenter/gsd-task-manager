@@ -79,6 +79,22 @@ describe('useCommandPalette', () => {
     vi.clearAllMocks();
   });
 
+  it('ignores every open path while an existing modal owns the page', () => {
+    const modal = document.createElement('div');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    document.body.append(modal);
+    try {
+      const { result } = renderHook(() => useCommandPalette({ actions, tasks }));
+      act(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })));
+      expect(result.current.open).toBe(false);
+      act(() => window.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT)));
+      expect(result.current.open).toBe(false);
+      act(() => result.current.setOpen(true));
+      expect(result.current.open).toBe(false);
+    } finally { modal.remove(); }
+  });
+
   it('should start with palette closed and empty search', () => {
     const { result } = renderHook(() =>
       useCommandPalette({ actions, tasks })

@@ -70,13 +70,13 @@ export async function updateTaskInPB(
   config: GsdConfig,
   task: Task,
   ownerId: string,
-  deviceId: string
+  deviceId: string,
+  expectedVersion: string
 ): Promise<void> {
-  const pb = getPocketBase(config);
   const pbRecordId = await findPBRecordId(config, task.id);
 
   const fields = taskToPBFields(task, ownerId, deviceId);
-  await pb.collection('tasks').update(pbRecordId, fields);
+  await conditionalMutation(config, pbRecordId, 'PATCH', expectedVersion, fields);
 
   // Invalidate cache after successful write
   getTaskCache().invalidate();
@@ -87,12 +87,12 @@ export async function updateTaskInPB(
  */
 export async function deleteTaskInPB(
   config: GsdConfig,
-  taskId: string
+  taskId: string,
+  expectedVersion: string
 ): Promise<void> {
-  const pb = getPocketBase(config);
   const pbRecordId = await findPBRecordId(config, taskId);
 
-  await pb.collection('tasks').delete(pbRecordId);
+  await conditionalMutation(config, pbRecordId, 'DELETE', expectedVersion);
 
   // Invalidate cache after successful write
   getTaskCache().invalidate();
@@ -237,11 +237,11 @@ export async function updateTaskInPBById(
   pbRecordId: string,
   task: Task,
   ownerId: string,
-  deviceId: string
+  deviceId: string,
+  expectedVersion: string
 ): Promise<void> {
-  const pb = getPocketBase(config);
   const fields = taskToPBFields(task, ownerId, deviceId);
-  await pb.collection('tasks').update(pbRecordId, fields);
+  await conditionalMutation(config, pbRecordId, 'PATCH', expectedVersion, fields);
 }
 
 /**
@@ -249,10 +249,10 @@ export async function updateTaskInPBById(
  */
 export async function deleteTaskInPBById(
   config: GsdConfig,
-  pbRecordId: string
+  pbRecordId: string,
+  expectedVersion: string
 ): Promise<void> {
-  const pb = getPocketBase(config);
-  await pb.collection('tasks').delete(pbRecordId);
+  await conditionalMutation(config, pbRecordId, 'DELETE', expectedVersion);
 }
 
 export async function updateTaskDependenciesInPBById(
@@ -260,11 +260,11 @@ export async function updateTaskDependenciesInPBById(
   pbRecordId: string,
   dependencies: string[],
   clientUpdatedAt: string,
-  deviceId: string
+  deviceId: string,
+  expectedVersion: string
 ): Promise<void> {
-  const pb = getPocketBase(config);
   const fields = taskDependencyPatchToPBFields(dependencies, clientUpdatedAt, deviceId);
-  await pb.collection('tasks').update(pbRecordId, fields);
+  await conditionalMutation(config, pbRecordId, 'PATCH', expectedVersion, fields);
 }
 
 /**
@@ -283,4 +283,20 @@ export async function getAuthInfo(
     ownerId,
     deviceId: 'mcp-server', // MCP server always uses this device ID
   };
+}
+
+/** A missing contract fails closed; there is no unconditional mutation fallback. */
+async function conditionalMutation(
+  config: GsdConfig,
+  recordId: string,
+  method: 'PATCH' | 'DELETE',
+  expectedVersion: string,
+  data?: Partial<PBTask>
+): Promise<void> {
+  if (data?.client_updated_at === expectedVersion) {
+    data = { ...data, client_updated_at: new Date(Date.parse(expectedVersion) + 1).toISOString() };
+  }
+  await getPocketBase(config).send(`/api/gsd/tasks/${encodeURIComponent(recordId)}`, {
+    method, body: { expected_version: expectedVersion, ...(data ? { data } : {}) },
+  });
 }

@@ -482,7 +482,8 @@ describe('bulkUpdateTasks dependency cleanup after delete', () => {
       'rec-dependent',
       ['other'],
       expect.any(String),
-      'device-1'
+      'device-1',
+      expect.any(String)
     );
   });
 
@@ -537,7 +538,8 @@ describe('bulkUpdateTasks dependency cleanup after delete', () => {
       'rec-dependent',
       ['changed'],
       expect.any(String),
-      'device-1'
+      'device-1',
+      expect.any(String)
     );
   });
 

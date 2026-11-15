@@ -3,6 +3,7 @@ import type { CommandAction } from "@/lib/command-actions";
 import type { TaskRecord } from "@/lib/types";
 import { applyFilters } from "@/lib/filters";
 import { SEARCH_CONFIG } from "@/lib/constants/ui";
+import { hasOpenModal } from "@/lib/use-app-shortcuts";
 
 export const OPEN_COMMAND_PALETTE_EVENT = "gsd:open-command-palette";
 
@@ -43,6 +44,26 @@ function paletteReducer(state: PaletteState, action: PaletteAction): PaletteStat
   }
 }
 
+function matchingActions(actions: CommandAction[], search: string): CommandAction[] {
+  if (!search || search.length < 2) {
+    // Show all actions when no search
+    return actions.filter(action => !action.condition || action.condition());
+  }
+
+  const searchLower = search.toLowerCase();
+
+  return actions.filter(action => {
+    // Check condition
+    if (action.condition && !action.condition()) return false;
+
+    // Check label
+    if (action.label.toLowerCase().includes(searchLower)) return true;
+
+    // Check keywords
+    return action.keywords.some(kw => kw.includes(searchLower));
+  });
+}
+
 /**
  * Hook to manage command palette state and filtering
  */
@@ -61,6 +82,7 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
   }, []);
 
   const openPalette = useCallback(() => {
+    if (!openRef.current && hasOpenModal()) return;
     if (!openRef.current) {
       rememberOpener();
     }
@@ -144,25 +166,7 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
     dispatch({ type: "setSelectedActionId", value });
 
   // Filter actions by search query
-  const filteredActions = (() => {
-    if (!search || search.length < 2) {
-      // Show all actions when no search
-      return actions.filter(action => !action.condition || action.condition());
-    }
-
-    const searchLower = search.toLowerCase();
-
-    return actions.filter(action => {
-      // Check condition
-      if (action.condition && !action.condition()) return false;
-
-      // Check label
-      if (action.label.toLowerCase().includes(searchLower)) return true;
-
-      // Check keywords
-      return action.keywords.some(kw => kw.includes(searchLower));
-    });
-  })();
+  const filteredActions = matchingActions(actions, search);
 
   // Filter tasks by search query (only show if search is 2+ chars)
   const matchingTasks = (() => {

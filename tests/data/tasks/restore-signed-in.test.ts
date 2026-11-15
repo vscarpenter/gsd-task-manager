@@ -16,7 +16,7 @@ beforeEach(async () => {
   await Promise.all(db.tables.map((table) => table.clear()));
   await db.syncMetadata.put(signedIn());
   await db.tasks.add(localRow(SAVED));
-  await deleteTask('t-a');
+  await deleteTask('task-a');
 });
 
 describe('undo after a delete while signed in', () => {
@@ -24,14 +24,14 @@ describe('undo after a delete while signed in', () => {
     await expect(restoreTask(localRow(SAVED))).resolves.toBeUndefined();
 
     const db = getDb();
-    expect(await db.tasks.get('t-a')).toMatchObject({ id: 't-a', title: 'Read later' });
-    expect(await db.deletedTasks.get('t-a')).toBeUndefined();
+    expect(await db.tasks.get('task-a')).toMatchObject({ id: 'task-a', title: 'Read later' });
+    expect(await db.deletedTasks.get('task-a')).toBeUndefined();
   });
 
   it('queues the create after the delete', async () => {
     await restoreTask(localRow(SAVED));
 
     const queued = (await getSyncQueue().getPending()).map((row) => `${row.operation}:${row.taskId}`);
-    expect(queued).toEqual(['delete:t-a', 'create:t-a']);
+    expect(queued).toEqual(['delete:task-a', 'create:task-a']);
   });
 });

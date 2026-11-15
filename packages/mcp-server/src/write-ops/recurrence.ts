@@ -42,6 +42,8 @@ export function buildRecurringInstance(completed: Task): Task {
     ...carried,
     id: generateTaskId(),
     completed: false,
+    timeEntries: [],
+    timeSpent: 0,
     ...(nextDueDate && { dueDate: nextDueDate }),
     subtasks: completed.subtasks.map((subtask) => ({ ...subtask, completed: false })),
     notificationSent: false,

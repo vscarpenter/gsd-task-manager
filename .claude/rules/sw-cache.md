@@ -18,6 +18,7 @@ Three purpose-specific caches with distinct strategies:
 | `gsd-immutable-v1` | content-hashed `/_next/static/*` assets | cache-first | FIFO-pruned at 60 entries, survives deploys |
 | `gsd-pages-v{version}` | HTML + RSC flight data | network-first | rotated on deploy |
 | `gsd-runtime-v{version}` | an allowlist: `/manifest.json`, `/theme-init.js`, `/favicon.svg`, and `/icons/` | cache-first | rotated on deploy |
+| `gsd-control-v1` | content-free reset marker for background reminders | local control state, never a fetch cache | survives deploy; successful wipe clears the marker |
 
 ## Files
 
@@ -29,3 +30,13 @@ Three purpose-specific caches with distinct strategies:
 ## Cache Version
 
 Every build rotates the pages and runtime caches on its own. `public/sw.js` keeps the placeholder `const CACHE_VERSION = 'dev';`, and `scripts/build-static-export.sh` stamps the build's version into `out/sw.js` with `scripts/update-sw-version.cjs`. Never commit a real version to `public/sw.js`: the stamp fails the build when the placeholder is missing. The immutable cache is content-hashed and does not need a version.
+
+## Periodic reminders (ADR 0022)
+
+`public/sw-notifications.js` is generated from `lib/notifications/worker-entry.ts`
+and its canonical reminder/database/coordination dependencies. Run
+`node scripts/generate-sw-notifications.cjs` after changing those sources;
+commit the generated copy. The drift test also loads it as a classic worker.
+Page, worker and reset share a Web Lock. Publish the durable reset marker before
+waiting for that lock, so an active worker stops between deliveries. Keep
+`gsd-control-v1` in `shouldDeleteCache` across cache-version rotations.

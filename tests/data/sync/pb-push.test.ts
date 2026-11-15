@@ -39,7 +39,16 @@ import { getPocketBase } from '@/lib/sync/pocketbase-client';
 function confirmedSession() {
   return {
     authStore: { token: 'token-1', clear: vi.fn() },
-    send: vi.fn(async () => ({ record: { id: 'user-1' } })),
+    send: vi.fn(async (path: string, options?: { method?: string; body?: { data?: unknown } }) => {
+      if (path.startsWith('/api/gsd/tasks/')) {
+        const collection = getPocketBase().collection('tasks');
+        const id = decodeURIComponent(path.split('/').pop()!);
+        return options?.method === 'DELETE'
+          ? collection.delete(id)
+          : collection.update(id, options?.body?.data as Record<string, unknown>);
+      }
+      return { record: { id: 'user-1' } };
+    }),
   };
 }
 
@@ -55,6 +64,57 @@ function makeTask(id: string, updatedAt: string): TaskRecord {
     updatedAt,
   });
 }
+
+describe('conditional mutation contract', () => {
+  const stamp = '2026-11-10T10:00:00.000Z';
+  beforeEach(async () => {
+    await getDb().syncQueue.clear();
+    await getDb().tasks.clear();
+    fetchRemoteTaskEntryMock.mockReset();
+    fetchRemoteTaskEntryMock.mockResolvedValue({
+      entry: { pbRecordId: 'remote-task', clientUpdatedAt: stamp }, fetchSucceeded: true,
+    });
+  });
+
+  it('sends the observed version to the server mutation route', async () => {
+    const send = vi.fn(async () => undefined);
+    const legacyUpdate = vi.fn();
+    vi.mocked(getPocketBase).mockReturnValue({ send, collection: () => ({ update: legacyUpdate }) } as unknown as ReturnType<typeof getPocketBase>);
+    await getSyncQueue().enqueue('update', 'task-one', makeTask('task-one', stamp));
+    await pushLocalChanges('user-1');
+    expect(send).toHaveBeenCalledWith('/api/gsd/tasks/remote-task', expect.objectContaining({
+      method: 'PATCH', body: expect.objectContaining({ expected_version: stamp,
+        data: expect.objectContaining({ client_updated_at: '2026-11-10T10:00:00.001Z' }),
+      }),
+    }));
+    expect(legacyUpdate).not.toHaveBeenCalled();
+  });
+
+  it.each([404, 412])('preserves intent when the guarded endpoint returns %s', async (status) => {
+    const send = vi.fn(async () => { throw { status }; });
+    const legacyUpdate = vi.fn();
+    vi.mocked(getPocketBase).mockReturnValue({ send, collection: () => ({ update: legacyUpdate }) } as unknown as ReturnType<typeof getPocketBase>);
+    await getSyncQueue().enqueue('update', 'task-one', makeTask('task-one', stamp));
+    await pushLocalChanges('user-1');
+    expect(await getSyncQueue().getPendingCount()).toBe(1);
+    expect(legacyUpdate).not.toHaveBeenCalled();
+    if (status === 412) expect((await getSyncQueue().getPending())[0].retryCount).toBe(0);
+  });
+
+  it('does not send an obsolete snapshot replaced during its remote lookup', async () => {
+    const send = vi.fn();
+    const update = vi.fn();
+    vi.mocked(getPocketBase).mockReturnValue({ send, collection: () => ({ update }) } as unknown as ReturnType<typeof getPocketBase>);
+    await getSyncQueue().enqueue('update', 'task-one', makeTask('task-one', stamp));
+    fetchRemoteTaskEntryMock.mockImplementationOnce(async () => {
+      await getDb().syncQueue.clear();
+      return { entry: { pbRecordId: 'remote-task', clientUpdatedAt: stamp }, fetchSucceeded: true };
+    });
+    await pushLocalChanges('user-1');
+    expect(send).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+});
 
 // A push reads the queue only while sync_config names its session owner.
 beforeEach(async () => {
@@ -91,6 +151,7 @@ describe('pushLocalChanges LWW guard', () => {
     });
     const updateSpy = vi.fn();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -116,6 +177,7 @@ describe('pushLocalChanges LWW guard', () => {
     const createSpy = vi.fn();
     const deleteSpy = vi.fn();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: createSpy, update: updateSpy, delete: deleteSpy }),
     });
 
@@ -147,6 +209,7 @@ describe('pushLocalChanges LWW guard', () => {
 
     const deleteSpy = vi.fn();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
     });
 
@@ -182,6 +245,7 @@ describe('pushLocalChanges LWW guard', () => {
     function deleteSpyOnPb(): ReturnType<typeof vi.fn> {
       const deleteSpy = vi.fn();
       (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+        ...confirmedSession(),
         collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
       });
       return deleteSpy;
@@ -224,6 +288,7 @@ describe('pushLocalChanges LWW guard', () => {
 
     const updateSpy = vi.fn(async () => ({ id: 'rec-1' }));
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -251,6 +316,7 @@ describe('pushLocalChanges LWW guard', () => {
 
     const updateSpy = vi.fn(async () => ({ id: 'rec-1' }));
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -275,6 +341,7 @@ describe('pushLocalChanges LWW guard', () => {
     const updateSpy = vi.fn();
     const createSpy = vi.fn();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: createSpy, update: updateSpy, delete: vi.fn() }),
     });
 
@@ -302,6 +369,7 @@ describe('pushLocalChanges LWW guard', () => {
 
     const updateSpy = vi.fn(async () => ({ id: 'rec-1' }));
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -327,6 +395,7 @@ describe('pushLocalChanges LWW guard', () => {
 
     const deleteSpy = vi.fn();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
     });
 
@@ -382,6 +451,7 @@ describe('pushLocalChanges LWW guard', () => {
     const updateSpy = vi.fn(async () => ({ id: 'rec-1' }));
     const deleteSpy = vi.fn();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: deleteSpy }),
     });
 
@@ -416,6 +486,7 @@ describe('pushLocalChanges LWW guard', () => {
       throw pbNetworkError;
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -444,6 +515,7 @@ describe('pushLocalChanges LWW guard', () => {
       .mockRejectedValueOnce(Object.assign(new Error('validation failed'), { status: 422 }))
       .mockResolvedValueOnce({ id: 'rec-2' });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -482,6 +554,7 @@ describe('pushLocalChanges LWW guard', () => {
         throw validationError;
       });
       (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+        ...confirmedSession(),
         collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
       });
 
@@ -519,6 +592,7 @@ describe('pushLocalChanges LWW guard', () => {
 
     const updateSpy = vi.fn(async () => ({ id: 'rec-1' }));
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -552,6 +626,7 @@ describe('pushLocalChanges LWW guard', () => {
       throw rateLimited;
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -595,6 +670,7 @@ describe('pushLocalChanges LWW guard', () => {
       return { id: recordId };
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -629,6 +705,7 @@ describe('pushLocalChanges LWW guard', () => {
       throw rateLimited;
     });
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
     });
 
@@ -654,6 +731,7 @@ describe('pushLocalChanges session binding', () => {
   it('throws StaleSyncSessionError and sends nothing when the SDK principal is not the session owner', async () => {
     const create = vi.fn();
     vi.mocked(getPocketBase).mockReturnValue({
+      ...confirmedSession(),
       collection: () => ({ create, update: vi.fn() }),
     } as never);
     await getSyncQueue().enqueue('create', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));

@@ -14,6 +14,7 @@ import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { assertRawSmartViewBounds } from "@/lib/tasks/smart-view-import-bounds";
 import { readDefaultReminder } from "@/lib/notifications/default-reminder";
 import { regenerateConflictingIds, remapTaskReferences } from "@/lib/tasks/import-id-remap";
+import { forgetForResurrect } from "@/lib/sync/resurrect-ids";
 
 /** Maximum number of tasks allowed in a single import to prevent storage DoS */
 const MAX_IMPORT_TASKS = 10_000;
@@ -253,6 +254,7 @@ async function applyArchivedTasks(
   if (mode === "replace") await db.archivedTasks.clear();
 
   const liveIds = new Set((await db.tasks.toCollection().primaryKeys()) as string[]);
+  const trashIds = new Set((await db.deletedTasks.toCollection().primaryKeys()) as string[]);
   const existingArchivedIds =
     mode === "merge"
       ? new Set((await db.archivedTasks.toCollection().primaryKeys()) as string[])
@@ -264,8 +266,9 @@ async function applyArchivedTasks(
       dropped++;
       continue;
     }
-    if (existingArchivedIds.has(task.id)) continue;
-    await db.archivedTasks.put(task);
+    if (existingArchivedIds.has(task.id) || (mode === "merge" && trashIds.has(task.id))) continue;
+    if (mode === "replace") await db.deletedTasks.delete(task.id); // NOSONAR -- clear the tombstone before the ordered archive write.
+    await db.archivedTasks.put(task); // NOSONAR -- preserve input order when imported snapshots share an id.
   }
   return dropped;
 }
@@ -366,6 +369,7 @@ function importTransactionTables(db: ReturnType<typeof getDb>) {
     db.archiveSettings,
     db.appPreferences,
     db.syncQueue,
+    db.syncMetadata,
   ];
 }
 
@@ -382,12 +386,18 @@ async function applyTasks(
     const deletedIds = [...existingIds].filter(id => !importedIds.has(id));
 
     await db.tasks.clear();
+    await db.archivedTasks.bulkDelete([...importedIds]);
+    await db.deletedTasks.bulkDelete([...importedIds]);
+    await forgetForResurrect([...importedIds]);
     await db.tasks.bulkAdd(tasks);
     return { created: tasks, deletedIds };
   }
 
   const existingTasks = await db.tasks.toArray();
-  const existingIds = new Set(existingTasks.map(t => t.id));
+  const [archivedIds, trashedIds] = await Promise.all([
+    db.archivedTasks.toCollection().primaryKeys(), db.deletedTasks.toCollection().primaryKeys(),
+  ]);
+  const existingIds = new Set([...existingTasks.map(t => t.id), ...archivedIds, ...trashedIds] as string[]);
   const { tasks: regeneratedTasks, idMap } = regenerateConflictingIds(tasks, existingIds);
   const tasksToImport = remapTaskReferences(regeneratedTasks, idMap);
   await db.tasks.bulkAdd(tasksToImport);
@@ -437,8 +447,7 @@ async function defaultInEffectAfter(parsed: SettingsBearingPayload, mode: "repla
   return restored ?? (await readDefaultReminder());
 }
 
-export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
-  const db = getDb();
+async function prepareImport(payload: ImportablePayload, mode: "replace" | "merge") {
   assertRawSmartViewBounds(payload);
   const result = importPayloadSchema.safeParse(payload);
   if (!result.success) {
@@ -457,6 +466,12 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
     notifyBefore: task.notifyBefore ?? defaultReminder,
   }));
 
+  return parsed;
+}
+
+export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
+  const db = getDb();
+  const parsed = await prepareImport(payload, mode);
   const { syncEnabled, queue, scheduleSyncAfterChange } = await resolveSyncDeps();
 
   let tasksToCreate: TaskRecord[] = [];
@@ -468,7 +483,18 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
     "rw",
     importTransactionTables(db),
     async () => {
+      // Replace is a new local decision, so old snapshots cannot replay over it.
+      const superseded = mode === "replace" ? await db.syncQueue.toArray() : [];
+      if (mode === "replace") await db.syncQueue.clear();
+      if (mode === "replace" && syncEnabled) {
+        const restoredAt = isoNow();
+        parsed.tasks = parsed.tasks.map((task) => ({ ...task, updatedAt: restoredAt }));
+      }
       ({ created: tasksToCreate, deletedIds: taskIdsToDelete } = await applyTasks(parsed.tasks, mode));
+      const importedIds = new Set(tasksToCreate.map((task) => task.id));
+      taskIdsToDelete = [...new Set([
+        ...taskIdsToDelete, ...superseded.filter((row) => !importedIds.has(row.taskId)).map((row) => row.taskId),
+      ])];
 
       droppedArchivedCount = await applyArchivedTasks(parsed.archivedTasks, mode);
       await applyTrashedTasks(parsed.deletedTasks, mode);

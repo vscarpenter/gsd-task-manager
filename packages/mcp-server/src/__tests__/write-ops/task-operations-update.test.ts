@@ -209,7 +209,8 @@ describe('updateTask', () => {
       'record-target',
       expect.objectContaining({ title: 'Saved' }),
       'owner-1',
-      'device-1'
+      'device-1',
+      fresh.clientUpdatedAt
     );
     expect(mocks.invalidate).toHaveBeenCalledOnce();
     expect(mocks.getAuthInfo.mock.invocationCallOrder[0]).toBeLessThan(
@@ -273,7 +274,9 @@ describe('completeTask with a recurring task', () => {
   });
 
   it('resets the instance the way the web does and keeps the series fields', async () => {
-    const original = recurring('daily', '2026-06-10T12:00:00.000Z');
+    const original = recurring('daily', '2026-06-10T12:00:00.000Z', {
+      timeSpent: 25, timeEntries: [{ id: 'entry-one', startedAt: '2026-06-10T10:00:00.000Z' }],
+    });
     await complete(original);
 
     const created = mocks.createTaskInPB.mock.calls[0][1] as Task;
@@ -284,6 +287,8 @@ describe('completeTask with a recurring task', () => {
       tags: ['home'],
       completed: false,
       notificationSent: false,
+      timeSpent: 0,
+      timeEntries: [],
       quadrant: original.quadrant,
     });
     expect(created.completedAt).toBeUndefined();

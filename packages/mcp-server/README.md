@@ -1,5 +1,10 @@
 # GSD Task Manager MCP Server
 
+Backend requirement: updates and deletes require the atomic task-write hooks in
+`docker/pb_hooks/task_conditional_writes.pb.js` and `task-write-contract.js`.
+Install them and restart PocketBase before releasing this client. A missing
+route fails closed. See [ADR 0021](../../docs/adr/0021-atomic-task-mutations.md).
+
 [![npm version](https://badge.fury.io/js/gsd-mcp-server.svg)](https://www.npmjs.com/package/gsd-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

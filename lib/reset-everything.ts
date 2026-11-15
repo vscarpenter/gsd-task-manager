@@ -15,6 +15,7 @@ import { createLogger } from "@/lib/logger";
 import { resetFeedbackState } from "@/lib/feedback/feedback-store";
 import { wipeLocalData } from "@/lib/reset-local-data";
 import { RESET_PENDING_KEY, endResetLock, startResetLock } from "@/lib/reset-lock";
+import { setBackgroundResetPending, withNotificationLock } from "@/lib/notifications/coordination";
 
 const logger = createLogger("DB");
 
@@ -167,6 +168,18 @@ async function runResetSteps(preserveTheme: boolean): Promise<ResetResult> {
 	return result;
 }
 
+async function updateBackgroundResetMarker(pending: boolean): Promise<void> {
+	try {
+		await setBackgroundResetPending(pending);
+	} catch (error) {
+		// Cache availability must not prevent sign-out or the local-data wipe.
+		logger.warn("Could not update the background reset marker", {
+			pending,
+			errorName: error instanceof Error ? error.name : "Unknown error",
+		});
+	}
+}
+
 /**
  * Reset everything - complete application reset
  *
@@ -198,7 +211,13 @@ export async function resetEverything(
 	startResetLock(preserveTheme);
 	let localDataDeleted = false;
 	try {
-		const result = await runResetSteps(preserveTheme);
+		// Publish before waiting: an active worker checks this between deliveries.
+		await updateBackgroundResetMarker(true);
+		const result = await withNotificationLock(async () => {
+			const reset = await runResetSteps(preserveTheme);
+			if (!reset.failedSteps.includes("local-data")) await updateBackgroundResetMarker(false);
+			return reset;
+		});
 		localDataDeleted = !result.failedSteps.includes("local-data");
 
 		logger.info("Reset complete", {

@@ -27,7 +27,7 @@ export function isPendingSyncQueueItem(item: SyncQueueItem): boolean {
 
 /**
  * A row that has exhausted its retry budget. `getPending()` never returns one
- * and nothing re-arms it, so it can neither reach the server nor be retried.
+ * until the owner explicitly retries it in Settings (failed-recovery.ts).
  * Module-private on purpose: `classifyRemoteDeletion` is the only supported way
  * to ask what a queue row means for a remote deletion.
  */
@@ -53,7 +53,7 @@ export interface RemoteDeletionDecision {
  * push will actually attempt, so protection is scoped to exactly the set
  * `getPending()` returns.
  *
- * A retry-exhausted row will never be pushed, so it may not shield the task —
+ * A retry-exhausted row is not pushed automatically, so it may not shield the task —
  * but its content never reached the server either, so the caller moves the task
  * to Trash rather than dropping it. Either way the caller deletes `staleRowIds`
  * in the same transaction, so a dead row can never outlive the task it guarded

@@ -80,7 +80,7 @@ export function shouldDeleteCache(
 	currentCacheNames: CacheNameSet,
 ): boolean {
 	const currentValues = Object.values(currentCacheNames);
-	if (currentValues.includes(cacheName)) {
+	if (currentValues.includes(cacheName) || cacheName === "gsd-control-v1") {
 		return false;
 	}
 	return cacheName.startsWith("gsd-");

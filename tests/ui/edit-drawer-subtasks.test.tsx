@@ -30,6 +30,27 @@ describe("<EditDrawer> subtasks", () => {
     user = userEvent.setup();
   });
 
+  it("saves pending subtask text without requiring Enter", async () => {
+    const onSubmit = vi.fn();
+    render(<EditDrawer open task={baseTask} onClose={vi.fn()} onSubmit={onSubmit} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    await user.type(screen.getByLabelText(/add a subtask/i), "Pending checklist item");
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      subtasks: [expect.objectContaining({ title: "Pending checklist item" })],
+    }), "t1", expect.objectContaining({ subtasks: expect.any(Array) }));
+  });
+
+  it("guards dismissal when pending subtask text is the only edit", async () => {
+    const onClose = vi.fn();
+    render(<EditDrawer open task={baseTask} onClose={onClose} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    await user.type(screen.getByLabelText(/add a subtask/i), "Do not discard me");
+    await user.keyboard("{Escape}");
+    expect(screen.getByText(/discard unsaved changes/i)).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("adds a subtask and submits it", async () => {
     const onSubmit = vi.fn();
     render(<EditDrawer open task={baseTask} onClose={vi.fn()} onSubmit={onSubmit} />);

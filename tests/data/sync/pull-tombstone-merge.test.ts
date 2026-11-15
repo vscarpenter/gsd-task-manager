@@ -57,13 +57,13 @@ const BRING_BACK = [
 ] as const;
 
 async function expectBackWithNoTombstone(expected: Partial<TaskRecord>): Promise<void> {
-  const row = await getDb().tasks.get('t-a');
+  const row = await getDb().tasks.get('task-a');
   expect(row).toMatchObject({ title: 'Edited elsewhere', ...expected });
   // Only the reminder fields come from the buried row. Its archive or Trash stamp stays behind.
   expect(row).not.toHaveProperty('archivedAt');
   expect(row).not.toHaveProperty('deletedAt');
-  await expect(getDb().archivedTasks.get('t-a')).resolves.toBeUndefined();
-  await expect(getDb().deletedTasks.get('t-a')).resolves.toBeUndefined();
+  await expect(getDb().archivedTasks.get('task-a')).resolves.toBeUndefined();
+  await expect(getDb().deletedTasks.get('task-a')).resolves.toBeUndefined();
 }
 
 beforeEach(async () => {

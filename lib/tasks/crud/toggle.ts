@@ -146,6 +146,8 @@ function buildRecurringInstance(existing: TaskRecord): TaskRecord {
     createdAt: now,
     updatedAt: now,
     parentTaskId: existing.parentTaskId ?? existing.id,
+    timeEntries: [],
+    timeSpent: 0,
     subtasks: existing.subtasks.map((subtask) => ({ ...subtask, completed: false })),
     notificationSent: false,
     lastNotificationAt: undefined,

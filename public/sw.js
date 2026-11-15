@@ -6,6 +6,7 @@ const IMMUTABLE_CACHE_VERSION = 1;
 const IMMUTABLE_MAX_ENTRIES = 60;
 
 importScripts('./sw-cache-logic.js');
+importScripts('./sw-notifications.js');
 
 const CACHE_NAMES = getCacheNames(CACHE_VERSION, IMMUTABLE_CACHE_VERSION);
 
@@ -339,11 +340,5 @@ self.addEventListener("push", (event) => {
 });
 
 async function checkAndNotifyTasks() {
-	try {
-		if ("setAppBadge" in self.navigator) {
-			await self.navigator.setAppBadge(0);
-		}
-	} catch (error) {
-		console.error("Error in background notification check:", error);
-	}
+	await checkBackgroundNotifications();
 }

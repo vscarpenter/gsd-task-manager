@@ -4,8 +4,10 @@
     ".": {
       "entry": [
         "lib/sw-cache-logic.ts!",
+        "lib/notifications/worker-entry.ts!",
         "public/sw.js!",
         "public/sw-cache-logic.js!",
+        "public/sw-notifications.js!",
         "public/theme-init.js!",
         "cloudfront-function-response-headers.cjs!",
         "cloudfront-function-url-rewrite.cjs!",

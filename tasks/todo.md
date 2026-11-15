@@ -1606,3 +1606,58 @@ Tier: Standard per PR. Every PR branched from `origin/main`, TDD, one concern ea
   - A skipped record is not re-fetched, so the archive-sweep gate holds for one pull only (noted in `lib/sync/sync-coordinator.ts`).
 - Blockers: none.
 - Assumptions: web and MCP version bumps and the MCP publish stay with Vinny; two PRs that each pass CI can still break `main` together, so run the full suite after a merge that touches the same mocks.
+
+# P1/P2 review remediation (2026-11-14)
+
+Non-trivial; owner approved review items 1–14 in chat. Branch `fix/review-p1-p2`.
+Contract and ordered plan: `tasks/spec-review-p1-p2-2026-11-14.md`.
+
+- [x] A: import lifecycle, replace queue, remote validation, fresh execution state
+- [x] B: atomic PocketBase mutations and web/MCP/system verification
+- [x] C: deployment retention and cache metadata
+- [x] D: palette, pending subtasks, timer controls, failed sync recovery
+- [x] E: periodic reminder engine
+- [x] F: bundle reductions and complete verification
+
+## Resuming From Here
+
+- Done: all 14 P1/P2 findings implemented and locally verified. App 4,973 tests; MCP
+  544 tests; PocketBase seven system tests; production browser suite 540 passed,
+  24 declared skips. Final affected browser suites: 25 passed, two skips.
+  Build, unchanged budgets, CSP/PWA, types, lint, shape, knip and dependency checks pass.
+- Backend: owner installed the hooks on api.vinny.io. Live creation, guarded
+  update, three concurrent-update races and stale-delete rejection passed;
+  the temporary task was deleted and confirmed absent.
+- Next: review the PR and authorize web/MCP releases. No implementation work
+  remains for the requested P1/P2 items.
+- Resolution/evidence: `tasks/review-p1-p2-resolution-2026-11-14.md`.
+- Assumptions: owner authorized branch push and PR creation. Web/MCP deployment
+  remains a separate action. P3 focus restoration is not requested.
+
+# PR #743 follow-up (2026-11-14)
+
+Standard fixes within the approved remediation contract; no new public API.
+
+- [x] Reproduce and fix equal-version queue snapshots losing the latest edit.
+- [x] Reproduce and bound stalled worker activation while holding the reminder lock.
+- [x] Keep reset available when Cache Storage marker writes fail.
+- [x] Address Sonar findings; retain justified serial operations and browser capability skips.
+- [x] Run affected regressions and required quality checks, then push fixes.
+- [x] Monitor the final commit's CI and review results; address actionable findings.
+
+Verification: real push/pull over fake IndexedDB and a stateful PocketBase fake;
+notification/reset lock integration with a never-resolving worker-ready promise;
+required app checks plus affected production browser tests.
+
+## Resuming From Here
+
+- Done: three validated review bugs fixed with red/green regressions; initial CI
+  all green. App 4,983 tests, affected browser suites 25 passed/two capability
+  skips, types, lint, shape, knip, production build and bundle checks pass.
+- Next: push follow-up commits, resolve the fixed review threads, and monitor the
+  resulting CI/review runs. Web/MCP release authorization remains separate.
+- Blockers: none.
+
+- CI at `08954231`: every job and the SonarCloud quality gate passed; all three
+  code-review threads resolved. Final static follow-up uses `.at(-1)` and marks
+  the other required serial import operation. Verify that final head after push.

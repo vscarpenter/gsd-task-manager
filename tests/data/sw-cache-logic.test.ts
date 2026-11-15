@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { CONTROL_CACHE } from "@/lib/notifications/coordination";
 import {
 	classifyRequest,
 	getCacheNames,
@@ -143,6 +144,9 @@ describe("getCacheNames", () => {
 });
 
 describe("shouldDeleteCache", () => {
+  it("keeps the durable notification reset fence across deployments", () => {
+    expect(shouldDeleteCache(CONTROL_CACHE, getCacheNames('new-build', 1))).toBe(false);
+  });
 	const currentNames = getCacheNames("9.3.4", 1);
 
 	it("should return true for old gsd-cache-v* single-cache format (migration)", () => {

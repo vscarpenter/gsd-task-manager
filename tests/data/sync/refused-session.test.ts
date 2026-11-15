@@ -66,7 +66,7 @@ beforeEach(async () => {
 describe('a delete queued under a refused session', () => {
   beforeEach(async () => {
     await seed({ config: signedIn(CURRENT), local: [localRow(SAVED)], server: [serverRow()] });
-    await deleteTask('t-a');
+    await deleteTask('task-a');
     refuseSession();
   });
 
@@ -74,7 +74,7 @@ describe('a delete queued under a refused session', () => {
     await fullSync('auto');
 
     await expect(queuedRows()).resolves.toMatchObject([
-      { taskId: 't-a', operation: 'delete', status: 'pending', retryCount: 0 },
+      { taskId: 'task-a', operation: 'delete', status: 'pending', retryCount: 0 },
     ]);
     expect(fake.state.records.has('rec_a')).toBe(true);
   });
@@ -122,7 +122,7 @@ describe('edits queued under a refused session', () => {
     const rows = await queuedRows();
     expect(rows.map(({ taskId, status, retryCount }) => ({ taskId, status, retryCount }))).toEqual(
       expect.arrayContaining([
-        { taskId: 't-a', status: 'pending', retryCount: 0 },
+        { taskId: 'task-a', status: 'pending', retryCount: 0 },
         { taskId: 't-b', status: 'pending', retryCount: 0 },
       ]),
     );
@@ -139,7 +139,7 @@ describe('local tasks under a refused session', () => {
 
     const result = await fullSync('auto');
 
-    await expect(getDb().tasks.get('t-a')).resolves.toBeDefined();
+    await expect(getDb().tasks.get('task-a')).resolves.toBeDefined();
     expect(isAuthError(new Error(result.error))).toBe(true);
     asksForSignIn();
   });
@@ -149,12 +149,12 @@ describe('a delete remembered for resurrect on sight, under a refused session', 
   it('stays remembered, and the sync asks for sign-in', async () => {
     await seed({ config: signedIn(CURRENT), server: [serverRow()] });
     await getDb().deletedTasks.put(toTrashedRecord(localRow(SAVED)));
-    await rememberForResurrect(['t-a']);
+    await rememberForResurrect(['task-a']);
     refuseSession();
 
     const result = await fullSync('auto');
 
-    await expect(readRememberedTaskIds()).resolves.toEqual(['t-a']);
+    await expect(readRememberedTaskIds()).resolves.toEqual(['task-a']);
     expect(isAuthError(new Error(result.error))).toBe(true);
     asksForSignIn();
   });
@@ -179,7 +179,7 @@ describe('a refused session in its last seven days', () => {
 describe('a session the server confirms', () => {
   it('drops a delete whose record is already gone, after asking once', async () => {
     await seed({ config: signedIn(CURRENT), local: [localRow(SAVED)] });
-    await deleteTask('t-a');
+    await deleteTask('task-a');
 
     const result = await fullSync('auto');
 
@@ -204,7 +204,7 @@ describe('a session the server confirms', () => {
     const token = sessionToken(30);
     fake.pb.authStore.save(token, USER);
     await seed({ config: signedIn(CURRENT), local: [localRow(SAVED)] });
-    await deleteTask('t-a');
+    await deleteTask('task-a');
 
     await fullSync('auto');
 
@@ -215,7 +215,7 @@ describe('a session the server confirms', () => {
 describe('a session check that fails for another reason', () => {
   beforeEach(async () => {
     await seed({ config: signedIn(CURRENT), local: [localRow(SAVED)] });
-    await deleteTask('t-a');
+    await deleteTask('task-a');
   });
 
   it("keeps a delete queued when the session is another account's", async () => {

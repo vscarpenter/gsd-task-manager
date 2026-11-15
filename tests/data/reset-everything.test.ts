@@ -87,7 +87,7 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 import { resetEverything, reloadAfterReset } from '@/lib/reset-everything';
-import { getResetLockSnapshot } from '@/lib/reset-lock';
+import { endResetLock, getResetLockSnapshot } from '@/lib/reset-lock';
 import { getDb } from '@/lib/db';
 
 describe('reset-everything', () => {
@@ -105,6 +105,44 @@ describe('reset-everything', () => {
   });
 
   describe('resetEverything', () => {
+    it('fences the worker before waiting for an active notification pass', async () => {
+      const entries = new Map();
+      vi.stubGlobal('caches', { open: async () => ({
+        put: async (key: string, value: Response) => entries.set(key, value),
+        delete: async (key: string) => entries.delete(key),
+      }) });
+      vi.stubGlobal('navigator', { locks: { request: async (_name: string, run: () => Promise<unknown>) => {
+        expect(entries.has('/.gsd-reset-pending')).toBe(true);
+        return run();
+      } } });
+      try {
+        await resetEverything();
+        expect(entries.size).toBe(0);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+    it.each(['open', 'put', 'delete'])('continues reset when Cache Storage %s fails', async (failure) => {
+      const fail = () => { throw new DOMException('Cache unavailable', 'QuotaExceededError'); };
+      vi.stubGlobal('caches', { open: async () => {
+        if (failure === 'open') fail();
+        return {
+          put: async () => { if (failure === 'put') fail(); },
+          delete: async () => { if (failure === 'delete') fail(); return true; },
+        };
+      } });
+      try {
+        const result = await resetEverything();
+        expect(result.success).toBe(true);
+        expect(result.clearedTables).toContain('tasks');
+        expect(mockDisableSync).toHaveBeenCalled();
+        expect(getResetLockSnapshot()).toBe('unlocked');
+      } finally {
+        endResetLock(true);
+        vi.unstubAllGlobals();
+      }
+    });
+
     it('should clear all IndexedDB tables and localStorage on success', async () => {
       const result = await resetEverything();
 

@@ -58,6 +58,8 @@ export interface EditDraftState {
   recurrence: RecurrenceType;
   setRecurrence: (v: RecurrenceType) => void;
   subtasks: Subtask[];
+  subtaskInput: string;
+  setSubtaskInput: (v: string) => void;
   addSubtask: (title: string) => void;
   toggleSubtask: (id: string) => void;
   removeSubtask: (id: string) => void;
@@ -71,7 +73,7 @@ export interface EditDraftState {
   setSnoozedUntil: (v: string | undefined) => void;
   /** False when creating a task or for a completed one. */
   canSnooze: boolean;
-  toDraft: () => EditDraft;
+  toDraft: (includePending?: boolean) => EditDraft;
 }
 
 /** The three ways a draft's checklist changes. */
@@ -121,6 +123,7 @@ function useDetailDraftFields(
   const [subtasks, setSubtasks] = useState<Subtask[]>(() =>
     task ? task.subtasks ?? [] : initialDraft?.subtasks ?? []
   );
+  const [subtaskInput, setSubtaskInput] = useState("");
   // Held as a string so an emptied field means "no estimate" rather than 0.
   const [estimateInput, setEstimateInput] = useState<string>(() =>
     String(task?.estimatedMinutes ?? initialDraft?.estimatedMinutes ?? "")
@@ -132,6 +135,8 @@ function useDetailDraftFields(
     recurrence,
     setRecurrence,
     subtasks,
+    subtaskInput,
+    setSubtaskInput,
     ...subtaskActions(setSubtasks),
     estimateInput,
     setEstimateInput,
@@ -324,7 +329,7 @@ export function useEditDraftState(
     setTagInput("");
   };
 
-  const toDraft = (): EditDraft => ({
+  const toDraft = (includePending = false): EditDraft => ({
     title: title.trim(),
     description: description.trim(),
     urgent,
@@ -333,7 +338,7 @@ export function useEditDraftState(
     tags,
     dependencies,
     recurrence: detail.recurrence,
-    subtasks: detail.subtasks,
+    subtasks: includePending ? appendSubtask(detail.subtasks, detail.subtaskInput) : detail.subtasks,
     estimatedMinutes: parseEstimate(detail.estimateInput),
     ...reminderDraftFields(),
   });

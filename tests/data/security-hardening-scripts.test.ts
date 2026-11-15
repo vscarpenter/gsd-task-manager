@@ -195,21 +195,22 @@ describe('security hardening scripts and workflows', () => {
     expect(cacheHeaderStart).toBeGreaterThan(htmlSyncStart);
     expect(htmlSyncBlock).toContain('--delete');
     expect(htmlSyncBlock).toContain('--include "*.html"');
-    expect(htmlSyncBlock).toContain('--include "sw.js"');
-    expect(deployScript.match(/--no-follow-symlinks/g)).toHaveLength(3);
+    expect(deployScript).toContain('Syncing mutable assets and service worker');
+    expect(deployScript.match(/--no-follow-symlinks/g)).toHaveLength(5);
   });
 
 
   it('forces stable executable assets to revalidate instead of caching them immutable', () => {
     const deployScript = readRepoFile('scripts/deploy-app.sh');
     const immutableStart = deployScript.indexOf('Syncing static assets');
-    const stableStart = deployScript.indexOf('Syncing HTML files and service worker');
+    const stableStart = deployScript.indexOf('Syncing mutable assets and service worker');
     const metadataStart = deployScript.indexOf('Forcing stable runtime metadata');
     const immutableBlock = deployScript.slice(immutableStart, stableStart);
     const stableBlock = deployScript.slice(stableStart, metadataStart);
 
-    expect(immutableBlock).toContain('--exclude "theme-init.js"');
-    expect(stableBlock).toContain('--include "theme-init.js"');
+    expect(immutableBlock).toContain('--exclude "*"');
+    expect(immutableBlock).toContain('--include "_next/static/*"');
+    expect(stableBlock).toContain('--exclude "_next/static/*"');
     expect(deployScript.slice(metadataStart)).toContain('aws s3 cp "$BUILD_DIR/theme-init.js"');
     expect(deployScript.slice(metadataStart)).toContain('--metadata-directive REPLACE');
     expect(deployScript.slice(metadataStart)).toContain('public,max-age=0,must-revalidate');

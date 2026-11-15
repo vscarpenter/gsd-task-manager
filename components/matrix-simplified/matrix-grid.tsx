@@ -12,6 +12,8 @@ interface MatrixGridProps {
   onToggleComplete: (task: TaskRecord, completed: boolean) => void | Promise<void>;
   onDelete: (task: TaskRecord) => void | Promise<void>;
   onShare: (task: TaskRecord) => void;
+  onStartTimer?: (taskId: string) => Promise<void>;
+  onStopTimer?: (taskId: string) => Promise<void>;
   onSave?: (task: TaskRecord) => Promise<void> | void;
   onDuplicate?: (task: TaskRecord) => Promise<void> | void;
   onClearSnooze?: (taskId: string) => Promise<void>;
@@ -27,15 +29,8 @@ interface MatrixGridProps {
 export function MatrixGrid({
   tasks,
   allTasks,
-  onEdit,
-  onInspect,
-  onToggleComplete,
-  onDelete,
-  onShare, onSnooze, onSave, onDuplicate, onMoveTo, onClearSnooze, onMarkUrgent,
-  onAddInQuadrant,
-  highlightedTaskId,
-  onTaskRef,
   onQuadrantRef,
+  ...handlers
 }: MatrixGridProps) {
   const grouped = groupByQuadrant(tasks);
 
@@ -78,14 +73,7 @@ export function MatrixGrid({
             meta={meta}
             tasks={grouped[meta.rdKey]}
             allTasks={allTasks}
-            onEdit={onEdit}
-            onInspect={onInspect}
-            onToggleComplete={onToggleComplete}
-            onDelete={onDelete}
-            onShare={onShare} onSnooze={onSnooze} onSave={onSave} onDuplicate={onDuplicate} onMoveTo={onMoveTo} onClearSnooze={onClearSnooze} onMarkUrgent={onMarkUrgent}
-            onAddInQuadrant={onAddInQuadrant}
-            highlightedTaskId={highlightedTaskId}
-            onTaskRef={onTaskRef}
+            {...handlers}
             sectionRef={(element) => onQuadrantRef?.(meta.rdKey, element)}
           />
         ))}

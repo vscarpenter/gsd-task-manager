@@ -8,6 +8,7 @@
 import { readDefaultReminder } from '@/lib/notifications/default-reminder';
 import { getPocketBase } from './pocketbase-client';
 import { getSyncQueue } from './queue';
+import { preparePendingForSession } from './push-queue';
 import { placementToWire, taskRecordToPocketBase } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
@@ -64,14 +65,6 @@ export interface PushResult {
  * while sync_config still names `ownerId`. Every queue read and write below
  * checks that in its own transaction, as the pull does for its writes.
  */
-async function readPendingForSession(ownerId: string): Promise<SyncQueueItem[]> {
-  const db = getDb();
-  return db.transaction('r', [db.syncMetadata, db.syncQueue], async () => {
-    await assertSyncSessionCurrent(ownerId);
-    return getSyncQueue().getPending();
-  });
-}
-
 async function writeQueueForSession(ownerId: string, write: () => Promise<void>): Promise<void> {
   const db = getDb();
   await db.transaction('rw', [db.syncMetadata, db.syncQueue], async () => {
@@ -93,6 +86,16 @@ async function assertPushSessionCurrent(ownerId: string): Promise<void> {
   const db = getDb();
   await db.transaction('r', [db.syncMetadata], async () => {
     await assertSyncSessionCurrent(ownerId);
+  });
+}
+
+/** Replace/retry removes old row ids, invalidating already captured snapshots. */
+async function isPushItemCurrent(id: string, ownerId: string): Promise<boolean> {
+  const db = getDb();
+  return db.transaction('r', [db.syncMetadata, db.syncQueue], async () => {
+    await assertSyncSessionCurrent(ownerId);
+    const current = await db.syncQueue.get(id);
+    return Boolean(current && current.status !== 'failed');
   });
 }
 
@@ -142,27 +145,36 @@ async function settleRowOffset(task: QueuedTask, ownerId: string): Promise<void>
   }
 }
 
-/**
- * Upsert a task to PocketBase. Creates if no remote record exists, updates otherwise.
- * Placement comes from the current row (placementToWire), not the payload.
- */
-async function upsertRemoteTask(
-  payload: SyncQueueItem['payload'],
-  pbRecordId: string | undefined,
-  ownerId: string,
-  deviceId: string,
-): Promise<string> {
-  const pb = getPocketBase();
+/** Placement comes from the current row, rather than the queued snapshot. */
+async function preparePushFields(payload: QueuedTask, ownerId: string, deviceId: string, expectedVersion?: string) {
   const defaultReminder = await readDefaultReminder();
-  const { task, storeOnRow } = await resolveNotifyBefore(payload!, defaultReminder);
+  const { task, storeOnRow } = await resolveNotifyBefore(payload, defaultReminder);
   const { saved_at: _savedAt, focus_date: _focusDate, focus_rank: _focusRank, ...queued } =
     taskRecordToPocketBase(task, ownerId, deviceId, defaultReminder);
-  const current = await getDb().tasks.get(payload!.id);
+  const current = await getDb().tasks.get(payload.id);
   const pbData = { ...queued, ...placementToWire(current) };
+  // Equal LWW stamps still need a fresh CAS token (same-millisecond edits or
+  // an already delivered retry). Pull reconciles this one-millisecond tie break.
+  if (expectedVersion && pbData.client_updated_at === expectedVersion) {
+    pbData.client_updated_at = new Date(Date.parse(expectedVersion) + 1).toISOString();
+  }
+  return { task, storeOnRow, pbData };
+}
+
+/** Create when absent; otherwise compare and write atomically on the server. */
+async function upsertRemoteTask(
+  payload: SyncQueueItem['payload'], pbRecordId: string | undefined,
+  ownerId: string, deviceId: string, queueId: string, expectedVersion?: string,
+): Promise<string | null> {
+  const pb = getPocketBase();
+  const { task, storeOnRow, pbData } = await preparePushFields(payload!, ownerId, deviceId, expectedVersion);
+  if (!(await isPushItemCurrent(queueId, ownerId))) return null;
 
   let recordId = pbRecordId;
   if (recordId) {
-    await pb.collection('tasks').update(recordId, pbData);
+    await pb.send(`/api/gsd/tasks/${encodeURIComponent(recordId)}`, {
+      method: 'PATCH', body: { expected_version: expectedVersion, data: pbData },
+    });
   } else {
     recordId = (await pb.collection('tasks').create(pbData)).id;
   }
@@ -315,7 +327,8 @@ async function pushUpsert(
   }
 
   if (!remote) await ctx.session.beforeCreate();
-  await upsertRemoteTask(item.payload, remote?.pbRecordId, ctx.ownerId, ctx.deviceId);
+  const written = await upsertRemoteTask(item.payload, remote?.pbRecordId, ctx.ownerId, ctx.deviceId, item.id, remote?.clientUpdatedAt);
+  if (written === null) return 'skipped';
   await dequeueForSession(ctx.ownerId, item.id);
   return 'pushed';
 }
@@ -335,7 +348,10 @@ async function pushDelete(
       await dequeueForSession(ownerId, item.id);
       return 'skipped';
     }
-    await getPocketBase().collection('tasks').delete(remote.pbRecordId);
+    if (!(await isPushItemCurrent(item.id, ownerId))) return 'skipped';
+    await getPocketBase().send(`/api/gsd/tasks/${encodeURIComponent(remote.pbRecordId)}`, {
+      method: 'DELETE', body: { expected_version: remote.clientUpdatedAt },
+    });
     await dequeueForSession(ownerId, item.id);
     return 'pushed';
   }
@@ -391,6 +407,8 @@ function resolvePushPrincipal(sessionOwnerId: string): string | null {
  * raw message, which for a 4xx can echo task content back from PocketBase.
  */
 async function recordItemFailure(item: SyncQueueItem, error: unknown, ownerId: string): Promise<string> {
+  // Concurrent edits retain the intent and do not spend its retry budget.
+  if ((error as { status?: number })?.status === 412) return 'conflict_retry';
   const errorCode = sanitizeSyncError(error);
   const context = { taskId: item.taskId, operation: item.operation, errorCode };
   if (isTransientSyncFailure(error)) {
@@ -416,7 +434,7 @@ export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResu
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: false };
   }
 
-  const pending = await readPendingForSession(ownerId);
+  const pending = await preparePendingForSession(ownerId);
   if (pending.length === 0) {
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
   }

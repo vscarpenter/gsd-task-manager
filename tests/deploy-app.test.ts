@@ -22,7 +22,7 @@ function stubAws(): { dir: string; log: string } {
       'if [ "$1" = "s3" ] && [ "$2" = "cp" ]; then',
       '  case "$3" in',
       "    s3://*) ;;",
-      '    *) if [ ! -f "$3" ]; then',
+      '    *) if [ ! -f "$3" ] && [ ! -d "$3" ]; then',
       '         echo "The user-provided path $3 does not exist." >&2',
       "         exit 255",
       "       fi ;;",
@@ -65,6 +65,23 @@ function deploy(workspace: string, stubDir: string): string {
 }
 
 describe("deploy-app.sh", () => {
+  it("retains previous hashed assets and revalidates stable files even when unchanged", () => {
+    const { dir, log } = stubAws();
+    const workspace = workspaceWith({ "index.html": "<!doctype html>", "manifest.json": "{}", "index.txt": "RSC" });
+    deploy(workspace, dir);
+    const calls = readFileSync(log, "utf8").trim().split("\n");
+    const immutable = calls.find((call) => call.includes("immutable"))!;
+    expect(immutable).toContain('--include _next/static/*');
+    expect(immutable).not.toContain("--delete");
+    const stableRefresh = calls.find((call) => call.startsWith("s3 cp out/ "))!;
+    expect(stableRefresh).toContain("--recursive");
+    expect(stableRefresh).toContain("--exclude _next/static/*");
+    expect(stableRefresh).toContain("max-age=0,must-revalidate");
+    const html = calls.findIndex((call) => call.startsWith("s3 sync ") && call.includes("--include *.html"));
+    expect(html).toBeGreaterThan(calls.indexOf(stableRefresh));
+    expect(calls.filter((call) => call.startsWith("s3 sync ") && call.includes("--delete"))
+      .every((call) => call.includes("--exclude _next/static/*") || call.includes("--exclude * --include *.html"))).toBe(true);
+  });
   it("invalidates CloudFront even when the build predates theme-init.js", () => {
     // The documented rollback dispatches main's deploy-app.sh against an older
     // release artifact. Releases before v12 have no public/theme-init.js, and

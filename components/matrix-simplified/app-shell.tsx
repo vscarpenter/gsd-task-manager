@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { CommandIcon } from "lucide-react";
 import { DesktopIconRail, MobileIconRail } from "./icon-rail";
 import { SimplifiedTopbar } from "./topbar";
-import { HelpDrawer } from "@/components/matrix-simplified/help-drawer";
+import dynamic from "next/dynamic";
 import { AppFooter } from "@/components/app-footer";
 import { CommandPalette } from "@/components/command-palette";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 const MAIN_CLASS = "mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9 sm:py-6 md:pb-6";
 const FILL_VIEWPORT_COLUMN = "pinned:h-dvh pinned:overflow-hidden";
 const FILL_VIEWPORT_MAIN = "pinned:flex pinned:min-h-0! pinned:flex-col pinned:overflow-hidden";
+const HelpDrawer = dynamic(() => import('./help-drawer').then((module) => module.HelpDrawer));
 
 function openCommandPalette() {
   window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
@@ -167,7 +168,7 @@ export function AppShell({
         <AppFooter />
       </div>
       <MobileIconRail onHelp={() => setHelpOpen(true)} />
-      <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
+      {helpOpen ? <HelpDrawer open onClose={() => setHelpOpen(false)} /> : null}
       <CommandPalette
         handlers={handlers}
         conditions={conditions}
