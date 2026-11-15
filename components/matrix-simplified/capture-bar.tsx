@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type SubmitEvent, type KeyboardEvent } from "react";
 import { ArrowRightIcon, ArrowUpRightIcon, ChevronsUpDownIcon, ZapIcon } from "lucide-react";
 import { parseCapture } from "@/lib/capture-parser";
 import {
@@ -132,11 +132,11 @@ function QuadrantPill({
   );
 }
 
-function captureFocusRestorer(event: FormEvent | undefined, inputRef: React.RefObject<HTMLInputElement | null>) {
+function captureFocusRestorer(event: SubmitEvent<HTMLFormElement> | undefined, inputRef: React.RefObject<HTMLInputElement | null>) {
   const focused = document.activeElement;
   const form = event?.currentTarget;
   // Safari pointer activation can leave focus outside the clicked submit button.
-  const submitter = (event?.nativeEvent as SubmitEvent | undefined)?.submitter;
+  const submitter = event?.nativeEvent.submitter;
   const fromCapture = form?.contains(focused) || (submitter && form?.contains(submitter));
   return () => {
     if (!fromCapture || document.activeElement !== focused || hasOpenModal()) return;
@@ -224,7 +224,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     setOverride(CYCLE[(idx + 1) % CYCLE.length]);
   };
 
-  const submit = async (e?: FormEvent) => {
+  const submit = async (e?: SubmitEvent<HTMLFormElement>) => {
     e?.preventDefault();
     if (submittingRef.current || awaitingClearRef.current) return;
     if (!hasTitle) {
