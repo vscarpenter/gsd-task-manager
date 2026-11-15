@@ -34,7 +34,7 @@ export async function preparePendingForSession(ownerId: string): Promise<SyncQue
     const groups = equalVersionGroups(pending);
     if (groups.length === 0) return pending;
     const superseded = await Promise.all(groups.map(async (group) => {
-      const latest = group[group.length - 1];
+      const latest = group.at(-1)!;
       const current = await db.tasks.get(latest.taskId);
       // Equal enqueue timestamps have no insertion order in IndexedDB. The
       // live row carries the final content when it still has this version.

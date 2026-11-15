@@ -163,3 +163,8 @@ Verification after these changes:
 I checked worker activation/registration in Modern Web Guidance; the catalog had
 no applicable guide for activation deadlines or sync queue ordering. The worker
 ready behavior was checked against MDN before changing the wait.
+
+All CI jobs and the SonarCloud quality gate passed at `08954231`, and all three
+review threads were resolved. A final static follow-up uses `.at(-1)` in queue
+preparation and documents the required serial tombstone deletion before an archive
+write. The final pushed head is monitored separately.

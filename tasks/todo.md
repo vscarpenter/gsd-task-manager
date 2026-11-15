@@ -1643,7 +1643,7 @@ Standard fixes within the approved remediation contract; no new public API.
 - [x] Keep reset available when Cache Storage marker writes fail.
 - [x] Address Sonar findings; retain justified serial operations and browser capability skips.
 - [x] Run affected regressions and required quality checks, then push fixes.
-- [ ] Monitor the final commit's CI and review results; address actionable findings.
+- [x] Monitor the final commit's CI and review results; address actionable findings.
 
 Verification: real push/pull over fake IndexedDB and a stateful PocketBase fake;
 notification/reset lock integration with a never-resolving worker-ready promise;
@@ -1657,3 +1657,7 @@ required app checks plus affected production browser tests.
 - Next: push follow-up commits, resolve the fixed review threads, and monitor the
   resulting CI/review runs. Web/MCP release authorization remains separate.
 - Blockers: none.
+
+- CI at `08954231`: every job and the SonarCloud quality gate passed; all three
+  code-review threads resolved. Final static follow-up uses `.at(-1)` and marks
+  the other required serial import operation. Verify that final head after push.

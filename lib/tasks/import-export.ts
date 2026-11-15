@@ -267,7 +267,7 @@ async function applyArchivedTasks(
       continue;
     }
     if (existingArchivedIds.has(task.id) || (mode === "merge" && trashIds.has(task.id))) continue;
-    if (mode === "replace") await db.deletedTasks.delete(task.id);
+    if (mode === "replace") await db.deletedTasks.delete(task.id); // NOSONAR -- clear the tombstone before the ordered archive write.
     await db.archivedTasks.put(task); // NOSONAR -- preserve input order when imported snapshots share an id.
   }
   return dropped;
