@@ -59,6 +59,16 @@ test.describe("What's New", () => {
     await expect(page.getByTestId("whats-new-cue")).toHaveCount(0);
   });
 
+  test("shows the 14.9.0 sync, reminder, and capture improvements", async ({ page }) => {
+    await page.goto("/settings#whats-new");
+    const notes = page.getByRole("region", { name: "Version 14.9.0", exact: true });
+    await expect(notes).toBeVisible();
+    await expect(notes).toContainText("More reliable sync, reminders, and quick task entry.");
+    await expect(notes).toContainText("Recover failed sync operations in Settings.");
+    await expect(notes).toContainText("After Add, focus returns to the capture field");
+    await expect(notes).toContainText("background checks");
+  });
+
   test("Dismiss hides the cue for good", async ({ page }) => {
     await becomeExistingUserBeforeAnUpdate(page);
     await page.getByRole("button", { name: "Dismiss what's new" }).click();

@@ -23,6 +23,20 @@ test.describe("Task CRUD Operations", () => {
     await expect(taskCard).toBeVisible();
   });
 
+  test("returns focus after Add so the next task can be typed immediately", async ({ page }) => {
+    const input = page.getByTestId("capture-input");
+    await input.fill("First repeated capture");
+    await input.evaluate((field) => field.blur());
+    await page.getByTestId("submit-task").click();
+    await expect(page.getByTestId("task-card").filter({ hasText: "First repeated capture" })).toBeVisible();
+    await expect(input).toBeFocused();
+    await page.keyboard.type("Second repeated capture");
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("task-card").filter({ hasText: "Second repeated capture" })).toBeVisible();
+    await expect(page.getByTestId("capture-input")).toBeFocused();
+    await expect(page.getByTestId("capture-input")).toHaveValue("");
+  });
+
   test("should read and display task details", async ({ page }) => {
     await matrixPage.createTask("Task to read");
     
