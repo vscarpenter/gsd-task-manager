@@ -11,6 +11,7 @@ import {
   requestNotificationPermission
 } from "./permissions";
 import { createLogger } from "@/lib/logger";
+import { isResetPending } from "@/lib/reset-lock";
 
 const logger = createLogger("NOTIFICATIONS");
 
@@ -22,11 +23,19 @@ async function getActiveServiceWorker(): Promise<ServiceWorkerRegistration | und
     return undefined;
   }
 
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await navigator.serviceWorker.ready;
+    // ready never rejects if registration fails. Release the shared reset lock
+    // and use the existing fallback when no worker activates within two seconds.
+    return await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<undefined>((resolve) => { timeout = setTimeout(() => resolve(undefined), 2_000); }),
+    ]);
   } catch (error) {
     logger.error("Error resolving service worker registration", error instanceof Error ? error : new Error(String(error)));
     return undefined;
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
   }
 }
 
@@ -129,6 +138,7 @@ async function displayNotification(
   options: NotificationOptions
 ): Promise<boolean> {
   const registration = await getActiveServiceWorker();
+  if (isResetPending()) return false;
 
   if (registration?.showNotification) {
     await registration.showNotification(title, options);

@@ -585,6 +585,26 @@ describe("Notifications module", () => {
 				mockDb.notificationSettings.get.mockResolvedValue(enabledSettings);
 			});
 
+			it("falls back after a worker activation wait expires and ignores late activation", async () => {
+				vi.useFakeTimers();
+				let activate!: (registration: { showNotification: ReturnType<typeof vi.fn> }) => void;
+				const ready = new Promise<{ showNotification: ReturnType<typeof vi.fn> }>((resolve) => { activate = resolve; });
+				Object.defineProperty(navigator, "serviceWorker", { value: { ready }, configurable: true });
+				let finished = false;
+				const delivery = showTaskNotification(createTask(), 15).then((shown) => { finished = true; return shown; });
+				const showNotification = vi.fn();
+				try {
+					await vi.advanceTimersByTimeAsync(2_500);
+					expect(finished).toBe(true);
+					expect(await delivery).toBe(true);
+					expect(mockNotificationConstructor).toHaveBeenCalledOnce();
+				} finally {
+					activate({ showNotification });
+					await delivery;
+				}
+				expect(showNotification).not.toHaveBeenCalled();
+			});
+
 			it("returns true once the service worker shows it", async () => {
 				useServiceWorker(vi.fn().mockResolvedValue(undefined));
 

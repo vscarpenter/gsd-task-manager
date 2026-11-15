@@ -87,7 +87,7 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 import { resetEverything, reloadAfterReset } from '@/lib/reset-everything';
-import { getResetLockSnapshot } from '@/lib/reset-lock';
+import { endResetLock, getResetLockSnapshot } from '@/lib/reset-lock';
 import { getDb } from '@/lib/db';
 
 describe('reset-everything', () => {
@@ -122,6 +122,27 @@ describe('reset-everything', () => {
         vi.unstubAllGlobals();
       }
     });
+    it.each(['open', 'put', 'delete'])('continues reset when Cache Storage %s fails', async (failure) => {
+      const fail = () => { throw new DOMException('Cache unavailable', 'QuotaExceededError'); };
+      vi.stubGlobal('caches', { open: async () => {
+        if (failure === 'open') fail();
+        return {
+          put: async () => { if (failure === 'put') fail(); },
+          delete: async () => { if (failure === 'delete') fail(); return true; },
+        };
+      } });
+      try {
+        const result = await resetEverything();
+        expect(result.success).toBe(true);
+        expect(result.clearedTables).toContain('tasks');
+        expect(mockDisableSync).toHaveBeenCalled();
+        expect(getResetLockSnapshot()).toBe('unlocked');
+      } finally {
+        endResetLock(true);
+        vi.unstubAllGlobals();
+      }
+    });
+
     it('should clear all IndexedDB tables and localStorage on success', async () => {
       const result = await resetEverything();
 

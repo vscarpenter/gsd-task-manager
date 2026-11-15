@@ -168,6 +168,18 @@ async function runResetSteps(preserveTheme: boolean): Promise<ResetResult> {
 	return result;
 }
 
+async function updateBackgroundResetMarker(pending: boolean): Promise<void> {
+	try {
+		await setBackgroundResetPending(pending);
+	} catch (error) {
+		// Cache availability must not prevent sign-out or the local-data wipe.
+		logger.warn("Could not update the background reset marker", {
+			pending,
+			errorName: error instanceof Error ? error.name : "Unknown error",
+		});
+	}
+}
+
 /**
  * Reset everything - complete application reset
  *
@@ -200,10 +212,10 @@ export async function resetEverything(
 	let localDataDeleted = false;
 	try {
 		// Publish before waiting: an active worker checks this between deliveries.
-		await setBackgroundResetPending(true);
+		await updateBackgroundResetMarker(true);
 		const result = await withNotificationLock(async () => {
 			const reset = await runResetSteps(preserveTheme);
-			if (!reset.failedSteps.includes("local-data")) await setBackgroundResetPending(false);
+			if (!reset.failedSteps.includes("local-data")) await updateBackgroundResetMarker(false);
 			return reset;
 		});
 		localDataDeleted = !result.failedSteps.includes("local-data");
