@@ -1,0 +1,652 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Independent GSD production probes, aggregate metrics and grouped alerts. Render with monitoring/render-template.cjs before deployment.",
+  "Parameters": {
+    "AlarmTopicArn": {
+      "Type": "String",
+      "Description": "Existing confirmed SNS alert topic in the deployment account and region.",
+      "AllowedPattern": "^arn:aws:sns:us-east-1:[0-9]{12}:[A-Za-z0-9_-]+$"
+    },
+    "DistributionId": {
+      "Type": "String",
+      "Description": "Existing GSD production CloudFront distribution.",
+      "AllowedPattern": "^[A-Z0-9]{8,20}$"
+    },
+    "BackendInstanceId": {
+      "Type": "String",
+      "Description": "Existing PocketBase EC2 host.",
+      "AllowedPattern": "^i-[a-f0-9]{8,17}$"
+    },
+    "NotificationsEnabled": {
+      "Type": "String",
+      "Default": "false",
+      "AllowedValues": [
+        "false",
+        "true"
+      ],
+      "Description": "Enable only after scheduled probes and normal alarm states are verified."
+    },
+    "LatencyThresholdMs": {
+      "Type": "Number",
+      "Default": 2500,
+      "MinValue": 100,
+      "MaxValue": 60000,
+      "Description": "Tail latency threshold for public probes in milliseconds."
+    }
+  },
+  "Conditions": {
+    "NotificationsOn": {
+      "Fn::Equals": [
+        {
+          "Ref": "NotificationsEnabled"
+        },
+        "true"
+      ]
+    }
+  },
+  "Resources": {
+    "ProbeLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/${AWS::StackName}-probe"
+        },
+        "RetentionInDays": 7
+      }
+    },
+    "ProbeRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "ProbeLogsOnly",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "ProbeLogGroup",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "ProbeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "${AWS::StackName}-probe"
+        },
+        "Description": "Checks fixed public GSD endpoints and emits aggregate metadata only.",
+        "Runtime": "nodejs24.x",
+        "Architectures": [
+          "arm64"
+        ],
+        "Handler": "index.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "ProbeRole",
+            "Arn"
+          ]
+        },
+        "Timeout": 25,
+        "MemorySize": 256,
+        "ReservedConcurrentExecutions": 1,
+        "TracingConfig": {
+          "Mode": "PassThrough"
+        },
+        "LoggingConfig": {
+          "LogFormat": "Text",
+          "LogGroup": {
+            "Ref": "ProbeLogGroup"
+          }
+        }
+      }
+    },
+    "Schedule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-schedule"
+        },
+        "Description": "Public GSD health checks once a minute; contains no application events.",
+        "ScheduleExpression": "rate(1 minute)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "ProbeFunction",
+                "Arn"
+              ]
+            },
+            "Id": "PublicHealthProbe",
+            "Input": "{}",
+            "RetryPolicy": {
+              "MaximumRetryAttempts": 0,
+              "MaximumEventAgeInSeconds": 60
+            }
+          }
+        ]
+      }
+    },
+    "SchedulePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ProbeFunction"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "Schedule",
+            "Arn"
+          ]
+        },
+        "SourceAccount": {
+          "Ref": "AWS::AccountId"
+        }
+      }
+    },
+    "WebsiteAvailability": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-website-availability"
+        },
+        "AlarmDescription": "Public website check failed or stopped publishing. No response content is collected.",
+        "Namespace": "GSD/Production",
+        "MetricName": "Success",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          },
+          {
+            "Name": "Check",
+            "Value": "website"
+          }
+        ],
+        "Statistic": "Minimum",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching"
+      }
+    },
+    "WebsiteLatency": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-website-latency"
+        },
+        "AlarmDescription": "Sustained high tail latency for the public website check.",
+        "Namespace": "GSD/Production",
+        "MetricName": "DurationMs",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          },
+          {
+            "Name": "Check",
+            "Value": "website"
+          }
+        ],
+        "ExtendedStatistic": "p95",
+        "EvaluateLowSampleCountPercentile": "evaluate",
+        "Period": 300,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": {
+          "Ref": "LatencyThresholdMs"
+        },
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching"
+      }
+    },
+    "WorkerAvailability": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-service-worker-availability"
+        },
+        "AlarmDescription": "Public service-worker check failed or stopped publishing. No response content is collected.",
+        "Namespace": "GSD/Production",
+        "MetricName": "Success",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          },
+          {
+            "Name": "Check",
+            "Value": "service-worker"
+          }
+        ],
+        "Statistic": "Minimum",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching"
+      }
+    },
+    "WorkerLatency": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-service-worker-latency"
+        },
+        "AlarmDescription": "Sustained high tail latency for the public service-worker check.",
+        "Namespace": "GSD/Production",
+        "MetricName": "DurationMs",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          },
+          {
+            "Name": "Check",
+            "Value": "service-worker"
+          }
+        ],
+        "ExtendedStatistic": "p95",
+        "EvaluateLowSampleCountPercentile": "evaluate",
+        "Period": 300,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": {
+          "Ref": "LatencyThresholdMs"
+        },
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching"
+      }
+    },
+    "AssetAvailability": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-bootstrap-asset-availability"
+        },
+        "AlarmDescription": "Public bootstrap-asset check failed or stopped publishing. No response content is collected.",
+        "Namespace": "GSD/Production",
+        "MetricName": "Success",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          },
+          {
+            "Name": "Check",
+            "Value": "bootstrap-asset"
+          }
+        ],
+        "Statistic": "Minimum",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching"
+      }
+    },
+    "AssetLatency": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-bootstrap-asset-latency"
+        },
+        "AlarmDescription": "Sustained high tail latency for the public bootstrap-asset check.",
+        "Namespace": "GSD/Production",
+        "MetricName": "DurationMs",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          },
+          {
+            "Name": "Check",
+            "Value": "bootstrap-asset"
+          }
+        ],
+        "ExtendedStatistic": "p95",
+        "EvaluateLowSampleCountPercentile": "evaluate",
+        "Period": 300,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": {
+          "Ref": "LatencyThresholdMs"
+        },
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching"
+      }
+    },
+    "BackendAvailability": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-pocketbase-availability"
+        },
+        "AlarmDescription": "Public pocketbase check failed or stopped publishing. No response content is collected.",
+        "Namespace": "GSD/Production",
+        "MetricName": "Success",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          },
+          {
+            "Name": "Check",
+            "Value": "pocketbase"
+          }
+        ],
+        "Statistic": "Minimum",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching"
+      }
+    },
+    "BackendLatency": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-pocketbase-latency"
+        },
+        "AlarmDescription": "Sustained high tail latency for the public pocketbase check.",
+        "Namespace": "GSD/Production",
+        "MetricName": "DurationMs",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          },
+          {
+            "Name": "Check",
+            "Value": "pocketbase"
+          }
+        ],
+        "ExtendedStatistic": "p95",
+        "EvaluateLowSampleCountPercentile": "evaluate",
+        "Period": 300,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": {
+          "Ref": "LatencyThresholdMs"
+        },
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching"
+      }
+    },
+    "Heartbeat": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-heartbeat"
+        },
+        "AlarmDescription": "The scheduled monitor stopped completing checks.",
+        "Namespace": "GSD/Production",
+        "MetricName": "Completed",
+        "Dimensions": [
+          {
+            "Name": "Environment",
+            "Value": "production"
+          }
+        ],
+        "Statistic": "Sum",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching"
+      }
+    },
+    "ProbeErrors": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-probe-errors"
+        },
+        "AlarmDescription": "The monitoring function failed during execution.",
+        "Namespace": "AWS/Lambda",
+        "MetricName": "Errors",
+        "Dimensions": [
+          {
+            "Name": "FunctionName",
+            "Value": {
+              "Ref": "ProbeFunction"
+            }
+          }
+        ],
+        "Statistic": "Sum",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 0,
+        "ComparisonOperator": "GreaterThanThreshold",
+        "TreatMissingData": "notBreaching"
+      }
+    },
+    "CloudFront5xx": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-cloudfront-5xx"
+        },
+        "AlarmDescription": "Sustained 5xx response rate on the production distribution.",
+        "Namespace": "AWS/CloudFront",
+        "MetricName": "5xxErrorRate",
+        "Dimensions": [
+          {
+            "Name": "DistributionId",
+            "Value": {
+              "Ref": "DistributionId"
+            }
+          },
+          {
+            "Name": "Region",
+            "Value": "Global"
+          }
+        ],
+        "Statistic": "Average",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching"
+      }
+    },
+    "CloudFront4xx": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-cloudfront-4xx"
+        },
+        "AlarmDescription": "Sustained 4xx response rate on the production distribution.",
+        "Namespace": "AWS/CloudFront",
+        "MetricName": "4xxErrorRate",
+        "Dimensions": [
+          {
+            "Name": "DistributionId",
+            "Value": {
+              "Ref": "DistributionId"
+            }
+          },
+          {
+            "Name": "Region",
+            "Value": "Global"
+          }
+        ],
+        "Statistic": "Average",
+        "Period": 300,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 20,
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "notBreaching"
+      }
+    },
+    "BackendStatus": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-backend-status"
+        },
+        "AlarmDescription": "PocketBase host failed an EC2 status check. Notification only.",
+        "Namespace": "AWS/EC2",
+        "MetricName": "StatusCheckFailed",
+        "Dimensions": [
+          {
+            "Name": "InstanceId",
+            "Value": {
+              "Ref": "BackendInstanceId"
+            }
+          }
+        ],
+        "Statistic": "Maximum",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 2,
+        "Threshold": 1,
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "TreatMissingData": "missing"
+      }
+    },
+    "CriticalAlarm": {
+      "Type": "AWS::CloudWatch::CompositeAlarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-critical"
+        },
+        "AlarmDescription": {
+          "Fn::Sub": "GSD critical health alert. Open the ${AWS::StackName} CloudWatch dashboard. Aggregate monitoring data only."
+        },
+        "AlarmRule": {
+          "Fn::Sub": "ALARM(\"${WebsiteAvailability}\") OR ALARM(\"${WorkerAvailability}\") OR ALARM(\"${AssetAvailability}\") OR ALARM(\"${BackendAvailability}\") OR ALARM(\"${Heartbeat}\") OR ALARM(\"${ProbeErrors}\") OR ALARM(\"${CloudFront5xx}\") OR ALARM(\"${BackendStatus}\")"
+        },
+        "ActionsEnabled": {
+          "Fn::If": [
+            "NotificationsOn",
+            true,
+            false
+          ]
+        },
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicArn"
+          }
+        ],
+        "OKActions": [
+          {
+            "Ref": "AlarmTopicArn"
+          }
+        ]
+      }
+    },
+    "WarningAlarm": {
+      "Type": "AWS::CloudWatch::CompositeAlarm",
+      "Properties": {
+        "AlarmName": {
+          "Fn::Sub": "${AWS::StackName}-warning"
+        },
+        "AlarmDescription": {
+          "Fn::Sub": "GSD warning health alert. Open the ${AWS::StackName} CloudWatch dashboard. Aggregate monitoring data only."
+        },
+        "AlarmRule": {
+          "Fn::Sub": "(ALARM(\"${WebsiteLatency}\") OR ALARM(\"${WorkerLatency}\") OR ALARM(\"${AssetLatency}\") OR ALARM(\"${BackendLatency}\") OR ALARM(\"${CloudFront4xx}\")) AND NOT ALARM(\"${CriticalAlarm}\")"
+        },
+        "ActionsEnabled": {
+          "Fn::If": [
+            "NotificationsOn",
+            true,
+            false
+          ]
+        },
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicArn"
+          }
+        ],
+        "OKActions": [
+          {
+            "Ref": "AlarmTopicArn"
+          }
+        ]
+      }
+    },
+    "Dashboard": {
+      "Type": "AWS::CloudWatch::Dashboard",
+      "Properties": {
+        "DashboardName": {
+          "Ref": "AWS::StackName"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "ProbeFunctionName": {
+      "Description": "Scheduled public health probe.",
+      "Value": {
+        "Ref": "ProbeFunction"
+      }
+    },
+    "CriticalAlarmName": {
+      "Description": "Grouped availability and monitoring failures.",
+      "Value": {
+        "Ref": "CriticalAlarm"
+      }
+    },
+    "WarningAlarmName": {
+      "Description": "Grouped latency and sustained client response errors.",
+      "Value": {
+        "Ref": "WarningAlarm"
+      }
+    },
+    "LogGroupName": {
+      "Description": "Seven-day aggregate metric log; contains no response bodies.",
+      "Value": {
+        "Ref": "ProbeLogGroup"
+      }
+    },
+    "DashboardUrl": {
+      "Description": "Production monitoring dashboard.",
+      "Value": {
+        "Fn::Sub": "https://console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${AWS::StackName}"
+      }
+    }
+  }
+}

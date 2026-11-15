@@ -173,6 +173,9 @@ the architecture decisions in [`docs/adr/`](docs/adr/).
 Uploading an artifact is not proof that the CDN or a running container serves
 it. Verify the deployed URL separately.
 
+Public health checks, aggregate alerts, the dashboard, and operator commands are
+documented in [`docs/ops/production-monitoring.md`](docs/ops/production-monitoring.md).
+
 ## Release documentation checklist
 
 Before changing the release version or announcing a feature:

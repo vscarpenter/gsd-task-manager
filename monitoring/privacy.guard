@@ -1,0 +1,41 @@
+rule bounded_public_probe {
+    Resources.ProbeFunction.Properties {
+        Runtime == 'nodejs24.x'
+        Timeout <= 30
+        MemorySize <= 512
+        ReservedConcurrentExecutions == 1
+        TracingConfig.Mode == 'PassThrough'
+    }
+    Resources.ProbeLogGroup.Properties.RetentionInDays <= 7
+    Resources.Schedule.Properties.ScheduleExpression == 'rate(1 minute)'
+    Resources.Schedule.Properties.Targets[0].Input == '{}'
+    Parameters.NotificationsEnabled.Default == 'false'
+}
+
+rule log_writes_only {
+    Resources.ProbeRole.Properties.Policies[*].PolicyDocument.Statement[*] {
+        Effect == 'Allow'
+        Action[*] IN ['logs:CreateLogStream', 'logs:PutLogEvents']
+        Resource.'Fn::GetAtt'[0] == 'ProbeLogGroup'
+        Resource.'Fn::GetAtt'[1] == 'Arn'
+    }
+}
+
+rule missing_monitor_data_alerts {
+    Resources.Heartbeat.Properties.TreatMissingData == 'breaching'
+    Resources.WebsiteAvailability.Properties.TreatMissingData == 'breaching'
+    Resources.BackendAvailability.Properties.TreatMissingData == 'breaching'
+}
+
+rule monitoring_resources_only {
+    Resources.*.Type IN [
+        'AWS::Logs::LogGroup',
+        'AWS::IAM::Role',
+        'AWS::Lambda::Function',
+        'AWS::Lambda::Permission',
+        'AWS::Events::Rule',
+        'AWS::CloudWatch::Alarm',
+        'AWS::CloudWatch::CompositeAlarm',
+        'AWS::CloudWatch::Dashboard'
+    ]
+}
