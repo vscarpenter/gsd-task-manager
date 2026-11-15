@@ -1,0 +1,200 @@
+{
+  "widgets": [
+    {
+      "type": "alarm",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 3,
+      "properties": {
+        "title": "Grouped alerts",
+        "alarms": [
+          "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${CriticalAlarm}",
+          "arn:${AWS::Partition}:cloudwatch:${AWS::Region}:${AWS::AccountId}:alarm:${WarningAlarm}"
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 3,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Public probe success",
+        "region": "${AWS::Region}",
+        "period": 60,
+        "stat": "Average",
+        "metrics": [
+          [
+            "GSD/Production",
+            "Success",
+            "Environment",
+            "production",
+            "Check",
+            "website",
+            {
+              "label": "website"
+            }
+          ],
+          [
+            "GSD/Production",
+            "Success",
+            "Environment",
+            "production",
+            "Check",
+            "service-worker",
+            {
+              "label": "service-worker"
+            }
+          ],
+          [
+            "GSD/Production",
+            "Success",
+            "Environment",
+            "production",
+            "Check",
+            "bootstrap-asset",
+            {
+              "label": "bootstrap-asset"
+            }
+          ],
+          [
+            "GSD/Production",
+            "Success",
+            "Environment",
+            "production",
+            "Check",
+            "pocketbase",
+            {
+              "label": "pocketbase"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 3,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Public probe tail latency (ms)",
+        "region": "${AWS::Region}",
+        "period": 300,
+        "stat": "p95",
+        "metrics": [
+          [
+            "GSD/Production",
+            "DurationMs",
+            "Environment",
+            "production",
+            "Check",
+            "website",
+            {
+              "label": "website"
+            }
+          ],
+          [
+            "GSD/Production",
+            "DurationMs",
+            "Environment",
+            "production",
+            "Check",
+            "service-worker",
+            {
+              "label": "service-worker"
+            }
+          ],
+          [
+            "GSD/Production",
+            "DurationMs",
+            "Environment",
+            "production",
+            "Check",
+            "bootstrap-asset",
+            {
+              "label": "bootstrap-asset"
+            }
+          ],
+          [
+            "GSD/Production",
+            "DurationMs",
+            "Environment",
+            "production",
+            "Check",
+            "pocketbase",
+            {
+              "label": "pocketbase"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 9,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "CloudFront error rate (%)",
+        "region": "us-east-1",
+        "period": 60,
+        "stat": "Average",
+        "metrics": [
+          [
+            "AWS/CloudFront",
+            "4xxErrorRate",
+            "DistributionId",
+            "${DistributionId}",
+            "Region",
+            "Global"
+          ],
+          [
+            "AWS/CloudFront",
+            "5xxErrorRate",
+            "DistributionId",
+            "${DistributionId}",
+            "Region",
+            "Global"
+          ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 9,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Backend CPU and status",
+        "region": "${AWS::Region}",
+        "period": 300,
+        "metrics": [
+          [
+            "AWS/EC2",
+            "CPUUtilization",
+            "InstanceId",
+            "${BackendInstanceId}",
+            {
+              "stat": "Average"
+            }
+          ],
+          [
+            "AWS/EC2",
+            "StatusCheckFailed",
+            "InstanceId",
+            "${BackendInstanceId}",
+            {
+              "stat": "Maximum",
+              "yAxis": "right"
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}

@@ -1749,3 +1749,35 @@ Release metadata is ready for its PR. Next: monitor CI/reviews, merge, tag,
 validate the attested artifact, deploy through Gate 2, verify live, and publish.
 The final deployment and live-verification receipt will be recorded in the
 v14.9.2 GitHub release. No backend migration or additional MCP publish is needed.
+
+# Ongoing production monitoring (2026-11-15)
+
+Owner requested active monitoring and alerts without collecting users' task
+content. Non-trivial infrastructure work; specification and plan:
+`tasks/spec-production-monitoring.md`.
+
+- [x] Inspect actual AWS resources, privacy policy and alert destinations.
+- [x] Select independent AWS probes, aggregate metrics and a confirmed alert channel.
+- [x] Implement privacy and failure regressions first, then the probe and stack.
+- [ ] Validate permissions, template and required checks; commit, push and PR.
+- [ ] Deploy the additive monitoring stack and observe scheduled successful runs.
+- [ ] Enable and test grouped SNS email failure/recovery notifications.
+- [ ] Create an hourly Codex heartbeat and record the operating receipt.
+
+The active destination is the existing confirmed `account-alerts` Gmail
+subscription in us-east-1. The owner selected email until SMS is ready. The
+`vinny-text-notify` destination is not verified in the SMS sandbox;
+AWS could not send an OTP because there is no registered origination identity. CloudFront distribution E1T6GDX0TQEP94 and PocketBase
+instance i-0e504734c45bb214b have been verified against production.
+
+## Resuming From Here — production monitoring
+
+Implementation and local verification are complete: 47 new regressions and
+5,047 full-suite tests passed, along with type checks, lint, shape, knip,
+CloudFormation schema, privacy Guard rules and AWS template validation. Live
+public probes and the isolated Chromium operator check passed. No client or
+release artifact changed. The change report and review questions are in the
+specification. Next: publish the PR, review the exact monitoring-only change
+set, deploy quietly, verify scheduled metrics, enable and test email actions,
+then create the hourly heartbeat and save its operating receipt. SMS remains
+deferred; confirmed email is authorized.

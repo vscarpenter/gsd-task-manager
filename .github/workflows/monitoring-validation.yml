@@ -1,0 +1,47 @@
+name: Validate production monitoring
+
+on:
+  pull_request:
+    paths:
+      - 'monitoring/**'
+      - 'tests/data/production-monitor*.test.ts'
+      - '.github/workflows/monitoring-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'monitoring/**'
+      - '.github/workflows/monitoring-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  monitoring-template:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Render exact probe source
+        run: node monitoring/render-template.cjs > "$RUNNER_TEMP/monitoring.json"
+      - name: Validate resource schema
+        run: |
+          python3 -m venv "$RUNNER_TEMP/monitoring-validator"
+          "$RUNNER_TEMP/monitoring-validator/bin/pip" install --disable-pip-version-check -r monitoring/requirements-validation.txt
+          "$RUNNER_TEMP/monitoring-validator/bin/cfn-lint" --format json --regions us-east-1 --template "$RUNNER_TEMP/monitoring.json"
+      - name: Verify and install temporary policy validator
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download 3.2.1 --repo aws-cloudformation/cloudformation-guard \
+            --pattern cfn-guard-v3-x86_64-ubuntu-latest.tar.gz --dir "$RUNNER_TEMP"
+          echo '09c2b8cfd81d513374a8da89d4805dc55006a3da52bbf598e272022d4d198e94  cfn-guard-v3-x86_64-ubuntu-latest.tar.gz' > "$RUNNER_TEMP/guard.sha256"
+          (cd "$RUNNER_TEMP" && sha256sum --check guard.sha256)
+          mkdir "$RUNNER_TEMP/guard"
+          tar -xzf "$RUNNER_TEMP/cfn-guard-v3-x86_64-ubuntu-latest.tar.gz" -C "$RUNNER_TEMP/guard"
+      - name: Enforce monitoring privacy boundaries
+        run: |
+          GUARD_BINARY=$(find "$RUNNER_TEMP/guard" -type f -name cfn-guard -print -quit)
+          test -n "$GUARD_BINARY"
+          "$GUARD_BINARY" validate --rules monitoring/privacy.guard --data "$RUNNER_TEMP/monitoring.json" --output-format json

@@ -1,0 +1,8 @@
+{
+  "stackName": "gsd-production-monitoring",
+  "region": "us-east-1",
+  "accountId": "710603110067",
+  "alarmTopicArn": "arn:aws:sns:us-east-1:710603110067:account-alerts",
+  "distributionId": "E1T6GDX0TQEP94",
+  "backendInstanceId": "i-0e504734c45bb214b"
+}
