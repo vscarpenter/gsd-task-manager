@@ -8,6 +8,7 @@
 import { readDefaultReminder } from '@/lib/notifications/default-reminder';
 import { getPocketBase } from './pocketbase-client';
 import { getSyncQueue } from './queue';
+import { preparePendingForSession } from './push-queue';
 import { placementToWire, taskRecordToPocketBase } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
@@ -64,14 +65,6 @@ export interface PushResult {
  * while sync_config still names `ownerId`. Every queue read and write below
  * checks that in its own transaction, as the pull does for its writes.
  */
-async function readPendingForSession(ownerId: string): Promise<SyncQueueItem[]> {
-  const db = getDb();
-  return db.transaction('r', [db.syncMetadata, db.syncQueue], async () => {
-    await assertSyncSessionCurrent(ownerId);
-    return getSyncQueue().getPending();
-  });
-}
-
 async function writeQueueForSession(ownerId: string, write: () => Promise<void>): Promise<void> {
   const db = getDb();
   await db.transaction('rw', [db.syncMetadata, db.syncQueue], async () => {
@@ -441,7 +434,7 @@ export async function pushLocalChanges(sessionOwnerId: string): Promise<PushResu
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: false };
   }
 
-  const pending = await readPendingForSession(ownerId);
+  const pending = await preparePendingForSession(ownerId);
   if (pending.length === 0) {
     return { pushedCount: 0, failedCount: 0, lastError: null, authenticated: true };
   }
