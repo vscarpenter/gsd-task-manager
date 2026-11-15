@@ -47,7 +47,8 @@ authenticated sync activity are not centrally collected; see ADR 0017.
 bun run monitoring:check
 bun run monitoring:browser
 aws cloudwatch describe-alarms --region us-east-1 \
-  --alarm-name-prefix gsd-production-monitoring
+  --alarm-name-prefix gsd-production-monitoring \
+  --alarm-types MetricAlarm CompositeAlarm
 ```
 
 The first command checks the four public surfaces. The second also verifies
@@ -55,6 +56,10 @@ capture focus, pending subtasks, the running version and release notes, offline
 persistence, completion/deletion and browser diagnostics. Browser transport
 errors during the intentional offline phase and canceled navigations are
 counted separately from unexpected runtime failures.
+
+The AWS CLI defaults to metric alarms. Include both types to see the grouped
+notification alarms. For their action history, use `describe-alarm-history`
+with `--alarm-types CompositeAlarm`.
 
 The hourly Codex thread check is supplementary. Its public checks need no AWS
 credentials; alarm inspection requires a valid local AWS session. It must not
@@ -115,3 +120,18 @@ in response to a single synthetic failure.
 Deleting this stack stops its schedule, probe, dashboard and alarms. The log
 group is retained with its seven-day retention policy. Existing SNS topics,
 subscriptions, CloudFront and EC2 resources are not owned by this stack.
+
+## Activation record — 2026-11-15
+
+The stack was created from committed monitoring source `3fc2c3c4`. The installed
+Lambda source was downloaded and matched byte for byte. Scheduled runs passed
+all four public checks; CloudWatch received their metrics and heartbeat. All
+15 alarms reached OK before notification actions were enabled.
+
+A controlled website-child alarm triggered the critical email at 19:41:40 UTC.
+Normal healthy metric evaluation restored OK and sent recovery at 19:42:10 UTC.
+Both SNS actions succeeded, and both messages were verified in Gmail. All 15
+alarms returned to OK with critical and warning email actions enabled.
+
+The hourly `GSD production health` Codex heartbeat is active as a secondary
+check. The live app remains 14.9.2; this setup did not deploy an app artifact.
