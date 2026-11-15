@@ -1701,7 +1701,8 @@ reported one minor deprecation: React FormEvent in the capture focus helper.
 - [x] Use SubmitEvent<HTMLFormElement> for the capture submit handler and helper;
   read the typed native submitter without a DOM-event cast.
 - [x] Run existing regressions, required checks and real-browser capture checks.
-- [ ] Commit and open a follow-up PR, then monitor its checks and reviews.
+- [x] Commit and open PR #745; all checks/reviews passed and the owner authorized
+  its merge at bb67f72d748ad75a0231b12632c725cf9fa439aa.
 
 Tier: trivial type correction; no new runtime behavior, dependency, version or
 release-note change. Existing capture regressions cover the affected path.
@@ -1711,3 +1712,40 @@ TypeScript, lint, existing shape and bundle checks, knip and production build
 passed. The capture focus regression passed in Chromium, Firefox and WebKit on
 the rebuilt artifact (three tests, no retries). Sonar's original finding is
 `typescript:S1874`, issue `AaHdRzcx07pFJPuuXvwc`, on merged PR #744.
+
+# Release 14.9.2 (2026-11-15)
+
+Owner explicitly authorized release, production deployment and live verification.
+Metadata-only preparation uses `chore/release-14-9-2` from main at bb67f72d.
+
+- [x] Verify merged source and current production/release baseline. Live worker
+  reports 14.9.1; package version is 14.9.0. Latest published tag is v14.8.8.
+- [x] Align package/README at 14.9.2; add a maintenance note, preserving 14.9.0 history.
+- [ ] Run release checks, create the version PR, wait for CI/reviews, and merge.
+- [ ] Create immutable v14.9.2 tag and draft GitHub release; wait for the protected
+  workflow to audit, build and attest its exact release artifact.
+- [ ] Validate rollback tag, checksum and provenance, then record the owner's
+  explicit deployment approval through the eligible production reviewer account.
+- [ ] Wait for deployment, CloudFront invalidation and smoke verification.
+- [ ] Verify live version, release notes, task flows, focus and offline behavior
+  using fresh browser profiles; publish the GitHub release and save evidence.
+
+Gate 2 remains enabled. The production environment names vscarpenter as reviewer
+and permits self-review. Rollback target v14.8.8 resolves to
+60d3e507ebb51419fad4c09706ac3fa8f553dc6a and is reachable from protected main.
+The previously installed hosted conditional-write route will be checked read-only;
+verification tasks will live only in isolated browser storage.
+
+Local release verification passed: 5,000 app tests across 370 files (91.25%
+statement coverage), app/test types, lint, code-shape thresholds, knip, audit
+(no vulnerabilities across 783 packages), static export and bundle checks.
+All 18 production What's New checks and three capture-focus checks passed
+across Chromium, Firefox and WebKit. An isolated live Chromium profile holds
+a local task on worker 14.9.1 for the post-deployment upgrade check.
+
+## Resuming From Here — 14.9.2
+
+Release metadata is ready for its PR. Next: monitor CI/reviews, merge, tag,
+validate the attested artifact, deploy through Gate 2, verify live, and publish.
+The final deployment and live-verification receipt will be recorded in the
+v14.9.2 GitHub release. No backend migration or additional MCP publish is needed.
