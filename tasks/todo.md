@@ -1690,3 +1690,24 @@ into this worktree without changing the main checkout.
   types, lint, unchanged shape/bundle checks, knip, license policy and audit.
 - Next: review the PR. Merge and deployment remain owner actions.
 - Blockers: none. Receipt: `tasks/capture-field-focus-2026-11-14.md`.
+
+# PR #744 follow-up (2026-11-15)
+
+PR #744 was already merged when monitoring began. All 13 checks passed; Codex
+and Claude found no bugs, and there are no inline review threads. SonarCloud
+reported one minor deprecation: React FormEvent in the capture focus helper.
+
+- [x] Verify the replacement against the installed React type definitions.
+- [x] Use SubmitEvent<HTMLFormElement> for the capture submit handler and helper;
+  read the typed native submitter without a DOM-event cast.
+- [x] Run existing regressions, required checks and real-browser capture checks.
+- [ ] Commit and open a follow-up PR, then monitor its checks and reviews.
+
+Tier: trivial type correction; no new runtime behavior, dependency, version or
+release-note change. Existing capture regressions cover the affected path.
+
+Verification before publication: 4,996 app tests passed across 370 files; app/test
+TypeScript, lint, existing shape and bundle checks, knip and production build
+passed. The capture focus regression passed in Chromium, Firefox and WebKit on
+the rebuilt artifact (three tests, no retries). Sonar's original finding is
+`typescript:S1874`, issue `AaHdRzcx07pFJPuuXvwc`, on merged PR #744.
