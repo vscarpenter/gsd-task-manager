@@ -1,7 +1,9 @@
 # P1/P2 review resolution — 2026-11-14
 
 All five P1 and nine P2 findings are implemented on `fix/review-p1-p2`.
-This is a local code and verification result. Nothing was pushed or deployed.
+Local verification is complete. The owner installed the backend hooks on
+`api.vinny.io`, and the live checks below passed. Web and MCP releases remain
+pending.
 Contract: `tasks/spec-review-p1-p2-2026-11-14.md`.
 
 ## Resolution list
@@ -36,7 +38,8 @@ this request.
   MCP coverage: statements 90.00%, branches 85.91%, functions 89.63%, lines 89.97%.
 - Disposable PocketBase: seven system tests passed against pinned 0.40.4 and
   upgrade fixtures, including simultaneous conditional PATCH, stale DELETE,
-  owner/identity constraints and encrypted storage. No live backend was used.
+  owner/identity constraints and encrypted storage. These system tests used
+  disposable backends.
 - Full production Playwright suite: 540 passed, 24 declared skips across Chromium,
   Firefox and WebKit. After the reset-ordering adjustment, the rebuilt affected
   suites passed again: 25 passed, two non-Chromium periodic-worker skips.
@@ -58,10 +61,26 @@ font metrics and tries available neighboring directions; the Today test uses
 the automatic runtime-error guard, which already recognizes canceled local-font
 requests. Subsequent full-suite verification passed with no retries enabled.
 
+## Live backend verification
+
+On 2026-11-14, 5:12:40–5:12:42 PM CST, authenticated checks against
+`https://api.vinny.io` passed using one temporary task:
+
+- Creation returned 200; a guarded update returned 204 and matched on read-back.
+- In each of three concurrent PATCH races, one request returned 204 and the
+  other returned 412. Read-back preserved the winning title and version.
+- A stale-version DELETE returned 412 and preserved the task.
+- Guarded cleanup returned 204. An authenticated lookup returned 404, and an
+  owner-scoped query for the exact task ID returned no matches.
+
+The normal-user session was attested before writes. The temporary credential
+file was removed after reading; no credentials are included in this report.
+
 ## Rollout
 
-1. Install both atomic-write hook files on the backend and restart PocketBase.
-   Verify the guarded endpoint before releasing adopting web/MCP clients. See ADR 0021.
+1. Backend prerequisite completed: the owner installed both atomic-write hook
+   files and restarted PocketBase. Live guarded writes, conflict rejection and
+   cleanup passed as recorded above. Keep both files installed. See ADR 0021.
 2. Release the clients and use the updated deployment script so mutable metadata
    is replaced and previous hashed assets remain available. Old hashes are
    deliberately retained; cleanup requires a separate retention process after
@@ -76,8 +95,8 @@ Checked: editor draft preservation and discard handling, modal keyboard paths,
 timer persistence, global result visibility/focus, failed-sync recovery,
 on-demand guides, production CSP, offline worker lifecycle and runtime errors.
 Loop: served production artifact + Playwright; fresh contexts and seeded data.
-Verdict: PASS for the requested implementation; backend-first deployment remains
-a release prerequisite.
+Verdict: PASS for the requested implementation. The backend prerequisite is
+verified; adopting web/MCP clients still require release.
 
 ## Modern Web Guidance
 
@@ -87,3 +106,16 @@ a release prerequisite.
   applying "include the visible text as well as important contextual information".
 - **`forms`**: I kept secondary recovery/checklist actions from submitting the
   editor, following "explicitly set `type="button"` on secondary or helper buttons".
+
+## Review questions before merge
+
+1. Where are the expected version and task mutation checked together, and what
+   should an adopting client do if the guarded route is unavailable?
+2. How does replace import prevent an already captured queue snapshot from
+   replaying obsolete work, and how are live/archive/Trash collisions handled?
+3. Which deployment files can be cached as immutable, and why must older hashed
+   assets survive a deployment?
+4. What prevents page and worker reminders from racing with each other or with
+   reset, and which browsers control periodic scheduling?
+5. What must happen before removing the backend hooks during a rollback, and
+   which clients gain atomic conflict protection?

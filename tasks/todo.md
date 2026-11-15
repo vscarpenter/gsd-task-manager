@@ -1625,8 +1625,11 @@ Contract and ordered plan: `tasks/spec-review-p1-p2-2026-11-14.md`.
   544 tests; PocketBase seven system tests; production browser suite 540 passed,
   24 declared skips. Final affected browser suites: 25 passed, two skips.
   Build, unchanged budgets, CSP/PWA, types, lint, shape, knip and dependency checks pass.
-- Next: no implementation work remains for this request. Backend-first rollout
-  requires a separately authorized deployment.
+- Backend: owner installed the hooks on api.vinny.io. Live creation, guarded
+  update, three concurrent-update races and stale-delete rejection passed;
+  the temporary task was deleted and confirmed absent.
+- Next: review the PR and authorize web/MCP releases. No implementation work
+  remains for the requested P1/P2 items.
 - Resolution/evidence: `tasks/review-p1-p2-resolution-2026-11-14.md`.
-- Assumptions: prepare local fixes and backend-first rollout instructions; live deployment
-  and remote publication remain separate actions. P3 focus restoration is not requested.
+- Assumptions: owner authorized branch push and PR creation. Web/MCP deployment
+  remains a separate action. P3 focus restoration is not requested.
