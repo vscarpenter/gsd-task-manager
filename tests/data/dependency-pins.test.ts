@@ -35,7 +35,6 @@ const WORKSPACE_MANIFESTS = ['package.json', 'packages/mcp-server/package.json']
 // import/order, and the jsx-a11y label rules. Enabling one crashes lint.
 const ACCEPTED_LINE_CROSSINGS: Record<string, string[]> = {
   minimatch: [
-    '@eslint/config-array',
     '@typescript-eslint/typescript-estree',
     'eslint',
     'eslint-plugin-import',

@@ -28,6 +28,103 @@ describe("<CaptureBar>", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("returns focus to the field after Add succeeds", async () => {
+    render(<CaptureBar onSubmit={vi.fn().mockResolvedValue(true)} />);
+    const input = screen.getByLabelText("Add a task");
+    await userEvent.type(input, "buy milk");
+    await userEvent.click(screen.getByTestId("submit-task"));
+    expect(input).toHaveValue("");
+    expect(input).toHaveFocus();
+  });
+
+  it("returns focus after an async Add succeeds", async () => {
+    let finish!: (saved: boolean) => void;
+    render(<CaptureBar onSubmit={() => new Promise<boolean>((resolve) => { finish = resolve; })} />);
+    const input = screen.getByLabelText("Add a task");
+    await userEvent.type(input, "buy milk");
+    await userEvent.click(screen.getByTestId("submit-task"));
+    expect(screen.getByTestId("submit-task")).toHaveFocus();
+    await act(async () => finish(true));
+    expect(input).toHaveFocus();
+  });
+
+  it("keeps focus on another control selected during an async save", async () => {
+    let finish!: (saved: boolean) => void;
+    render(<><CaptureBar onSubmit={() => new Promise<boolean>((resolve) => { finish = resolve; })} /><button>Another action</button></>);
+    const input = screen.getByLabelText("Add a task");
+    await userEvent.type(input, "buy milk");
+    await userEvent.click(screen.getByTestId("submit-task"));
+    const other = screen.getByRole("button", { name: "Another action" });
+    await userEvent.click(other);
+    await act(async () => finish(true));
+    expect(input).toHaveValue("");
+    expect(other).toHaveFocus();
+  });
+
+  it("does not focus behind a modal opened while saving", async () => {
+    let finish!: (saved: boolean) => void;
+    render(<CaptureBar onSubmit={() => new Promise<boolean>((resolve) => { finish = resolve; })} />);
+    await userEvent.type(screen.getByLabelText("Add a task"), "buy milk");
+    const add = screen.getByTestId("submit-task");
+    await userEvent.click(add);
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    document.body.append(dialog);
+    try {
+      await act(async () => finish(true));
+      expect(add).toHaveFocus();
+    } finally {
+      dialog.remove();
+    }
+  });
+
+  it.each([false, new Error("disk full")])("keeps focus and the draft after a failed Add (%s)", async (failure) => {
+    const onSubmit = failure instanceof Error ? vi.fn().mockRejectedValue(failure) : vi.fn().mockResolvedValue(failure);
+    render(<CaptureBar onSubmit={onSubmit} />);
+    const input = screen.getByLabelText("Add a task");
+    await userEvent.type(input, "buy milk");
+    const add = screen.getByTestId("submit-task");
+    await userEvent.click(add);
+    expect(input).toHaveValue("buy milk");
+    expect(add).toHaveFocus();
+  });
+
+  it("restores focus for a native Add submitter even when pointer activation leaves focus outside", async () => {
+    render(<><CaptureBar onSubmit={vi.fn().mockResolvedValue(true)} /><button>Another action</button></>);
+    const input = screen.getByLabelText("Add a task");
+    await userEvent.type(input, "buy milk");
+    await userEvent.click(screen.getByRole("button", { name: "Another action" }));
+    // Safari pointer activation does not move focus onto a button.
+    await act(async () => {
+      fireEvent(screen.getByTestId("capture-bar"), new SubmitEvent("submit", {
+        bubbles: true, cancelable: true, submitter: screen.getByTestId("submit-task"),
+      }));
+    });
+    expect(input).toHaveFocus();
+  });
+
+  it("leaves focus outside capture when a submit starts there", async () => {
+    render(<><CaptureBar onSubmit={vi.fn().mockResolvedValue(true)} /><button>Another action</button></>);
+    await userEvent.type(screen.getByLabelText("Add a task"), "buy milk");
+    const other = screen.getByRole("button", { name: "Another action" });
+    await userEvent.click(other);
+    await act(async () => { fireEvent.submit(screen.getByTestId("capture-bar")); });
+    expect(other).toHaveFocus();
+  });
+
+  it("leaves focus alone when the capture bar unmounts during a save", async () => {
+    let finish!: (saved: boolean) => void;
+    const { rerender } = render(<CaptureBar onSubmit={() => new Promise<boolean>((resolve) => { finish = resolve; })} />);
+    await userEvent.type(screen.getByLabelText("Add a task"), "buy milk");
+    await userEvent.click(screen.getByTestId("submit-task"));
+    rerender(<button>Another action</button>);
+    const other = screen.getByRole("button", { name: "Another action" });
+    await userEvent.click(other);
+    await act(async () => finish(true));
+    expect(other).toHaveFocus();
+  });
+
   // The pill remounts when its quadrant changes, which dropped focus to <body>
   // after a click, so the Enter that followed did nothing.
   it("still adds the task on Enter after the pill is clicked", async () => {

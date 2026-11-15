@@ -132,6 +132,18 @@ function QuadrantPill({
   );
 }
 
+function captureFocusRestorer(event: FormEvent | undefined, inputRef: React.RefObject<HTMLInputElement | null>) {
+  const focused = document.activeElement;
+  const form = event?.currentTarget;
+  // Safari pointer activation can leave focus outside the clicked submit button.
+  const submitter = (event?.nativeEvent as SubmitEvent | undefined)?.submitter;
+  const fromCapture = form?.contains(focused) || (submitter && form?.contains(submitter));
+  return () => {
+    if (!fromCapture || document.activeElement !== focused || hasOpenModal()) return;
+    inputRef.current?.focus({ preventScroll: true });
+  };
+}
+
 export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: CaptureBarProps) {
   const [text, setText] = useState("");
   const [override, setOverride] = useState<RedesignQuadrantKey | null>(null);
@@ -225,6 +237,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       : { urgent: parsed.urgent, important: parsed.important };
     const draftText = text;
     const draftOverride = override;
+    const restoreFocus = captureFocusRestorer(e, internalRef);
     submittingRef.current = true;
     let saved: void | boolean = false;
     try {
@@ -240,6 +253,8 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       setText((current) => (current === draftText ? "" : current));
       setOverride((current) => (current === draftOverride ? null : current));
       setJustCaptured(true);
+      // Keep rapid capture ready without taking focus from a newer interaction.
+      restoreFocus();
     } catch {
       // The caller reports the failure. The sentence stays so it can be retried.
       saved = false;

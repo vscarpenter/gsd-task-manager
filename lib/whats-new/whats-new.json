@@ -4,6 +4,36 @@
   "releases": [
     {
       "platform": "web",
+      "version": "14.9.0",
+      "date": "2026-11-14",
+      "notable": true,
+      "headline": "More reliable sync, reminders, and quick task entry.",
+      "new": [
+        "Recover failed sync operations in Settings. Retry sends the latest task; Dismiss keeps unsynced content in Trash and leaves the cloud copy alone.",
+        "Browsers that support background checks can now send local task reminders while GSD is closed, respecting quiet hours and snoozes."
+      ],
+      "improved": [
+        "GSD has a smaller initial download when you open the app.",
+        "App updates keep older open tabs working while new visits get the latest files."
+      ],
+      "fixed": [
+        "After Add, focus returns to the capture field so you can type the next task. If you moved elsewhere while saving, focus stays there.",
+        "Sync checks for competing changes before updating or deleting a cloud task, reducing the risk of one device overwriting another.",
+        "Rapid edits queued at the same time keep the latest task content when they sync.",
+        "Importing a backup keeps each task in one place: the matrix, archive, or Trash. Conflicting task IDs are handled without replacing unrelated work.",
+        "Replacing your tasks from a backup stops older queued sync changes from replaying over the replacement.",
+        "The command palette stays closed behind an open editor, protecting the draft you are working on.",
+        "Saving a task includes a subtask you have typed without pressing Enter. Closing the editor also checks that pending text before discarding it.",
+        "Copied tasks and new repeating instances start with fresh time tracking, including no running timer.",
+        "Cloud sync checks incoming tasks before saving them on this device.",
+        "Start and stop time tracking from task cards in the matrix.",
+        "Choosing a global search result clears filters that would hide the task, then reveals it.",
+        "Task reminders coordinate between open pages and background checks to avoid duplicate alerts.",
+        "Reset Everything can finish when background reminder services are unavailable."
+      ]
+    },
+    {
+      "platform": "web",
       "version": "14.8.1",
       "date": "2026-11-10",
       "notable": false,

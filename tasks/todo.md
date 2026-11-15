@@ -1661,3 +1661,32 @@ required app checks plus affected production browser tests.
 - CI at `08954231`: every job and the SonarCloud quality gate passed; all three
   code-review threads resolved. Final static follow-up uses `.at(-1)` and marks
   the other required serial import operation. Verify that final head after push.
+
+# P3 capture-field focus (2026-11-14)
+
+Standard fix: bounded capture interaction, no design or public API change. Owner
+authorized the focus fix, commit, push and PR in chat. Isolated worktree keeps
+pre-existing version/dependency edits in the main checkout untouched.
+
+- [x] Reproduce focus remaining on Add after successful capture.
+- [x] Restore focus after success only when focus still belongs to the submitting
+  capture control; preserve other controls, open modals, failed saves and unmount.
+- [x] Run unit regressions, required quality checks and real browser focus checks.
+- [x] Prepare the verified `fix/capture-field-focus` change for commit, push and PR.
+
+Scope update: owner asked to include the existing `package.json`/`bun.lock` edits
+(version 14.9.0 and Hono 4.13.16) and add app release notes for the P1/P2 review
+fixes, review follow-ups, and P3 capture focus. Those two edited files were copied
+into this worktree without changing the main checkout.
+
+## Resuming From Here
+
+- Done: guarded post-save focus restoration, native Safari submitter support,
+  14.9.0 version/README, the owner's dependency refresh, and complete user-facing
+  release notes for the review fixes and P3. Pin tests reflect Hono 4.13.16 and
+  remove the obsolete config-array/minimatch exception.
+- Verified: 4,996 app tests, 544 MCP tests (seven gated system skips), 42 production
+  browser tests across Chromium/Firefox/WebKit, focused Chromium dev checks,
+  types, lint, unchanged shape/bundle checks, knip, license policy and audit.
+- Next: review the PR. Merge and deployment remain owner actions.
+- Blockers: none. Receipt: `tasks/capture-field-focus-2026-11-14.md`.
