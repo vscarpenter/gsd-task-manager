@@ -143,8 +143,8 @@
       const tasks = transaction.objectStore("tasks").getAll();
       const settings = transaction.objectStore("notificationSettings").get("settings");
       transaction.oncomplete = () => resolve({ tasks: tasks.result, settings: settings.result });
-      transaction.onabort = () => reject(transaction.error);
-      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error ?? new Error("Reminder database transaction failed"));
+      transaction.onerror = () => reject(transaction.error ?? new Error("Reminder database transaction failed"));
     });
   }
   function sameReminder(current, checked) {
@@ -162,8 +162,8 @@
         }
       };
       transaction.oncomplete = () => resolve();
-      transaction.onabort = () => reject(transaction.error);
-      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error ?? new Error("Reminder database transaction failed"));
+      transaction.onerror = () => reject(transaction.error ?? new Error("Reminder database transaction failed"));
     });
   }
 

@@ -1633,3 +1633,27 @@ Contract and ordered plan: `tasks/spec-review-p1-p2-2026-11-14.md`.
 - Resolution/evidence: `tasks/review-p1-p2-resolution-2026-11-14.md`.
 - Assumptions: owner authorized branch push and PR creation. Web/MCP deployment
   remains a separate action. P3 focus restoration is not requested.
+
+# PR #743 follow-up (2026-11-14)
+
+Standard fixes within the approved remediation contract; no new public API.
+
+- [x] Reproduce and fix equal-version queue snapshots losing the latest edit.
+- [x] Reproduce and bound stalled worker activation while holding the reminder lock.
+- [x] Keep reset available when Cache Storage marker writes fail.
+- [x] Address Sonar findings; retain justified serial operations and browser capability skips.
+- [x] Run affected regressions and required quality checks, then push fixes.
+- [ ] Monitor the final commit's CI and review results; address actionable findings.
+
+Verification: real push/pull over fake IndexedDB and a stateful PocketBase fake;
+notification/reset lock integration with a never-resolving worker-ready promise;
+required app checks plus affected production browser tests.
+
+## Resuming From Here
+
+- Done: three validated review bugs fixed with red/green regressions; initial CI
+  all green. App 4,983 tests, affected browser suites 25 passed/two capability
+  skips, types, lint, shape, knip, production build and bundle checks pass.
+- Next: push follow-up commits, resolve the fixed review threads, and monitor the
+  resulting CI/review runs. Web/MCP release authorization remains separate.
+- Blockers: none.

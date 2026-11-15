@@ -119,3 +119,47 @@ verified; adopting web/MCP clients still require release.
    reset, and which browsers control periodic scheduling?
 5. What must happen before removing the backend hooks during a rollback, and
    which clients gain atomic conflict protection?
+
+## PR #743 review follow-up
+
+The initial CI run passed every job. Review then identified three reproducible
+correctness bugs, now covered by regression tests:
+
+- [Equal-version queued edits](https://github.com/vscarpenter/gsd-task-manager/pull/743#discussion_r4576764791):
+  prepare the owner-fenced queue in one transaction, coalescing consecutive
+  upserts at the same version before CAS tie-breaking. The current same-version
+  task supplies the final content when enqueue timestamps tie. A delete separates
+  groups, failed rows stay outside the pending set, and a failed push preserves
+  the remaining latest intent for retry. Real push/pull regressions cover absent
+  and existing remote records, equal enqueue timestamps, retry and a newer remote.
+- [Worker activation blocks reset](https://github.com/vscarpenter/gsd-task-manager/pull/743#discussion_r4576764794):
+  cap the worker-ready wait at two seconds, clear the timer, and check reset state
+  before display or fallback. Tests cover fallback, ignored late activation, and
+  reset deleting real IndexedDB rows while a due reminder waits for a worker.
+- [Cache Storage failure blocks reset](https://github.com/vscarpenter/gsd-task-manager/pull/743#discussion_r4576770160):
+  treat the background marker as best effort and log only the error name. Cache
+  open, put or delete failures no longer prevent sign-out, local deletion or
+  unlocking after a successful wipe. A failed local wipe still keeps the lock.
+
+Sonar follow-up gives aborted IndexedDB transactions an Error fallback, marks
+component props read-only, simplifies the recovery message and optional check,
+and documents three intentional constructs at their exact locations: serial
+notification display/marking, ordered archive writes and the Chromium-only
+periodic-worker test. No thresholds, budgets or blanket exclusions changed.
+
+Verification after these changes:
+
+- App: 370 files, 4,983 tests passed. Coverage: statements 91.23%, branches
+  86.09%, functions 90.89%, lines 92.52%. The queue preparation module has 100%
+  statement, line and function coverage, and 90% branch coverage.
+- Production browser regressions: 25 passed, two declared non-Chromium skips,
+  no retries, across Chromium, Firefox and WebKit. The served artifact covers
+  editor subtasks, failed-sync controls, reset, timers, global results and the
+  real background worker with fresh contexts and seeded IndexedDB. Verdict: PASS
+  for functionality and runtime-error checks.
+- App and test TypeScript, lint, shape, knip, production build, unchanged bundle
+  checks, generated-worker drift and whitespace checks passed.
+
+I checked worker activation/registration in Modern Web Guidance; the catalog had
+no applicable guide for activation deadlines or sync queue ordering. The worker
+ready behavior was checked against MDN before changing the wait.

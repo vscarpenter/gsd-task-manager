@@ -4,7 +4,7 @@ import { waitForAppLoad } from './helpers/test-helpers';
 // The headless shell denies notification permission; use Chromium's full
 // headless channel for this real API test (playwright#23954).
 test.use({ serviceWorkerEnabled: true, channel: 'chromium' });
-test.skip(({ browserName }) => browserName !== 'chromium', 'Periodic background sync is a Chromium enhancement.');
+test.skip(({ browserName }) => browserName !== 'chromium', 'Periodic background sync is a Chromium enhancement.'); // NOSONAR -- Firefox/WebKit do not implement this API; Chromium still runs the test.
 
 test('a real periodic worker checks IndexedDB while the app is closed', async ({ page, context, clearIndexedDB }) => {
   await context.grantPermissions(['notifications'], { origin: new URL(page.url()).origin });

@@ -23,7 +23,7 @@ interface SubtasksFieldProps {
   onRemove: (id: string) => void;
 }
 
-export function SubtasksField({ subtasks, entry, onEntryChange, onAdd, onToggle, onRemove }: SubtasksFieldProps): React.ReactElement {
+export function SubtasksField({ subtasks, entry, onEntryChange, onAdd, onToggle, onRemove }: Readonly<SubtasksFieldProps>): React.ReactElement {
   const done = subtasks.filter((s) => s.completed).length;
   const atLimit = subtasks.length >= SCHEMA_LIMITS.MAX_SUBTASKS;
 
@@ -60,7 +60,7 @@ interface SubtaskRowProps {
   onRemove: (id: string) => void;
 }
 
-function SubtaskRow({ subtask, onToggle, onRemove }: SubtaskRowProps): React.ReactElement {
+function SubtaskRow({ subtask, onToggle, onRemove }: Readonly<SubtaskRowProps>): React.ReactElement {
   return (
     <li className="flex items-center gap-2">
       <input
@@ -97,12 +97,12 @@ function SubtaskEntry({
   onChange,
   onCommit,
   disabled,
-}: {
+}: Readonly<{
   value: string;
   onChange: (value: string) => void;
   onCommit: () => void;
   disabled: boolean;
-}): React.ReactElement {
+}>): React.ReactElement {
   return (
     <input
       data-testid="edit-subtask-input"

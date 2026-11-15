@@ -54,7 +54,7 @@ async function checkDatabase(context: BackgroundContext, now: Date): Promise<voi
     const due = settings.enabled && !isQuietAt(quiet, now) ? tasks.filter((task) => isDue(task, settings, now)) : [];
     for (const task of due) {
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- serialized display/mark while holding the origin-wide notification lock
-      await notifyTask(context, db, task, settings, now);
+      await notifyTask(context, db, task, settings, now); // NOSONAR -- display and persist each reminder serially under the shared lock.
     }
     if (due.length) await context.navigator.setAppBadge?.(due.length);
     else await context.navigator.clearAppBadge?.();

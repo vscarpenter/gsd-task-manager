@@ -34,13 +34,16 @@ export function FailedSyncOperations() {
   );
 }
 
-function FailureRow({ row, ownerId }: { row: SyncQueueItem & { label: string }; ownerId: string }) {
+function FailureRow({ row, ownerId }: Readonly<{ row: SyncQueueItem & { label: string }; ownerId: string }>) {
   const [busy, setBusy] = useState(false);
   const recover = async (action: 'retry' | 'dismiss') => {
     setBusy(true);
     try {
       const result = await recoverFailedSyncItem(row.id, ownerId, action);
-      toast.success(result === 'trashed' ? 'Unsynced task moved to Trash' : result === 'queued' ? 'Retry queued' : 'Failed operation cleared');
+      let message = 'Failed operation cleared';
+      if (result === 'trashed') message = 'Unsynced task moved to Trash';
+      else if (result === 'queued') message = 'Retry queued';
+      toast.success(message);
       if (result === 'queued') {
         const { getSyncCoordinator } = await import('@/lib/sync/sync-coordinator');
         void getSyncCoordinator().requestSync('user').catch(() => toast.error('Retry is queued. Try syncing again when connected.'));

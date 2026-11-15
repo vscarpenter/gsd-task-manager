@@ -56,8 +56,8 @@ describe('notification coordination', () => {
       queueMicrotask(() => tx.abort());
       return tx;
     } } as IDBDatabase;
-    await expect(readReminderSnapshot(proxy)).rejects.toBeDefined();
-    await expect(markBackgroundReminder(proxy, createMockTask(), new Date())).rejects.toBeDefined();
+    await expect(readReminderSnapshot(proxy)).rejects.toBeInstanceOf(Error);
+    await expect(markBackgroundReminder(proxy, createMockTask(), new Date())).rejects.toBeInstanceOf(Error);
   });
 
   it('exposes a callable classic-worker entry', async () => {

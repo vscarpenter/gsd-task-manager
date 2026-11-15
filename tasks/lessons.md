@@ -479,3 +479,14 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **Publish the reset fence before waiting for the notification lock.** Otherwise an already-running worker can keep delivering while Reset Everything waits. A blocked DB open also needs to close a connection that arrives after abandonment.
 - **Check generated files under the CI runtime.** Bun 1.3.14 and 1.4.4 renamed shadowed locals differently. Explicit local names kept this worker byte-identical without adding a dependency.
 - **Measure every route after shared-code changes.** Sync code increased the auth callback's initial bundle even while optional Help code reduced the main routes. Keep budgets fixed and reduce eager work.
+
+## PR #743 review follow-up (2026-11-14)
+
+- **A wire-only timestamp increment can outrank a later queued snapshot.**
+  Coalesce equal-version snapshots before CAS tie-breaking, and use the current
+  same-version row when enqueue timestamps cannot establish insertion order.
+- **Worker readiness has no failure deadline.** A notification pass holding the
+  reset lock needs a bounded activation wait and a reset check before delivery.
+- **An auxiliary reset marker must not gate deleting local data.** Cache Storage
+  can fail independently of IndexedDB; keep marker writes best effort and base
+  unlocking on verified local deletion.

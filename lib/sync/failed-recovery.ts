@@ -43,7 +43,7 @@ export async function recoverFailedSyncItem(
   return db.transaction('rw', [db.tasks, db.archivedTasks, db.deletedTasks, db.syncQueue, db.syncMetadata], async () => {
     await assertSyncSessionCurrent(ownerId);
     const item = await db.syncQueue.get(id);
-    if (!item || item.status !== 'failed') return 'missing';
+    if (item?.status !== 'failed') return 'missing';
     const rows = await db.syncQueue.where('taskId').equals(item.taskId).toArray();
     await db.syncQueue.bulkDelete(rows.filter((row) => row.status === 'failed').map((row) => row.id));
     if (rows.some(isPendingSyncQueueItem)) return action === 'retry' ? 'queued' : 'dismissed';
