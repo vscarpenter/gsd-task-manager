@@ -113,7 +113,10 @@ files; required type, lint, shape and unused-dependency checks passed. The
 deterministic monitoring modules exceed 80% statement, line and function
 coverage. The public probes and fresh Chromium operator check passed live.
 Rendered CloudFormation passes cfn-lint, all four Guard rules and AWS template
-validation. Actual change-set review and deployment verification follow.
+validation. The reviewed initial change set added 21 monitoring resources; the
+second changed only the two composites' notification flags. Installed Lambda
+source matched the commit byte for byte, scheduled runs passed, and both test
+failure/recovery emails were verified in Gmail. All 15 alarms returned to OK.
 
 ### Review questions
 

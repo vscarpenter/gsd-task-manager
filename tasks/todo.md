@@ -1759,10 +1759,10 @@ content. Non-trivial infrastructure work; specification and plan:
 - [x] Inspect actual AWS resources, privacy policy and alert destinations.
 - [x] Select independent AWS probes, aggregate metrics and a confirmed alert channel.
 - [x] Implement privacy and failure regressions first, then the probe and stack.
-- [ ] Validate permissions, template and required checks; commit, push and PR.
-- [ ] Deploy the additive monitoring stack and observe scheduled successful runs.
-- [ ] Enable and test grouped SNS email failure/recovery notifications.
-- [ ] Create an hourly Codex heartbeat and record the operating receipt.
+- [x] Validate permissions, template and required checks; commit, push and PR #747.
+- [x] Deploy the additive monitoring stack and observe scheduled successful runs.
+- [x] Enable and test grouped SNS email failure/recovery notifications.
+- [x] Create an hourly Codex heartbeat and record the operating receipt.
 
 The active destination is the existing confirmed `account-alerts` Gmail
 subscription in us-east-1. The owner selected email until SMS is ready. The
@@ -1772,12 +1772,18 @@ instance i-0e504734c45bb214b have been verified against production.
 
 ## Resuming From Here — production monitoring
 
-Implementation and local verification are complete: 47 new regressions and
-5,047 full-suite tests passed, along with type checks, lint, shape, knip,
-CloudFormation schema, privacy Guard rules and AWS template validation. Live
-public probes and the isolated Chromium operator check passed. No client or
-release artifact changed. The change report and review questions are in the
-specification. Next: publish the PR, review the exact monitoring-only change
-set, deploy quietly, verify scheduled metrics, enable and test email actions,
-then create the hourly heartbeat and save its operating receipt. SMS remains
-deferred; confirmed email is authorized.
+Monitoring is active in `gsd-production-monitoring`, us-east-1, from source
+`3fc2c3c4`. Scheduled public checks and extracted metrics passed. All 15 alarms
+are OK; both grouped alarms send failure and recovery to the confirmed email
+channel. The controlled test delivered ALARM at 19:41:40 UTC and OK at
+19:42:10 UTC, both verified in Gmail. The hourly `gsd-production-health`
+heartbeat is active. Evidence is under the owner's Codex documents directory,
+`2026-11-15/gsd-production-monitoring-setup/`; the runbook has the activation
+record and operating limits.
+
+All 5,047 local tests and required checks passed. The initial PR #747 commit
+passed CI, three-browser E2E, template policy validation and SonarCloud; Codex
+and Claude code reviews found no issues. No client or release artifact changed.
+The final documentation update records the deployed state. Next: complete PR
+review and merge separately; review questions are in the specification. SMS
+remains deferred pending sender registration and destination verification.
