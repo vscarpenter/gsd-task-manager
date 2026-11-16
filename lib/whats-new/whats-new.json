@@ -281,6 +281,21 @@
     },
     {
       "platform": "apple",
+      "version": "4.0.1",
+      "date": "2026-11-15",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [
+        "In columns, a narrow task card drops its ⋯ button so the title has more room. Long press the card for the same menu.",
+        "The Columns button dims when the window is too narrow for a second column."
+      ],
+      "fixed": [
+        "On a 13-inch iPad in landscape, each quadrant now shows two columns of tasks with the sidebar open. Before, the Columns button did nothing there."
+      ]
+    },
+    {
+      "platform": "apple",
       "version": "4.0.0",
       "date": "2026-11-10",
       "notable": true,
