@@ -27,16 +27,14 @@ const WORKSPACE_MANIFESTS = ['package.json', 'packages/mcp-server/package.json']
 
 // bun applies overrides by package name only (it ignores npm's nested form),
 // so one minimatch serves every consumer. minimatch 10 has no release clear of
-// GHSA-g3hv-75wg-m249, and 11 keeps the named exports ESLint 10 and
-// typescript-estree call. The three plugins call minimatch 3's default export,
-// which 11 removed, but only from rules this repo's ESLint config leaves off:
-// react/jsx-pascal-case, react/forbid-component-props,
+// GHSA-g3hv-75wg-m249. ESLint 10.15 and typescript-estree 8.73 declare the 11
+// line themselves, so they left this list. The three plugins call minimatch
+// 3's default export, which 11 removed, but only from rules this repo's ESLint
+// config leaves off: react/jsx-pascal-case, react/forbid-component-props,
 // react/no-unstable-nested-components, import/no-unassigned-import,
 // import/order, and the jsx-a11y label rules. Enabling one crashes lint.
 const ACCEPTED_LINE_CROSSINGS: Record<string, string[]> = {
   minimatch: [
-    '@typescript-eslint/typescript-estree',
-    'eslint',
     'eslint-plugin-import',
     'eslint-plugin-jsx-a11y',
     'eslint-plugin-react',
