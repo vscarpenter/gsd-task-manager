@@ -490,3 +490,21 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **An auxiliary reset marker must not gate deleting local data.** Cache Storage
   can fail independently of IndexedDB; keep marker writes best effort and base
   unlocking on verified local deletion.
+
+## Dependency update and the audit gate (2026-11-17)
+
+- **A red Security audit blocks every release.** Each deploy and publish workflow
+  runs it first with `needs: audit`. Report a high finding as a release blocker
+  and name the workflows it stops.
+- **Check production scope under CI's bun, or walk the lockfile.** bun 1.3.14's
+  `bun audit --prod` listed dev-only chains and bun 1.4.4's did not, so the local
+  answer and CI's answer differed for the same lockfile.
+- **No patched release means no update fixes it.** Read `first_patched_version`
+  on the advisory before looking for an override.
+- **bun skips every package named in `overrides`.** `bun update --latest` left
+  four outdated packages alone. Raise the direct pin and the override together.
+- **Read the changelog for anything on the auth or sync path.** PocketBase SDK
+  0.29.0 clears the auth store on every 401 by default. A typecheck can't show a
+  changed default.
+- **A bundle budget turns a bump into a decision.** recharts 3.11.0 added 11.9 KB
+  gzip to `/dashboard`. Measure with two builds that differ in one package.
