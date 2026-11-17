@@ -83,7 +83,7 @@ the compatibility scope.
 
 ## Local development
 
-Requirements: [Bun](https://bun.sh/) 1.3.14, [Node.js](https://nodejs.org/) 22.22.2+ (or 24.15+ or 26+), and a current browser. `bun run` executes package scripts on Node, so tests, lint, and builds run on your installed Node.
+Requirements: [Bun](https://bun.sh/) 1.4.4, [Node.js](https://nodejs.org/) 22.22.2+ (or 24.15+ or 26+), and a current browser. `bun run` executes package scripts on Node, so tests, lint, and builds run on your installed Node.
 
 ```bash
 bun install

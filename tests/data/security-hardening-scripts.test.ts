@@ -430,11 +430,14 @@ describe('security hardening scripts and workflows', () => {
       '.github/workflows/sonarcloud.yml',
     ].map(readRepoFile);
 
-    expect(rootPackage.packageManager).toBe('bun@1.3.14');
+    expect(rootPackage.packageManager).toBe('bun@1.4.4');
     expect(rootPackage.scripts.audit).toBe('bun audit --audit-level=high');
     for (const file of bunSetupFiles) {
-      expect(file).not.toContain('bun-version: latest');
-      expect(file).toContain('bun-version: 1.3.14');
+      // Every pin, not just one: ci.yml has six, and a missed one runs a job
+      // on a different Bun than the rest.
+      const pins = [...file.matchAll(/bun-version: (\S+)/g)].map(([, version]) => version);
+      expect(pins.length).toBeGreaterThan(0);
+      expect([...new Set(pins)]).toEqual(['1.4.4']);
     }
   });
 
