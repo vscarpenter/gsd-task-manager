@@ -1,6 +1,19 @@
+# Release 14.9.3 (2026-11-17)
+
+Branch: `chore/release-14-9-3` off `main` (`d86e6df3`). Trivial tier: two version pins and these notes.
+
+## Resuming From Here
+
+- [x] `package.json` and `README.md` line 7 are on 14.9.3. Production serves cache version 14.9.2, so the bump rotates the caches.
+- [x] No What's New entry. Nothing since 14.9.2 is user-facing, and that file takes no notes about dependencies. Skipping it also leaves the Apple and Android copies alone.
+- [x] Verify on bun 1.4.4 and Node 22.23.5: unit, typecheck, test typecheck, lint, shape, and knip pass.
+- [ ] The owner merges the PR, then tags `v14.9.3`. The tag starts the production deploy, which the audit gate allows again since #750.
+- **Not in this release:** an MCP server publish. Its manifest moved to sdk 1.32.2 and pocketbase 0.28.2 in #749, and that ships only with the next `mcp-v*` tag.
+- **Blockers:** none.
+
 # Audit gate: picomatch acceptance and bun 1.4.4 (2026-11-17)
 
-Branch: `ci/bun-1-4-audit-gate` off `main` (`86e89497`). Non-trivial tier: it changes the security gate in front of every release and the bun every CI job runs. The owner approved the design in session. The spec is the last section of `tasks/spec.md`.
+Merged as #750 from `ci/bun-1-4-audit-gate`. Non-trivial tier: it changes the security gate in front of every release and the bun every CI job runs. The owner approved the design in session. The spec is the last section of `tasks/spec.md`.
 
 ## Resuming From Here
 
@@ -9,7 +22,8 @@ Branch: `ci/bun-1-4-audit-gate` off `main` (`86e89497`). Non-trivial tier: it ch
 - [x] `scripts/check-audit-results.cjs` accepts picomatch advisory 1247710 at high until 2027-02-17.
 - [x] `packageManager` and the ten `bun-version` pins are on 1.4.4.
 - [x] Verify, in a clean worktree on bun 1.4.4 and Node 22.23.5 with a frozen install. The audit job passes all three steps: gitleaks 8.30.1 finds nothing in 985 commits, the checker accepts picomatch and blocks nothing, and `bun audit --prod` exits 0. Unit: 5,054 passed in 373 files. Typecheck, test typecheck, lint, shape, knip, and the license check pass. MCP 544 passed, and the PocketBase system test passes 7 of 7. Build and bundle budget pass. On the production export, Chromium passes the PWA check, the CSP check, and 190 specs.
-- [ ] Push, open the PR, and watch `audit` pass in CI. Only CI can prove the runner installs bun 1.4.4.
+- [x] PR #750 is open and all 13 checks pass on runners that installed bun 1.4.4, `Security Audit / audit` and the Firefox and WebKit e2e jobs included.
+- [x] #750 is rebase-merged (`fdce4776`, `31a8ad73`, `d86e6df3`) and the branch is deleted. On `d86e6df3`, Security Audit passed and Publish Docker Image passed behind it, so the release gate is open.
 - **Next:** when a patched picomatch ships, update it and remove the acceptance entry.
 - **Blockers:** none.
 
@@ -31,13 +45,13 @@ Merged as #749 (`86e89497`) from `chore/deps-update-2026-11-17`, and the branch 
   - `recharts` 3.10.1: 3.11.0 adds 11.9 KB gzip to `/dashboard` and fails `quality:bundle`.
   - MCP Vitest 4.1.12: the workspace hasn't migrated to Vitest 5.
 - **Owner decisions parked:**
-  - picomatch GHSA-fc5q-39xc-vjpf (high) has no patched release. A walk of `bun.lock` from the production dependencies never reaches it, so it's dev tooling only. The Security audit job still fails in two steps, on `main` too. `scripts/check-audit-results.cjs` has no acceptance for it. And on CI's bun 1.3.14, `bun audit --prod` lists it through dev chains, where bun 1.4.4 reports production clean. An acceptance entry alone won't turn the job green. Wait for a fix, or add the entry and move CI to a bun whose `--prod` drops dev chains.
+  - picomatch GHSA-fc5q-39xc-vjpf (high): settled by #750. The checker accepts it until 2027-02-17 and CI runs bun 1.4.4, so the audit job passes. Remove the entry when a patched picomatch ships.
   - Adopt PocketBase SDK 0.29.0 with `pb.autoClearAuthStore(false)` in both client wrappers, on its own branch.
   - Take recharts 3.11.0 and refresh the bundle baseline, or stay on 3.10.1.
 - **CI on #749:** every check passed, Firefox and WebKit e2e included, except `audit`, which failed on picomatch as expected.
 - **Found on the way, not fixed:** `pocketbase-system.test.ts` starts `next dev` under `NODE_ENV=test`. Next then adds `.next/dev/dev/types/**/*.ts` to `tsconfig.json` and edits `AGENTS.md` in that checkout. Next 16.4.1 has the same code, so the update didn't cause it.
-- **Next:** settle the picomatch decision first, because it gates `/release`. Then the other two. No version bump went in; that goes with `/release`.
-- **Blockers:** the picomatch advisory blocks releases. Every deploy and publish workflow runs the Security audit job first (`needs: audit`): the `v*.*.*` production deploy, the Docker publish, the MCP publish, and the CloudFront infra deploy. On the #749 merge commit, Security Audit failed and Publish Docker Image failed behind it. A release tag fails at the same gate until the audit passes.
+- **Next:** the PocketBase SDK and recharts decisions above. No version bump went in; that goes with `/release`.
+- **Blockers:** none. The picomatch advisory blocked every release until #750 opened the audit gate.
 
 # Sync session fixes, README contracts, and the system overview (2026-11-11)
 
