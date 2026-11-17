@@ -96,7 +96,7 @@ Each entry gives the usage, the environment variables the script reads, and the 
 - `generate-sw-cache-logic.cjs:generateSwCacheLogic` throws when an `export` line remains after the transform.
 - `check-code-shape.cjs:compareCodeShape` allows no file to exceed its baseline `count` or `max`. `validateDebtLedger` fails after the ledger `deadline`. It also fails when `owner` is blank, when a rule has no `maximumRemainingViolations` ceiling, or when a rule's total exceeds its ceiling.
 - `check-bundle-budget.cjs:compareBundleBudget` fails a route with no budget entry or with bytes above the recorded value plus `allowanceBytes`.
-- `check-audit-results.cjs:BLOCKING_SEVERITIES` blocks `high` and `critical` only. `ACCEPTED_ADVISORIES` holds one dated exception.
+- `check-audit-results.cjs:BLOCKING_SEVERITIES` blocks `high` and `critical` only. `ACCEPTED_ADVISORIES` holds two dated exceptions.
 - `check-dependency-licenses.cjs:main` writes no SBOM when a violation exists.
 - `bun-test-guard.cjs` makes `bun test` exit 1 every time.
 - `failing-agent-prs.cjs:isTrustedProvenance` trusts nothing when the bot login is blank.

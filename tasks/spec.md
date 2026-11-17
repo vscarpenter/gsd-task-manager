@@ -1601,3 +1601,109 @@ No acceptance criterion changed. Added test stubs:
 Open for Vinny: the WebKit fingerprint relaxes the shared fixture, narrowly. The default
 taken is to add it, matching the Firefox precedent. The alternative is to leave the
 first-visit test as a known WebKit flake that CI's retries absorb.
+
+---
+
+# Spec: Accept the picomatch advisory and move CI to bun 1.4.4 (2026-11-17)
+
+Tier: Non-trivial. The change is small, but it touches the security gate in front of
+every release and the bun version every CI job runs. Vinny approved the design in
+session on 2026-11-17, so this spec records it and the work continues without a second
+gate.
+
+## Goal
+
+Get the Security audit job passing again so releases can ship, without hiding an
+advisory that has no fix.
+
+## Background (measured 2026-11-17)
+
+- picomatch GHSA-fc5q-39xc-vjpf is high and covers `<=4.0.7`, which is every published
+  version. GitHub lists no patched release.
+- A walk of `bun.lock` from the production dependencies of both manifests (266 packages)
+  never reaches either picomatch copy. It arrives through knip, vite, vitest,
+  typescript-eslint, and eslint-config-next.
+- The Security audit job fails in two steps. `scripts/check-audit-results.cjs` has no
+  acceptance for advisory id 1247710. And on bun 1.3.14, `bun audit --prod` lists the
+  package through those dev chains and exits 1. bun 1.4.4 exits 0 on the same lockfile.
+- Every deploy and publish workflow calls that job first with `needs: audit`. On the
+  #749 merge commit, Security Audit failed and Publish Docker Image failed behind it.
+- bun 1.4.4 is the latest stable release and the version that wrote the current
+  `bun.lock`.
+
+## Inputs / Outputs
+
+- `scripts/check-audit-results.cjs`: `ACCEPTED_ADVISORIES` gains one entry.
+  `packageName: 'picomatch'`, `id: 1247710`, `severity: 'high'`, `expires: '2027-02-17'`,
+  and a reason that names the dev-only chains. Three months matches the braces entry.
+- `package.json`: `packageManager` becomes `bun@1.4.4`.
+- The ten `bun-version` pins become `1.4.4`: six in `ci.yml`, and one each in
+  `publish-mcp-server.yml`, `security-audit.yml`, `sonarcloud.yml`, and the
+  `build-static-export` action.
+- `security-audit.yml`: one comment changes, because it describes bun 1.3.14's
+  `--ignore`. The steps and their commands don't change.
+- `README.md` and `scripts/README.md`: the bun requirement and the count of dated
+  exceptions.
+
+No schema, no synced data, and no runtime code changes.
+
+## Constraints
+
+- The acceptance stays as narrow as the braces one: one package, one advisory id, one
+  severity, one expiry date.
+- The production audit step keeps its rule of no exceptions. It passes because bun 1.4.4
+  scopes `--prod` correctly, not because anything is ignored.
+- Workflow guard tests match text, so only the version values change in workflow files.
+- All ten pins and `packageManager` move in one commit. The guard test must fail if one
+  is left behind.
+- No bundle impact: nothing under `app/`, `components/`, or `lib/` changes.
+
+## Edge Cases
+
+- The advisory rises to critical: the checker blocks again.
+- The expiry date passes with no patch: the checker blocks again until someone
+  re-reviews it.
+- A patched picomatch ships first: update, then remove the entry. That is a follow-up.
+- One pin is missed: the guard test compares every `bun-version` value, so it fails.
+- bun 1.3.14 and 1.4.4 minify one generated worker differently (see `tasks/lessons.md`).
+  The unit suite has to pass under 1.4.4.
+- The pinned `setup-bun` action has to install 1.4.4 on the runner. Only CI can prove
+  that, so the PR's own checks are part of verification.
+- The Docker image copies bun from a digest-pinned `oven/bun:1` image. That pin is
+  separate and stays.
+
+## Out of Scope
+
+- Removing or changing the braces acceptance.
+- Using `bun audit --ignore`, or any other change to the audit job's logic.
+- An override or fork that tries to patch picomatch.
+- The PocketBase SDK 0.29.0 and recharts 3.11.0 decisions.
+- A version bump or a release.
+
+## Acceptance Criteria
+
+1. The checker accepts picomatch advisory 1247710 at severity high before 2027-02-17 and
+   reports its expiry.
+2. The checker blocks that advisory from 2027-02-17T00:00:00Z.
+3. The checker blocks that advisory if its severity is critical.
+4. `packageManager` is `bun@1.4.4`, and every `bun-version` value in the five setup
+   files is `1.4.4`.
+5. Under bun 1.4.4, on the current lockfile, the audit job's two commands pass: the
+   checker exits 0 on `bun audit --audit-level=high --json`, and
+   `bun audit --prod --audit-level=high` exits 0.
+6. Every CI job's commands pass from a frozen install under bun 1.4.4 and Node 22, and
+   the PR's checks pass, `audit` included.
+
+## Test Stubs
+
+- `tests/audit-result-checker.test.ts`:
+  `accepts the reviewed picomatch advisory before its expiry date` (AC1)
+- `tests/audit-result-checker.test.ts`:
+  `blocks the picomatch advisory again once its acceptance expires` (AC2)
+- `tests/audit-result-checker.test.ts`:
+  `blocks the picomatch advisory if its severity rises above the reviewed level` (AC3)
+- `tests/data/security-hardening-scripts.test.ts`:
+  `pins the Bun runtime and invokes the repository audit without dynamic npx execution`,
+  updated to 1.4.4 and to check every pin (AC4)
+- AC5 and AC6 are checked by running the commands, locally in a clean worktree and then
+  in the PR's CI.

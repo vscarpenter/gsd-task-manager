@@ -15,6 +15,13 @@ const ACCEPTED_ADVISORIES = [
     expires: '2027-01-05',
     reason: 'dev-only lint dependency via eslint-config-next; no patched release exists',
   },
+  {
+    packageName: 'picomatch',
+    id: 1247710, // GHSA-fc5q-39xc-vjpf
+    severity: 'high',
+    expires: '2027-02-17',
+    reason: 'dev-only tooling via knip, vite, vitest, typescript-eslint, and eslint-config-next; no patched release exists',
+  },
 ];
 
 function findAcceptance(packageName, advisory, now) {
