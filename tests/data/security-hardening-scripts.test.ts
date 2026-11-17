@@ -387,7 +387,7 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides['ip-address']).toBe('10.7.4');
     expect(rootPackage.overrides['caniuse-lite']).toBe('1.0.30001809');
     expect(rootPackage.overrides.browserslist).toBe('4.29.5');
-    expect(rootPackage.overrides.vite).toBe('8.3.6');
+    expect(rootPackage.overrides.vite).toBe('8.3.8');
     expect(rootPackage.overrides['@babel/core']).toBe('7.29.13');
     expect(rootPackage.overrides.minimatch).toBe('11.0.5');
     expect(rootPackage.overrides['path-to-regexp']).toBe('8.4.2');
@@ -395,12 +395,12 @@ describe('security hardening scripts and workflows', () => {
     expect(rootPackage.overrides['proxy-addr']).toBe('2.0.8');
     expect(rootPackage.overrides['source-map-js']).toBe('1.2.2');
     expect(rootPackage.overrides['body-parser']).toBe('2.4.0');
-    expect(rootPackage.devDependencies.vite).toBe('8.3.6');
+    expect(rootPackage.devDependencies.vite).toBe('8.3.8');
     expect(rootPackage.devDependencies.rimraf).toBe('6.1.4');
-    expect(rootPackage.devDependencies.vitest).toBe('5.0.5');
+    expect(rootPackage.devDependencies.vitest).toBe('5.1.0');
     expect(mcpPackage.devDependencies.vitest).toBe('4.1.12');
     expect(mcpPackage.devDependencies['@vitest/ui']).toBe('4.1.12');
-    expect(mcpPackage.dependencies['@modelcontextprotocol/sdk']).toBe('1.32.1');
+    expect(mcpPackage.dependencies['@modelcontextprotocol/sdk']).toBe('1.32.2');
     expect(rootPackage.dependencies.zod).toBe('4.6.7');
     expect(rootPackage.overrides.zod).toBe('4.6.7');
     expect(mcpPackage.dependencies.zod).toBe('4.6.7');

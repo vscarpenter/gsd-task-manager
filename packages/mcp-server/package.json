@@ -76,15 +76,15 @@
     "url": "https://github.com/vscarpenter/gsd-task-manager/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
-    "pocketbase": "0.27.3",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "pocketbase": "0.28.2",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@types/node": "26.2.0",
+    "@types/node": "26.6.6",
     "@vitest/coverage-v8": "4.1.12",
     "@vitest/ui": "4.1.12",
-    "eventsource": "4.1.1",
+    "eventsource": "5.1.5",
     "typescript": "7.0.2",
     "vitest": "4.1.12"
   },

@@ -988,7 +988,7 @@ This section states the package's contract for developers and AI assistants who 
 - Prompts (`src/tools/prompts.ts:allPrompts`): `daily-standup`, `weekly-review`, `focus-mode`, `upcoming-deadlines`, `productivity-report`, `tag-analysis`.
 - Module exports: `package.json` `exports` maps `.` to `dist/index.js` and `./types` to `dist/types.js`.
 - `src/index.ts` exports no symbols. It runs `main()` when loaded.
-- Runtime dependencies (`package.json`): `@modelcontextprotocol/sdk` 1.32.1, `pocketbase` 0.27.3, `zod` 4.6.7.
+- Runtime dependencies (`package.json`): `@modelcontextprotocol/sdk` 1.32.2, `pocketbase` 0.28.2, `zod` 4.6.7.
 - Local scripts in this directory: `decode-jwt.cjs`, `test-env-vars.js`, and `test-in-claude.sh`. `package.json` `files` leaves them out of the published package.
 
 ### Invariants

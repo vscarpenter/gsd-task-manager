@@ -44,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   again. Later calls used to go out with no token at all until the MCP server
   restarted.
 
+### Dependencies
+- `@modelcontextprotocol/sdk` 1.32.1 to 1.32.2
+- `pocketbase` 0.27.3 to 0.28.2
+
 ### Documentation
 - README: `delete_task` and bulk deletes default to a dry run; pass
   `dryRun: false` to apply. Removed the `maxTasks` parameter, which the strict
