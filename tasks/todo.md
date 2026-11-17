@@ -8,8 +8,8 @@ Branch: `ci/bun-1-4-audit-gate` off `main` (`86e89497`). Non-trivial tier: it ch
 - [x] Red, then green: three checker tests for the picomatch entry, and the bun pin guard now compares every `bun-version` value.
 - [x] `scripts/check-audit-results.cjs` accepts picomatch advisory 1247710 at high until 2027-02-17.
 - [x] `packageManager` and the ten `bun-version` pins are on 1.4.4.
-- [ ] Verify in a clean worktree on bun 1.4.4 and Node 22: every CI job's commands and the audit job's two commands.
-- [ ] Push, open the PR, and watch `audit` pass in CI.
+- [x] Verify, in a clean worktree on bun 1.4.4 and Node 22.23.5 with a frozen install. The audit job passes all three steps: gitleaks 8.30.1 finds nothing in 985 commits, the checker accepts picomatch and blocks nothing, and `bun audit --prod` exits 0. Unit: 5,054 passed in 373 files. Typecheck, test typecheck, lint, shape, knip, and the license check pass. MCP 544 passed, and the PocketBase system test passes 7 of 7. Build and bundle budget pass. On the production export, Chromium passes the PWA check, the CSP check, and 190 specs.
+- [ ] Push, open the PR, and watch `audit` pass in CI. Only CI can prove the runner installs bun 1.4.4.
 - **Next:** when a patched picomatch ships, update it and remove the acceptance entry.
 - **Blockers:** none.
 
