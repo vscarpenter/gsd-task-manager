@@ -17,6 +17,10 @@ const BRACES_ADVISORY = { id: 1240992, severity: 'high', title: 'Stack exhaustio
 const BEFORE_EXPIRY = { now: new Date('2026-10-05T12:00:00Z') };
 const AT_EXPIRY = { now: new Date('2027-01-05T00:00:00Z') };
 
+const PICOMATCH_ADVISORY = { id: 1247710, severity: 'high', title: 'ReDoS through repeated extglobs' };
+const BEFORE_PICOMATCH_EXPIRY = { now: new Date('2026-11-17T12:00:00Z') };
+const AT_PICOMATCH_EXPIRY = { now: new Date('2027-02-17T00:00:00Z') };
+
 describe('analyzeAuditResults', () => {
   it('accepts an empty audit result', () => {
     expect(analyzeAuditResults('{}')).toEqual({ advisoryCount: 0, blocking: [], accepted: [] });
@@ -52,6 +56,39 @@ describe('analyzeAuditResults', () => {
 
     expect(result.accepted).toEqual([]);
     expect(result.blocking).toEqual([{ packageName: 'braces', ...critical }]);
+  });
+
+  it('accepts the reviewed picomatch advisory before its expiry date', () => {
+    const result = analyzeAuditResults(
+      JSON.stringify({ picomatch: [PICOMATCH_ADVISORY] }),
+      BEFORE_PICOMATCH_EXPIRY,
+    );
+
+    expect(result.blocking).toEqual([]);
+    expect(result.accepted).toEqual([
+      expect.objectContaining({ packageName: 'picomatch', id: 1247710, expires: '2027-02-17' }),
+    ]);
+  });
+
+  it('blocks the picomatch advisory again once its acceptance expires', () => {
+    const result = analyzeAuditResults(
+      JSON.stringify({ picomatch: [PICOMATCH_ADVISORY] }),
+      AT_PICOMATCH_EXPIRY,
+    );
+
+    expect(result.accepted).toEqual([]);
+    expect(result.blocking).toEqual([{ packageName: 'picomatch', ...PICOMATCH_ADVISORY }]);
+  });
+
+  it('blocks the picomatch advisory if its severity rises above the reviewed level', () => {
+    const critical = { ...PICOMATCH_ADVISORY, severity: 'critical' };
+    const result = analyzeAuditResults(
+      JSON.stringify({ picomatch: [critical] }),
+      BEFORE_PICOMATCH_EXPIRY,
+    );
+
+    expect(result.accepted).toEqual([]);
+    expect(result.blocking).toEqual([{ packageName: 'picomatch', ...critical }]);
   });
 
   it('keeps an acceptance scoped to its package', () => {
