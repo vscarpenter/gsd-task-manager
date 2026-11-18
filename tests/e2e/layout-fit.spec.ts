@@ -1,6 +1,6 @@
-import type { Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./fixtures/test-fixtures";
-import { createTaskViaCaptureBar, waitForAppLoad } from "./helpers/test-helpers";
+import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./helpers/test-helpers";
 
 /**
  * Controls that must fit beside their neighbours, measured at real sizes.
@@ -11,11 +11,36 @@ import { createTaskViaCaptureBar, waitForAppLoad } from "./helpers/test-helpers"
  * these check the geometry.
  */
 const ROW_TOLERANCE_PX = 4;
+// Under the 40rem (640px) height the shell needs before it pins.
+const UNPINNED_HEIGHT_PX = 600;
+// Where a scrolled element's top sits when it's parked behind the topbar.
+const PARKED_INSET_PX = 8;
 
 async function centerY(locator: Locator): Promise<number> {
   const rect = await locator.boundingBox();
   if (!rect) throw new Error("Element has no bounding box");
   return rect.y + rect.height / 2;
+}
+
+async function bottomEdge(locator: Locator): Promise<number> {
+  const rect = await locator.boundingBox();
+  if (!rect) throw new Error("Element has no bounding box");
+  return rect.y + rect.height;
+}
+
+/** Scrolls the capture input behind the sticky topbar and returns the topbar's bottom edge. */
+async function parkCaptureInputBehindTopbar(page: Page): Promise<number> {
+  const input = page.getByTestId("capture-input");
+  const topbarBottom = await bottomEdge(page.getByRole("banner"));
+  const inputTop = (await input.boundingBox())!.y;
+  await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), inputTop - PARKED_INSET_PX);
+  expect((await input.boundingBox())!.y, "the input starts behind the topbar").toBeLessThan(topbarBottom);
+  return topbarBottom;
+}
+
+/** The focus ring is on the bar, not the input, so the whole bar has to clear the topbar. */
+async function captureBarTop(page: Page): Promise<number> {
+  return (await page.getByTestId("capture-bar").boundingBox())!.y;
 }
 
 test.describe("Layout fit", () => {
@@ -108,5 +133,47 @@ test.describe("Layout fit", () => {
         expect(drift, `${pane} label at ${height}px tall`).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
       }
     }
+  });
+
+  // Below 40rem tall the shell stops pinning and the page scrolls. The capture
+  // bar's wrapper shared the topbar's z-index and came later in the DOM, so it
+  // slid over the bar for about 100px of that scroll.
+  test("nothing slides over the topbar when a short window scrolls", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: UNPINNED_HEIGHT_PX });
+    await waitForAppLoad(page);
+
+    expect(await findTopbarCover(page)).toBeNull();
+  });
+
+  // The capture bar now scrolls under the topbar. An input parked there is
+  // still inside the window, so the browser saw no reason to scroll when it
+  // took focus, and the next keystrokes went into a field nobody could see.
+  // 768 has the tallest topbar, because its controls wrap onto a second row.
+  for (const width of [768, 1280]) {
+    test(`pressing n brings the capture bar out from under the topbar at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: UNPINNED_HEIGHT_PX });
+      await waitForAppLoad(page);
+      const topbarBottom = await parkCaptureInputBehindTopbar(page);
+
+      await page.keyboard.press("n");
+
+      await expect(page.getByTestId("capture-input")).toBeFocused();
+      await expect.poll(() => captureBarTop(page)).toBeGreaterThanOrEqual(topbarBottom);
+    });
+  }
+
+  // Focus stays in the bar after a capture while the page scrolls to the new
+  // card. Typing then reveals the caret, but the browser stops at the window's
+  // top edge, which is behind the topbar.
+  test("typing brings the capture bar out from under the topbar", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: UNPINNED_HEIGHT_PX });
+    await waitForAppLoad(page);
+    await page.getByTestId("capture-input").focus();
+    const topbarBottom = await parkCaptureInputBehindTopbar(page);
+
+    await page.keyboard.type("Call the plumber");
+
+    await expect(page.getByTestId("capture-input")).toHaveValue("Call the plumber");
+    await expect.poll(() => captureBarTop(page)).toBeGreaterThanOrEqual(topbarBottom);
   });
 });

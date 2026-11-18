@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/test-fixtures";
-import { createTaskViaCaptureBar, waitForAppLoad } from "./helpers/test-helpers";
+import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./helpers/test-helpers";
 
 /**
  * The type ramp is rem, so text follows the browser's default font size.
@@ -82,13 +82,10 @@ test.describe("Text scaling at 150%", () => {
     const rail = page.getByRole("navigation", { name: "Primary navigation" });
     await expect(rail.getByText("Matrix")).toBeInViewport();
 
-    // Whatever paints just inside the header's bottom edge must be the header.
-    const header = await page.locator("header").first().boundingBox();
-    const topmost = await page.evaluate(
-      ([x, y]) => document.elementFromPoint(x, y)?.closest("header") !== null,
-      [header!.x + header!.width / 2, header!.y + header!.height - 4]
-    );
-    expect(topmost, "something covers the header").toBe(true);
+    // Checked along the whole scroll. The capture bar covered the header for
+    // one stretch of it, and the date in the heading moved that stretch. A
+    // check at one offset passed or failed by the calendar.
+    expect(await findTopbarCover(page), "something covers the header").toBeNull();
   });
 
   // The search box was a fixed 18rem, 432px at this size. It pushed the command

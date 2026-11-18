@@ -303,16 +303,23 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         onChange={(e) => {
           setText(e.target.value);
           clearPasteNote();
+          // The browser reveals a hidden caret only as far as the window's top
+          // edge, which is behind the sticky topbar. This applies the input's
+          // scroll margin. Instant, because that reveal cancels a smooth scroll.
+          e.currentTarget.scrollIntoView({ block: "nearest", behavior: "instant" });
         }}
         onPaste={onPaste}
         onKeyDown={onInputKey}
         placeholder="Add a task…"
         aria-label="Add a task"
+        // md:scroll-mt-44: on a page that scrolls, the bar can sit behind the
+        // sticky topbar. The margin makes focus and typing bring it out below a
+        // two-row topbar (131px at 768), with room for the form's frame.
         // The focus indicator lives on the parent <form> (focus-within:ring-2
         // ring-accent), which is the visible affordance for this borderless
         // input. The rule matches per element and cannot see the parent.
         // ui-craft-detect-ignore-next-line
-        className="touch-target col-start-2 row-start-1 min-w-0 flex-1 border-0 bg-transparent text-base text-foreground outline-none placeholder:text-foreground-muted sm:text-body"
+        className="touch-target col-start-2 row-start-1 min-w-0 flex-1 border-0 bg-transparent text-base text-foreground outline-none placeholder:text-foreground-muted sm:text-body md:scroll-mt-44"
       />
       {hasVisibleText(text) ? (
         <>
