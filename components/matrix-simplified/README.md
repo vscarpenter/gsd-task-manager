@@ -267,6 +267,9 @@ Task actions and shared hooks:
 - `icon-rail.tsx:DesktopIconRail`, `MobileIconRail`: call `navigateWithTransition(ROUTES[item.routeKey])` from `useViewTransition` for HOME, SAVED, DASHBOARD, SETTINGS, and ABOUT.
 - `matrix-briefing.tsx:WhatsNewCue`: loads `./whats-new-cue` through React `lazy`. `MatrixBriefing` reads the clock with `new Date()` once mounted.
 - `capture-bar.tsx:CaptureBar`: adds and removes a `window` `"keydown"` listener. Key `n` focuses the capture input. Shift+`N` calls `onMoreOptions`, then clears the text and the quadrant override when the text has visible characters. The Details button (`more-options`) calls `onMoreOptions` and always clears both.
+- `capture-bar.tsx:revealCaptureInput`: calls `input.scrollIntoView({ block: "nearest", behavior: "instant" })` when the input's computed `scroll-margin-top` is above zero. The input's `onFocus` and `onChange` call it. The margin comes from `md:scroll-mt-44`, so the phone's fixed dock never scrolls.
+- `capture-bar.tsx:captureFocusRestorer`: after a save, calls `inputRef.current?.focus({ preventScroll: true })` with `quietFocusRef` set, so `onFocus` skips `revealCaptureInput` while the page scrolls to the new card.
+- `capture-bar.tsx:quietForThisPress`: the input's `onMouseDown` sets `quietFocusRef` and clears it with `setTimeout(…, 0)`, so the focus a press causes skips `revealCaptureInput`.
 - `capture-bar.tsx:useAdoptTypedText`: a layout effect reads the input's DOM value after hydration and copies it into state.
 - `use-capture-paste.ts:useCapturePaste` (`onPaste`): reads `e.clipboardData.getData("text")` and calls `e.preventDefault()` for multi-line pastes.
 - `quadrant-pane.tsx:QuadrantPane`: calls `useDroppable({ id: meta.id })` from `@dnd-kit/core` and registers the section node.

@@ -132,7 +132,36 @@ function QuadrantPill({
   );
 }
 
-function captureFocusRestorer(event: SubmitEvent<HTMLFormElement> | undefined, inputRef: React.RefObject<HTMLInputElement | null>) {
+/**
+ * Brings the input out from behind the sticky topbar. Its scroll margin says how
+ * far. Only a layout where the bar scrolls with the page sets one, so the
+ * phone's fixed dock never moves. Browsers don't do this themselves: WebKit
+ * ignores the margin when a text field takes focus, and typing reveals only the
+ * caret, as far as the window's top edge. Instant, because that reveal cancels a
+ * smooth scroll.
+ */
+function revealCaptureInput(input: HTMLInputElement): void {
+  if (!parseFloat(getComputedStyle(input).scrollMarginTop)) return;
+  input.scrollIntoView({ block: "nearest", behavior: "instant" });
+}
+
+/**
+ * A press focuses a field that's already under the pointer. Revealing it then
+ * moves it mid-press, which drags the caret through the draft. The focus lands
+ * in the same task as the press, so the flag clears on the next one.
+ */
+function quietForThisPress(quietFocusRef: React.RefObject<boolean>): void {
+  quietFocusRef.current = true;
+  setTimeout(() => {
+    quietFocusRef.current = false;
+  }, 0);
+}
+
+function captureFocusRestorer(
+  event: SubmitEvent<HTMLFormElement> | undefined,
+  inputRef: React.RefObject<HTMLInputElement | null>,
+  quietFocusRef: React.RefObject<boolean>
+) {
   const focused = document.activeElement;
   const form = event?.currentTarget;
   // Safari pointer activation can leave focus outside the clicked submit button.
@@ -140,7 +169,10 @@ function captureFocusRestorer(event: SubmitEvent<HTMLFormElement> | undefined, i
   const fromCapture = form?.contains(focused) || (submitter && form?.contains(submitter));
   return () => {
     if (!fromCapture || document.activeElement !== focused || hasOpenModal()) return;
+    // The page is scrolling to the new card, so this focus must not pull it back.
+    quietFocusRef.current = true;
     inputRef.current?.focus({ preventScroll: true });
+    quietFocusRef.current = false;
   };
 }
 
@@ -154,6 +186,8 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
   // Set after a save until the cleared text renders: a second Enter in that gap
   // still sees the old text and would save it again.
   const awaitingClearRef = useRef(false);
+  // True while a press or the focus restorer focuses the input, so onFocus leaves the scroll alone.
+  const quietFocusRef = useRef(false);
   useAdoptTypedText(internalRef, setText);
 
   // Stable refs so the global keydown handler does not re-register on every keystroke.
@@ -237,7 +271,7 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
       : { urgent: parsed.urgent, important: parsed.important };
     const draftText = text;
     const draftOverride = override;
-    const restoreFocus = captureFocusRestorer(e, internalRef);
+    const restoreFocus = captureFocusRestorer(e, internalRef, quietFocusRef);
     submittingRef.current = true;
     let saved: void | boolean = false;
     try {
@@ -303,18 +337,17 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
         onChange={(e) => {
           setText(e.target.value);
           clearPasteNote();
-          // The browser reveals a hidden caret only as far as the window's top
-          // edge, which is behind the sticky topbar. This applies the input's
-          // scroll margin. Instant, because that reveal cancels a smooth scroll.
-          e.currentTarget.scrollIntoView({ block: "nearest", behavior: "instant" });
+          revealCaptureInput(e.currentTarget);
         }}
+        onMouseDown={() => quietForThisPress(quietFocusRef)}
+        onFocus={(e) => { if (!quietFocusRef.current) revealCaptureInput(e.currentTarget); }}
         onPaste={onPaste}
         onKeyDown={onInputKey}
         placeholder="Add a task…"
         aria-label="Add a task"
         // md:scroll-mt-44: on a page that scrolls, the bar can sit behind the
-        // sticky topbar. The margin makes focus and typing bring it out below a
-        // two-row topbar (131px at 768), with room for the form's frame.
+        // sticky topbar. revealCaptureInput uses the margin to bring it out below
+        // a two-row topbar (131px up to 831 wide), with room for the form's frame.
         // The focus indicator lives on the parent <form> (focus-within:ring-2
         // ring-accent), which is the visible affordance for this borderless
         // input. The rule matches per element and cannot see the parent.

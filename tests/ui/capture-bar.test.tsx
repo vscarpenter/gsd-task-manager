@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { act, render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
@@ -430,5 +430,86 @@ describe("<CaptureBar>", () => {
     await userEvent.type(input, "ship it");
     await userEvent.click(screen.getByRole("button", { name: /open full task form/i }));
     expect(container.querySelector(".animate-capture-pop")).toBeNull();
+  });
+});
+
+/** jsdom computes no layout CSS, so this stands in for the md:scroll-mt-44 class. */
+function giveScrollMargin(input: HTMLElement, value: string): void {
+  const real = window.getComputedStyle.bind(window);
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element, pseudo) => {
+    const style = real(element, pseudo);
+    if (element !== input) return style;
+    return new Proxy(style, {
+      get: (target, property) => (property === "scrollMarginTop" ? value : Reflect.get(target, property)),
+    });
+  });
+}
+
+describe("<CaptureBar> on a page that scrolls under a sticky topbar", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  function renderWithScrollMargin(margin: string): HTMLElement {
+    render(<CaptureBar onSubmit={vi.fn().mockResolvedValue(true)} />);
+    const input = screen.getByLabelText("Add a task");
+    input.scrollIntoView = vi.fn();
+    giveScrollMargin(input, margin);
+    return input;
+  }
+
+  it("carries the scroll margin that clears a two-row topbar", () => {
+    render(<CaptureBar onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText("Add a task")).toHaveClass("md:scroll-mt-44");
+  });
+
+  // WebKit reveals a text field's caret on focus and ignores the scroll margin,
+  // so the input parked behind the topbar stayed there.
+  it("scrolls itself clear of the topbar when it takes focus", () => {
+    const input = renderWithScrollMargin("176px");
+    act(() => input.focus());
+    expect(input.scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "instant" });
+  });
+
+  // Typing reveals only the caret, and only as far as the window's top edge.
+  it("does the same when the text changes", async () => {
+    const input = renderWithScrollMargin("176px");
+    act(() => input.focus());
+    vi.mocked(input.scrollIntoView).mockClear();
+    await userEvent.keyboard("a");
+    expect(input.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(input.scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "instant" });
+  });
+
+  it("stays put where the input has no scroll margin, as in the phone's fixed dock", async () => {
+    const input = renderWithScrollMargin("0px");
+    await userEvent.type(input, "a");
+    expect(input.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  // A press focuses a field that's already under the pointer. Moving it
+  // mid-press dragged the caret through the draft.
+  it("leaves the field where it is when a press focuses it", async () => {
+    const input = renderWithScrollMargin("176px");
+    await userEvent.click(input);
+    expect(input).toHaveFocus();
+    expect(input.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("reveals again on a later focus that isn't a press", async () => {
+    const input = renderWithScrollMargin("176px");
+    await userEvent.click(input);
+    act(() => input.blur());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    act(() => input.focus());
+    expect(input.scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  // The page is scrolling to the new card. Pulling it back would undo that.
+  it("doesn't scroll when focus returns after Add", async () => {
+    const input = renderWithScrollMargin("176px");
+    await userEvent.type(input, "buy milk");
+    vi.mocked(input.scrollIntoView).mockClear();
+    await userEvent.click(screen.getByTestId("submit-task"));
+    expect(input).toHaveFocus();
+    expect(input.scrollIntoView).not.toHaveBeenCalled();
   });
 });
