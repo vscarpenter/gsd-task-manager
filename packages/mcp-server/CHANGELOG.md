@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   way the web app maps it (#703).
 
 ### Fixed
+- `update_task` includes the next recurring instance and validation warnings in previews and live responses. `delete_task` marks incomplete dependency cleanup as an error (#728).
+- `delete_task` invalidates the cache after dependency cleanup. Reads that started before invalidation cannot repopulate the stale cache (#729).
+- `create_task`, `update_task`, and `complete_task` retry a rate-limited write once using `Retry-After`. A next-instance create retries independently of the completion write (#730).
 - `validate_config` reports an Authentication error when the sync status is
   unhealthy. `getSyncStatus` catches its own errors, so the check used to report
   success even for a revoked or rejected token.

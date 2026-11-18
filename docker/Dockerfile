@@ -104,4 +104,7 @@ VOLUME ["/pb_data"]
 
 USER gsd
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s \
+  CMD ["wget", "-q", "-T", "3", "-O", "/dev/null", "http://127.0.0.1:8090/api/health"]
+
 ENTRYPOINT ["/entrypoint.sh"]

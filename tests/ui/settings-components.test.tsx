@@ -70,16 +70,19 @@ vi.mock('@/components/ui/switch', () => ({
     onCheckedChange,
     disabled,
     'aria-label': ariaLabel,
+    'aria-describedby': ariaDescribedBy,
   }: {
     checked: boolean;
     onCheckedChange: (v: boolean) => void;
     disabled?: boolean;
     'aria-label'?: string;
+    'aria-describedby'?: string;
   }) => (
     <button
       role="switch"
       aria-checked={checked}
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
       onClick={() => !disabled && onCheckedChange(!checked)}
       disabled={disabled}
     >
@@ -299,6 +302,9 @@ describe('Settings Components', () => {
   });
 
   describe('NotificationSettingsSection', () => {
+    beforeEach(() => vi.stubGlobal('Notification', { permission: 'granted' }));
+    afterEach(() => vi.unstubAllGlobals());
+
     const enabledSettings = {
       id: 'settings' as const,
       enabled: true,
@@ -324,6 +330,27 @@ describe('Settings Components', () => {
         />
       );
       expect(screen.getByText('Loading...')).toBeInTheDocument();
+    });
+
+    it('disables the notifications switch when the browser lacks the API', () => {
+      Reflect.deleteProperty(window, 'Notification');
+      const onNotificationToggle = vi.fn();
+      render(
+        <NotificationSettingsSection
+          settings={enabledSettings}
+          onNotificationToggle={onNotificationToggle}
+          onDefaultReminderChange={vi.fn()}
+          {...soundAndQuietHandlers}
+        />
+      );
+
+      const toggle = screen.getByRole('switch', { name: 'Notifications' });
+      expect(toggle).toBeDisabled();
+      expect(toggle).not.toBeChecked();
+      expect(toggle).toHaveAccessibleDescription('Task reminders are unavailable in this browser.');
+      fireEvent.click(toggle);
+      expect(onNotificationToggle).not.toHaveBeenCalled();
+      expect(screen.queryByText('Browser permission')).not.toBeInTheDocument();
     });
 
     it('renders the notifications row with an honest description', () => {

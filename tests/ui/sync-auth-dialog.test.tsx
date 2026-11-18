@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AuthState } from '@/lib/sync/pb-auth';
 
@@ -1003,6 +1003,29 @@ describe('SyncAuthDialog', () => {
       });
     });
 
+    it('confirms disconnecting an expired session with unsynced changes', async () => {
+      const user = userEvent.setup();
+      mockRefreshAuth.mockResolvedValue(false);
+      mockGetSyncStatus
+        .mockResolvedValueOnce({ enabled: true, pendingCount: 2 })
+        .mockResolvedValueOnce({ enabled: true, pendingCount: 2 });
+
+      render(<SyncAuthDialog isOpen onClose={vi.fn()} />);
+
+      const disconnect = await screen.findByRole('button', { name: 'Disconnect account instead' });
+      await user.click(disconnect);
+      const cancel = await screen.findByRole('button', { name: 'Cancel' });
+      expect(cancel).toHaveFocus();
+      expect(screen.getByText(/2 unsynchronized changes/)).toBeInTheDocument();
+      expect(mockDisableSync).not.toHaveBeenCalled();
+
+      await user.click(cancel);
+      expect(disconnect).toHaveFocus();
+      await user.click(disconnect);
+      await user.click(await screen.findByRole('button', { name: 'Sign out anyway' }));
+      expect(mockDisableSync).toHaveBeenCalledOnce();
+    });
+
     it('should show normal signed-in view when refresh succeeds', async () => {
       mockRefreshAuth.mockResolvedValue(true);
 
@@ -1028,6 +1051,34 @@ describe('SyncAuthDialog', () => {
   });
 
   describe('Status Loading', () => {
+    it.each(['signed-out', 'valid-token'])('clears a cancelled refresh before showing the %s view', async (nextView) => {
+      let finishRefresh!: (refreshed: boolean) => void;
+      const refresh = new Promise<boolean>((resolve) => { finishRefresh = resolve; });
+      const config = { key: 'sync_config', enabled: true, email: 'refresh@example.com' };
+      const onClose = vi.fn();
+      mockDb.syncMetadata.get.mockResolvedValue(config);
+      mockIsAuthenticated.mockReturnValue(false);
+      mockRefreshAuth.mockReturnValue(refresh);
+
+      const { rerender } = render(<SyncAuthDialog isOpen onClose={onClose} syncEnabled />);
+      await screen.findByText('Checking session...');
+
+      if (nextView === 'signed-out') {
+        mockDb.syncMetadata.get.mockResolvedValue(null);
+        rerender(<SyncAuthDialog isOpen onClose={onClose} syncEnabled={false} />);
+        expect(await screen.findByTestId('oauth-buttons')).toBeInTheDocument();
+      } else {
+        mockIsAuthenticated.mockReturnValue(true);
+        rerender(<SyncAuthDialog isOpen={false} onClose={onClose} syncEnabled />);
+        rerender(<SyncAuthDialog isOpen onClose={onClose} syncEnabled />);
+        expect(await screen.findByText('refresh@example.com')).toBeInTheDocument();
+      }
+
+      await act(async () => finishRefresh(false));
+      expect(screen.queryByText('Checking session...')).not.toBeInTheDocument();
+      expect(screen.queryByText('Session expired')).not.toBeInTheDocument();
+    });
+
     it('should load sync status from IndexedDB when dialog opens', async () => {
       render(<SyncAuthDialog isOpen={true} onClose={vi.fn()} />);
 

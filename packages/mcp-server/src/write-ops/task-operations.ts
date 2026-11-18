@@ -129,7 +129,7 @@ export async function createTask(
   }
 
   const { ownerId, deviceId } = await getAuthInfo(config);
-  await createTaskInPB(config, newTask, ownerId, deviceId);
+  await new WriteRateLimiter().run(() => createTaskInPB(config, newTask, ownerId, deviceId));
 
   return {
     task: newTask,
@@ -300,15 +300,14 @@ async function applyUpdate(
     ? nextInstanceFor(currentTask, updatedTask, input)
     : undefined;
 
-  if (input.dryRun) {
-    return {
-      task: updatedTask,
-      ...(recurringInstance && { recurringInstance }),
-      dryRun: true,
-      changes,
-      validation: { valid: true, warnings },
-    };
-  }
+  const result: UpdateTaskResult = {
+    task: updatedTask,
+    ...(recurringInstance && { recurringInstance }),
+    dryRun: Boolean(input.dryRun),
+    changes,
+    validation: { valid: true, warnings },
+  };
+  if (result.dryRun) return result;
 
   // Preflight LWW check: re-read the record and confirm `client_updated_at`
   // hasn't moved between the initial read and now. If it has, a concurrent
@@ -316,19 +315,16 @@ async function applyUpdate(
   // their change.
   const { ownerId, deviceId } = await getAuthInfo(config);
   const preflight = await assertFreshUpdatePreflight(config, input, fresh.clientUpdatedAt);
-  await updateTaskInPBById(config, preflight.pbRecordId, updatedTask, ownerId, deviceId, preflight.clientUpdatedAt);
+  const limiter = new WriteRateLimiter();
+  await limiter.run(() =>
+    updateTaskInPBById(config, preflight.pbRecordId, updatedTask, ownerId, deviceId, preflight.clientUpdatedAt)
+  );
   // updateTaskInPBById skips the cache invalidation done in updateTaskInPB, so
   // invalidate here explicitly (matches the contract callers expect).
   getTaskCache().invalidate();
-  if (recurringInstance) await createNextInstance(config, recurringInstance, ownerId, deviceId);
+  if (recurringInstance) await createNextInstance(config, recurringInstance, ownerId, deviceId, limiter);
 
-  return {
-    task: updatedTask,
-    ...(recurringInstance && { recurringInstance }),
-    dryRun: false,
-    changes,
-    validation: { valid: true, warnings },
-  };
+  return result;
 }
 
 /**
@@ -434,7 +430,8 @@ export async function deleteTask(
   const { deviceId } = await getAuthInfo(config);
   const pending = await snapshotDependents(config, affectedTasks);
   await deletePrimaryTask(config, task, limiter);
-  const outcomes = await cleanDependents(config, new Set([taskId]), pending, deviceId, limiter);
+  const outcomes = await cleanDependents(config, new Set([taskId]), pending, deviceId, limiter)
+    .finally(() => getTaskCache().invalidate());
   const summary = summarizeCleanup(outcomes);
 
   return {

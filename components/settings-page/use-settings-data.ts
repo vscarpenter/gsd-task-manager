@@ -10,6 +10,7 @@ import {
   toggleQuietHours,
   setQuietHoursEdge,
 } from "@/lib/notifications";
+import { isNotificationSupported } from "@/lib/notifications/permissions";
 import type { AppPreferences, NotificationSettings } from "@/lib/types";
 import { getSyncStatus } from "@/lib/sync/config";
 import { createLogger } from "@/lib/logger";
@@ -149,7 +150,8 @@ function buildNotificationHandlers(
     notificationToggle: async () => {
       if (!current) return;
       const newEnabled = !current.enabled;
-      if (newEnabled && "Notification" in window) {
+      if (newEnabled) {
+        if (!isNotificationSupported()) return;
         const permission = await Notification.requestPermission();
         if (permission !== "granted") return;
       }

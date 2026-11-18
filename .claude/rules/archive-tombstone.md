@@ -62,7 +62,7 @@ Adding a writer? Add it to this table and give it a test for each rule that appl
 
 ## Traps
 
-- **Resolve sync deps before opening a Dexie transaction.** Awaiting a non-Dexie promise inside one lets it commit early. A dynamic `import()` or a config read silently removes the atomicity you just added. `archiveOldTasks` and `restoreTask` both resolve `getSyncConfig` and `getSyncQueue` first.
+- **Load sync modules before opening a Dexie transaction.** A dynamic `import()` or network request can let the transaction commit early. Read `sync_config` with `getSyncConfig()` inside the transaction that makes the queue decision. It reads IndexedDB through Dexie, so `syncMetadata` belongs in that transaction's scope.
 - **`bulkAdd` inside a transaction is all-or-nothing.** One duplicate key aborts the entire batch, which turns a single bad row into a permanent feature outage.
 - **Byte comparison does not identify resurrected rows.** Sync normalizes fields on the round trip. Measured against the affected dataset, content comparison matched zero of 167 duplicates.
 - **Neither tombstone table is synced.** Trash is a per-device undo buffer: emptying it on one device does not empty it on another (ADR 0015).

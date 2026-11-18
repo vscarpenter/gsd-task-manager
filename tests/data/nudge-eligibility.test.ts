@@ -60,6 +60,21 @@ describe("summarizeEngagement", () => {
     expect(summarizeEngagement(tasks, NOW).completionDays).toBe(2);
   });
 
+  it("counts local completion days across UTC midnight", () => {
+    const previousTimezone = process.env.TZ;
+    process.env.TZ = "America/Los_Angeles";
+    try {
+      const afternoon = completedTask("afternoon", 2, { completedAt: "2026-09-01T22:00:00.000Z" });
+      const evening = completedTask("evening", 2, { completedAt: "2026-09-02T00:30:00.000Z" });
+      const nextMorning = completedTask("next-morning", 1, { completedAt: "2026-09-02T08:00:00.000Z" });
+      expect(summarizeEngagement([afternoon, evening], NOW).completionDays).toBe(1);
+      expect(summarizeEngagement([evening, nextMorning], NOW).completionDays).toBe(2);
+    } finally {
+      if (previousTimezone === undefined) delete process.env.TZ;
+      else process.env.TZ = previousTimezone;
+    }
+  });
+
   it("falls back to updatedAt when a legacy record has no completedAt", () => {
     const legacy = completedTask("legacy", 5, { completedAt: undefined });
 

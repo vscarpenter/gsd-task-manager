@@ -34,6 +34,7 @@ The module header lists the files it models. They sit under `lib/sync/`, plus `l
     - Sign-in: `YouSignIn` to `PopulateWrites`.
     - Sign-out and reset: `YouSignOut` to `ResetReloads`.
     - Settings and edits: `YouChangeAutoSync`, `AutoSyncSaves`, `YouEditTask`, `EditSaves`.
+      An edit can start with sync on or off. `EditSaves` reads the current setting in the same step that queues the edit.
   - `Spec == Init /\ [][Next]_vars`. It has no fairness condition.
 - Config groups:
   - `SyncSession.cfg`: `Broken = "none"`, the code as it is. It checks `TypeOK` and both rules.

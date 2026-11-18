@@ -301,7 +301,7 @@ This section records the contract of the source files in `docker/`: `Dockerfile`
 - `Dockerfile` build arguments: `POCKETBASE_VERSION`, `POCKETBASE_SHA256_AMD64`, `POCKETBASE_SHA256_ARM64`, and `TARGETARCH`. It uses the optional BuildKit secret `npmrc`.
 - `Dockerfile` runtime stage: `EXPOSE 80 443`, `VOLUME ["/pb_data"]`, `USER gsd`, `ENTRYPOINT ["/entrypoint.sh"]`.
 - `docker-entrypoint.sh` reads `GSD_TASKS_ENC_KEY`, `TLS_MODE`, `TLS_CERT`, `TLS_KEY`, `TMPDIR`, and `SITE_ADDRESS`.
-- `docker-entrypoint.sh` exits 1 on an invalid key, an invalid `TLS_MODE`, or a missing or unreadable certificate or key in `custom` mode. Its `cleanup` function exits 0. Under `set -e` the script also ends when `gsd_install_state` returns 1, when `gsd_build_fresh_migrations` fails, or when `pocketbase migrate up` fails.
+- `docker-entrypoint.sh` exits 1 on invalid configuration or when a service exits unexpectedly. Normal shutdown by signal exits 0. Under `set -e` the script also ends when `gsd_install_state`, `gsd_build_fresh_migrations`, or `pocketbase migrate up` fails.
 - `docker-entrypoint.sh` runs in this order: validate the key, resolve `TLS_MODE`, source `migrations.sh`, call `gsd_install_state /pb_data`, run `pocketbase migrate up`, start `pocketbase serve`, wait for `/api/health`, start `caddy run`.
 - `docker-compose.yml` defines one service, `gsd`, with ports `443:443` and `80:80`, the volume `pb_data:/pb_data`, and `restart: unless-stopped`. It sets `SITE_ADDRESS=localhost` in the service environment.
 - `Caddyfile` reads the placeholders `SITE_ADDRESS`, `TLS_MODE`, `TLS_CERT`, and `TLS_KEY`. It imports `tls_internal`, `tls_public`, or `tls_custom`.
@@ -320,7 +320,7 @@ This section records the contract of the source files in `docker/`: `Dockerfile`
 - `docker-entrypoint.sh` refuses to start unless `GSD_TASKS_ENC_KEY` has exactly 32 characters.
 - `docker-entrypoint.sh` accepts `internal`, `public`, and `custom` for `TLS_MODE`. An unset mode with both `TLS_CERT` and `TLS_KEY` set becomes `custom`.
 - `docker-entrypoint.sh` passes `--automigrate=false` to both `pocketbase migrate up` and `pocketbase serve`. It uses the fresh overlay only when `gsd_install_state` prints `fresh`. It passes `--hooksDir=/pb_hooks` to both commands and `--publicDir=/pb_data/pb_public` to `pocketbase serve`.
-- `docker-entrypoint.sh` waits up to 30 seconds for PocketBase. After that it prints a warning and starts Caddy anyway.
+- `docker-entrypoint.sh` waits up to 30 seconds for PocketBase. If PocketBase is still running at the deadline, the script warns and starts Caddy. The image health check probes PocketBase's local `/api/health` endpoint.
 - `docker-compose.yml` uses `${GSD_TASKS_ENC_KEY:?...}`, so `docker compose up` fails when the variable is unset.
 - `Dockerfile` accepts `amd64` or `arm64` for `TARGETARCH`. It checks the PocketBase archive with `sha256sum -c` against the checksum argument for that architecture.
 - `Dockerfile` pins all three base images by digest.
@@ -334,7 +334,7 @@ This section records the contract of the source files in `docker/`: `Dockerfile`
 - `Dockerfile` (build time): runs `setcap cap_net_bind_service=+ep` on the `caddy` and `pocketbase` binaries.
 - `docker-entrypoint.sh`: on a fresh install it writes the folder `${TMPDIR:-/tmp}/gsd-fresh-migrations-$$`.
 - `docker-entrypoint.sh`: `pocketbase migrate up --dir=/pb_data` writes to the data volume. `pocketbase serve --http=0.0.0.0:8090` and `caddy run` start as background processes.
-- `docker-entrypoint.sh:cleanup`: sends `kill` to both processes on `TERM`, `INT`, or `QUIT`. The script also calls it when either process exits on its own, so the container exits 0 after PocketBase or Caddy stops.
+- `docker-entrypoint.sh:cleanup`: stops both processes on `TERM`, `INT`, or `QUIT`. If either service dies on its own, the entrypoint stops the survivor and exits 1 so Docker's restart policy can act.
 - `Caddyfile`: `tls internal` makes Caddy create a local certificate authority. The `public` mode makes outbound ACME requests.
 - `docker-compose.yml`: keeps `/pb_data` in the named volume `pb_data`.
 

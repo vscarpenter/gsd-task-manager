@@ -24,7 +24,7 @@ Recurrence (`recurrence.ts`):
 
 - `completesRecurringTask(current, completed)`: true when the change completes a recurring task.
 - `buildRecurringInstance(completed)`: builds the next instance with a new ID, reset state, and the next due date.
-- `createNextInstance(config, instance, ownerId, deviceId)`: saves the instance.
+- `createNextInstance(config, instance, ownerId, deviceId, limiter)`: saves the instance using the same limiter as the completion write.
 
 Dependency cleanup (`dependency-cleanup.ts`):
 
@@ -79,14 +79,14 @@ Input types (`types.ts`):
 - `helpers.ts:updateTaskInPBById`: it does not invalidate the cache. Its caller `applyUpdate` calls `getTaskCache().invalidate()` after the write.
 - `helpers.ts:escapeFilterValue`: throws for values over 500 characters (`MAX_FILTER_VALUE_LENGTH`). It escapes the backslash first, then the double quote.
 - `helpers.ts:getAuthInfo`: `deviceId` is always `mcp-server`. `ownerId` comes from `requireUsersPrincipal`.
-- `write-rate-limiter.ts:WriteRateLimiter`: writes are 100 ms apart (`WRITE_INTERVAL_MS`). Only a 429 is retried, once (`MAX_RATE_LIMIT_RETRIES`). `deleteTask` and `executeBulkWrite` each build a new limiter per call, so the spacing does not carry across tool calls. `createTask` and `applyUpdate` (which serves `updateTask` and `completeTask`) write without a limiter.
+- `write-rate-limiter.ts:WriteRateLimiter`: writes through one limiter are 100 ms apart (`WRITE_INTERVAL_MS`). Only a 429 is retried, once (`MAX_RATE_LIMIT_RETRIES`). Each write tool creates its own limiter per call. Bulk completion's follow-up instance creation runs inside the parent write and gets one attempt.
 - `write-rate-limiter.ts:WriteRateLimiter.run`: operations through one limiter run one at a time.
 - `dependency-cleanup.ts:cleanDependents`: cleanup logs record IDs and status codes only, never task content.
 
 ## Side Effects
 
 - `helpers.ts:createTaskInPB`, `updateTaskInPB`, `deleteTaskInPB`: create, update, or delete a record in the PocketBase `tasks` collection, then invalidate the task cache.
-- `helpers.ts:updateTaskInPBById`, `deleteTaskInPBById`, `updateTaskDependenciesInPBById`: update or delete a `tasks` record by record ID. In `deleteTask`, nothing invalidates the cache after the dependency cleanup writes.
+- `helpers.ts:updateTaskInPBById`, `deleteTaskInPBById`, `updateTaskDependenciesInPBById`: update or delete a `tasks` record by record ID. The callers clear the cache. `deleteTask` clears it after the delete and after dependency cleanup.
 - `helpers.ts:fetchSinglePBTaskFresh`, `fetchPBSnapshotForTasks`, `fetchPBRecordIdsForTasks`: read the `tasks` collection over the network. `fetchPBSnapshotForTasks` calls `confirmUsersPrincipal` when zero records return. `fetchPBRecordIdsForTasks` does not.
 - `helpers.ts:getAuthInfo`: calls `requireUsersPrincipal` to resolve the owner.
 - `bulk-operations.ts:executeBulkWrite`: reads snapshots, writes each item through a `WriteRateLimiter`, and invalidates the cache at the end. Each recurring instance it spawns also invalidates the cache through `createTaskInPB`. A bulk delete also calls `listTasksFresh` before any write. An empty snapshot returns `errors: ['No matching tasks found']` with no write. Each requested ID missing from the snapshot adds `Task <id>: not found in PocketBase` to `errors`.

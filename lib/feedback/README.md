@@ -58,7 +58,7 @@ This package backs the anonymous, opt-in feedback form. It builds the outgoing p
 - `submit-feedback.ts:isDuplicateSubmission` treats a 400 with `submission_id.code === "validation_not_unique"` as success. The earlier request already landed.
 - `submit-feedback.ts:submitFeedback` logs only the status code. What the user wrote must never appear in a log line.
 - `nudge-eligibility.ts:shouldShowFeedbackNudge` requires 14 tenure days, 10 completions, and 3 distinct completion days. It stays quiet for 90 days after a send, 180 days after a dismissal, and while a draft exists.
-- `nudge-eligibility.ts:summarizeEngagement` buckets completion days by UTC calendar day (`utcDay`). `lib/analytics` buckets by local day (`completion-day.ts:localDayKey`). The code comment on `utcDay` says the two match.
+- `nudge-eligibility.ts:summarizeEngagement` uses the same local calendar day and completion timestamp as dashboard streaks.
 - `nudge-eligibility.ts:withinCooldown` treats a missing or unparseable timestamp as an event that never happened.
 
 ## Side Effects

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { taskToPBFields, type GsdConfig, type PBTask, type Task } from '../../types.js';
 
-const { mockLoggerWarn } = vi.hoisted(() => ({ mockLoggerWarn: vi.fn() }));
+const { mockLoggerWarn, mockInvalidate } = vi.hoisted(() => ({ mockLoggerWarn: vi.fn(), mockInvalidate: vi.fn() }));
 
 vi.mock('../../utils/logger.js', () => ({
   createMcpLogger: () => ({
@@ -32,7 +32,7 @@ vi.mock('../../write-ops/helpers.js', async () => {
 });
 
 vi.mock('../../cache.js', () => ({
-  getTaskCache: () => ({ invalidate: vi.fn() }),
+  getTaskCache: () => ({ invalidate: mockInvalidate }),
 }));
 
 import { deleteTask } from '../../write-ops/task-operations.js';
@@ -129,6 +129,9 @@ describe('deleteTask', () => {
       'device-1',
       expect.any(String)
     );
+    expect(mockInvalidate).toHaveBeenCalledTimes(2);
+    expect(mockInvalidate.mock.invocationCallOrder[1])
+      .toBeGreaterThan(vi.mocked(helpers.updateTaskDependenciesInPBById).mock.invocationCallOrder[0]);
   });
 
   it('deletes without auth hydration when no dependencies need cleanup', async () => {

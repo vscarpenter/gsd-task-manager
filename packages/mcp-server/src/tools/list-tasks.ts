@@ -42,11 +42,11 @@ export async function listTasks(
     }
   }
 
-  // Fetch tasks from PocketBase
+  const generation = cache.generation;
   const tasks = await fetchTasks(config);
 
-  // Cache unfiltered results
-  if (!filters) {
+  // A write may have invalidated this snapshot while the read was in flight.
+  if (!filters && cache.generation === generation) {
     cache.setTaskList(cacheKey, tasks, namespace);
   }
 

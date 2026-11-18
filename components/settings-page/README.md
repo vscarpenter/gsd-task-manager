@@ -42,7 +42,7 @@ Section metadata is a static table in `settings-sidebar-data.ts`. The section co
 - `use-settings-data.ts:useSettingsData`: sets `dataLoaded` only after all three loads resolve. A load failure is logged and `dataLoaded` stays false.
 - `use-settings-data.ts:useSettingsData`: the mount effect ignores results once cleanup sets its `cancelled` flag.
 - `use-settings-data.ts:toggleSmartViews`: returns early when `appPreferences` is `null`.
-- `use-settings-data.ts:buildNotificationHandlers`: `notificationToggle` returns early when settings are `null`. When `"Notification" in window`, it aborts enabling unless `Notification.requestPermission()` returns `"granted"`. Without that API, it enables with no permission check.
+- `use-settings-data.ts:buildNotificationHandlers`: `notificationToggle` returns early when settings are `null`. Enabling requires the Notification API and granted permission.
 - `use-settings-data.ts:buildNotificationHandlers`: `defaultReminderChange` converts the value with `Number.parseInt(value, 10)`.
 - `use-settings-data.ts:buildNotificationHandlers`: each notification handler reloads settings with `getNotificationSettings()` after it mutates.
 - `use-storage-summary.ts:countByState`: a task counts as saved if `savedAt` is set, else completed if `completed`, else active.
@@ -66,7 +66,7 @@ Section metadata is a static table in `settings-sidebar-data.ts`. The section co
 - `use-settings-data.ts:useSettingsData`: on mount calls `getNotificationSettings` from `@/lib/notifications`, `getSyncStatus` from `@/lib/sync/config`, `getAppPreferences` from `@/lib/smart-views`, and `readShowCompleted` from `@/lib/preferences/show-completed`.
 - `use-settings-data.ts:toggleCompleted`: calls `localStorage.setItem(SHOW_COMPLETED_KEY, String(next))`, then dispatches a window `CustomEvent(SHOW_COMPLETED_EVENT, { detail: { show: next } })`. Both constants come from `@/lib/preferences/show-completed`.
 - `use-settings-data.ts:toggleSmartViews`: calls `updateAppPreferences` from `@/lib/smart-views`, then dispatches a window `CustomEvent(APP_PREFERENCES_EVENT, { detail: { preferences: updated } })`.
-- `use-settings-data.ts:buildNotificationHandlers.notificationToggle`: calls `Notification.requestPermission()` when enabling notifications, only if `"Notification" in window`.
+- `use-settings-data.ts:buildNotificationHandlers.notificationToggle`: calls `Notification.requestPermission()` when enabling notifications in a browser that supports them.
 - `use-settings-data.ts:buildNotificationHandlers`: calls `updateNotificationSettings`, `clearAppBadge`, `toggleNotificationSound`, `toggleQuietHours`, and `setQuietHoursEdge` from `@/lib/notifications`.
 - `use-settings-data.ts:useSettingsData`: calls `logger.error("Failed to load settings data", ...)` when the mount load throws.
 - `use-storage-summary.ts:useStorageSummary`: runs Dexie live queries through `useLiveQuery`. They call `getArchivedStorageStats` from `@/lib/archive` and `getTrashStorageStats` from `@/lib/trash`.

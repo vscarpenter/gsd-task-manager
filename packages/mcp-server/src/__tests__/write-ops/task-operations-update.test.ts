@@ -101,6 +101,19 @@ beforeEach(() => {
 });
 
 describe('updateTask', () => {
+  it.each(['update', 'complete'])('retries a rate-limited %s once', async (action) => {
+    mocks.fetchSinglePBTaskFresh.mockResolvedValue(freshRecord(task('target')));
+    mocks.updateTaskInPBById.mockRejectedValueOnce({ status: 429, retryAfterMs: 0 });
+
+    const result = action === 'update'
+      ? await updateTask(config, { id: 'target', title: 'Updated' })
+      : await completeTask(config, 'target', true);
+
+    expect(result.dryRun).toBe(false);
+    expect(mocks.updateTaskInPBById).toHaveBeenCalledTimes(2);
+    expect(mocks.updateTaskInPBById.mock.calls[0]).toEqual(mocks.updateTaskInPBById.mock.calls[1]);
+  });
+
   it('requires an explicit return before completing a saved item', async () => {
     mocks.fetchSinglePBTaskFresh.mockResolvedValueOnce(freshRecord(task('saved-reading', { savedAt: '2026-10-26T12:00:00.000Z' })));
     await expect(completeTask(config, 'saved-reading', true)).rejects.toThrow(/Return this saved item/);
@@ -352,6 +365,17 @@ describe('completeTask with a recurring task', () => {
       /marked complete, but the next recurring instance could not be created/
     );
     expect(mocks.updateTaskInPBById).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries a rate-limited recurring create without repeating the completion write', async () => {
+    mocks.createTaskInPB.mockRejectedValueOnce({ status: 429, retryAfterMs: 0 });
+
+    const result = await complete(recurring('daily'));
+
+    expect(mocks.updateTaskInPBById).toHaveBeenCalledTimes(1);
+    expect(mocks.createTaskInPB).toHaveBeenCalledTimes(2);
+    expect(mocks.createTaskInPB.mock.calls.map(([, task]) => task.id))
+      .toEqual([result.recurringInstance?.id, result.recurringInstance?.id]);
   });
 });
 

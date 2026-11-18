@@ -9,7 +9,19 @@ import {
   type BulkOperation,
 } from '../../write-ops.js';
 import type { GsdConfig } from '../../tools.js';
+import type { Task } from '../../types.js';
 import type { McpToolResponse } from './types.js';
+
+function formatWriteWarnings(warnings: string[]): string {
+  if (warnings.length === 0) return '';
+  return `\n\n⚠️ Warnings:\n${warnings.map((warning) => `  - ${warning}\n`).join('')}`;
+}
+
+function formatRecurringInstance(instance: Task | undefined, dryRun: boolean): string {
+  if (!instance) return '';
+  const summary = dryRun ? 'The next recurring instance would be created' : 'Next recurring instance created';
+  return `\n\n${summary}:\n\n${JSON.stringify(instance, null, 2)}`;
+}
 
 /**
  * Write operation tool handlers for modifying task data
@@ -23,21 +35,11 @@ export async function handleCreateTask(config: GsdConfig, args: CreateTaskInput)
   if (result.dryRun) {
     message = `🔍 DRY RUN - Task would be created (not saved):\n\n`;
     message += JSON.stringify(result.task, null, 2);
-    if (result.validation.warnings.length > 0) {
-      message += `\n\n⚠️ Warnings:\n`;
-      result.validation.warnings.forEach((w) => {
-        message += `  - ${w}\n`;
-      });
-    }
+    message += formatWriteWarnings(result.validation.warnings);
     message += `\n\nTo create this task, remove dryRun or set it to false.`;
   } else {
     message = `✅ Task created successfully!\n\n${JSON.stringify(result.task, null, 2)}`;
-    if (result.validation.warnings.length > 0) {
-      message += `\n\n⚠️ Warnings:\n`;
-      result.validation.warnings.forEach((w) => {
-        message += `  - ${w}\n`;
-      });
-    }
+    message += formatWriteWarnings(result.validation.warnings);
   }
 
   return {
@@ -53,36 +55,21 @@ export async function handleCreateTask(config: GsdConfig, args: CreateTaskInput)
 export async function handleUpdateTask(config: GsdConfig, args: UpdateTaskInput): Promise<McpToolResponse> {
   const result = await updateTask(config, args);
 
-  let message: string;
-  if (result.dryRun) {
-    message = `🔍 DRY RUN - Task would be updated (not saved):\n\n`;
-    if (result.changes.length > 0) {
-      message += `Changes:\n`;
-      result.changes.forEach((c) => {
-        message += `  - ${c}\n`;
-      });
-    } else {
-      message += `No changes detected.\n`;
-    }
-    message += `\nResulting task:\n${JSON.stringify(result.task, null, 2)}`;
-    if (result.validation.warnings.length > 0) {
-      message += `\n\n⚠️ Warnings:\n`;
-      result.validation.warnings.forEach((w) => {
-        message += `  - ${w}\n`;
-      });
-    }
-    message += `\n\nTo apply changes, remove dryRun or set it to false.`;
-  } else {
-    message = `✅ Task updated successfully!\n\n`;
-    if (result.changes.length > 0) {
-      message += `Changes applied:\n`;
-      result.changes.forEach((c) => {
-        message += `  - ${c}\n`;
-      });
-      message += `\n`;
-    }
-    message += JSON.stringify(result.task, null, 2);
+  let message = result.dryRun
+    ? '🔍 DRY RUN - Task would be updated (not saved):\n\n'
+    : '✅ Task updated successfully!\n\n';
+  if (result.changes.length > 0) {
+    message += result.dryRun ? 'Changes:\n' : 'Changes applied:\n';
+    for (const change of result.changes) message += `  - ${change}\n`;
+    if (!result.dryRun) message += '\n';
+  } else if (result.dryRun) {
+    message += 'No changes detected.\n';
   }
+  if (result.dryRun) message += '\nResulting task:\n';
+  message += JSON.stringify(result.task, null, 2);
+  message += formatRecurringInstance(result.recurringInstance, result.dryRun);
+  message += formatWriteWarnings(result.validation.warnings);
+  if (result.dryRun) message += `\n\nTo apply changes, remove dryRun or set it to false.`;
 
   return {
     content: [
@@ -104,15 +91,11 @@ export async function handleCompleteTask(
   if (result.dryRun) {
     message = `🔍 DRY RUN - Task would be marked as ${args.completed ? 'complete' : 'incomplete'} (not saved):\n\n`;
     message += JSON.stringify(result.task, null, 2);
-    if (result.recurringInstance) {
-      message += `\n\nThe next recurring instance would be created:\n\n${JSON.stringify(result.recurringInstance, null, 2)}`;
-    }
+    message += formatRecurringInstance(result.recurringInstance, true);
     message += `\n\nTo apply this change, remove dryRun or set it to false.`;
   } else {
     message = `✅ Task marked as ${args.completed ? 'complete' : 'incomplete'}!\n\n${JSON.stringify(result.task, null, 2)}`;
-    if (result.recurringInstance) {
-      message += `\n\nNext recurring instance created:\n\n${JSON.stringify(result.recurringInstance, null, 2)}`;
-    }
+    message += formatRecurringInstance(result.recurringInstance, false);
   }
 
   return {
@@ -161,6 +144,7 @@ export async function handleDeleteTask(config: GsdConfig, args: { id: string; dr
   }
 
   return {
+    ...(result.partial ? { isError: true } : {}),
     content: [
       {
         type: 'text' as const,

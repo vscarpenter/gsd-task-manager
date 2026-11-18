@@ -80,12 +80,11 @@ export async function archiveOldTasks(
   const now = new Date().toISOString();
 
   const { getSyncConfig } = await import("@/lib/sync/config");
-  const syncConfig = await getSyncConfig();
   const queue = getSyncQueue();
 
   const tasksToArchive = await db.transaction(
     "rw",
-    [db.tasks, db.archivedTasks, db.syncQueue],
+    [db.tasks, db.archivedTasks, db.syncQueue, db.syncMetadata],
     async () => {
       // Find completed tasks older than cutoff
       const allTasks = await db.tasks.toArray();
@@ -117,7 +116,7 @@ export async function archiveOldTasks(
       await db.tasks.bulkDelete(eligible.map((task) => task.id));
 
       // Enqueue delete operations for sync (only if sync is enabled)
-      if (syncConfig?.enabled) {
+      if ((await getSyncConfig())?.enabled) {
         await Promise.all(
           eligible.map((task) => queue.enqueue('delete', task.id, task))
         );
@@ -144,12 +143,7 @@ export async function listArchivedTasks(): Promise<TaskRecord[]> {
 export async function restoreTask(taskId: string): Promise<void> {
   const db = getDb();
 
-  // Resolve the sync dependencies BEFORE opening the transaction. Awaiting a
-  // non-Dexie promise (the dynamic import, the config read) inside a Dexie
-  // transaction lets it commit early, which would reopen the very atomicity
-  // hole the transaction exists to close. Same ordering as archiveOldTasks.
   const { getSyncConfig } = await import("@/lib/sync/config");
-  const syncConfig = await getSyncConfig();
   const queue = getSyncQueue();
 
   // The read, both writes, and the sync enqueue commit as one unit. Previously
@@ -162,7 +156,7 @@ export async function restoreTask(taskId: string): Promise<void> {
   // one sees the row already gone instead of colliding on `tasks.add`.
   await db.transaction(
     "rw",
-    [db.tasks, db.archivedTasks, db.syncQueue],
+    [db.tasks, db.archivedTasks, db.syncQueue, db.syncMetadata],
     async () => {
       const archivedTask = await db.archivedTasks.get(taskId);
       if (!archivedTask) {
@@ -175,7 +169,7 @@ export async function restoreTask(taskId: string): Promise<void> {
       await db.tasks.add(taskWithoutArchive);
       await db.archivedTasks.delete(taskId);
 
-      if (syncConfig?.enabled) {
+      if ((await getSyncConfig())?.enabled) {
         await queue.enqueue('update', taskWithoutArchive.id, taskWithoutArchive);
       }
     }
@@ -196,15 +190,12 @@ export async function restoreTask(taskId: string): Promise<void> {
 export async function archiveTaskNow(taskId: string): Promise<void> {
   const db = getDb();
 
-  // Resolved before the transaction opens — see restoreTask for why awaiting a
-  // non-Dexie promise inside a Dexie transaction breaks its atomicity.
   const { getSyncConfig } = await import("@/lib/sync/config");
-  const syncConfig = await getSyncConfig();
   const queue = getSyncQueue();
 
   await db.transaction(
     "rw",
-    [db.tasks, db.archivedTasks, db.syncQueue],
+    [db.tasks, db.archivedTasks, db.syncQueue, db.syncMetadata],
     async () => {
       const task = await db.tasks.get(taskId);
       if (!task) {
@@ -217,7 +208,7 @@ export async function archiveTaskNow(taskId: string): Promise<void> {
       );
       await db.tasks.delete(taskId);
 
-      if (syncConfig?.enabled) {
+      if ((await getSyncConfig())?.enabled) {
         await queue.enqueue('delete', taskId, task);
       }
     }

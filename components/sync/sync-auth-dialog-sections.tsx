@@ -30,7 +30,7 @@ interface SessionExpiredSectionProps {
   error: string | null;
   isLoading: boolean;
   oauthCallbacks: OAuthCallbacks;
-  onLogout: () => void;
+  logout: LogoutControls;
 }
 
 /** UI for when the session token has expired */
@@ -39,7 +39,7 @@ export function SessionExpiredSection({
   error,
   isLoading,
   oauthCallbacks,
-  onLogout,
+  logout,
 }: SessionExpiredSectionProps) {
   return (
     <div className="space-y-4">
@@ -62,15 +62,8 @@ export function SessionExpiredSection({
         lastUsedProvider={syncStatus.provider}
       />
 
-      <div className="border-t border-card-border pt-3">
-        <Button
-          onClick={onLogout}
-          disabled={isLoading}
-          variant="ghost"
-          className="w-full text-sm text-foreground-muted"
-        >
-          {isLoading ? "Signing out…" : "Disconnect account instead"}
-        </Button>
+      <div className="space-y-3 border-t border-card-border pt-3">
+        <LocalSignOut logout={logout} isLoading={isLoading} sessionExpired />
       </div>
     </div>
   );
@@ -118,13 +111,32 @@ export function AuthenticatedSection({
 
       <ErrorMessage error={error} />
 
+      <LocalSignOut logout={logout} isLoading={isLoading} />
+
+      <SignOutEverywhereSection controls={signOutEverywhere} isLoading={isLoading} />
+    </div>
+  );
+}
+
+function LocalSignOut({ logout, isLoading, sessionExpired = false }: {
+  logout: LogoutControls;
+  isLoading: boolean;
+  sessionExpired?: boolean;
+}) {
+  const triggerRef = useReturnFocusWhenClosed(logout.showLogoutConfirm);
+  const label = sessionExpired ? "Disconnect account instead" : "Sign out";
+
+  return (
+    <>
       <Button
+        ref={triggerRef}
         onClick={logout.handleLogout}
         disabled={isLoading}
-        variant="subtle"
-        className="w-full"
+        variant={sessionExpired ? "ghost" : "subtle"}
+        className={sessionExpired ? "w-full text-sm text-foreground-muted" : "w-full"}
+        aria-expanded={logout.showLogoutConfirm}
       >
-        {isLoading ? "Signing out…" : "Sign out"}
+        {isLoading ? "Signing out…" : label}
       </Button>
 
       {logout.showLogoutConfirm && (
@@ -135,9 +147,7 @@ export function AuthenticatedSection({
           onConfirm={logout.performLogout}
         />
       )}
-
-      <SignOutEverywhereSection controls={signOutEverywhere} isLoading={isLoading} />
-    </div>
+    </>
   );
 }
 
@@ -199,10 +209,16 @@ export function LogoutConfirmation({
   onConfirm,
 }: LogoutConfirmationProps) {
   const changeLabel = pendingChanges === 1 ? "change" : "changes";
+  const descriptionId = useId();
 
   return (
-    <div className="rounded-lg border border-status-blocked/45 bg-status-blocked-muted p-3">
-      <p className="mb-2 text-sm font-medium text-status-blocked-ink">
+    <div
+      role="group"
+      aria-label="Confirm sign out"
+      aria-describedby={descriptionId}
+      className="rounded-lg border border-status-blocked/45 bg-status-blocked-muted p-3"
+    >
+      <p id={descriptionId} className="mb-2 text-sm font-medium text-status-blocked-ink">
         You have {pendingChanges} unsynchronized {changeLabel}.
         Signing out will discard them.
       </p>

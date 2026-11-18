@@ -44,9 +44,6 @@ export async function restoreFromTrash(taskId: string): Promise<void> {
   const db = getDb();
   const { getSyncConfig } = await import("@/lib/sync/config");
   const { getSyncQueue } = await import("@/lib/sync/queue");
-  // Resolved before the transaction opens: awaiting a non-Dexie promise inside
-  // one lets it commit early and silently removes the atomicity.
-  const syncEnabled = !!(await getSyncConfig())?.enabled;
   const queue = getSyncQueue();
 
   try {
@@ -61,7 +58,7 @@ export async function restoreFromTrash(taskId: string): Promise<void> {
         await db.tasks.put(task as TaskRecord);
         await db.deletedTasks.delete(taskId);
         await forgetForResurrect([taskId]);
-        if (syncEnabled) await queue.enqueue("create", taskId, task as TaskRecord);
+        if ((await getSyncConfig())?.enabled) await queue.enqueue("create", taskId, task as TaskRecord);
         return task as TaskRecord;
       }
     );

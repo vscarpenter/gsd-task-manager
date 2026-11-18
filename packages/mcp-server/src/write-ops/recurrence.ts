@@ -5,6 +5,7 @@
 
 import type { GsdConfig, Task } from '../types.js';
 import { createTaskInPB, generateTaskId } from './helpers.js';
+import type { WriteRateLimiter } from './write-rate-limiter.js';
 
 export function completesRecurringTask(current: Task, completed: boolean | undefined): boolean {
   return completed === true && !current.completed && current.recurrence !== 'none';
@@ -57,10 +58,11 @@ export async function createNextInstance(
   config: GsdConfig,
   instance: Task,
   ownerId: string,
-  deviceId: string
+  deviceId: string,
+  limiter: WriteRateLimiter
 ): Promise<void> {
   try {
-    await createTaskInPB(config, instance, ownerId, deviceId);
+    await limiter.run(() => createTaskInPB(config, instance, ownerId, deviceId));
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(

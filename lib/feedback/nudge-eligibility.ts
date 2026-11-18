@@ -1,4 +1,5 @@
 import { TIME_MS } from "@/lib/constants";
+import { completionTime, localDayKey } from "@/lib/analytics/completion-day";
 import type { TaskRecord } from "@/lib/types";
 
 /**
@@ -40,12 +41,6 @@ function wholeDaysBetween(earlierMs: number, laterMs: number): number {
   return Math.floor((laterMs - earlierMs) / TIME_MS.DAY);
 }
 
-/** UTC calendar day, matching how `lib/analytics/streaks.ts` buckets completions. */
-function utcDay(iso: string): string | null {
-  const ms = Date.parse(iso);
-  return Number.isNaN(ms) ? null : new Date(ms).toISOString().slice(0, 10);
-}
-
 export function summarizeEngagement(tasks: TaskRecord[], now: Date): EngagementSummary {
   let oldestCreatedMs = Number.POSITIVE_INFINITY;
   let completions = 0;
@@ -57,8 +52,8 @@ export function summarizeEngagement(tasks: TaskRecord[], now: Date): EngagementS
 
     if (!task.completed) continue;
     completions += 1;
-    const day = utcDay(task.completedAt ?? task.updatedAt);
-    if (day) completionDays.add(day);
+    const completed = completionTime(task);
+    if (!Number.isNaN(completed.getTime())) completionDays.add(localDayKey(completed));
   }
 
   return {
