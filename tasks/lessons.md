@@ -508,3 +508,18 @@ Adding a wire column is not enough. A client that pulled a record before the col
   changed default.
 - **A bundle budget turns a bump into a decision.** recharts 3.11.0 added 11.9 KB
   gzip to `/dashboard`. Measure with two builds that differ in one package.
+
+## PocketBase SDK 0.29.0 (2026-11-17)
+
+- **A fake of the SDK can't see the SDK change.** On 0.29.0 with no fix, web
+  5,054 and MCP 544 tests passed. Keep one test per client that runs the real
+  SDK with only `fetch` stubbed.
+- **Find every read of shared state after a failed request.** The changelog
+  named one risk. Reading the call sites found a second: `signOutEverywhere`
+  reads the token's expiry after a 401.
+- **Test the outcome, not the option.** A test that asserts
+  `autoClearAuthStore(false)` was called still passes if the SDK renames the
+  option. A test on the stored token fails.
+- **A version with no upstream tag needs a diff, not a guess.** The SDK's repo
+  had moved hosts. Source maps give a readable diff, and sorted minified
+  statements show whether the shipped bundle matches it.
