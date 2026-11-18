@@ -12,11 +12,19 @@ Branch: `chore/pocketbase-sdk-0-29` off `main` (`ee172b41`). Standard tier: the 
 - [x] Docs: both client READMEs, the MCP README and CHANGELOG, and `.claude/rules/pocketbase-sync.md`.
 - [x] Verify `80a8cd6e` in a clean worktree on bun 1.4.4 and Node 22.23.5 with a frozen install. All 16 job commands pass. Unit: 5,056 passed in 374 files. MCP: 545 passed. The PocketBase system test passes 7 of 7 against a real server. Typecheck, both test typechecks, lint, shape, knip, and the license check pass. Build and bundle budget pass. On the production export, Chromium passes the PWA check, the CSP check, and 190 specs.
 - [x] Review by `pb-sync-reviewer`: nothing blocking in the code or the tests. It found three overstatements in my wording, fixed in `4286d83e` (comments and Markdown only). It confirmed that no code creates a client outside the two wrappers.
-- [ ] Push and open the PR. This waits for the owner. Only CI runs the Firefox and WebKit e2e jobs.
+- [x] PR #752 is open; the owner asked for the push. All five required checks pass. Firefox and WebKit e2e, MCP coverage, the PocketBase system test, and Sonar pass too.
+- [ ] `e2e (chromium)` is red on #752, and this branch didn't cause it. `text-scaling.spec.ts:75` ("something covers the header") failed the same way on `main` (`c9b3958f`) and three other branches on Wednesday 2026-11-11. Chromium passed on every run checked from 2026-11-12 to 2026-11-17. The job isn't a required check. Rerun it after 00:00 UTC on 2026-11-19, or land the fix below first.
+- **Found on the way, not fixed:** the capture bar slides over the sticky topbar when the matrix page scrolls.
+  - Both carry `z-20`: the header in `topbar.tsx` and the `mobile-capture-dock` wrapper in `components/matrix-simplified/index.tsx`. The dock comes later in the DOM, so it paints on top.
+  - It shows whenever the shell isn't pinned at `md` and up, such as 150% text on a 720px screen.
+  - Measured on the built app at 1280x720 and 150% text. On a Tuesday the dock covers the header's bottom edge from scrollY 252 to 398. On a Wednesday it's 348 to 492.
+  - The window moves with the date. A wider date squeezes the intro paragraph onto more lines, which pushes the dock down.
+  - The spec checks one offset, 700. On CI's wider Linux fonts, only the widest dates ("Wednesday, November 18") put the window on 700. On macOS it never gets there, so the spec passes locally.
+  - A fix needs two parts: keep the dock under the header at `md` and up, and make the spec sweep the scroll range under a fixed clock.
 - **Not covered by a test:** a 401 on the realtime subscribe request. It goes through the same `send`, so the opt-out covers it.
 - **Found on the way:** SDK 0.29.0 breaks `signOutEverywhere` too. It reads `pb.authStore.isValid` after a 401, and the SDK had already emptied the store, so a retried revoke threw.
 - **Assumptions:** no version bump here. It goes with `/release`, as for #749 and #750. No MCP publish.
-- **Blockers:** none.
+- **Blockers:** none for the merge gate. `e2e (chromium)` stays red until the UTC date changes or the layout fix lands.
 
 # Release 14.9.3 (2026-11-17)
 
