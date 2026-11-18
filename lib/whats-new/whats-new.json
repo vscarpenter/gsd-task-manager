@@ -4,6 +4,24 @@
   "releases": [
     {
       "platform": "web",
+      "version": "14.9.4",
+      "date": "2026-11-18",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [
+        "Settings explains when your browser cannot send task reminders."
+      ],
+      "fixed": [
+        "You can disconnect an expired sync session after reviewing the warning about unsynced changes.",
+        "The sync dialog recovers when a session check is interrupted.",
+        "Task edits use the current sync state when you sign in or out in another tab.",
+        "The feedback invitation counts completion days in your local time zone, just like your streaks.",
+        "The quick-entry field stays below the top bar and comes into view when you focus it."
+      ]
+    },
+    {
+      "platform": "web",
       "version": "14.9.2",
       "date": "2026-11-15",
       "notable": false,

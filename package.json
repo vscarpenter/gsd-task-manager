@@ -1,6 +1,6 @@
 {
 	"name": "gsd-taskmanager",
-	"version": "14.9.3",
+	"version": "14.9.4",
 	"packageManager": "bun@1.4.4",
 	"private": true,
 	"type": "module",

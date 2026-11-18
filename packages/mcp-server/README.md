@@ -15,12 +15,12 @@ Model Context Protocol (MCP) server for GSD Task Manager. Provides **full task m
 Install a reviewed, exact release and run its interactive setup wizard:
 
 ```bash
-npm install --global gsd-mcp-server@1.4.1
+npm install --global gsd-mcp-server@1.5.0
 gsd-mcp-server --setup
 ```
 
-1.4.1 is the current release when this README was written; the npm badge above
-shows the latest. Install one exact version rather than a range or `npx`.
+This README uses 1.5.0. The npm badge above shows the latest release. Install an
+exact version with the command above.
 
 The wizard validates a normal user account and writes an owner-only configuration
 artifact for Claude Desktop: `~/.gsd-mcp-setup.json`, which only your user account
@@ -127,7 +127,7 @@ connectivity, authentication, and task-access checks only):
 ### Option A: Install an Exact Published Release (Recommended)
 
 Install an explicitly reviewed version, such as `npm install --global
-gsd-mcp-server@1.4.1`. Updating is a deliberate reinstall followed by `--setup`.
+gsd-mcp-server@1.5.0`. Updating involves reinstalling and running `--setup`.
 Don't run the server through `npx`: the setup wizard writes the path of the copy
 that ran it, and npm can prune the npx cache, which silently breaks Claude Desktop.
 
@@ -965,7 +965,7 @@ MIT - Same as GSD Task Manager
 
 ---
 
-**Current release:** 1.4.1. See [CHANGELOG.md](CHANGELOG.md) for every release.
+**Current release:** 1.5.0. See [CHANGELOG.md](CHANGELOG.md) for every release.
 
 ## Package contract
 

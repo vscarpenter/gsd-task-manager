@@ -85,9 +85,12 @@ describe('/.well-known/mcp/server-card.json', () => {
 			[...readFileSync(resolve(schemaDir, file), 'utf-8').matchAll(/^ {2}name: '([a-z_]+)'/gm)].map((match) => match[1])
 		);
 
-	it('matches the published npm package name', () => {
-		expect(card.serverInfo.name).toBe('gsd-mcp-server');
-		expect(card.serverInfo.version).toMatch(/^\d+\.\d+\.\d+/);
+	it('matches the MCP package name and release version', () => {
+		const manifest = JSON.parse(
+			readFileSync(resolve(__dirname, '../../packages/mcp-server/package.json'), 'utf8')
+		) as { name: string; version: string };
+		expect(card.serverInfo.name).toBe(manifest.name);
+		expect(card.serverInfo.version).toBe(manifest.version);
 	});
 
 	it('declares a stdio transport with an install command', () => {
