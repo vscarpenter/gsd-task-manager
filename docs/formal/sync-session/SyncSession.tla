@@ -55,7 +55,7 @@ VARIABLES
   si, siWho, siTab, siRows,     \* a sign-in in progress
   so, soTab, soReset, soCfg,    \* a sign-out or Reset Everything in progress
   st,         \* a Settings change in progress: {} or the row it read
-  ed,         \* TRUE while a task edit that read "sync on" is in progress
+  ed,         \* TRUE while an edit is waiting to commit
   ev          \* a realtime event in progress: {} or {[o, r]}
 
 syncVars == <<sp, pullFirst, owner, rt, pushOwner, pending, pullOwner, fetched>>
@@ -398,18 +398,17 @@ AutoSyncSaves ==
   /\ st' = {}
   /\ UNCHANGED <<tok, rows, queue, srv, syncVars, siVars, soVars, ed, ev>>
 
-\* runTaskSyncTransaction reads getSyncConfig() before its transaction opens.
-\* An edit that reads "sync off" queues nothing, so only the other kind is modeled.
+\* An edit can start during either session state. It has not read sync_config yet.
 YouEditTask ==
-  /\ ~ed /\ cfg.on
+  /\ ~ed
   /\ ed' = TRUE
   /\ UNCHANGED <<cfg, tok, rows, queue, srv, syncVars, siVars, soVars, st, ev>>
 
-\* ...then one transaction puts the row and enqueues it, as updateTask does.
-\* A task that is gone throws "not found" and queues nothing.
+\* The transaction reads sync_config, saves the task, and enqueues it when sync
+\* is on. A task that is gone throws "not found" and queues nothing.
 EditSaves(r) ==
   /\ ed
-  /\ queue' = IF r \in rows THEN queue \cup {r} ELSE queue
+  /\ queue' = IF cfg.on /\ r \in rows THEN queue \cup {r} ELSE queue
   /\ ed' = FALSE
   /\ UNCHANGED <<cfg, tok, rows, srv, syncVars, siVars, soVars, st, ev>>
 

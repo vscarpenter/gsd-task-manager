@@ -44,7 +44,7 @@ This package holds the write paths for live tasks: create, update, complete, mov
 
 - `helpers.ts:runTaskSyncTransaction` opens one `"rw!"` transaction over `tasks`, `deletedTasks`, `syncQueue`, and `syncMetadata`. A narrower scope would make delete and restore non-atomic (ADR 0015).
 - `helpers.ts:runTaskSyncTransaction` requires an async function as the transaction scope. With a plain arrow, Dexie rejects the commit as premature (WEB-UNDO-SIGNED-IN).
-- `helpers.ts:runTaskSyncTransaction` reads the sync config before it opens the transaction. It schedules background sync only after the commit, and only when it enqueued something.
+- `helpers.ts:runTaskSyncTransaction` reads the sync config inside the task and queue transaction. It schedules background sync after the commit when it enqueued a write.
 - `delete.ts:deleteTask` moves the row between `tasks` and `deletedTasks` in one transaction. An id lives in exactly one lifecycle table (ADR 0013).
 - `delete.ts:deleteTask` writes `deletedTasks` with `put`, never `add`. Deleting a restored task again must not raise a `ConstraintError`.
 - `delete.ts:deleteTask` enqueues a `delete` when sync is on. When sync is off it calls `rememberForResurrect([id])` in the same transaction.

@@ -63,16 +63,8 @@ export async function runTaskSyncTransaction<T>(
   mutation: (context: TaskSyncTransactionContext) => Promise<T>
 ): Promise<T> {
   const db = getDb();
-  const syncConfig = await getSyncConfig();
-  const syncEnabled = syncConfig?.enabled ?? false;
   const queue = getSyncQueue();
   let didEnqueue = false;
-
-  const enqueue: TransactionalSyncEnqueue = async (operation, taskId, data) => {
-    if (!syncEnabled) return;
-    await queue.enqueue(operation, taskId, data);
-    didEnqueue = true;
-  };
 
   const result = await db.transaction(
     "rw!",
@@ -85,7 +77,15 @@ export async function runTaskSyncTransaction<T>(
     // native awaits only for a scope tagged AsyncFunction; with a plain arrow, a
     // write after an await that made no request runs in a transaction of its own,
     // and Dexie rejects the commit as premature (WEB-UNDO-SIGNED-IN).
-    async () => mutation({ syncEnabled, enqueue })
+    async () => {
+      const syncEnabled = (await getSyncConfig())?.enabled ?? false;
+      const enqueue: TransactionalSyncEnqueue = async (operation, taskId, data) => {
+        if (!syncEnabled) return;
+        await queue.enqueue(operation, taskId, data);
+        didEnqueue = true;
+      };
+      return mutation({ syncEnabled, enqueue });
+    }
   );
   if (didEnqueue) scheduleSyncAfterChange();
   return result;

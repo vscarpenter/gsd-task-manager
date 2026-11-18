@@ -54,14 +54,12 @@ Check off a daily task, then uncheck it. `toggleCompleted(id, false)` (`lib/task
 
 ### `WEB-SESSION-STALE-READ` · P3 · writers act on a `sync_config` read taken outside their transaction
 
-Each one needs a second tab or a stale dialog, plus a window of a few IndexedDB round trips. The first three bullets were fixed on 2026-11-11 (#734). The fourth bullet is open and tracked as #735.
+Each one needed a second tab or a stale dialog, plus a window of a few IndexedDB round trips. The first three fixes landed in #734. The task-writer changes are tracked in #735.
 
 - Fixed. `disableSync` read the row before `resetSyncConfigState` opened its transaction. If A's sign-in saved in between, the signed-out row recorded no `localTaskOwnerUserId`, and B could then sign in and upload A's task. `resetSyncConfigState` now reads the row inside its transaction (`verify-sync-session`, `BrokenSignOutRead.cfg`).
 - Fixed. `updateAutoSyncConfig` wrote `{...current, ...updates}` through `updateSyncConfig` with no transaction, so it could write A's row back over B's sign-in. `updateSyncConfig` now reads and writes in one transaction (`BrokenSettingsWrite.cfg`).
 - Fixed. `persistSyncConfig` committed, then `populateFromExistingTasks` queued every task with no session check. A Reset Everything in between left A's task queued on an empty device, and B's push uploaded it. The sign-in transaction now queues the local tasks itself (`BrokenPopulate.cfg`).
-- Open (#735). `runTaskSyncTransaction`, `restoreFromTrash` (`lib/trash.ts`), and the archive's `restoreTask` (`lib/archive.ts`) read the row before their transaction. That `restoreTask` is not Undo's `restoreTask` in `lib/tasks/crud/restore.ts`, which goes through `runTaskSyncTransaction`. If another tab signs in during that gap, the writer still acts as signed out. It remembers a delete instead of queuing it, and resurrect on sight brings the task back. Or it queues nothing for a restore, and reconcile drops the task (`verify-task-tombstones`, `Finding-6-config-read.cfg` and `Finding-6-config-read-loss.cfg`). `archiveOldTasks`, `archiveTaskNow`, and import's `resolveSyncDeps` read the row early in the same way, and the model does not cover them.
-
-Fix for the open bullet: each of those three functions reads the row inside its own transaction. `SyncSession.cfg` models the code with the first three fixed, and it passes both account rules (`NoRecordInAnotherAccount` and `DeviceHoldsOnlyTheSignedInAccount`).
+- Fixed (#735). Task CRUD, Trash restore, all three archive writers, and backup import now read `sync_config` in the same transaction that queues the write. A concurrent sign-in or sign-out can no longer change the flag between the read and the queue decision. `SyncSession.cfg` models that ordering, and both account rules hold. The historical tombstone model preserves the buggy order in `Finding-6-config-read.cfg` and `Finding-6-config-read-loss.cfg`.
 
 ### `WEB-RESTORE-ONE-TABLE` · P3 · two restore paths write a live row beside an archive row
 

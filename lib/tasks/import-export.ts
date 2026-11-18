@@ -8,7 +8,6 @@ import {
   trashedTaskRecordSchema,
 } from "@/lib/schema";
 import type { ImportablePayload, ImportPayload, SmartViewRecord, TaskRecord } from "@/lib/types";
-import type { SyncQueue } from "@/lib/sync/queue";
 import { isoNow } from "@/lib/utils";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import { assertRawSmartViewBounds } from "@/lib/tasks/smart-view-import-bounds";
@@ -214,15 +213,14 @@ export async function exportTasks(): Promise<ImportPayload> {
 }
 
 /** Resolve sync modules outside transaction to avoid detaching Dexie context */
-async function resolveSyncDeps(): Promise<{ syncEnabled: boolean; queue: SyncQueue; scheduleSyncAfterChange: () => void }> {
+async function resolveSyncDeps() {
   const [{ getSyncConfig }, { getSyncQueue }, { scheduleSyncAfterChange }] = await Promise.all([
     import("@/lib/sync/config"),
     import("@/lib/sync/queue"),
     import("@/lib/tasks/crud/helpers"),
   ]);
-  const syncConfig = await getSyncConfig();
   return {
-    syncEnabled: !!syncConfig?.enabled,
+    getSyncConfig,
     queue: getSyncQueue(),
     scheduleSyncAfterChange,
   };
@@ -472,17 +470,16 @@ async function prepareImport(payload: ImportablePayload, mode: "replace" | "merg
 export async function importTasks(payload: ImportablePayload, mode: "replace" | "merge" = "replace"): Promise<void> {
   const db = getDb();
   const parsed = await prepareImport(payload, mode);
-  const { syncEnabled, queue, scheduleSyncAfterChange } = await resolveSyncDeps();
+  const { getSyncConfig, queue, scheduleSyncAfterChange } = await resolveSyncDeps();
 
-  let tasksToCreate: TaskRecord[] = [];
-  let taskIdsToDelete: string[] = [];
   let droppedArchivedCount = 0;
   let skippedSmartViewCount = 0;
 
-  await db.transaction(
+  const syncEnabled = await db.transaction(
     "rw",
     importTransactionTables(db),
     async () => {
+      const syncEnabled = (await getSyncConfig())?.enabled ?? false;
       // Replace is a new local decision, so old snapshots cannot replay over it.
       const superseded = mode === "replace" ? await db.syncQueue.toArray() : [];
       if (mode === "replace") await db.syncQueue.clear();
@@ -490,10 +487,10 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
         const restoredAt = isoNow();
         parsed.tasks = parsed.tasks.map((task) => ({ ...task, updatedAt: restoredAt }));
       }
-      ({ created: tasksToCreate, deletedIds: taskIdsToDelete } = await applyTasks(parsed.tasks, mode));
+      const { created: tasksToCreate, deletedIds } = await applyTasks(parsed.tasks, mode);
       const importedIds = new Set(tasksToCreate.map((task) => task.id));
-      taskIdsToDelete = [...new Set([
-        ...taskIdsToDelete, ...superseded.filter((row) => !importedIds.has(row.taskId)).map((row) => row.taskId),
+      const taskIdsToDelete = [...new Set([
+        ...deletedIds, ...superseded.filter((row) => !importedIds.has(row.taskId)).map((row) => row.taskId),
       ])];
 
       droppedArchivedCount = await applyArchivedTasks(parsed.archivedTasks, mode);
@@ -511,6 +508,7 @@ export async function importTasks(payload: ImportablePayload, mode: "replace" | 
           ...tasksToCreate.map((task) => queue.enqueue('create', task.id, task)),
         ]);
       }
+      return syncEnabled;
     });
 
   reportImportSkips({ skippedSmartViewCount, droppedArchivedCount });
