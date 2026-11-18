@@ -5,7 +5,7 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-18
 
 ### Added
 - `get_top_three`, a read-only tool for today's top three picks and suggestions
@@ -63,12 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `validate_config`; documented Saved items, recurrence on `complete_task`, the
   three notification and estimate params, payload limits, URL rules, superuser
   rejection, troubleshooting for the errors the server returns, and where tool
-  output goes. Install pins 1.4.1, sign-in lists Apple, and the stale v0.6.0
+  output goes. Install pins 1.5.0, sign-in lists Apple, and the stale v0.6.0
   status block and dead retry claim are gone.
 - README-SECURITY: on a self-hosted server, Sign out of all devices ends MCP
   tokens too; the hosted service can't revoke early.
-- The README token edits from #663 (30-day tokens, no renewal) land on npm with
-  the next release.
+- The README documents the 30-day token lifetime and how to copy a fresh token
+  when it expires (#663).
 - Tool descriptions: `list_tasks`, `get_task`, and `search_tasks` say Saved
   items are excluded and `get_task_stats` says it leaves them out; tag examples
   are lowercase without `#`; `update_task` and `bulk_update_tasks` say
@@ -749,6 +749,7 @@ audits every tool for schema fidelity, input validation, and side-effect safety.
 - `Security` - Security improvements
 - `Improved` - Enhancements to existing features
 
+[1.5.0]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.4.1...mcp-v1.5.0
 [1.3.2]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.3.1...mcp-v1.3.2
 [1.3.1]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.3.0...mcp-v1.3.1
 [1.3.0]: https://github.com/vscarpenter/gsd-task-manager/compare/mcp-v1.2.8...mcp-v1.3.0

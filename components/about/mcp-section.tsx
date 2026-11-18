@@ -28,7 +28,7 @@ const intro =
 const setupHint = (
   <>
     Install an exact release with{" "}
-    <code>npm install --global gsd-mcp-server@1.4.1</code>, then run{" "}
+    <code>npm install --global gsd-mcp-server@1.5.0</code>, then run{" "}
     <code>gsd-mcp-server --setup</code>. Setup asks you to paste the token from
     Settings › Cloud Sync › Copy auth token. It then writes a config like the one
     below, with the full paths to Node and the server, for you to add to Claude
