@@ -1,6 +1,8 @@
 "use client";
 
+import { useId } from "react";
 import { Switch } from "@/components/ui/switch";
+import { isNotificationSupported } from "@/lib/notifications/permissions";
 import type { NotificationSettings } from "@/lib/types";
 import { SettingsRow, SettingsSelectRow } from "./shared-components";
 import { SweepReminderRows } from "./sweep-reminder-rows";
@@ -41,12 +43,15 @@ export function NotificationSettingsSection({
 		);
 	}
 
+	const supported = isNotificationSupported();
+	const enabled = supported && settings.enabled;
+
 	return (
 		<>
-			<NotificationsRow enabled={settings.enabled} onToggle={onNotificationToggle} />
+			<NotificationsRow enabled={enabled} supported={supported} onToggle={onNotificationToggle} />
 
 			{/* Reminder, sound, quiet hours - only meaningful while notifications fire */}
-			{settings.enabled && (
+			{enabled && (
 				<TaskReminderRows
 					settings={settings}
 					onDefaultReminderChange={onDefaultReminderChange}
@@ -60,7 +65,7 @@ export function NotificationSettingsSection({
 			<SweepReminderRows />
 
 			{/* Permission Status Row */}
-			{"Notification" in window && (
+			{supported && (
 				<SettingsRow label="Browser permission">
 					<PermissionBadge permission={Notification.permission} />
 				</SettingsRow>
@@ -146,20 +151,30 @@ function TaskReminderRows({
 /** The master switch for notifications. */
 function NotificationsRow({
 	enabled,
+	supported,
 	onToggle,
 }: {
 	enabled: boolean;
+	supported: boolean;
 	onToggle: () => Promise<void>;
 }) {
+	const descriptionId = useId();
+	const description = supported
+		? "Remind me about due tasks. Works while GSD is open; an installed app in Chrome or Edge can also check in the background."
+		: "Task reminders are unavailable in this browser.";
+
 	return (
 		<SettingsRow
 			label="Notifications"
-			description="Remind me about due tasks. Works while GSD is open; an installed app in Chrome or Edge can also check in the background."
-			state={enabled}
+			description={description}
+			descriptionId={descriptionId}
+			state={supported ? enabled : undefined}
 		>
 			<Switch
 				aria-label="Notifications"
+				aria-describedby={descriptionId}
 				checked={enabled}
+				disabled={!supported}
 				onCheckedChange={onToggle}
 			/>
 		</SettingsRow>
