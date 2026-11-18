@@ -15,6 +15,8 @@ const ROW_TOLERANCE_PX = 4;
 const UNPINNED_HEIGHT_PX = 600;
 // Where a scrolled element's top sits when it's parked behind the topbar.
 const PARKED_INSET_PX = 8;
+// How far under the topbar the capture bar sits when it's in view but inside its scroll margin.
+const VISIBLE_GAP_PX = 6;
 
 async function centerY(locator: Locator): Promise<number> {
   const rect = await locator.boundingBox();
@@ -148,8 +150,10 @@ test.describe("Layout fit", () => {
   // The capture bar now scrolls under the topbar. An input parked there is
   // still inside the window, so the browser saw no reason to scroll when it
   // took focus, and the next keystrokes went into a field nobody could see.
-  // 768 has the tallest topbar, because its controls wrap onto a second row.
-  for (const width of [768, 1280]) {
+  // 800 has the tallest topbar, because its controls wrap onto a second row.
+  // It also sits clear of the 768 breakpoint, where a scrollbar's width can
+  // decide which layout a browser picks.
+  for (const width of [800, 1280]) {
     test(`pressing n brings the capture bar out from under the topbar at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: UNPINNED_HEIGHT_PX });
       await waitForAppLoad(page);
@@ -161,6 +165,24 @@ test.describe("Layout fit", () => {
       await expect.poll(() => captureBarTop(page)).toBeGreaterThanOrEqual(topbarBottom);
     });
   }
+
+  // A press focuses a field that's already under the pointer. Revealing it then
+  // moved it mid-press, which dragged the caret through the draft.
+  test("clicking a visible capture bar leaves the page where it is", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: UNPINNED_HEIGHT_PX });
+    await waitForAppLoad(page);
+    const topbarBottom = await bottomEdge(page.getByRole("banner"));
+    const restingTop = await captureBarTop(page);
+    await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), restingTop - topbarBottom - VISIBLE_GAP_PX);
+    const scrolledTo = await page.evaluate(() => window.scrollY);
+
+    // A raw press: Playwright's click() first scrolls the field's margin into view itself.
+    const field = (await page.getByTestId("capture-input").boundingBox())!;
+    await page.mouse.click(field.x + field.width / 2, field.y + field.height / 2);
+
+    await expect(page.getByTestId("capture-input")).toBeFocused();
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolledTo);
+  });
 
   // Focus stays in the bar after a capture while the page scrolls to the new
   // card. Typing then reveals the caret, but the browser stops at the window's

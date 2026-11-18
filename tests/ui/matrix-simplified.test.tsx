@@ -633,6 +633,9 @@ describe("<MatrixSimplified>", () => {
     // A fixed 60px sticky offset slid the dock over a taller header once the
     // unpinned page scrolled.
     expect(dock).not.toHaveClass("md:sticky");
+    // So did a z-index that tied with the sticky topbar's. The phone's fixed
+    // dock still needs it.
+    expect(dock).toHaveClass("z-20", "md:z-auto");
   });
 
   it("renders four quadrant panes (regions)", () => {
