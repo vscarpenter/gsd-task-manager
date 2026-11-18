@@ -1,13 +1,34 @@
+# PocketBase JS SDK 0.29.0 (2026-11-17)
+
+Branch: `chore/pocketbase-sdk-0-29` off `main` (`ee172b41`). Standard tier: the pin, one line in each client wrapper, and three tests. The owner approved the design in session.
+
+## Resuming From Here
+
+- [x] The package is genuine. The SDK's GitHub repo is archived and points to `ganigeorgiev.com/pocketbase/js-sdk`, so 0.28.2 and 0.29.0 have no GitHub tags. The npm publisher is unchanged and the tarball checksums match. A diff of the source maps and of the shipped bundles shows 0.28.2 changed link text only, and 0.29.0 added only the 401 cleanup. The new host isn't a plain git endpoint, so the check rests on the published code, not on upstream tags.
+- [x] `pocketbase` is 0.29.0 in both manifests. `bun.lock` moved that one entry.
+- [x] Baseline on 0.29.0 with no fix: web 5,054 and MCP 544 passed. No test saw the new default, because the client tests fake the SDK.
+- [x] Red first, on the real SDK with only `fetch` stubbed: `pocketbase-client-401.test.ts` in each package. Another tab's sign-in survives a refused refresh. `signOutEverywhere` finishes on a 401 for an unexpired token. The MCP client sends the configured token on the next request.
+- [x] Green: `autoClearAuthStore(false)` in `lib/sync/pocketbase-client.ts` and `packages/mcp-server/src/pocketbase-client.ts`. Three SDK fakes gained the method.
+- [x] Docs: both client READMEs, the MCP README and CHANGELOG, and `.claude/rules/pocketbase-sync.md`.
+- [ ] Verify in a clean worktree on bun 1.4.4 and Node 22 with a frozen install: every CI job's commands.
+- [ ] Review by `pb-sync-reviewer`.
+- [ ] Push and open the PR. This waits for the owner.
+- **Found on the way:** SDK 0.29.0 breaks `signOutEverywhere` too. It reads `pb.authStore.isValid` after a 401, and the SDK had already emptied the store, so a retried revoke threw.
+- **Assumptions:** no version bump here. It goes with `/release`, as for #749 and #750. No MCP publish.
+- **Blockers:** none.
+
 # Release 14.9.3 (2026-11-17)
 
-Branch: `chore/release-14-9-3` off `main` (`d86e6df3`). Trivial tier: two version pins and these notes.
+Merged as #751 (`ee172b41`) from `chore/release-14-9-3`. Trivial tier: two version pins and these notes.
 
 ## Resuming From Here
 
 - [x] `package.json` and `README.md` line 7 are on 14.9.3. Production serves cache version 14.9.2, so the bump rotates the caches.
-- [x] No What's New entry. Nothing since 14.9.2 is user-facing, and that file takes no notes about dependencies. Skipping it also leaves the Apple and Android copies alone.
+- [x] No web What's New entry. The web app's behavior hasn't changed since 14.9.2, and that file takes no notes about dependencies. Skipping it also leaves the Apple and Android copies alone.
+- The tag also carries two earlier merges: #747 (ops monitoring under `monitoring/`) and #748 (the Apple 4.0.1 entry in `whats-new.json`).
 - [x] Verify on bun 1.4.4 and Node 22.23.5: unit, typecheck, test typecheck, lint, shape, and knip pass.
-- [ ] The owner merges the PR, then tags `v14.9.3`. The tag starts the production deploy, which the audit gate allows again since #750.
+- [x] `v14.9.3` is tagged on `ee172b41` and deployed. The audit gate passed on the tag, the owner approved the production job, and the smoke test passed. Production serves cache version 14.9.3.
+- [x] The owner published the GitHub release for `v14.9.3`.
 - **Not in this release:** an MCP server publish. Its manifest moved to sdk 1.32.2 and pocketbase 0.28.2 in #749, and that ships only with the next `mcp-v*` tag.
 - **Blockers:** none.
 
@@ -41,16 +62,16 @@ Merged as #749 (`86e89497`) from `chore/deps-update-2026-11-17`, and the branch 
 - **Held back, each for a reason:**
   - `typescript` 6.0.3: typescript-eslint needs the TS 6 compiler API.
   - `jsdom` 30.0.1: 31.0.1 still fails the `global-error` palette test, the same failure 30.1.1 had.
-  - `pocketbase` 0.28.2: SDK 0.29.0 clears the auth store on every 401, which bypasses `forgetRefusedToken`.
+  - `pocketbase` 0.28.2: SDK 0.29.0 clears the auth store on every 401, which bypasses `forgetRefusedToken`. Lifted on `chore/pocketbase-sdk-0-29`; see the top section.
   - `recharts` 3.10.1: 3.11.0 adds 11.9 KB gzip to `/dashboard` and fails `quality:bundle`.
   - MCP Vitest 4.1.12: the workspace hasn't migrated to Vitest 5.
 - **Owner decisions parked:**
   - picomatch GHSA-fc5q-39xc-vjpf (high): settled by #750. The checker accepts it until 2027-02-17 and CI runs bun 1.4.4, so the audit job passes. Remove the entry when a patched picomatch ships.
-  - Adopt PocketBase SDK 0.29.0 with `pb.autoClearAuthStore(false)` in both client wrappers, on its own branch.
+  - Adopt PocketBase SDK 0.29.0 with `pb.autoClearAuthStore(false)` in both client wrappers, on its own branch. Approved 2026-11-17 and in progress on `chore/pocketbase-sdk-0-29`.
   - Take recharts 3.11.0 and refresh the bundle baseline, or stay on 3.10.1.
 - **CI on #749:** every check passed, Firefox and WebKit e2e included, except `audit`, which failed on picomatch as expected.
 - **Found on the way, not fixed:** `pocketbase-system.test.ts` starts `next dev` under `NODE_ENV=test`. Next then adds `.next/dev/dev/types/**/*.ts` to `tsconfig.json` and edits `AGENTS.md` in that checkout. Next 16.4.1 has the same code, so the update didn't cause it.
-- **Next:** the PocketBase SDK and recharts decisions above. No version bump went in; that goes with `/release`.
+- **Next:** the recharts decision above. No version bump went in; that goes with `/release`.
 - **Blockers:** none. The picomatch advisory blocked every release until #750 opened the audit gate.
 
 # Sync session fixes, README contracts, and the system overview (2026-11-11)

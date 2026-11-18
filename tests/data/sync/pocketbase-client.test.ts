@@ -7,6 +7,7 @@ const mockAuthStore = {
 
 const mockPb = {
   autoCancellation: vi.fn(),
+  autoClearAuthStore: vi.fn(),
   authStore: mockAuthStore,
   collection: vi.fn(),
   // Assigned by getPocketBase(); the SDK invokes it after every response.

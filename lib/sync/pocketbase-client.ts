@@ -21,6 +21,10 @@ export function getPocketBase(): PocketBase {
     pbInstance = new PocketBase(ENV_CONFIG.pocketBaseUrl);
     // Disable auto-cancellation so concurrent requests don't cancel each other
     pbInstance.autoCancellation(false);
+    // Since 0.29.0 the SDK clears the store on any 401, whichever token was
+    // refused. The app decides that itself: forgetRefusedToken compares tokens
+    // first, and signOutEverywhere reads the token's expiry after a 401.
+    pbInstance.autoClearAuthStore(false);
     // The SDK throws ClientResponseError after afterSend but forwards only
     // status + parsed body — never response headers. afterSend is the one place
     // with header access, so capture the server's Retry-After on a 429 and fold

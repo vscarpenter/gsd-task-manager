@@ -17,7 +17,13 @@ const { authStore, authRefresh, autoCancellation, collection, pocketBaseConstruc
     autoCancellation: vi.fn(),
     collection: collectionMock,
     pocketBaseConstructor: vi.fn(function PocketBaseMock() {
-      return { authStore: store, autoCancellation: vi.fn(), collection: collectionMock, afterSend: undefined };
+      return {
+        authStore: store,
+        autoCancellation: vi.fn(),
+        autoClearAuthStore: vi.fn(),
+        collection: collectionMock,
+        afterSend: undefined,
+      };
     }),
   };
 });
@@ -51,7 +57,7 @@ beforeEach(() => {
     authStore.record = null;
   });
   pocketBaseConstructor.mockImplementation(function PocketBaseMock() {
-    return { authStore, autoCancellation, collection, afterSend: undefined };
+    return { authStore, autoCancellation, autoClearAuthStore: vi.fn(), collection, afterSend: undefined };
   });
 });
 

@@ -44,6 +44,8 @@ vi.mock('pocketbase', () => {
 
     autoCancellation(): void {}
 
+    autoClearAuthStore(): void {}
+
     /** PocketBase drops a token it refuses and answers as it answers a guest. */
     private isGuest(): boolean {
       return server.refused || !this.authStore.token;

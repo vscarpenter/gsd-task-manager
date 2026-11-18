@@ -46,7 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dependencies
 - `@modelcontextprotocol/sdk` 1.32.1 to 1.32.2
-- `pocketbase` 0.27.3 to 0.28.2
+- `pocketbase` 0.27.3 to 0.29.0. SDK 0.29.0 clears its auth store on any 401.
+  The client turns that off (`autoClearAuthStore(false)`), so the next call
+  still sends the configured token.
 
 ### Documentation
 - README: `delete_task` and bulk deletes default to a dry run; pass
