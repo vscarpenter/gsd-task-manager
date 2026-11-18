@@ -1,6 +1,38 @@
+# Capture bar under the sticky topbar (2026-11-17)
+
+Branch: `fix/capture-bar-over-topbar` off `main` (`a5ed57be`). Standard tier: a layout class, a scroll margin, a reveal in the capture input, and tests. The owner asked for the fix on its own branch.
+
+## Resuming From Here
+
+- [x] Cause, confirmed by a one-variable test. The capture bar's wrapper and the sticky topbar both had `z-20`, and the wrapper comes later in the DOM. With only the wrapper's z-index set to `auto`, the overlap is gone at every scroll offset.
+- [x] The bug is wider than large text. At default text in a 1280x600 window the bar covered the topbar from scrollY 112 to 208. The shell pins only at 48rem wide and 40rem tall.
+- [x] Red first, in `tests/e2e`. `findTopbarCover` sweeps the whole scroll, so `text-scaling.spec.ts` no longer depends on the date. `layout-fit.spec.ts` gained five specs that run in every browser.
+- [x] Green, in `e7679722` and `f7ad1374`:
+  - `md:z-auto` on the wrapper in `components/matrix-simplified/index.tsx`.
+  - `md:scroll-mt-44` on the capture input. It sets how far a reveal brings the bar out: below a two-row topbar.
+  - `revealCaptureInput` in `capture-bar.tsx`, called on focus and on change. It does nothing without the scroll margin, so the phone's fixed dock never moves.
+  - Two kinds of focus stay quiet: the restorer after a save, and a mouse press.
+- [x] Four mechanisms failed on the way, each for a measured reason:
+  - The z-index alone hid a focused input behind the topbar. The old overlap had been keeping it in view.
+  - A page-level `scroll-padding-top` fixed typing, then made `/` and a click on search jump the page to the top. The topbar's own controls sit inside the padding.
+  - The browser's own focus scroll honors the margin in Chromium and Firefox, not in WebKit. A text field there reveals its caret instead.
+  - A reveal on every focus moved the field mid-press and dragged the caret through a draft.
+- [x] Verified in the running app: Chromium on the production build, at 1280x600, 800x600, and 150% text at 1280x720. The topbar is never covered. `n`, Tab, add then type, and wheel away then type all leave the bar visible below the topbar. A press into a draft doesn't move the page. A click on Add still leaves the page on the new card. Search doesn't move the page. The phone dock and the pinned desktop are unchanged.
+- [x] Gates on `f7ad1374`, in this checkout on bun 1.4.4 and Node 26.12.1. Typecheck, test typecheck, lint, shape, and knip pass. Unit: 5,063 passed in 374 files. Build and bundle budget pass. On the production export, Chromium passes the PWA check, the CSP check, and 195 specs. Not run: the MCP and PocketBase system jobs, which this change doesn't touch.
+- [x] Reviews. `a11y-reviewer` ran twice and found nothing blocking; its second pass predicted the search jump. `adversary` found the WebKit gap in `e7679722`. It then measured the follow-up in system WebKit and Firefox 160: `n`, Tab, and typing all clear the topbar at 1280x600 and 800x600. It also found the mid-press move, fixed in `f7ad1374`.
+- [ ] Push and open the PR. This waits for the owner. Only CI runs Playwright's Firefox and WebKit.
+- **Not verified:** the mouse-press fix in WebKit and Firefox. It rests on event order (the press and its focus share a task), on unit tests, and on a Chromium spec.
+- **Left as it was:** after an add, focus stays in the bar while the page scrolls to the new card. The bar can sit behind the topbar until the first keystroke. Before this fix it painted over the topbar in that spot, and a bottom-row add already left it off screen.
+- **Known cost:** the 11rem margin is sized for the two-row topbar. Under a one-row topbar, a bar within 82px of it moves down when `n` or the first keystroke reveals it. A smaller margin from `lg` up needs the topbar's height measured with sync signed in.
+- **Found on the way, not fixed:**
+  - At 150% text the intro paragraph is 158px tall on a Tuesday and 252px on a Wednesday. The date beside it doesn't shrink, so a wider date squeezes the paragraph.
+  - The reviewer saw the same squeeze at 768x640, where the shell is pinned. The capture form sits below `main`'s visible bottom, and `n` scrolls a `main` the user can't scroll back.
+- **Assumptions:** no version bump and no What's New entry. They go with `/release`.
+- **Blockers:** none. `main`'s CI is red on `text-scaling.spec.ts:75` until this lands or the UTC date changes.
+
 # PocketBase JS SDK 0.29.0 (2026-11-17)
 
-Branch: `chore/pocketbase-sdk-0-29` off `main` (`ee172b41`). Standard tier: the pin, one line in each client wrapper, and three tests. The owner approved the design in session.
+Merged as #752 (`e65493eb`, `81a2a40e`, `a5ed57be`) from `chore/pocketbase-sdk-0-29`. Standard tier: the pin, one line in each client wrapper, and three tests. The owner approved the design in session.
 
 ## Resuming From Here
 
@@ -13,18 +45,17 @@ Branch: `chore/pocketbase-sdk-0-29` off `main` (`ee172b41`). Standard tier: the 
 - [x] Verify `80a8cd6e` in a clean worktree on bun 1.4.4 and Node 22.23.5 with a frozen install. All 16 job commands pass. Unit: 5,056 passed in 374 files. MCP: 545 passed. The PocketBase system test passes 7 of 7 against a real server. Typecheck, both test typechecks, lint, shape, knip, and the license check pass. Build and bundle budget pass. On the production export, Chromium passes the PWA check, the CSP check, and 190 specs.
 - [x] Review by `pb-sync-reviewer`: nothing blocking in the code or the tests. It found three overstatements in my wording, fixed in `4286d83e` (comments and Markdown only). It confirmed that no code creates a client outside the two wrappers.
 - [x] PR #752 is open; the owner asked for the push. All five required checks pass. Firefox and WebKit e2e, MCP coverage, the PocketBase system test, and Sonar pass too.
-- [ ] `e2e (chromium)` is red on #752, and this branch didn't cause it. `text-scaling.spec.ts:75` ("something covers the header") failed the same way on `main` (`c9b3958f`) and three other branches on Wednesday 2026-11-11. Chromium passed on every run checked from 2026-11-12 to 2026-11-17. The job isn't a required check. Rerun it after 00:00 UTC on 2026-11-19, or land the fix below first.
-- **Found on the way, not fixed:** the capture bar slides over the sticky topbar when the matrix page scrolls.
+- [x] The owner rebase-merged #752 on its five required checks. `e2e (chromium)` was red on the PR and on the merge commit, and this branch didn't cause it. `text-scaling.spec.ts:75` ("something covers the header") failed the same way on `main` (`c9b3958f`) and three other branches on Wednesday 2026-11-11. Chromium passed on every run checked from 2026-11-12 to 2026-11-17.
+- **Found on the way:** the capture bar slides over the sticky topbar when the matrix page scrolls. The fix is the section above.
   - Both carry `z-20`: the header in `topbar.tsx` and the `mobile-capture-dock` wrapper in `components/matrix-simplified/index.tsx`. The dock comes later in the DOM, so it paints on top.
   - It shows whenever the shell isn't pinned at `md` and up, such as 150% text on a 720px screen.
   - Measured on the built app at 1280x720 and 150% text. On a Tuesday the dock covers the header's bottom edge from scrollY 252 to 398. On a Wednesday it's 348 to 492.
   - The window moves with the date. A wider date squeezes the intro paragraph onto more lines, which pushes the dock down.
-  - The spec checks one offset, 700. On CI's wider Linux fonts, only the widest dates ("Wednesday, November 18") put the window on 700. On macOS it never gets there, so the spec passes locally.
-  - A fix needs two parts: keep the dock under the header at `md` and up, and make the spec sweep the scroll range under a fixed clock.
+  - The spec checked one offset, 700. On CI's wider Linux fonts, only the widest dates ("Wednesday, November 18") put the window on 700. On macOS it never got there, so the spec passed locally.
 - **Not covered by a test:** a 401 on the realtime subscribe request. It goes through the same `send`, so the opt-out covers it.
 - **Found on the way:** SDK 0.29.0 breaks `signOutEverywhere` too. It reads `pb.authStore.isValid` after a 401, and the SDK had already emptied the store, so a retried revoke threw.
 - **Assumptions:** no version bump here. It goes with `/release`, as for #749 and #750. No MCP publish.
-- **Blockers:** none for the merge gate. `e2e (chromium)` stays red until the UTC date changes or the layout fix lands.
+- **Blockers:** none.
 
 # Release 14.9.3 (2026-11-17)
 
