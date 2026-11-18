@@ -173,7 +173,7 @@ function DialogBody({ state, oauthCallbacks }: DialogBodyProps) {
         error={state.error}
         isLoading={state.isLoading}
         oauthCallbacks={oauthCallbacks}
-        onLogout={state.logout.handleLogout}
+        logout={state.logout}
       />
     );
   }

@@ -71,6 +71,7 @@ export function useSyncAuthDialog({ isOpen, onSuccess, syncEnabled }: UseSyncAut
       logout.cancelLogout();
       signOutEverywhere.onCancel();
       setSessionExpired(false);
+      setIsRefreshing(false);
     }
   }
 
@@ -158,6 +159,7 @@ async function loadSyncStatus(
   if (cancellation.cancelled) return;
 
   if (!config?.enabled) {
+    setters.setIsRefreshing(false);
     setters.setSyncStatus({ enabled: false, email: null });
     setters.setSessionExpired(false);
     return;
@@ -186,6 +188,7 @@ async function validateTokenAndRefresh(
   const tokenValid = isAuthenticated();
 
   if (tokenValid) {
+    setters.setIsRefreshing(false);
     setters.setSessionExpired(false);
     return;
   }
