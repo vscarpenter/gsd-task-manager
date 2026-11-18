@@ -10,9 +10,10 @@ Branch: `chore/pocketbase-sdk-0-29` off `main` (`ee172b41`). Standard tier: the 
 - [x] Red first, on the real SDK with only `fetch` stubbed: `pocketbase-client-401.test.ts` in each package. Another tab's sign-in survives a refused refresh. `signOutEverywhere` finishes on a 401 for an unexpired token. The MCP client sends the configured token on the next request.
 - [x] Green: `autoClearAuthStore(false)` in `lib/sync/pocketbase-client.ts` and `packages/mcp-server/src/pocketbase-client.ts`. Three SDK fakes gained the method.
 - [x] Docs: both client READMEs, the MCP README and CHANGELOG, and `.claude/rules/pocketbase-sync.md`.
-- [ ] Verify in a clean worktree on bun 1.4.4 and Node 22 with a frozen install: every CI job's commands.
-- [ ] Review by `pb-sync-reviewer`.
-- [ ] Push and open the PR. This waits for the owner.
+- [x] Verify `80a8cd6e` in a clean worktree on bun 1.4.4 and Node 22.23.5 with a frozen install. All 16 job commands pass. Unit: 5,056 passed in 374 files. MCP: 545 passed. The PocketBase system test passes 7 of 7 against a real server. Typecheck, both test typechecks, lint, shape, knip, and the license check pass. Build and bundle budget pass. On the production export, Chromium passes the PWA check, the CSP check, and 190 specs.
+- [x] Review by `pb-sync-reviewer`: nothing blocking in the code or the tests. It found three overstatements in my wording, fixed in `4286d83e` (comments and Markdown only). It confirmed that no code creates a client outside the two wrappers.
+- [ ] Push and open the PR. This waits for the owner. Only CI runs the Firefox and WebKit e2e jobs.
+- **Not covered by a test:** a 401 on the realtime subscribe request. It goes through the same `send`, so the opt-out covers it.
 - **Found on the way:** SDK 0.29.0 breaks `signOutEverywhere` too. It reads `pb.authStore.isValid` after a 401, and the SDK had already emptied the store, so a retried revoke threw.
 - **Assumptions:** no version bump here. It goes with `/release`, as for #749 and #750. No MCP publish.
 - **Blockers:** none.
