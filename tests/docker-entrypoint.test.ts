@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -78,5 +78,45 @@ describe("docker-entrypoint.sh TLS mode", () => {
     const output = runEntrypoint({ TLS_MODE: "custom" });
 
     expect(output).toContain("FATAL: TLS_CERT and TLS_KEY are required when TLS_MODE=custom");
+  });
+});
+
+describe("docker-entrypoint.sh process supervision", () => {
+  it.each(["pocketbase", "caddy"])("stops the remaining service when %s exits", (crashed) => {
+    const dir = mkdtempSync(join(tmpdir(), "gsd-services-"));
+    try {
+      const service = `#!/bin/sh
+if [ "$1" = migrate ]; then exit 0; fi
+name="$(basename "$0")"
+if [ "$name" = "$CRASHED_SERVICE" ]; then sleep 0.2; exit 7; fi
+trap 'echo "$name received TERM"; exit 0' TERM
+for tick in $(seq 1 30); do sleep 0.1; done
+`;
+      for (const name of ["pocketbase", "caddy"]) {
+        writeFileSync(join(dir, name), service, { mode: 0o755 });
+      }
+      writeFileSync(join(dir, "wget"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+      writeFileSync(join(dir, "migrations.sh"), "gsd_install_state() { echo existing; }\n");
+      const script = readFileSync(SCRIPT, "utf8")
+        .replaceAll("/usr/local/bin/pocketbase", "pocketbase")
+        .replace("/usr/local/lib/gsd/migrations.sh", '"$MIGRATIONS_STUB"');
+      const result = spawnSync("sh", ["-c", script], {
+        env: {
+          PATH: `${dir}:/usr/bin:/bin`,
+          NODE_ENV: "test",
+          GSD_TASKS_ENC_KEY: ENC_KEY,
+          CRASHED_SERVICE: crashed,
+          MIGRATIONS_STUB: join(dir, "migrations.sh"),
+        },
+        encoding: "utf8",
+        timeout: 4500,
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(`${crashed === "caddy" ? "pocketbase" : "caddy"} received TERM`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

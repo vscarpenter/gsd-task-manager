@@ -47,12 +47,12 @@ echo "[gsd] TLS mode: $TLS_MODE"
 
 cleanup() {
     echo "[gsd] Shutting down..."
-    kill "$PB_PID"    2>/dev/null || true
-    kill "$CADDY_PID" 2>/dev/null || true
-    wait "$PB_PID" "$CADDY_PID" 2>/dev/null || true
-    exit 0
+    [ -z "${PB_PID:-}" ] || kill "$PB_PID" 2>/dev/null || true
+    [ -z "${CADDY_PID:-}" ] || kill "$CADDY_PID" 2>/dev/null || true
+    wait 2>/dev/null || true
+    exit "$1"
 }
-trap cleanup TERM INT QUIT
+trap 'cleanup 0' TERM INT QUIT
 
 # -- Start PocketBase ------------------------------------------------------
 . /usr/local/lib/gsd/migrations.sh
@@ -87,6 +87,10 @@ PB_PID=$!
 
 echo "[gsd] Waiting for PocketBase..."
 for i in $(seq 1 30); do
+    if ! kill -0 "$PB_PID" 2>/dev/null; then
+        echo "[gsd] PocketBase exited before becoming ready" >&2
+        cleanup 1
+    fi
     if wget -q --spider http://localhost:8090/api/health 2>/dev/null; then
         echo "[gsd] PocketBase is ready"
         break
@@ -110,6 +114,13 @@ echo "  Admin: not exposed on the public app origin"
 echo "==========================================="
 echo ""
 
-# Wait for either process to exit, then tear everything down
-wait "$PB_PID" "$CADDY_PID" 2>/dev/null || true
-cleanup
+# POSIX wait with both PIDs waits for both children. Poll for the first exit.
+while kill -0 "$PB_PID" 2>/dev/null && kill -0 "$CADDY_PID" 2>/dev/null; do
+    sleep 1
+done
+if kill -0 "$PB_PID" 2>/dev/null; then
+    echo "[gsd] Caddy exited unexpectedly" >&2
+else
+    echo "[gsd] PocketBase exited unexpectedly" >&2
+fi
+cleanup 1
