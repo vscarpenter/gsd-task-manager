@@ -523,3 +523,31 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **A version with no upstream tag needs a diff, not a guess.** The SDK's repo
   had moved hosts. Source maps give a readable diff, and sorted minified
   statements show whether the shipped bundle matches it.
+
+## Capture bar under the sticky topbar (2026-11-17)
+
+- **An overlap can be doing a job.** The capture bar painted over the sticky
+  topbar by accident, and that kept a focused input in view. Before removing an
+  overlap, focus the thing and type into it at every scroll position.
+- **One scroll offset is a coin toss.** The spec checked offset 700. The covered
+  stretch moved with the date in the heading, so CI failed only on the widest
+  dates. Sweep the whole scroll and report what covered what.
+- **CI runs on UTC.** A Tuesday night push ran on Wednesday, the widest weekday.
+  When a layout spec fails only in CI, check the date and the fonts before the
+  diff.
+- **`scroll-padding-top` and a sticky bar don't mix.** The bar's own controls sit
+  inside the padding, so focusing search scrolled the page to the top. Put a
+  `scroll-margin` on the target instead.
+- **A scroll margin is a distance, not a behavior.** WebKit ignores it when a
+  text field takes focus, and every browser ignores it when typing reveals the
+  caret. Call `scrollIntoView` yourself, with `behavior: "instant"`, because the
+  caret reveal cancels a smooth scroll.
+- **A reveal on focus must skip a press.** The field is under the pointer
+  already. Moving it mid-press drags the caret through the text.
+- **Playwright's `click()` and `hover()` scroll a scroll margin into view.** A
+  spec about a press went red for the tool's own scroll. Use `page.mouse` when
+  the scroll position is what the spec measures.
+- **A code review can predict a scroll bug but not confirm it.** One reviewer
+  flagged the search jump from reading the CSS, and a browser run settled it.
+  Another measured WebKit through the system web view when Playwright's wasn't
+  installed.
