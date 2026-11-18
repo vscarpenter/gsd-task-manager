@@ -101,10 +101,15 @@ class TaskCacheManager {
   private singleTaskCache: TTLCache<Task>;
   private hitCount = 0;
   private missCount = 0;
+  private cacheGeneration = 0;
 
   constructor(config: CacheConfig = DEFAULT_CACHE_CONFIG) {
     this.taskListCache = new TTLCache<Task[]>(config);
     this.singleTaskCache = new TTLCache<Task>(config);
+  }
+
+  get generation(): number {
+    return this.cacheGeneration;
   }
 
   private singleTaskKey(namespace: string, taskId: string): string {
@@ -161,6 +166,7 @@ class TaskCacheManager {
    * Invalidate all caches (called after write operations)
    */
   invalidate(): void {
+    this.cacheGeneration++;
     this.taskListCache.clear();
     this.singleTaskCache.clear();
   }
@@ -169,6 +175,7 @@ class TaskCacheManager {
    * Invalidate specific task (for targeted invalidation)
    */
   invalidateTask(taskId: string, namespace: string): void {
+    this.cacheGeneration++;
     this.singleTaskCache.delete(this.singleTaskKey(namespace, taskId));
     // Also clear list cache since it may contain this task
     this.taskListCache.clear();

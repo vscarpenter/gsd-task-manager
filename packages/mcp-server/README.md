@@ -37,9 +37,9 @@ See [Installation](#installation) section below for detailed setup instructions.
 ## Features
 
 **Reliability & Performance**
-- ✅ **Rate-limit handling** - `delete_task` and `bulk_update_tasks` pace their writes and retry once after a 429, honoring Retry-After. `create_task`, `update_task`, and `complete_task` write once with no retry. Reads are not retried, so ask again after a network error.
+- ✅ **Rate-limit handling** - Single-task writes retry once after a 429, honoring Retry-After. See [Pacing and the cache](#pacing-and-the-cache) for bulk writes.
 - ✅ **Token Monitoring** - `get_token_status` reports when the token expires (healthy/warning/critical/expired/invalid). Nothing warns you unless you ask
-- ✅ **Caching** - In-memory TTL cache (30s), cleared after this server's writes (one exception: see [Pacing and the cache](#pacing-and-the-cache))
+- ✅ **Caching** - In-memory TTL cache (30s), cleared after this server's writes and dependency cleanup.
 - ✅ **Dry-Run Mode** - Preview all write operations before committing
 - ✅ **Dependency Validation** - Circular dependency detection using BFS algorithm
 - ✅ **Cache Stats Tool** - Monitor cache hit rates and performance
@@ -583,9 +583,7 @@ Get task cache statistics including hit rate, cache size, and TTL configuration.
 }
 ```
 
-With `reset: true`, the response also includes `"statsReset": true`. The first note
-is the tool's own text. [Pacing and the cache](#pacing-and-the-cache) has the one
-exception to it.
+With `reset: true`, the response also includes `"statsReset": true`.
 
 **Example Usage:**
 - "Show me cache performance"
@@ -598,19 +596,18 @@ exception to it.
 
 ### Pacing and the cache
 
-`delete_task` and `bulk_update_tasks` send their writes one at a time, 100 ms apart.
-They retry a write once after a 429, after PocketBase's `Retry-After` time or 200 ms.
-`create_task`, `update_task`, and `complete_task` send each write once, with no
-pacing and no retry. `src/write-ops/write-rate-limiter.ts` holds these numbers.
+Within each tool call, the write limiter spaces writes 100 ms apart. It retries
+a write once after a 429, waiting for PocketBase's `Retry-After` time or 200 ms.
+Reads use a single attempt.
 
-Completing a recurring task adds a second write, which creates the next instance. No
-tool retries that write. If it fails, the reply says the task is complete and the
-next instance is missing.
+Completing a recurring task adds a second write to create the next instance.
+`update_task` and `complete_task` retry this write on its own after a 429.
+`bulk_update_tasks` tries each next instance once. If that write fails, the reply
+reports the completed task and the missing next instance.
 
-Each write tool clears the task cache after it writes. A bulk call clears it at the
-end of the batch. One exception: `delete_task` doesn't clear
-it again after it removes the deleted task's ID from other tasks. A read that runs
-during that cleanup can cache the old dependency for up to 30 seconds.
+Each write tool clears the task cache after it writes. A bulk call clears it at
+the end of the batch. `delete_task` clears it after the primary delete and again
+after dependency cleanup, which drops stale entries cached during cleanup.
 
 A write tool answers some failed PocketBase requests with a short code, such as
 `Error: rate_limited`, in place of a sentence. A bulk result lists the code beside a

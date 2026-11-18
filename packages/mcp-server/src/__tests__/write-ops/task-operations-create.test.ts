@@ -219,6 +219,15 @@ describe('createTask URL extraction', () => {
   });
 });
 
+describe('createTask rate limiting', () => {
+  it('retries one 429 using the same generated task', async () => {
+    vi.mocked(createTaskInPB).mockRejectedValueOnce({ status: 429, retryAfterMs: 0 });
+    const result = await createTask(config, { title: 'Rate-limited create', urgent: false, important: false });
+    expect(createTaskInPB).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(createTaskInPB).mock.calls.map(([, task]) => task.id)).toEqual([result.task.id, result.task.id]);
+  });
+});
+
 describe('updateTask URL parity', () => {
   it('does NOT extract URLs from title (mirrors webapp non-extraction on edit)', async () => {
     const helpers = await import('../../write-ops/helpers.js');
