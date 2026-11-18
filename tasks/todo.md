@@ -1,6 +1,6 @@
 # Capture bar under the sticky topbar (2026-11-17)
 
-Branch: `fix/capture-bar-over-topbar` off `main` (`a5ed57be`). Standard tier: a layout class, a scroll margin, a reveal in the capture input, and tests. The owner asked for the fix on its own branch.
+[PR #753](https://github.com/vscarpenter/gsd-task-manager/pull/753) was rebase-merged into `main` at `d8590da9` and shipped in [v14.9.4](https://github.com/vscarpenter/gsd-task-manager/releases/tag/v14.9.4). The fix commits are `b4e28ffd` and `f2a0af83`.
 
 ## Resuming From Here
 
@@ -20,15 +20,13 @@ Branch: `fix/capture-bar-over-topbar` off `main` (`a5ed57be`). Standard tier: a 
 - [x] Verified in the running app: Chromium on the production build, at 1280x600, 800x600, and 150% text at 1280x720. The topbar is never covered. `n`, Tab, add then type, and wheel away then type all leave the bar visible below the topbar. A press into a draft doesn't move the page. A click on Add still leaves the page on the new card. Search doesn't move the page. The phone dock and the pinned desktop are unchanged.
 - [x] Gates on `f7ad1374`, in this checkout on bun 1.4.4 and Node 26.12.1. Typecheck, test typecheck, lint, shape, and knip pass. Unit: 5,063 passed in 374 files. Build and bundle budget pass. On the production export, Chromium passes the PWA check, the CSP check, and 195 specs. Not run: the MCP and PocketBase system jobs, which this change doesn't touch.
 - [x] Reviews. `a11y-reviewer` ran twice and found nothing blocking; its second pass predicted the search jump. `adversary` found the WebKit gap in `e7679722`. It then measured the follow-up in system WebKit and Firefox 160: `n`, Tab, and typing all clear the topbar at 1280x600 and 800x600. It also found the mid-press move, fixed in `f7ad1374`.
-- [ ] Push and open the PR. This waits for the owner. Only CI runs Playwright's Firefox and WebKit.
-- **Not verified:** the mouse-press fix in WebKit and Firefox. It rests on event order (the press and its focus share a task), on unit tests, and on a Chromium spec.
+- [x] All 13 PR checks and all nine `main` CI jobs passed. The new specs passed on their first run in Chromium, Firefox, and WebKit. In Firefox and WebKit, the mouse-press fix was verified by the CI spec.
+- WebKit reported 181 passes, 12 skips, and two flakes in `tests/e2e/sync-auth-token.spec.ts` at lines 171 and 182. Both passed on retry. Line 182 also flaked in WebKit on #751. [WebKit CI log](https://github.com/vscarpenter/gsd-task-manager/actions/runs/44303378406/job/134798560372)
 - **Left as it was:** after an add, focus stays in the bar while the page scrolls to the new card. The bar can sit behind the topbar until the first keystroke. Before this fix it painted over the topbar in that spot, and a bottom-row add already left it off screen.
 - **Known cost:** the 11rem margin is sized for the two-row topbar. Under a one-row topbar, a bar within 82px of it moves down when `n` or the first keystroke reveals it. A smaller margin from `lg` up needs the topbar's height measured with sync signed in.
 - **Found on the way, not fixed:**
   - At 150% text the intro paragraph is 158px tall on a Tuesday and 252px on a Wednesday. The date beside it doesn't shrink, so a wider date squeezes the paragraph.
   - The reviewer saw the same squeeze at 768x640, where the shell is pinned. The capture form sits below `main`'s visible bottom, and `n` scrolls a `main` the user can't scroll back.
-- **Assumptions:** no version bump and no What's New entry. They go with `/release`.
-- **Blockers:** none. `main`'s CI is red on `text-scaling.spec.ts:75` until this lands or the UTC date changes.
 
 # PocketBase JS SDK 0.29.0 (2026-11-17)
 
