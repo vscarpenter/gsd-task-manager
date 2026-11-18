@@ -336,7 +336,10 @@ export function MatrixSimplified() {
         <MatrixBriefing tasks={all} mounted={mounted} isLoading={isLoading} onFocusSchedule={() => focusQuadrant("q2")} />
         <div
           data-testid="mobile-capture-dock"
-          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-20 bg-topbar py-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:relative md:bottom-auto md:left-auto md:right-auto md:-mx-9 md:mb-4 md:px-9 md:py-4"
+          // z-20 keeps the phone's fixed dock above the page. From md up the dock
+          // is in the flow, and a z-index there lets it slide over the sticky
+          // topbar when the page scrolls.
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-20 bg-topbar py-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] md:relative md:bottom-auto md:left-auto md:right-auto md:z-auto md:-mx-9 md:mb-4 md:px-9 md:py-4"
         >
           <CaptureBar onSubmit={(payload) => captureAndReveal(payload, (id) => highlightTaskById(id, { focus: false }))} onMoreOptions={handleOpenCreateDrawer} inputRef={captureInputRef} />
         </div>

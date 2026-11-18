@@ -17,6 +17,38 @@ export async function waitForAppLoad(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: /^Schedule( is empty| · )/ })).toBeEnabled();
 }
 
+/** What painted over the topbar, and the stretch of the scroll where it did. */
+export interface TopbarCover {
+  by: string;
+  fromScrollY: number;
+  toScrollY: number;
+}
+
+/**
+ * Scrolls the page from top to bottom and reports what paints over the
+ * topbar's bottom edge on the way. One offset can't show it: content that
+ * slides over a sticky bar covers it for a stretch and then moves on.
+ */
+export async function findTopbarCover(page: Page): Promise<TopbarCover | null> {
+  return page.getByRole("banner").evaluate((topbar) => {
+    const SCROLL_STEP_PX = 8;
+    const EDGE_INSET_PX = 4;
+    const lastOffset = document.documentElement.scrollHeight - window.innerHeight;
+    if (lastOffset <= 0) throw new Error("The page doesn't scroll, so nothing was checked.");
+
+    let cover: TopbarCover | null = null;
+    for (let offset = 0; offset <= lastOffset; offset += SCROLL_STEP_PX) {
+      window.scrollTo({ top: offset, behavior: "instant" });
+      const edge = topbar.getBoundingClientRect();
+      const painted = document.elementFromPoint(edge.x + edge.width / 2, edge.bottom - EDGE_INSET_PX);
+      if (!painted || topbar.contains(painted)) continue;
+      const by = painted.closest("[data-testid]")?.getAttribute("data-testid") ?? painted.tagName.toLowerCase();
+      cover = { by: cover?.by ?? by, fromScrollY: cover?.fromScrollY ?? offset, toScrollY: offset };
+    }
+    return cover;
+  });
+}
+
 export async function getTaskCount(page: Page): Promise<number> {
   const tasks = await page.locator("[data-testid='task-card']").count();
   return tasks;
