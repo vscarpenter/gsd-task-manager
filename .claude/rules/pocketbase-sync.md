@@ -27,7 +27,7 @@ paths:
 - **Realtime**: PocketBase SSE auto-reconnects; periodic sync runs as safety net.
 - **Echo filtering**: skip own-device changes via `device_id` comparison.
 - **Auth**: PocketBase SDK auto-stores tokens in localStorage. The app refreshes the token itself: `ensureValidAuth` in `pb-auth.ts` runs at the start of each `fullSync` and refreshes a token that is near expiry.
-- **The SDK never clears the store on a 401**: SDK 0.29.0 does that by default, for whichever token is stored. `getPocketBase` turns it off (`autoClearAuthStore(false)`) in the web client and the MCP client. Keep it off: `forgetRefusedToken` compares tokens first, and `signOutEverywhere` reads the token's expiry after a 401. Client tests that fake the SDK can't see this, so `pocketbase-client-401.test.ts` in each package runs the real SDK.
+- **Keep the SDK's 401 cleanup off**: SDK 0.29.0 clears the auth store on any 401 by default, for whichever token is stored. `getPocketBase` turns that off (`autoClearAuthStore(false)`) in the web client and the MCP client. `forgetRefusedToken` compares tokens first, and `signOutEverywhere` reads the token's expiry after a 401. Client tests that fake the SDK can't see this, so `pocketbase-client-401.test.ts` in each package runs the real SDK.
 
 ## Key Locations
 

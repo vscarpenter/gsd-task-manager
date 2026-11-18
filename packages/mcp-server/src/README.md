@@ -96,7 +96,7 @@ Subdirectories:
 - `dependencies.ts:validateDependencies`: a task cannot depend on itself, on an unknown task, or on a completed task.
 - `dependencies.ts:wouldCreateCircularDependency`: a breadth-first search from the dependency must not reach the task.
 - `pocketbase-client.ts:PRINCIPAL_REJECTION_STATUSES`: in `refreshPrincipal`, only 401 and 403 retire a token. Statuses 0, 404, 429, and 5xx do not. `usersOwnerId` and `getPocketBase` also clear the token for a refused principal, with no status involved.
-- `pocketbase-client.ts:getPocketBase`: it turns off the SDK's auth-store cleanup on a 401 (`autoClearAuthStore(false)`, new in SDK 0.29.0). Only `retirePrincipal` drops a token, because it also resets `pbToken`, so the next call saves the configured token again.
+- `pocketbase-client.ts:getPocketBase`: it turns off the SDK's auth-store cleanup on a 401 (`autoClearAuthStore(false)`, new in SDK 0.29.0). Each clear in this file also updates `pbToken`, so the store and `pbToken` never disagree.
 - `pocketbase-client.ts:usersOwnerId`: the principal must be a record in `users` that is not a superuser.
 - `pocketbase-client.ts:unreachableError` comment: the message does not advise rotating credentials, and the host is redacted.
 - `top-three.ts:MAX_PICKS`: at most 3 picks. A valid `focusRank` is an integer from 1 to 3.

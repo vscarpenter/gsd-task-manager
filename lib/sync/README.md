@@ -155,7 +155,7 @@ Auth, client, and account:
 - `oauth-callback.ts:waitForOAuthCallback` acknowledges the message it takes, so the callback page can tell a delivered sign-in from an abandoned one.
 - `oauth-callback.ts:boundedParam` drops a parameter longer than 2048 characters. `oauth-callback.ts:ACK_WAIT_MS` is 3000.
 - `pocketbase-client.ts:getPocketBase` turns off SDK auto-cancellation, so concurrent requests do not cancel each other.
-- `pocketbase-client.ts:getPocketBase` turns off the SDK's auth-store cleanup on a 401 (`autoClearAuthStore(false)`, new in SDK 0.29.0). The SDK clears whichever token is stored. `forgetRefusedToken` stays the one path that forgets a refused token, and `signOutEverywhere` can still read the token's expiry after a 401.
+- `pocketbase-client.ts:getPocketBase` turns off the SDK's auth-store cleanup on a 401 (`autoClearAuthStore(false)`, new in SDK 0.29.0). The SDK clears whichever token is stored. `forgetRefusedToken` stays the only path that clears the store because of a 401, and `signOutEverywhere` can still read the token's expiry after one.
 - `pocketbase-client.ts:clearPocketBase` swaps the retired client onto an in-memory store. A late `authRefresh` response for the signed-out account then lands in a throwaway.
 - `pocketbase-client.ts:forgetRefusedToken` clears only the refused token. Another tab may have saved a new one while the refusal was in flight.
 - `pb-account-deletion.ts:deleteRemoteAccountAndTasks` deletes remote tasks first, then the user record. The `owner` field is plain text, so deleting the user does not cascade.

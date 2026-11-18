@@ -7,7 +7,7 @@
  * remembers the token it saved (`pbToken`) and saves again only when the
  * configured token changes. A store the SDK emptied is never refilled, so the
  * next request goes out as a guest. `getPocketBase` turns the SDK's cleanup
- * off, which leaves `retirePrincipal` as the one place a token is dropped.
+ * off, so the store changes only where this client also updates `pbToken`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearPocketBase, getPocketBase } from '../pocketbase-client.js';

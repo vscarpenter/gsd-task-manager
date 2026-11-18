@@ -46,8 +46,8 @@ export function getPocketBase(config: GsdConfig): PocketBase {
     pbInstance = new PocketBase(config.pocketBaseUrl);
     pbInstance.autoCancellation(false);
     // Since 0.29.0 the SDK clears the store on any 401. pbToken would still say
-    // the token is saved, so later requests would go out as a guest. Only
-    // retirePrincipal drops a token, because it resets pbToken as well.
+    // the token is saved, so later requests would go out as a guest. This file
+    // clears the store itself, and each time it updates pbToken to match.
     pbInstance.autoClearAuthStore(false);
     pbInstance.afterSend = (response, data) => {
       if (response.status === 429 && data && typeof data === 'object') {
