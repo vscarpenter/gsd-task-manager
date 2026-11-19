@@ -18,7 +18,8 @@ a retry; the next sync re-reads the winner. MCP surfaces the rejected write.
 The dedicated route fails closed on an older server. There is no fallback to
 an unconditional collection mutation. Install both `task_conditional_writes.pb.js`
 and `task-write-contract.js` from `docker/pb_hooks` on the backend and restart
-PocketBase **before** releasing these web or MCP clients. The Docker image ships
+PocketBase **before** releasing any web, MCP, iOS, or Android client that uses
+the guarded route. The Docker image ships
 both files. Verify with `bun run test:system:pocketbase`; it runs disposable
 PocketBase 0.40.4, concurrent PATCHes, stale DELETE, identity validation, the
 MCP flow, and encrypted storage checks. This change does not deploy the hooks.
