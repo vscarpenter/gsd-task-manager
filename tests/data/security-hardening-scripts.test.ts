@@ -481,6 +481,26 @@ describe('security hardening scripts and workflows', () => {
     expect(dockerfile).toMatch(/^FROM caddy:2-alpine@sha256:[0-9a-f]{64}/m);
   });
 
+  it('lets Dependabot refresh the Docker base digests and nothing else', () => {
+    const config = readRepoFile('.github/dependabot.yml');
+    const security = readRepoFile('SECURITY.md');
+    const ecosystems = [...config.matchAll(/^\s*- package-ecosystem: "([\w-]+)"$/gm)].map(
+      ([, name]) => name
+    );
+
+    // A digest pin freezes the image's packages until someone edits it, so
+    // this one update is automated. npm and action updates stay manual.
+    expect(ecosystems).toEqual(['docker']);
+    expect(config).toMatch(/^\s+directory: "\/docker"$/m);
+    // The tags name majors (bun 1, node 24, caddy 2), so a tag change is a
+    // major upgrade and stays a manual decision.
+    expect(config).toMatch(
+      /dependency-name: "\*"\n\s+update-types: \["version-update:semver-major"\]/
+    );
+    expect(security).toContain('Dependabot checks the Docker base images weekly');
+    expect(security).not.toContain('No Dependabot or Renovate');
+  });
+
   it('keeps security documentation references on tracked canonical files', () => {
     const agents = readRepoFile('AGENTS.md');
     const architecture = readRepoFile('ARCHITECTURE.md');
