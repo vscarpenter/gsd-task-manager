@@ -12,12 +12,12 @@
 #
 # Bun gets its own stage because COPY --from=<image> pulls that image for the
 # target platform, which would put an arm64 Bun in the amd64 builder.
-FROM --platform=$BUILDPLATFORM oven/bun:1@sha256:e10577f0db68676a7024391c6e5cb4b879ebd17188ab750cf10024a6d700e5c4 AS bun
+FROM --platform=$BUILDPLATFORM oven/bun:1@sha256:1d22548f177f4ff38e0c15baa3c2c46c6c2060ba2d1bc573bb4720b407548f1d AS bun
 
 # Real Node runs `next build` here. The oven/bun image links `node` to Bun,
 # and Bun 1.3.14 crashed while exiting after a successful build (exit 132).
 # Copy only the Bun binary so `bun install` stays on Bun and `node` stays Node.
-FROM --platform=$BUILDPLATFORM node:24-trixie-slim@sha256:6950b66b4c0cb0151ce89fa75074673850763d096b044f422c6729b588dd4956 AS builder
+FROM --platform=$BUILDPLATFORM node:24-trixie-slim@sha256:af02d57b57719b9657a45199a79264a9437940cd55b3c7b3fc99615654f124a0 AS builder
 
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 
@@ -64,7 +64,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends unzip curl ca-c
 # ---------------------------------------------------------------------------
 # Stage 2: Runtime — Caddy (HTTPS reverse proxy) + PocketBase
 # ---------------------------------------------------------------------------
-FROM caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+FROM caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
 
 # Run as non-root user for security
 RUN addgroup -S gsd && adduser -S gsd -G gsd
