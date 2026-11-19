@@ -23,10 +23,16 @@ both files. Verify with `bun run test:system:pocketbase`; it runs disposable
 PocketBase 0.40.4, concurrent PATCHes, stale DELETE, identity validation, the
 MCP flow, and encrypted storage checks. This change does not deploy the hooks.
 
-The standard collection API remains available to existing native clients.
-They keep their current behavior; atomic protection applies to clients that
-adopt the guarded route. A server rollback requires rolling back the adopting
-clients first. Retain previous hashed frontend assets during that rollback.
+The iOS and Android apps adopt the guarded route in their next releases. They
+send task PATCH and DELETE to `/api/gsd/tasks/{recordId}` with
+`expected_version`, as web and MCP do. Creates and Erase Everywhere stay on the
+collection API. Hosted PocketBase keeps the collection `updateRule` open to
+direct writes until no installed native build predates that port, because
+closing it sooner would break those builds. Until then, builds that predate the
+port keep their current behavior, and atomic protection applies only to clients
+on the guarded route. A server rollback requires rolling back the adopting
+clients first, and that now includes the native apps. Retain previous hashed
+frontend assets during that rollback.
 
 Raw conditional SQL was rejected because it would bypass field validation and
 encryption hooks. Adding a collection field was unnecessary for this contract:
