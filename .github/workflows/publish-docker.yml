@@ -5,6 +5,8 @@ name: Publish Docker Image
 #
 #   push to main      -> :edge and :sha-<short>   (moving + immutable "latest commit")
 #   push tag vX.Y.Z   -> :X.Y.Z, :X.Y, :latest    (release)
+# Grype scans the amd64 image before any registry login. The findings land in
+# the job summary and in the image-vulnerability-report artifact.
 # GHCR auth uses the built-in GITHUB_TOKEN. Docker Hub is published only when the
 # DOCKERHUB_USERNAME / DOCKERHUB_TOKEN repo secrets are configured, so the workflow
 # stays correct even if those secrets are absent.
@@ -40,6 +42,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      GRYPE_VERSION: 0.121.3
+      GRYPE_SHA256: e9da18cc1429e786722e32161288103600efffd8e483c90761f90485bd1bec85
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -110,6 +115,56 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      # Build one platform into the local Docker engine so Grype can read it.
+      # The multi-platform build below reuses these layers.
+      - name: Build image for scanning
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: gsd-task-manager:scan
+          cache-from: type=gha
+          provenance: false
+
+      - name: Install pinned Grype
+        run: |
+          ARCHIVE="grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$ARCHIVE" \
+            "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/$ARCHIVE"
+          echo "$GRYPE_SHA256  $RUNNER_TEMP/$ARCHIVE" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$ARCHIVE" -C "$RUNNER_TEMP" grype
+          sudo install "$RUNNER_TEMP/grype" /usr/local/bin/grype
+
+      # The scan reports findings and does not fail on them. The step fails
+      # only when Grype cannot run, so no unscanned image reaches a registry.
+      - name: Scan image for vulnerabilities
+        run: |
+          grype docker:gsd-task-manager:scan \
+            -o json="$RUNNER_TEMP/grype-report.json" -o table
+
+      - name: Vulnerability summary
+        run: |
+          {
+            echo "### Image vulnerability scan"
+            echo ""
+            echo "| Severity | Findings | With a fix |"
+            echo "|---|---|---|"
+            jq -r '
+              ["Critical", "High", "Medium", "Low", "Negligible", "Unknown"][] as $severity
+              | [.matches[] | select(.vulnerability.severity == $severity)] as $found
+              | "| \($severity) | \($found | length) | \([$found[] | select(.vulnerability.fix.state == "fixed")] | length) |"
+            ' "$RUNNER_TEMP/grype-report.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload vulnerability report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: image-vulnerability-report
+          path: ${{ runner.temp }}/grype-report.json
+          retention-days: 30
 
       - name: Log in to GitHub Container Registry
         if: steps.cfg.outputs.push_enabled == 'true'
