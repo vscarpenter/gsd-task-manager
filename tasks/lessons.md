@@ -551,3 +551,20 @@ Adding a wire column is not enough. A client that pulled a record before the col
   flagged the search jump from reading the CSS, and a browser run settled it.
   Another measured WebKit through the system web view when Playwright's wasn't
   installed.
+
+## Docker image hardening (2026-11-19)
+
+- **A digest pin ages without a diff.** The June `caddy:2-alpine` pin shipped
+  45 Critical findings by November. Refreshing three digests cut Grype's count
+  from 273 to 52. `apk add` installs new packages and leaves the base's old
+  ones alone.
+- **A major tag can move hours before you pin it.** `oven/bun:1` pointed at
+  Bun 1.4.5 on its release day while `package.json` pinned 1.4.4. Resolve the
+  digest of the exact version tag, then write it after the major tag.
+- **A publish-only workflow step can still get a dry run.** Parse the YAML,
+  write each `run` block to a file, and run it in a `linux/amd64` container with
+  `bash --noprofile --norc -eo pipefail`. Mount the Docker socket when the step
+  reads a local image.
+- **A missing config can be a removed one.** Dependabot was deleted here on
+  2026-01-05 (`d90821ca`). Check `git log --diff-filter=D` before proposing a
+  tool the repo lacks.

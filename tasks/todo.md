@@ -1,3 +1,28 @@
+# Docker image hardening (2026-11-19)
+
+Branch `chore/docker-image-hardening`, not pushed. Standard tier: three digests, a Dependabot config, five workflow steps, two guard tests, and three doc lines. The owner asked for all three steps in session.
+
+## Resuming From Here
+
+- [x] Digests refreshed in `docker/Dockerfile`. Caddy moved from 2.11.4 (a 22 June build) to 2.11.9 on Alpine 3.24.4. Node moved from 24.21.0 to 24.22.3.
+- [x] The Bun stage is pinned to the 1.4.4 image, the version `package.json` pins. The `1` tag moved to Bun 1.4.5 on 2026-11-19, hours before this work. The old pin was 1.3.14.
+- [x] A local amd64 build passed on the new digests. Pull request CI never builds the image, so this was the only proof before merge.
+- [x] Grype 0.121.3 baseline on amd64. The published `latest` (v14.9.4) has 273 findings, 45 of them Critical. The rebuilt image has 52, with 3 Critical and 25 High.
+- [x] Red first. `security-hardening-scripts.test.ts` hit ENOENT on `.github/dependabot.yml`. `pipeline-workflows.test.ts` found no `GRYPE_VERSION` in the publish job.
+- [x] `.github/dependabot.yml` covers the `docker` ecosystem in `/docker` only: weekly, one grouped pull request, major tag changes ignored.
+- [x] `publish-docker.yml` builds amd64 into the local engine, installs Grype by version and SHA-256, and scans. It writes a severity table to the job summary and uploads the JSON report. All five steps run before the first registry login.
+- [x] The three new shell steps were extracted from the YAML and run in a Linux amd64 container with the runner's shell flags. All three exited 0, and the summary table matched the baseline.
+- [x] Gates in this checkout on bun 1.4.4 and Node 26.12.1. Typecheck, test typecheck, lint, shape, and knip pass. Unit: 5,082 passed in 375 files. Not run: e2e, the build, and the bundle budget, because no app code changed.
+- **Next:** the owner reviews the branch, then push and open the pull request. After merge, watch the first `Publish Docker Image` run on `main`. No pull request check runs the new steps.
+- [x] The owner chose to keep the Docker-only Dependabot config (2026-11-19). The earlier config, removed on 2026-01-05 (`d90821ca`), also covered npm and GitHub Actions.
+- **Open decision for the owner:** the scan reports and doesn't block. A gate at "Critical with a fix" would stop every publish today.
+- **Found on the way, not fixed:**
+  - The 3 remaining Criticals all have a fix. zlib 1.3.2-r1 needs an `apk upgrade` in the runtime stage: Alpine 3.24 has zlib 1.4-r0, plus OpenSSL 3.5.9-r1 for 8 Highs.
+  - GO-2026-6604 and GO-2026-6612 sit in the PocketBase 0.40.4 binary, built with go1.27.1. Upstream is at 0.40.6. Whether 0.40.6 ships a patched Go is unchecked.
+  - Dependabot pull requests get no Actions secrets. SonarCloud and the Claude review will likely fail on them until Dependabot secrets are set.
+  - Dependabot's first pull request will offer the Bun 1.4.5 digest while the repo pins 1.4.4.
+  - Pull request CI still doesn't build the image, so a digest pull request is proven only by the publish run on `main`.
+
 # Capture bar under the sticky topbar (2026-11-17)
 
 [PR #753](https://github.com/vscarpenter/gsd-task-manager/pull/753) was rebase-merged into `main` at `d8590da9` and shipped in [v14.9.4](https://github.com/vscarpenter/gsd-task-manager/releases/tag/v14.9.4). The fix commits are `b4e28ffd` and `f2a0af83`.
