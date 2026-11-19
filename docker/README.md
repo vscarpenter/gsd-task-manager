@@ -323,7 +323,7 @@ This section records the contract of the source files in `docker/`: `Dockerfile`
 - `docker-entrypoint.sh` waits up to 30 seconds for PocketBase. If PocketBase is still running at the deadline, the script warns and starts Caddy. The image health check probes PocketBase's local `/api/health` endpoint.
 - `docker-compose.yml` uses `${GSD_TASKS_ENC_KEY:?...}`, so `docker compose up` fails when the variable is unset.
 - `Dockerfile` accepts `amd64` or `arm64` for `TARGETARCH`. It checks the PocketBase archive with `sha256sum -c` against the checksum argument for that architecture.
-- `Dockerfile` pins all three base images by digest.
+- `Dockerfile` pins all three base images by digest. Dependabot proposes each tag's new digest weekly (`.github/dependabot.yml`).
 - `Dockerfile` copies hooks and migrations outside `/pb_data`, so an existing volume cannot shadow them.
 - `Caddyfile` sets `admin off`. Its deny rules are more specific than `/api/*`, so they take precedence.
 

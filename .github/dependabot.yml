@@ -1,0 +1,21 @@
+# Dependabot refreshes the Docker base image digests and nothing else.
+# npm and GitHub Actions updates stay manual (SECURITY.md).
+version: 2
+updates:
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+    # One pull request covers all three base images.
+    groups:
+      base-images:
+        patterns:
+          - "*"
+    # The tags name majors (bun 1, node 24, caddy 2). A tag change is a major
+    # upgrade and stays a manual decision, which leaves the digest refresh.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: "chore"
+      include: "scope"

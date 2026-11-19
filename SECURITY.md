@@ -52,8 +52,8 @@ GSD Task Manager is a privacy-first application where all data is stored locally
      CI accepts only the advisory listed under Known Trade-offs
    - Blocking `bun run license:check` policy plus a CycloneDX SBOM artifact in CI
    - Pinned GitHub Action revisions, runner images, and container base digests
-   - Dependency updates are reviewed manually. No Dependabot or Renovate
-     configuration is checked in
+   - Dependabot checks the Docker base images weekly and proposes the new digest
+     in a pull request. Every other dependency update gets a manual review
 
 4. **Privacy-Safe Web Capture**
    - Bookmarklets pass task content in a client-only URL fragment:
