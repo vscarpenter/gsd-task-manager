@@ -54,6 +54,9 @@ GSD Task Manager is a privacy-first application where all data is stored locally
    - Pinned GitHub Action revisions, runner images, and container base digests
    - Dependabot checks the Docker base images weekly and proposes the new digest
      in a pull request. Every other dependency update gets a manual review
+   - The Docker publish workflow scans the image with a pinned Grype before it
+     logs in to a registry. The scan reports findings. It fails the publish only
+     when Grype cannot run
 
 4. **Privacy-Safe Web Capture**
    - Bookmarklets pass task content in a client-only URL fragment:

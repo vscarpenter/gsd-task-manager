@@ -138,6 +138,23 @@ describe("pipeline workflows", () => {
     expect(publish).toMatch(/^ {4}timeout-minutes: \d+$/m);
   });
 
+  // No other gate reads the Caddy and PocketBase binaries or the Alpine
+  // packages the image ships. The scan runs before any registry login, so an
+  // image that Grype could not read never reaches a registry.
+  it("scans the Docker image with a pinned Grype before any registry login", () => {
+    const publish = jobBodies(readWorkflow(`${WORKFLOW_DIR}/publish-docker.yml`)).get("publish") ?? "";
+    const verifyIndex = publish.indexOf('echo "$GRYPE_SHA256  $RUNNER_TEMP/$ARCHIVE" | sha256sum -c -');
+    const scanIndex = publish.indexOf("grype docker:gsd-task-manager:scan");
+    const loginIndex = publish.indexOf("docker/login-action@");
+
+    expect(publish).toMatch(/^ {6}GRYPE_VERSION: \d+\.\d+\.\d+$/m);
+    expect(publish).toMatch(/^ {6}GRYPE_SHA256: [0-9a-f]{64}$/m);
+    expect(verifyIndex).toBeGreaterThan(-1);
+    expect(scanIndex).toBeGreaterThan(verifyIndex);
+    expect(loginIndex).toBeGreaterThan(scanIndex);
+    expect(publish).not.toMatch(/continue-on-error:\s*true/);
+  });
+
   it("declares top-level permissions in every workflow", () => {
     const missing = listWorkflowPaths().filter(
       (path) => !/^permissions:/m.test(readWorkflow(path))
