@@ -10,6 +10,7 @@ import {
   confirmSessionIdentity,
   fetchBoundedRemoteTasks,
   fetchRemoteTaskIndex,
+  fetchRemoteTaskEntry,
   escapeFilterValue,
   assertSafeRecordId,
   isRemoteNewerThanArchive,
@@ -312,5 +313,54 @@ describe('isRemoteNewerThanArchive', () => {
     const now = Date.parse('2026-05-19T12:00:00.000Z');
     expect(isRemoteNewerThanArchive('3000-01-01T00:00:00.000Z', archivedAt, now)).toBe(false);
     expect(isRemoteNewerThanArchive('2026-05-19T12:04:00.000Z', archivedAt, now)).toBe(true);
+  });
+});
+
+describe('fetchRemoteTaskEntry', () => {
+  function stubRecord(record: Record<string, unknown>) {
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({ getFirstListItem: vi.fn(async () => record) }),
+    });
+  }
+
+  it('returns the raw version when client_updated_at is malformed', async () => {
+    stubRecord({ id: 'rec-1', task_id: 't1', client_updated_at: 'not-a-date' });
+
+    const result = await fetchRemoteTaskEntry('user-1', 't1');
+
+    expect(result.fetchSucceeded).toBe(true);
+    expect(result.entry).toEqual({ pbRecordId: 'rec-1', clientUpdatedAt: 'not-a-date' });
+  });
+
+  it('returns an empty version when client_updated_at is missing', async () => {
+    stubRecord({ id: 'rec-1', task_id: 't1' });
+
+    const result = await fetchRemoteTaskEntry('user-1', 't1');
+
+    expect(result.fetchSucceeded).toBe(true);
+    expect(result.entry).toEqual({ pbRecordId: 'rec-1', clientUpdatedAt: '' });
+  });
+
+  it('still fails the lookup when the record has no task_id', async () => {
+    stubRecord({ id: 'rec-1', client_updated_at: '2026-05-18T10:00:00.000Z' });
+
+    const result = await fetchRemoteTaskEntry('user-1', 't1');
+
+    expect(result).toEqual({ entry: null, fetchSucceeded: false });
+  });
+});
+
+describe('fetchRemoteTaskIndex strictness', () => {
+  it('still rejects a malformed row', async () => {
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      collection: () => ({
+        getList: vi.fn(async () => [{ id: 'rec-1', task_id: 't1', client_updated_at: 'not-a-date' }]),
+      }),
+    });
+
+    const result = await fetchRemoteTaskIndex('user-1');
+
+    expect(result.fetchSucceeded).toBe(false);
+    expect(result.index.size).toBe(0);
   });
 });

@@ -84,7 +84,7 @@ Helpers, wire mapping, queue, resurrection, and coordinator (`pb-sync-helpers.ts
 - `pb-sync-helpers.ts:getCurrentUserId`. Re-export from `pocketbase-client.ts`.
 - `pb-sync-helpers.ts:fetchBoundedRemoteTasks(options): Promise<RecordModel[]>`. Fetches a complete, capped task listing page by page.
 - `pb-sync-helpers.ts:fetchRemoteTaskIndex(ownerId)`. Returns a map of task id to `RemoteTaskIndexEntry`, plus `fetchSucceeded`.
-- `pb-sync-helpers.ts:fetchRemoteTaskEntry(ownerId, taskId)`. Looks up one remote task. Returns `entry` and `fetchSucceeded`.
+- `pb-sync-helpers.ts:fetchRemoteTaskEntry(ownerId, taskId)`. Looks up one remote task. Returns `entry` and `fetchSucceeded`. It needs a valid `id` and `task_id` but takes `client_updated_at` raw, as `""` when absent, so a delete can send it as `expected_version`. The index and identity readers stay strict.
 - `pb-sync-helpers.ts:confirmSessionIdentity(ownerId): Promise<void>`. Asks the server whether this session is the owner's.
 - `pb-sync-helpers.ts:SessionIdentityMismatchError`, `pb-sync-helpers.ts:SessionRejectedError`. Errors for another account's record and for a refused token.
 - `pb-sync-helpers.ts:readClientUpdatedAt(record): string | undefined`. Reads the raw `client_updated_at`.
@@ -215,6 +215,7 @@ Helpers, wire mapping, queue, resurrection, and coordinator:
 
 - `pb-sync-helpers.ts:fetchBoundedRemoteTasks` never materializes more than `SYNC_CONFIG.MAX_REMOTE_TASKS` records. It throws on malformed pagination, a total that changes mid-scan, or a page that makes no progress.
 - `pb-sync-helpers.ts:fetchRemoteTaskIndex` fails closed. A malformed or duplicate row returns an empty index with `fetchSucceeded: false`.
+- `pb-push.ts:pushSingleItem` charges an upsert whose listed version is missing or malformed. A delete is sent anyway with that raw version, and the server answers 412 on a mismatch.
 - `pb-sync-helpers.ts:fetchRemoteTaskEntry` treats a 404 as "no remote record, fetch succeeded". Any other error is a failed fetch.
 - `pb-sync-helpers.ts:assertSafeRecordId` accepts 1 to 50 characters of letters, digits, hyphens, and underscores. `escapeFilterValue` rejects values over 500 characters.
 - `pb-sync-helpers.ts:confirmSessionIdentity` reads the auth-refresh answer and drops it, never saves it. A saved answer could land over a newer sign-in.
