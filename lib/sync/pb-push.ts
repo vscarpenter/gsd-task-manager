@@ -9,7 +9,7 @@ import { readDefaultReminder } from '@/lib/notifications/default-reminder';
 import { getPocketBase } from './pocketbase-client';
 import { getSyncQueue } from './queue';
 import { preparePendingForSession } from './push-queue';
-import { placementToWire, taskRecordToPocketBase } from './task-mapper';
+import { isWireVersion, placementToWire, taskRecordToPocketBase } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
 import {
@@ -238,12 +238,6 @@ interface PushContext {
   session: PushSessionCheck;
 }
 
-function hasUsableRemoteVersion(value: unknown): value is string {
-  return typeof value === 'string'
-    && /(?:Z|[+-]\d{2}:\d{2})$/.test(value)
-    && !Number.isNaN(new Date(value).getTime());
-}
-
 async function recordUnusableRemoteVersion(item: SyncQueueItem, ownerId: string): Promise<void> {
   logger.warn('Skipping mutation: remote task version is missing or malformed', {
     taskId: item.taskId,
@@ -278,10 +272,11 @@ async function pushSingleItem(item: SyncQueueItem, ctx: PushContext): Promise<Pu
   await assertPushSessionCurrent(ctx.ownerId);
   const lookup = await fetchRemoteTaskEntry(ctx.ownerId, item.taskId);
 
-  // A delete is sent with the raw listed version as expected_version. The
-  // server compares it exactly, so an unusable value is refused there with a
-  // 412 instead of retrying here forever. Upserts need a version to compare.
-  if (item.operation !== 'delete' && lookup.entry && !hasUsableRemoteVersion(lookup.entry.clientUpdatedAt)) {
+  // A delete is sent with the raw listed version as expected_version. The hook
+  // compares it exactly against the stored string, so the delete lands unless
+  // the record changed after this lookup (412). Upserts need a parseable
+  // version to compare.
+  if (item.operation !== 'delete' && lookup.entry && !isWireVersion(lookup.entry.clientUpdatedAt)) {
     await recordUnusableRemoteVersion(item, ctx.ownerId);
     return 'index_unavailable';
   }
@@ -342,7 +337,8 @@ async function pushDelete(
   { ownerId, session }: PushContext,
 ): Promise<PushItemOutcome> {
   if (remote) {
-    if (isStaleDelete(item, remote.clientUpdatedAt)) {
+    // A version the wire schema rejects cannot be compared, so it is sent raw.
+    if (isWireVersion(remote.clientUpdatedAt) && isStaleDelete(item, remote.clientUpdatedAt)) {
       logger.info('Skipping stale delete: remote modified after the deleted version', {
         taskId: item.taskId,
         remoteAt: remote.clientUpdatedAt,

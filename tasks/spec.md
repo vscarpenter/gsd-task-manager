@@ -38,6 +38,7 @@ and the existing release gates.
   `criteria.dueDate`, and current iOS fixtures remain accepted.
 - Missing or malformed remote versions may protect/quarantine data but may not
   authorize overwrite or deletion.
+  > Note 2026-11-20 (R15): a delete over a missing or unparseable remote version is sent with the raw value, on all three clients. Upserts stay refused.
 - Failed sync entries remain outside automatic retries while continuing to
   protect unsynced local state.
 - A partial or over-cap remote enumeration may never drive deletion.

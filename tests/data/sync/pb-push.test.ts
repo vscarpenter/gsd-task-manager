@@ -451,6 +451,100 @@ describe('pushLocalChanges LWW guard', () => {
     expect(queued[0]?.lastError).toBe('Remote task version is missing or malformed');
   });
 
+  it.each([
+    '2026-11-20 10:00:00.000Z',
+    '2026-11-20T10:00Z',
+    '2026-02-30T10:00:00Z',
+  ])('an upsert over the Date-readable but non-wire version %s is charged, not sent', async (version) => {
+    await getSyncQueue().enqueue('update', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
+    fetchRemoteTaskEntryMock.mockResolvedValue({
+      entry: { pbRecordId: 'rec-1', clientUpdatedAt: version },
+      fetchSucceeded: true,
+    });
+    const updateSpy = vi.fn();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges('user-1');
+
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(result.failedCount).toBe(1);
+    expect(await getSyncQueue().getPendingCount()).toBe(1);
+  });
+
+  it('does not run the stale check on a version the wire schema rejects', async () => {
+    await getSyncQueue().enqueue('delete', 't1', null);
+    const [item] = await getDb().syncQueue.toArray();
+    await getDb().syncQueue.update(item.id, { timestamp: 1 });
+    fetchRemoteTaskEntryMock.mockResolvedValue({
+      entry: { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T12:00:00' },
+      fetchSucceeded: true,
+    });
+    const session = confirmedSession();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...session,
+      collection: () => ({ create: vi.fn(), update: vi.fn(), delete: vi.fn() }),
+    });
+
+    await pushLocalChanges('user-1');
+
+    expect(session.send).toHaveBeenCalledWith(
+      '/api/gsd/tasks/rec-1',
+      expect.objectContaining({ method: 'DELETE', body: { expected_version: '2026-05-18T12:00:00' } }),
+    );
+    expect(await getSyncQueue().getPendingCount()).toBe(0);
+  });
+
+  it('an archive delete over a garbled version is sent with the raw value', async () => {
+    await getSyncQueue().enqueue('delete', 't1', makeTask('t1', '2026-05-18T08:00:00.000Z'));
+    fetchRemoteTaskEntryMock.mockResolvedValue({
+      entry: { pbRecordId: 'rec-1', clientUpdatedAt: 'garbled' },
+      fetchSucceeded: true,
+    });
+    const session = confirmedSession();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...session,
+      collection: () => ({ create: vi.fn(), update: vi.fn(), delete: vi.fn() }),
+    });
+
+    await pushLocalChanges('user-1');
+
+    expect(session.send).toHaveBeenCalledWith(
+      '/api/gsd/tasks/rec-1',
+      expect.objectContaining({ method: 'DELETE', body: { expected_version: 'garbled' } }),
+    );
+    expect(await getSyncQueue().getPendingCount()).toBe(0);
+  });
+
+  it('charges a delete the server refuses with a 400 and still pushes the next item', async () => {
+    await getSyncQueue().enqueue('delete', 't1', null);
+    await getSyncQueue().enqueue('delete', 't2', null);
+    const pending = await getDb().syncQueue.toArray();
+    await getDb().syncQueue.update(pending.find((i) => i.taskId === 't1')!.id, { timestamp: Date.parse('2026-05-18T12:00:00.000Z') });
+    await getDb().syncQueue.update(pending.find((i) => i.taskId === 't2')!.id, { timestamp: Date.parse('2026-05-18T12:01:00.000Z') });
+    fetchRemoteTaskEntryMock
+      .mockResolvedValueOnce({ entry: { pbRecordId: 'rec-1', clientUpdatedAt: 'garbled' }, fetchSucceeded: true })
+      .mockResolvedValueOnce({ entry: { pbRecordId: 'rec-2', clientUpdatedAt: '2026-05-18T10:00:00.000Z' }, fetchSucceeded: true });
+    const deleteSpy = vi.fn()
+      .mockRejectedValueOnce(Object.assign(new Error('bad request'), { status: 400 }))
+      .mockResolvedValueOnce(undefined);
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
+      collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
+    });
+
+    const result = await pushLocalChanges('user-1');
+
+    expect(result).toMatchObject({ pushedCount: 1, failedCount: 1 });
+    expect(deleteSpy).toHaveBeenCalledTimes(2);
+    const left = await getSyncQueue().getForTask('t1');
+    expect(left).toHaveLength(1);
+    expect(left[0]?.retryCount).toBeGreaterThan(0);
+    expect(await getSyncQueue().getForTask('t2')).toHaveLength(0);
+  });
+
   it('fresh-reads the just-updated record so a later stale delete is skipped', async () => {
     // Same task: queue an update (payload.updatedAt = T2), then a delete queued at T1 < T2.
     // Initial remote index has clientUpdatedAt T0 < T1 < T2, so the update proceeds
