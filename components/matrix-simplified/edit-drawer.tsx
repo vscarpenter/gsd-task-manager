@@ -22,6 +22,7 @@ import { SnoozeField } from "./edit-drawer-snooze-field";
 import { DependenciesField } from "./edit-drawer-dependencies";
 import { LengthLimitNote } from "./limit-note";
 import { extractUrlsFromTitle } from "@/lib/capture-parser";
+import { isImeComposing } from "@/lib/ime";
 import type { EditDraft } from "./edit-draft";
 export type { EditDraft } from "./edit-draft";
 
@@ -59,7 +60,7 @@ export function EditDrawer({ open, task, initialDraft, allTasks, onClose, onSubm
 }
 
 /**
- * Close on Escape.
+ * Close on Escape, except the Escape that cancels an IME conversion.
  *
  * `onClose` may change identity between renders, so useEffectEvent keeps the
  * listener subscribed once while always calling the latest handler.
@@ -67,7 +68,7 @@ export function EditDrawer({ open, task, initialDraft, allTasks, onClose, onSubm
 function useEscapeToClose(onClose: () => void): void {
   const handleEscape = useEffectEvent(() => onClose());
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleEscape(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !isImeComposing(e)) handleEscape(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -386,6 +387,7 @@ function handleTagKeyDown(
   event: React.KeyboardEvent,
   draft: ReturnType<typeof useEditDraftState>
 ): void {
+  if (isImeComposing(event.nativeEvent)) return;
   if (event.key === "Enter" || event.key === ",") {
     event.preventDefault();
     draft.addTag();

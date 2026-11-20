@@ -1744,11 +1744,14 @@ Settings switch has a 44px coarse-pointer hit area); unnamed controls (none); re
 No data shape changes. Nothing in `lib/schema.ts`, Dexie, the backup envelope, or the
 PocketBase wire model moves.
 
-- F1: a new helper, `isImeComposing(event: React.KeyboardEvent): boolean`, in a new
-  `lib/ime.ts`. It returns true when `event.nativeEvent.isComposing` is true or
-  `event.keyCode === 229`. The tag and subtask handlers return early on it before committing.
-  The dependency combobox returns early on it before handling any key, so the IME keeps its
-  arrows and Escape too.
+- F1: a new helper, `isImeComposing(event: Pick<KeyboardEvent, "isComposing" | "keyCode">)`,
+  in a new `lib/ime.ts`. It returns true when `isComposing` is true or `keyCode === 229`. React
+  handlers pass `event.nativeEvent`. The tag and subtask handlers return early on it before
+  committing. The dependency combobox returns early on it before handling any key, so the IME
+  keeps its arrows and Escape too. The drawer's window Escape listener (`useEscapeToClose`)
+  skips it as well. Without that, the combobox's early return would hand the IME's cancel
+  Escape to the drawer and close it, and the same Escape already closes the drawer from every
+  other field today.
 - F2: the intro `<section>` wraps from `sm` up (`sm:flex-wrap`), and the sentence gets a 12rem
   flex-basis that can grow. When 12rem doesn't fit beside the date, the sentence moves to the
   next line with the button instead of shrinking.
@@ -1838,6 +1841,7 @@ F1, IME composition:
   one.
 - AC4: In dependency search, Enter, ArrowDown, ArrowUp, and Escape during composition don't pick,
   move the highlight, or close the list. The existing combobox tests still pass.
+- AC4a: Escape during composition doesn't close the drawer. A plain Escape still does.
 
 F2, intro row:
 
@@ -1906,6 +1910,9 @@ it("adds a subtask on a plain Enter", () => {}); // AC3
 it("does not pick the highlighted task when Enter confirms an IME conversion", () => {}); // AC4
 it("leaves the highlight alone while arrow keys move IME candidates", () => {}); // AC4
 it("keeps the suggestions open when Escape cancels a composition", () => {}); // AC4
+
+// tests/ui/edit-drawer.test.tsx
+it("stays open when Escape cancels an IME composition", () => {}); // AC4a
 ```
 
 End to end (Playwright, export build):

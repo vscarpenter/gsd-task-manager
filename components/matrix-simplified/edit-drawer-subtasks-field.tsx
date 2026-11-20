@@ -1,6 +1,7 @@
 "use client";
 
 import { XIcon } from "lucide-react";
+import { isImeComposing } from "@/lib/ime";
 import { cn } from "@/lib/utils";
 import type { Subtask } from "@/lib/types";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
@@ -109,7 +110,7 @@ function SubtaskEntry({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => {
-        if (e.key !== "Enter") return;
+        if (e.key !== "Enter" || isImeComposing(e.nativeEvent)) return;
         e.preventDefault();
         onCommit();
       }}
