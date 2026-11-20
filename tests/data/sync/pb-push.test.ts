@@ -384,28 +384,69 @@ describe('pushLocalChanges LWW guard', () => {
     expect(queued[0]?.lastError).toBe('Remote task version is missing or malformed');
   });
 
-  it('does not delete a remote record whose version is unusable', async () => {
+  it('a delete over an unusable remote version is sent with the raw value', async () => {
     await getSyncQueue().enqueue('delete', 't1', null);
-    fetchRemoteTaskIndexMock.mockResolvedValue({
-      index: new Map([
-        ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: null }],
-      ]),
+    fetchRemoteTaskEntryMock.mockResolvedValue({
+      entry: { pbRecordId: 'rec-1', clientUpdatedAt: 'not-a-date' },
       fetchSucceeded: true,
     });
 
     const deleteSpy = vi.fn();
+    const session = confirmedSession();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
-      ...confirmedSession(),
+      ...session,
       collection: () => ({ create: vi.fn(), update: vi.fn(), delete: deleteSpy }),
     });
 
     const result = await pushLocalChanges('user-1');
 
-    expect(deleteSpy).not.toHaveBeenCalled();
-    expect(result.pushedCount).toBe(0);
+    expect(session.send).toHaveBeenCalledWith(
+      '/api/gsd/tasks/rec-1',
+      expect.objectContaining({ method: 'DELETE', body: { expected_version: 'not-a-date' } }),
+    );
+    expect(result.pushedCount).toBe(1);
+    expect(await getSyncQueue().getPendingCount()).toBe(0);
+  });
+
+  it('a delete over an absent remote version is sent with an empty expected_version', async () => {
+    await getSyncQueue().enqueue('delete', 't1', null);
+    fetchRemoteTaskEntryMock.mockResolvedValue({
+      entry: { pbRecordId: 'rec-1', clientUpdatedAt: '' },
+      fetchSucceeded: true,
+    });
+
+    const session = confirmedSession();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...session,
+      collection: () => ({ create: vi.fn(), update: vi.fn(), delete: vi.fn() }),
+    });
+
+    await pushLocalChanges('user-1');
+
+    expect(session.send).toHaveBeenCalledWith(
+      '/api/gsd/tasks/rec-1',
+      expect.objectContaining({ method: 'DELETE', body: { expected_version: '' } }),
+    );
+    expect(await getSyncQueue().getPendingCount()).toBe(0);
+  });
+
+  it('an upsert over an unusable remote version is still charged', async () => {
+    await getSyncQueue().enqueue('update', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
+    fetchRemoteTaskEntryMock.mockResolvedValue({
+      entry: { pbRecordId: 'rec-1', clientUpdatedAt: 'not-a-date' },
+      fetchSucceeded: true,
+    });
+
+    const updateSpy = vi.fn();
+    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...confirmedSession(),
+      collection: () => ({ create: vi.fn(), update: updateSpy, delete: vi.fn() }),
+    });
+
+    const result = await pushLocalChanges('user-1');
+
+    expect(updateSpy).not.toHaveBeenCalled();
     expect(result.failedCount).toBe(1);
-    expect(result.lastError).toBe('remote_index_unavailable');
-    expect(await getSyncQueue().getPendingCount()).toBe(1);
     const queued = await getSyncQueue().getForTask('t1');
     expect(queued[0]?.lastError).toBe('Remote task version is missing or malformed');
   });

@@ -278,7 +278,10 @@ async function pushSingleItem(item: SyncQueueItem, ctx: PushContext): Promise<Pu
   await assertPushSessionCurrent(ctx.ownerId);
   const lookup = await fetchRemoteTaskEntry(ctx.ownerId, item.taskId);
 
-  if (lookup.entry && !hasUsableRemoteVersion(lookup.entry.clientUpdatedAt)) {
+  // A delete is sent with the raw listed version as expected_version. The
+  // server compares it exactly, so an unusable value is refused there with a
+  // 412 instead of retrying here forever. Upserts need a version to compare.
+  if (item.operation !== 'delete' && lookup.entry && !hasUsableRemoteVersion(lookup.entry.clientUpdatedAt)) {
     await recordUnusableRemoteVersion(item, ctx.ownerId);
     return 'index_unavailable';
   }

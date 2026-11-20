@@ -240,13 +240,19 @@ export async function fetchRemoteTaskEntry(
       `owner = "${escapeFilterValue(ownerId)}" && task_id = "${escapeFilterValue(taskId)}"`,
       { fields: 'id,task_id,client_updated_at' }
     );
-    const identity = getPocketBaseTaskIdentity(record);
+    // Lenient on the version only. A delete must still reach the server when
+    // the listed version is missing or garbled, and the push decides per
+    // operation whether that version is usable. The index and identity
+    // readers stay strict.
+    const id = record['id'];
+    const listedTaskId = record['task_id'];
+    if (typeof id !== 'string' || id.length === 0 || typeof listedTaskId !== 'string' || listedTaskId.length === 0) {
+      return { entry: null, fetchSucceeded: false };
+    }
+    const version = record['client_updated_at'];
     return {
-      entry: identity ? {
-        pbRecordId: identity.pbRecordId,
-        clientUpdatedAt: identity.clientUpdatedAt,
-      } : null,
-      fetchSucceeded: Boolean(identity),
+      entry: { pbRecordId: id, clientUpdatedAt: typeof version === 'string' ? version : '' },
+      fetchSucceeded: true,
     };
   } catch (error) {
     if ((error as { status?: number })?.status === 404) {
