@@ -15,3 +15,10 @@ Tactical deviations from the 2026-11-20 spec section. None changes the approved 
 - The wrapped layout differs from the spec's prediction. Below about 1000px of content width, the date and the sentence share line 1 and the Schedule button takes line 2, under the date. The ACs only bound the sentence's width and overlap, so this is in contract.
 - The stage already had `data-testid="matrix-stage"`, so F4 targets that instead of adding a `data-matrix-stage` attribute.
 - Measured on the rebuilt export: the sentence is 206px at 768x640 (was 0) and 446px at 1280x720 with 24px text (was 125). 768x640 and 900x660 scroll the page. The pinned stage is 180px at 1024x640, 260 at 1280x720, and 446 at 768x1024.
+
+## F4
+
+- The focus checks run under reduced motion, so each focus scroll lands at once and the checks need no timing waits. The margins don't depend on motion.
+- AC11 (phone About and Review) and AC13 (small pinned stage) pass before the fix too, so they are guards rather than reproductions. Chromium scrolls a focused control only when it's out of view, so a stop is left under the rail only when it's already on screen there, and that didn't happen in 60 presses. AC13 also pins the stage exemption directly, because in a 180px stage a margin cuts cards off rather than hiding them.
+- The chrome needs no explicit zero: the rule covers only `main` and the footer right after it, and the topbar, rails, and overlays sit outside both. Only the phone dock (inside `main`) and the pinned stage get explicit exemptions.
+- The 200% text test reloads before tabbing. Without that, the app's scroll to the last new card landed after the reset to the top, and the first stop read as hidden (top -456).

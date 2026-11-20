@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/test-fixtures";
 import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./helpers/test-helpers";
+import { findHiddenFocusStops, startAtMainContent } from "./helpers/focus-visibility";
 
 /**
  * The type ramp is rem, so text follows the browser's default font size.
@@ -9,15 +10,19 @@ import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./help
  * sideways or clipping. Only Chromium exposes the setting.
  */
 const LARGE_TEXT_PX = 24;
+const LARGE_FIXED_PX = 20;
+// 200%, the level WCAG asks text to survive.
+const DOUBLE_TEXT_PX = 32;
+const DOUBLE_FIXED_PX = 26;
 // The grid's minmax(280px,1fr) row floor.
 const PANE_FLOOR_PX = 280;
 // The narrowest the intro sentence may get before it moves to its own line.
 const SENTENCE_FLOOR_REM = 12;
 
-async function useLargeText(page: Page): Promise<void> {
+async function useLargeText(page: Page, standard = LARGE_TEXT_PX, fixed = LARGE_FIXED_PX): Promise<void> {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Page.enable");
-  await cdp.send("Page.setFontSizes", { fontSizes: { standard: LARGE_TEXT_PX, fixed: 20 } });
+  await cdp.send("Page.setFontSizes", { fontSizes: { standard, fixed } });
 }
 
 const sidewaysOverflow = (page: Page) =>
@@ -119,5 +124,29 @@ test.describe("Text scaling at 150%", () => {
     for (const selector of ["[data-testid='sync-button']", "button[aria-label='Open command palette']"]) {
       expect(Math.abs((await centerY(selector)) - search), selector).toBeLessThanOrEqual(4);
     }
+  });
+});
+
+// At 200% text the sticky topbar is tall enough that Tab parked dozens of
+// stops under it on the matrix. Reduced motion lands each focus scroll at once.
+test.describe("Text scaling at 200%", () => {
+  test.use({ reducedMotion: "reduce", viewport: { width: 1280, height: 800 } });
+
+  test.beforeEach(async ({ browserName, clearIndexedDB }) => {
+    test.skip(browserName !== "chromium", "only Chromium exposes the default font size");
+  });
+
+  test("focus clears the fixed chrome at 200% text", async ({ page }) => {
+    await useLargeText(page, DOUBLE_TEXT_PX, DOUBLE_FIXED_PX);
+    await waitForAppLoad(page);
+    for (const title of ["Pay rent !!", "Plan the roadmap *", "Reply to the landlord !", "Clean the garage"]) {
+      await createTaskViaCaptureBar(page, title);
+    }
+    // Reload so the scroll to the last new card can't land after the reset to the top.
+    await page.goto("/", { waitUntil: "networkidle" });
+    await waitForAppLoad(page);
+    await startAtMainContent(page);
+
+    expect(await findHiddenFocusStops(page, 45)).toEqual([]);
   });
 });

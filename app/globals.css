@@ -435,6 +435,39 @@ main {
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* WCAG 2.4.11 Focus Not Obscured. The topbar sticks over the page, and below md
+   the rail (plus the capture dock on the matrix) sits fixed over its bottom. Tab
+   parked focus under that chrome, 26 times on the phone matrix, so focusable
+   content keeps a margin clear of it. 8rem covers the tallest topbar measured:
+   123px, two rows on a phone. --fixed-chrome-bottom comes from AppShell.
+   Margins on the controls, not scroll-padding on the page: page padding also
+   moved where "/" leaves the page. The chrome sits outside main and needs none.
+   The phone dock is fixed too, and a margin on its input would wake
+   revealCaptureInput. A pinned stage scrolls on its own and is too short for
+   8rem plus a card: a margin there pushed 41 stops out of a 98px stage.
+   Layered, so utilities such as the capture input's md:scroll-mt-44 still win. */
+@layer components {
+  :where(main, main + footer) :where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])) {
+    scroll-margin-top: 8rem;
+  }
+
+  @media (width < 48rem) {
+    :where(main, main + footer) :where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])) {
+      scroll-margin-bottom: var(--fixed-chrome-bottom, 0px);
+    }
+
+    [data-testid="mobile-capture-dock"] :where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])) {
+      scroll-margin: 0;
+    }
+  }
+
+  @variant pinned {
+    [data-testid="matrix-stage"] :where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])) {
+      scroll-margin-top: 0;
+    }
+  }
+}
+
 @layer components {
   /* Must stay inside @layer components. Tailwind v4 resolves cascade layers
      before specificity, and unlayered CSS outranks every utility — so declared

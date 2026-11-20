@@ -27,6 +27,14 @@ import { cn } from "@/lib/utils";
  * the footer below the fold.
  */
 const MAIN_CLASS = "mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9 sm:py-6 md:pb-6";
+/**
+ * Below md the rail, and the capture dock when a page has one, sit fixed over
+ * the bottom of the page. --fixed-chrome-bottom is their height. It pads the
+ * column so the page can scroll its end clear of them, and globals.css uses it
+ * as the scroll margin that keeps a focused control from landing under them.
+ */
+const COLUMN_CLASS =
+  "flex min-w-0 flex-1 flex-col [--fixed-chrome-bottom:calc(3.75rem+env(safe-area-inset-bottom))] max-md:has-[[data-testid=mobile-capture-dock]]:[--fixed-chrome-bottom:calc(10.25rem+env(safe-area-inset-bottom))] pb-(--fixed-chrome-bottom) md:pb-0";
 const FILL_VIEWPORT_COLUMN = "pinned:h-dvh pinned:overflow-hidden";
 const FILL_VIEWPORT_MAIN = "pinned:flex pinned:min-h-0! pinned:flex-col pinned:overflow-hidden";
 const HelpDrawer = dynamic(() => import('./help-drawer').then((module) => module.HelpDrawer));
@@ -125,7 +133,7 @@ export function AppShell({
         Skip to main content
       </a>
       <DesktopIconRail onHelp={() => setHelpOpen(true)} />
-      <div className={cn("flex min-w-0 flex-1 flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom))] md:pb-0 max-md:has-[[data-testid=mobile-capture-dock]]:pb-[calc(10.25rem+env(safe-area-inset-bottom))]", fillViewport && FILL_VIEWPORT_COLUMN)}>
+      <div className={cn(COLUMN_CLASS, fillViewport && FILL_VIEWPORT_COLUMN)}>
         <SimplifiedTopbar
           title={title} titleAsLabel={titleAsLabel} caption={caption}
           searchQuery={searchQuery} onSearchChange={onSearchChange} searchInputRef={searchInputRef}

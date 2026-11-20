@@ -151,6 +151,8 @@ Page and view:
 Shell:
 
 - `app-shell.tsx:FILL_VIEWPORT_MAIN`: a comment requires `min-h-0!` on `main`. `globals.css` sets an unlayered `main` min-height that outranks layered utilities.
+- `app-shell.tsx:COLUMN_CLASS`: `--fixed-chrome-bottom` is the height of the fixed chrome below md (the rail, plus the capture dock when the page has one). It pads the column, and `globals.css` uses it as the bottom scroll margin on focusable content in `main` and the footer, so focus never lands under that chrome (WCAG 2.4.11).
+- `index.tsx:MatrixSimplified`: controls inside `matrix-stage` carry no top scroll margin while the shell is pinned, because the stage scrolls on its own. Controls in the phone capture dock carry none either.
 - `app-shell.tsx:AppShell`: `smartViewsEnabled` falls back to `false` when `getAppPreferences()` rejects. A `cancelled` flag drops the result after unmount.
 - `topbar.tsx:SimplifiedTopbar`: the search input renders only when `onSearchChange !== undefined`.
 - `topbar.tsx:topbarClassName`: the hidden topbar moves off screen only below `md`, and returns on focus-within.
