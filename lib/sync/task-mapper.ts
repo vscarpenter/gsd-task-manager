@@ -89,6 +89,11 @@ const pocketBaseTaskIdentitySchema = z.object({
   client_updated_at: z.iso.datetime({ offset: true }),
 });
 
+/** The one definition of a usable version: what the wire schema accepts. */
+export function isWireVersion(value: unknown): value is string {
+  return pocketBaseTaskIdentitySchema.shape.client_updated_at.safeParse(value).success;
+}
+
 export function getPocketBaseTaskIdentity(record: RecordModel): PocketBaseTaskIdentity | null {
   const parsed = pocketBaseTaskIdentitySchema.safeParse(record);
   if (!parsed.success) return null;
