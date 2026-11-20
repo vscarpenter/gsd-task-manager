@@ -17,6 +17,39 @@ const UNPINNED_HEIGHT_PX = 600;
 const PARKED_INSET_PX = 8;
 // How far under the topbar the capture bar sits when it's in view but inside its scroll margin.
 const VISIBLE_GAP_PX = 6;
+// The narrowest the intro sentence may get before it moves to its own line.
+const SENTENCE_FLOOR_REM = 12;
+// The least height a pinned matrix stage may have.
+const STAGE_FLOOR_REM = 10;
+// The longest English weekday and a long month, in the date heading.
+const LONG_DATE = new Date("2026-09-30T10:00:00");
+
+const remPx = (page: Page, rem: number) =>
+  page.evaluate((n) => n * Number.parseFloat(getComputedStyle(document.documentElement).fontSize), rem);
+
+/** The intro with its widest parts: a long date and the plural Schedule label. */
+async function loadLongIntro(page: Page): Promise<void> {
+  await page.clock.setFixedTime(LONG_DATE);
+  await page.reload();
+  await waitForAppLoad(page);
+  await createTaskViaCaptureBar(page, "Plan the roadmap *");
+  await createTaskViaCaptureBar(page, "Read the RFC *");
+}
+
+const introSentence = (page: Page) => page.locator("section:has(h1) > p");
+const scheduleButton = (page: Page) => page.getByRole("button", { name: /^Schedule( is empty| · )/ });
+
+/** How the matrix shell lays out: pinned to the viewport, or scrolling with the page. */
+function readShell(page: Page) {
+  return page.evaluate(() => {
+    const stage = document.querySelector<HTMLElement>("[data-testid='matrix-stage']")!;
+    return {
+      mainOverflow: getComputedStyle(document.querySelector("main")!).overflowY,
+      stageOverflow: getComputedStyle(stage).overflowY,
+      stageHeight: stage.getBoundingClientRect().height,
+    };
+  });
+}
 
 async function centerY(locator: Locator): Promise<number> {
   const rect = await locator.boundingBox();
@@ -118,6 +151,56 @@ test.describe("Layout fit", () => {
       const palette = await centerY(page.getByRole("button", { name: "Open command palette" }));
       const sync = await centerY(page.getByTestId("sync-button"));
       expect(Math.abs(palette - sync), `at ${width}px`).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+    }
+  });
+
+  // The sentence sat between a date and a button that never shrink. At 768px on
+  // a Wednesday it had 0px left, so it broke one word per line.
+  test("the intro sentence keeps 12rem beside a long date at 768px", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 640 });
+    await loadLongIntro(page);
+
+    const sentence = (await introSentence(page).boundingBox())!;
+    const button = (await scheduleButton(page).boundingBox())!;
+    expect(sentence.width).toBeGreaterThanOrEqual(await remPx(page, SENTENCE_FLOOR_REM));
+    const overlaps = sentence.x < button.x + button.width && button.x < sentence.x + sentence.width
+      && sentence.y < button.y + button.height && button.y < sentence.y + sentence.height;
+    expect(overlaps, "the sentence runs into the Schedule button").toBe(false);
+  });
+
+  test("the intro row stays on one line at 1280px", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await loadLongIntro(page);
+
+    const date = await centerY(page.locator("section:has(h1) > div"));
+    for (const [name, part] of [["sentence", introSentence(page)], ["button", scheduleButton(page)]] as const) {
+      expect(Math.abs((await centerY(part)) - date), name).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+    }
+  });
+
+  // Wide enough to pin but short, the shell left the matrix a 98px scroller at
+  // 768x640. Narrow md windows now need more height before they pin.
+  test("narrow md windows scroll the page instead of pinning a slot", async ({ page }) => {
+    for (const viewport of [{ width: 768, height: 640 }, { width: 900, height: 660 }]) {
+      await page.setViewportSize(viewport);
+      await waitForAppLoad(page);
+
+      const shell = await readShell(page);
+      const size = `${viewport.width}x${viewport.height}`;
+      expect(shell.mainOverflow, `main at ${size}`).not.toBe("hidden");
+      expect(shell.stageOverflow, `stage at ${size}`).toBe("visible");
+    }
+  });
+
+  test("a pinned stage is never shorter than 10rem", async ({ page }) => {
+    for (const viewport of [{ width: 1024, height: 640 }, { width: 1280, height: 720 }, { width: 768, height: 1024 }]) {
+      await page.setViewportSize(viewport);
+      await waitForAppLoad(page);
+
+      const shell = await readShell(page);
+      const size = `${viewport.width}x${viewport.height}`;
+      expect(shell.mainOverflow, `pinned at ${size}`).toBe("hidden");
+      expect(shell.stageHeight, `stage at ${size}`).toBeGreaterThanOrEqual(await remPx(page, STAGE_FLOOR_REM));
     }
   });
 

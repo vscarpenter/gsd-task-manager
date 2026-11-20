@@ -108,6 +108,18 @@ describe("MatrixIntro — compact one-row briefing", () => {
     expect(section?.className).toContain("sm:items-center");
   });
 
+  // A long weekday at 768px, or large text, left the sentence 0px between the
+  // date and the button. It now keeps 12rem and wraps onto its own line instead.
+  it("wraps the sentence onto its own line rather than squeezing it", () => {
+    const { container } = renderIntro();
+    const sentence = screen.getByText("The overdue task sits in Do First.");
+
+    expect(container.querySelector("section")?.className).toContain("sm:flex-wrap");
+    expect(sentence.className).toContain("basis-48");
+    expect(sentence.className).toContain("grow");
+    expect(sentence.className).not.toContain("flex-1");
+  });
+
   it("says 'Today's matrix' once to assistive tech", () => {
     renderIntro({ dateLabel: "Thursday, October 22", message: null });
 

@@ -35,7 +35,11 @@ export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule
     // The row starts at sm. A phone cannot fit a 205px date, a sentence, and a
     // 193px button on one line: unconditional, the row overflowed 390px by
     // 64px and scrolled the page sideways.
-    <section className="mb-5 flex flex-col items-start gap-3 border-b border-border/70 pb-4 sm:flex-row sm:items-center sm:gap-5">
+    //
+    // It wraps rather than squeezing the sentence. The date and the button
+    // never shrink, so a long weekday at 768px, or large text, left the
+    // sentence 0px wide. Its 12rem basis moves it to the next line instead.
+    <section className="mb-5 flex flex-col items-start gap-3 border-b border-border/70 pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
       <div className="shrink-0">
         {/* Visual only: the h1 below says it to screen readers. */}
         <p aria-hidden="true" className="text-eyebrow uppercase text-foreground-muted">Today&rsquo;s matrix</p>
@@ -47,7 +51,7 @@ export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule
         </h1>
       </div>
 
-      <p className="min-w-0 flex-1 text-small text-foreground-muted">
+      <p className="min-w-0 grow basis-48 text-small text-foreground-muted">
         {message ?? " "}
       </p>
 

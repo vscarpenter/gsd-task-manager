@@ -11,6 +11,8 @@ import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./help
 const LARGE_TEXT_PX = 24;
 // The grid's minmax(280px,1fr) row floor.
 const PANE_FLOOR_PX = 280;
+// The narrowest the intro sentence may get before it moves to its own line.
+const SENTENCE_FLOOR_REM = 12;
 
 async function useLargeText(page: Page): Promise<void> {
   const cdp = await page.context().newCDPSession(page);
@@ -65,6 +67,20 @@ test.describe("Text scaling at 150%", () => {
   // Pinned to a 720px screen, the header, briefing, and capture bar took 28rem
   // at this size and left the matrix a 48px scroller. The page scrolls instead,
   // so both 280px pane rows get their full height.
+  // The date and the Schedule button grow with the text and never shrink, so
+  // the sentence between them fell to 139px, about five words per line.
+  test("the intro sentence keeps 12rem at 150% text", async ({ page }) => {
+    await useLargeText(page);
+    await page.clock.setFixedTime(new Date("2026-09-30T10:00:00"));
+    await page.reload();
+    await waitForAppLoad(page);
+    await createTaskViaCaptureBar(page, "Plan the roadmap *");
+    await createTaskViaCaptureBar(page, "Read the RFC *");
+
+    const sentence = await page.locator("section:has(h1) > p").boundingBox();
+    expect(sentence!.width).toBeGreaterThanOrEqual(SENTENCE_FLOOR_REM * LARGE_TEXT_PX);
+  });
+
   test("the matrix keeps both pane rows on a laptop-height screen", async ({ page }) => {
     await useLargeText(page);
     await waitForAppLoad(page);
