@@ -1,6 +1,21 @@
+# Usability fixes from the modern-web-guidance audit (2026-11-20)
+
+Branch `fix/usability-audit`, not pushed. Non-trivial tier. The spec is the 2026-11-20 section of `tasks/spec.md`. The owner approved all four fixes and chose page scroll for F3 in session.
+
+## Plan
+
+- [ ] Commit the spec and this plan.
+- [ ] F1: `lib/ime.ts` plus guards in the tag, subtask, and dependency-search handlers. Unit tests first (AC1 to AC4).
+- [ ] F2: the intro row wraps, with a 12rem basis on the sentence. E2E first (AC5 to AC7).
+- [ ] F3: width-aware `pinned` floor. E2E first (AC8, AC9).
+- [ ] F4: scroll margins on focusables in `main` and the app footer, one `--fixed-chrome-bottom` property in the shell, exemptions for the topbar, rail, dock, and pinned stage. E2E first (AC10 to AC15).
+- [ ] Verify in the running app (`verify-frontend-change`), then `a11y-reviewer` and `adversary`.
+- [ ] Gates (AC16): unit, typecheck, test typecheck, lint, shape, knip, build, bundle budget, e2e on the export in Chromium, Firefox, and WebKit.
+- [ ] Hand off: resume notes, lessons, change report, quiz. Push and PR wait for the owner.
+
 # Docker image hardening (2026-11-19)
 
-Branch `chore/docker-image-hardening`, not pushed. Standard tier: three digests, a Dependabot config, five workflow steps, two guard tests, and three doc lines. The owner asked for all three steps in session.
+[PR #756](https://github.com/vscarpenter/gsd-task-manager/pull/756) was rebase-merged into `main` at `6e2608b3`. Standard tier: three digests, a Dependabot config, five workflow steps, two guard tests, and three doc lines. The owner asked for all three steps in session.
 
 ## Resuming From Here
 
@@ -13,7 +28,9 @@ Branch `chore/docker-image-hardening`, not pushed. Standard tier: three digests,
 - [x] `publish-docker.yml` builds amd64 into the local engine, installs Grype by version and SHA-256, and scans. It writes a severity table to the job summary and uploads the JSON report. All five steps run before the first registry login.
 - [x] The three new shell steps were extracted from the YAML and run in a Linux amd64 container with the runner's shell flags. All three exited 0, and the summary table matched the baseline.
 - [x] Gates in this checkout on bun 1.4.4 and Node 26.12.1. Typecheck, test typecheck, lint, shape, and knip pass. Unit: 5,082 passed in 375 files. Not run: e2e, the build, and the bundle budget, because no app code changed.
-- **Next:** the owner reviews the branch, then push and open the pull request. After merge, watch the first `Publish Docker Image` run on `main`. No pull request check runs the new steps.
+- [x] All 13 pull request checks passed. The first `Publish Docker Image` run on `main` passed too, in about 4 minutes. Its scan counted the same 52 findings as the local baseline, and it pushed `edge` and `sha-6e2608b`.
+- [x] Dependabot's first run found nothing to update. Node and Caddy were current. It skipped the Bun `1` tag under its default 3-day cooldown, because Bun 1.4.5 shipped that day.
+- **Next:** watch for Dependabot's first pull request, which should offer the Bun 1.4.5 digest once the cooldown passes. Until it opens, the digest refresh is unproven in this repo.
 - [x] The owner chose to keep the Docker-only Dependabot config (2026-11-19). The earlier config, removed on 2026-01-05 (`d90821ca`), also covered npm and GitHub Actions.
 - **Open decision for the owner:** the scan reports and doesn't block. A gate at "Critical with a fix" would stop every publish today.
 - **Found on the way, not fixed:**
