@@ -4,14 +4,24 @@ Branch `fix/usability-audit`, not pushed. Non-trivial tier. The spec is the 2026
 
 ## Plan
 
-- [ ] Commit the spec and this plan.
-- [ ] F1: `lib/ime.ts` plus guards in the tag, subtask, and dependency-search handlers. Unit tests first (AC1 to AC4).
-- [ ] F2: the intro row wraps, with a 12rem basis on the sentence. E2E first (AC5 to AC7).
-- [ ] F3: width-aware `pinned` floor. E2E first (AC8, AC9).
-- [ ] F4: scroll margins on focusables in `main` and the app footer, one `--fixed-chrome-bottom` property in the shell, exemptions for the topbar, rail, dock, and pinned stage. E2E first (AC10 to AC15).
-- [ ] Verify in the running app (`verify-frontend-change`), then `a11y-reviewer` and `adversary`.
-- [ ] Gates (AC16): unit, typecheck, test typecheck, lint, shape, knip, build, bundle budget, e2e on the export in Chromium, Firefox, and WebKit.
-- [ ] Hand off: resume notes, lessons, change report, quiz. Push and PR wait for the owner.
+- [x] Commit the spec and this plan (`64c36c26`).
+- [x] F1: `lib/ime.ts` plus guards in the tag, subtask, and dependency-search handlers and the drawer's Escape (`9055b227`). Review follow-up: Enter is always swallowed and the check sits under each key gate (`29c1ed92`).
+- [x] F2 and F3: the intro row wraps, and the `pinned` floor is width-aware (`db62e3d4`).
+- [x] F4: layered scroll margins on focusables in `main` and the footer, `--fixed-chrome-bottom` in the shell, exemptions for the phone dock and the pinned stage (`4e07741b`). E2E race fix (`1877e468`).
+- [x] Verify on the export build: new e2e specs in three engines, a real-engine IME probe through CDP, and screenshots. `a11y-reviewer` and `adversary` reviews done.
+- [x] Review round two (adversary verdict "needs changes", every finding checked against the code): phone intro height (`19c3b950`), measured focus margin and in-place focus return (`486533f1`), capture-bar composing Escape (`aac3644f`), tag handler moved out of the drawer (`87e34a27`), spec and notes (`3225d28a`).
+- [x] Gates (AC16) after round two: unit 5,113 passed, both typechecks, lint, shape, knip, build, bundle budget.
+- [x] Full export e2e after round two: 606 passed, 32 skipped, 1 failed. The failure was the WebKit drawer case of the scroll-lock jump below, so the whole focus-return group is now `fixme` in WebKit (`38891eca`). The focus spec then passed 54 of 54 over two repeats.
+- [x] Hand off: change report and quiz delivered in session. Push and PR wait for the owner.
+
+## Resuming From Here
+
+- **Done:** F1 to F4 plus both review rounds, committed on `fix/usability-audit`. Nothing is pushed.
+- **Next:** the owner's push and PR.
+- **Blocked on the owner:** push and PR. Two follow-ups are parked, not fixed here:
+  1. WebKit jumps the page when a modal's scroll lock lifts (958 to 290 on a phone). The card menu case predates this branch: it jumps with every margin forced to 0. The edit drawer hit the same 290 once in a full run. The WebKit focus-return checks in `focus-not-obscured.spec.ts` are `test.fixme`.
+  2. With the opt-in smart-view strip on, the pinned stage at 1024x640 is 112px, under the 10rem floor. It predates the branch at 1024 and up, and it needs a design call.
+- **Assumptions:** the weekly sweep's composing-Escape finding was refuted, because its panels hold no text field. The palette and toast focus returns stay as they were: the measured margin already ends the false scroll on desktop, and neither path runs while the phone topbar is tucked.
 
 # Docker image hardening (2026-11-19)
 

@@ -568,3 +568,44 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **A missing config can be a removed one.** Dependabot was deleted here on
   2026-01-05 (`d90821ca`). Check `git log --diff-filter=D` before proposing a
   tool the repo lacks.
+
+## Usability audit fixes (2026-11-20)
+
+- **An IME guard goes under the key gate, after `preventDefault`.** Returning
+  before `preventDefault` let an Enter reported as keyCode 229 reach implicit
+  submission in the drawer's form. A guard above every key check also broke
+  the 229 Backspace some Android keyboards send. Swallow Enter first, then skip
+  only the commit while composing, and leave a composing comma to the IME.
+- **`scroll-margin` applies at every scroll container above the element.** A
+  topbar-sized margin also offsets controls in inner scrollers, and in a short
+  pinned stage it pushed 41 stops out of sight. Exempt scrollers the chrome
+  can't cover. Page-level `scroll-padding` avoids this but moved where `/` lands.
+- **The one-line `@custom-variant` takes a single condition.** For a media query
+  list such as `a, b`, use the block form with `@slot`, then grep the built CSS
+  for the emitted query.
+- **Seeding through the capture bar leaves a scroll pending.** The matrix
+  scrolls to the new card on a later frame, so reload before any check that
+  scrolls or measures. It passed alone and failed only in the full suite.
+- **Check a reviewer's DOM claim in the DOM.** The a11y review placed the edit
+  drawer inside `main`. The built page has one `main`, and the dialog sits
+  outside it. One `evaluate` settled it.
+- **A flex-basis in a column sets the height.** `basis-48` on a row that turns
+  into a column below `sm` made the phone sentence 192px tall for 42px of text.
+  A basis meant for the row axis needs the same breakpoint prefix as `flex-row`.
+- **A class-substring test can't fail on a prefix.** `"sm:basis-48"` contains
+  `"basis-48"`, so `className.toContain` passed with the bug present. Use
+  `toHaveClass`, which compares whole tokens.
+- **A scroll margin taller than the chrome makes focus() scroll a visible
+  control.** The browser's "is it visible" check uses the margin box, so closing
+  a menu jumped the page. Size the margin from the chrome's measured height, and
+  return focus with `preventScroll`. `restoreFocusOrMainContent` in
+  `lib/focus-restoration.ts` already does that.
+- **Grep `lib/README.md` before writing a helper.** It indexes every lib module.
+  I wrote a second focus-restore helper before finding the one there.
+- **A final-offset check misses a jump the browser undoes.** Chromium jumped the
+  drawer's page 116px and put it back a frame later. Sample `scrollY` on every
+  animation frame. Scroll events are the wrong signal: WebKit reports an offset
+  it usually doesn't paint when a modal's scroll lock lifts.
+- **The phone topbar tucks only once its scroll listener is attached.** Under
+  load a park scroll can land before hydration, and the bar never tucks. Retry a
+  step up and back down until `data-chrome-hidden` appears.
