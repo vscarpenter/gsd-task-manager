@@ -623,3 +623,15 @@ Adding a wire column is not enough. A client that pulled a record before the col
   it watches.** The next delivery skips the shallower target and the browser
   raises "ResizeObserver loop completed with undelivered notifications", which
   the e2e console fixture treats as a failure. Defer the write a frame.
+- **A green e2e job can carry a flaky test.** Playwright passes a job whose test
+  failed and then passed on retry. #760's own run had the new strip test flaky,
+  and it failed on main. Read each engine's HTML report for `flaky` outcomes
+  before asking to merge, not just the check's status.
+- **Wait for a layout decision instead of reading it a fixed frame later.** The
+  shell decides a frame or more after a resize or a change above the stage, and
+  WebKit on Linux took about 100ms to apply `setViewportSize`. Resize until
+  `innerHeight` matches, then `expect.poll` for the state.
+- **Budget a long Tab walk by its CI duration, not its local one.** 120 presses
+  at about 240ms each ran 28.2 to 29.6 seconds in CI's WebKit against the 30s
+  default, then timed out on a run 15% slower. Compare each new test's report
+  duration to its timeout, and set `test.setTimeout` when it passes 70%.
