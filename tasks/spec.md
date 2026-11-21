@@ -1746,9 +1746,11 @@ PocketBase wire model moves.
 
 - F1: a new helper, `isImeComposing(event: Pick<KeyboardEvent, "isComposing" | "keyCode">)`,
   in a new `lib/ime.ts`. It returns true when `isComposing` is true or `keyCode === 229`. React
-  handlers pass `event.nativeEvent`. The tag and subtask handlers return early on it before
-  committing. The dependency combobox returns early on it before handling any key, so the IME
-  keeps its arrows and Escape too. The drawer's window Escape listener (`useEscapeToClose`)
+  handlers pass `event.nativeEvent`. Each check sits under its key gate, as the guide requires,
+  so a mobile keyboard that reports 229 for an ordinary key (Backspace) still works. Enter is
+  always swallowed, because in the drawer's form it would submit, but it doesn't commit a tag,
+  add a subtask, or pick a dependency while composing. A composing comma is left to the IME.
+  The combobox also leaves its arrows and Escape to the IME. The drawer's window Escape listener (`useEscapeToClose`)
   skips it as well. Without that, the combobox's early return would hand the IME's cancel
   Escape to the drawer and close it, and the same Escape already closes the drawer from every
   other field today.

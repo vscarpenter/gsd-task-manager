@@ -200,7 +200,7 @@ Task detail and edit drawer:
 - `edit-drawer.tsx:EditDrawerForm`: a comment explains the hand-rolled dialog. It keeps layered Escape: the first press closes the dependency popup and the second closes the drawer.
 - `edit-drawer.tsx:DrawerFooter`: the submit button is disabled unless `hasVisibleText(draft.title)`.
 - `edit-drawer.tsx:TitleAndDescriptionFields`: the title input has no `maxLength`. Its note counts the URL-stripped title against `SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH`. The description `maxLength` is `SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH`.
-- `edit-drawer.tsx:handleTagKeyDown`: Enter or `,` adds the tag. Backspace with an empty `tagInput` removes the last tag. All three are skipped while an IME is composing.
+- `edit-drawer.tsx:handleTagKeyDown`: Enter or `,` adds the tag. Backspace with an empty `tagInput` removes the last tag. While an IME is composing, Enter and `,` don't add the tag, and only Enter calls `preventDefault`, so the IME can still type its comma.
 - `edit-drawer-fields.tsx:TagsField`, `SubtasksField`: the inputs are disabled at `SCHEMA_LIMITS.MAX_TAGS` and `SCHEMA_LIMITS.MAX_SUBTASKS`. Their `maxLength` values are `TAG_MAX_LENGTH` and `SUBTASK_TITLE_MAX_LENGTH`.
 - `edit-drawer-fields.tsx:EstimateField`: the number input declares `min={1}` and `max={10080}`.
 - `edit-drawer-fields.tsx:DueDateField`: picking a preset clears the custom date. `DueTimeControls` renders only when `customDate || duePreset !== "none"`.
@@ -224,7 +224,7 @@ Task detail and edit drawer:
 - `use-drawer-save.ts:useDrawerSave`: the dependency cycle check runs only in edit mode. A cycle error calls `setDependencyError` and aborts.
 - `use-drawer-save.ts:useDrawerSave`: edit mode passes `changedDraftFields(baseline ?? current, current)`. Create mode passes no `taskId` and no changed fields.
 - `use-discard-guard.ts:useDiscardGuard`: `requestClose` dismisses an open prompt, else prompts if `dirty`, else calls `onClose`.
-- `use-suggestion-combobox.ts:useSuggestionCombobox.onKeyDown`: a key an IME is composing with (`isImeComposing` from `@/lib/ime`) is ignored entirely. Otherwise Enter always calls `preventDefault`. `onPick` runs only when `activeIndex >= 0`. Escape is handled only while `open`.
+- `use-suggestion-combobox.ts:useSuggestionCombobox.onKeyDown`: Enter always calls `preventDefault`. `onPick` runs only when `activeIndex >= 0` and no IME is composing (`isImeComposing` from `@/lib/ime`). The arrows and Escape are ignored while an IME is composing. Escape is handled only while `open`.
 - `use-suggestion-combobox.ts:useAnchorRect`: a comment requires `capture: true` on the scroll listener, because the drawer's scroll container does not bubble scroll to `window`.
 
 Task actions and shared hooks:

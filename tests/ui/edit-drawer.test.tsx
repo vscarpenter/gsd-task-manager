@@ -296,6 +296,37 @@ describe("<EditDrawer>", () => {
     expect(tagInput).toHaveValue("kanji");
   });
 
+  // Enter's default action in a form field is implicit submission.
+  it("still swallows the Enter that confirms an IME conversion", async () => {
+    render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+
+    const notCanceled = fireEvent.keyDown(screen.getByLabelText("Add a tag"), { key: "Enter", keyCode: 229 });
+
+    expect(notCanceled).toBe(false);
+  });
+
+  // A Chinese IME types a full-width comma with this key.
+  it("leaves a comma typed during composition to the IME", async () => {
+    render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+
+    const notCanceled = fireEvent.keyDown(screen.getByLabelText("Add a tag"), { key: ",", isComposing: true });
+
+    expect(notCanceled).toBe(true);
+  });
+
+  // Mobile keyboards report keyCode 229 for ordinary keys, so the composition
+  // check belongs only on the keys an IME claims.
+  it("removes the last tag on Backspace even when the keyboard reports keyCode 229", async () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+
+    fireEvent.keyDown(screen.getByLabelText("Add a tag"), { key: "Backspace", keyCode: 229 });
+
+    expect(within(screen.getByRole("group", { name: "Tags" })).queryAllByRole("button")).toHaveLength(0);
+  });
+
   describe("create mode (task is null)", () => {
     it("shows 'New task' header and 'Create task' button", () => {
       render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);

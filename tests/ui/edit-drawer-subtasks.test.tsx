@@ -76,10 +76,12 @@ describe("<EditDrawer> subtasks", () => {
     const input = screen.getByLabelText(/add a subtask/i);
     await user.type(input, "henkan");
 
-    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+    const notCanceled = fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
 
     expect(screen.queryByRole("checkbox", { name: "henkan" })).toBeNull();
     expect(input).toHaveValue("henkan");
+    // Swallowed all the same: Enter would otherwise submit the drawer's form.
+    expect(notCanceled).toBe(false);
   });
 
   it("shows existing subtasks with their completion state", () => {

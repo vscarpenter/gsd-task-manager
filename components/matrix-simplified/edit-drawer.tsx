@@ -382,13 +382,19 @@ function TitleAndDescriptionFields({
   );
 }
 
-/** Enter/comma commits a tag; Backspace on an empty input removes the last one. */
+/**
+ * Enter/comma commits a tag; Backspace on an empty input removes the last one.
+ * While an IME composes, Enter confirms a conversion and comma types its
+ * punctuation, so neither commits. Enter is swallowed either way, because in
+ * the drawer's form it would submit.
+ */
 function handleTagKeyDown(
   event: React.KeyboardEvent,
   draft: ReturnType<typeof useEditDraftState>
 ): void {
-  if (isImeComposing(event.nativeEvent)) return;
+  if (event.key === "Enter") event.preventDefault();
   if (event.key === "Enter" || event.key === ",") {
+    if (isImeComposing(event.nativeEvent)) return;
     event.preventDefault();
     draft.addTag();
     return;

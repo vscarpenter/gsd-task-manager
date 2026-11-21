@@ -328,9 +328,11 @@ describe("findDependencyCycleError", () => {
         await userEvent.type(input, "Alpha");
         await userEvent.keyboard("{ArrowDown}");
 
-        fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+        const notCanceled = fireEvent.keyDown(input, { key: "Enter", isComposing: true });
 
         expect(onChange).not.toHaveBeenCalled();
+        // Swallowed all the same: Enter would otherwise submit the drawer's form.
+        expect(notCanceled).toBe(false);
       });
 
       it("should_leave_the_highlight_alone_while_arrow_keys_move_candidates", async () => {
