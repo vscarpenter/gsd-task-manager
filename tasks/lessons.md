@@ -609,3 +609,17 @@ Adding a wire column is not enough. A client that pulled a record before the col
 - **The phone topbar tucks only once its scroll listener is attached.** Under
   load a park scroll can land before hydration, and the bar never tucks. Retry a
   step up and back down until `data-chrome-hidden` appears.
+- **A layout floor tuned on macOS fonts can fail on CI's Linux fonts.** At
+  1024x640 Linux's wider sans wrapped the intro's button onto its own line and
+  left a pinned stage of 120px, while the Mac run measured 176px. Read CI's
+  failure screenshot before reasoning about a layout failure that passes locally.
+  When a size depends on text, measure it in the page instead of choosing a
+  media-query constant.
+- **A prediction that decides a layout mode must read the same in both modes.**
+  The pinned-height prediction measures the stage's top, and block layout
+  collapses margins where flex doesn't, so `main` became a flex column in both
+  states. Otherwise the shell could pin, measure short, unpin, and measure tall.
+- **Don't write inside a ResizeObserver callback to something that resizes what
+  it watches.** The next delivery skips the shallower target and the browser
+  raises "ResizeObserver loop completed with undelivered notifications", which
+  the e2e console fixture treats as a failure. Defer the write a frame.

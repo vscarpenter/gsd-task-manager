@@ -1,3 +1,20 @@
+# Release blocker: pin only when the stage fits (2026-11-20)
+
+Branch `fix/pinned-stage-measure`, off `d4f813d0`. Standard tier: two components, CSS, and tests; the owner approved the design in session. Spec: the "F3 follow-up" section at the end of `tasks/spec.md`. v15.0.0 is not tagged; tagging deploys.
+
+- [x] Spec addendum and plan.
+- [x] Red: AppShell unit tests (AC20) and e2e for the strip case (AC17, AC18) and the floor (AC19). The strip case failed on the pre-fix build (main clipped at 1024x640).
+- [x] Green: measure in AppShell, veto in the `pinned` variant, main a flex column from md (`d14d94f1`). The help drawer state moved into `useHelpDrawerOpen` first, to stay under AppShell's code-shape ceiling (`dd794d8e`).
+- [x] Gates: unit 5,117 passed, typecheck, test typecheck, lint, shape, knip, build, bundle. Layout, focus, and text-scaling specs: 83 passed in three engines. Full export e2e: 608 passed, 33 skipped, 1 failed (the known Firefox `share-target.spec.ts` service-worker flake, 8 of 8 alone).
+- [ ] Push and PR; the owner merges; tag v15.0.0 once main is green.
+
+## Resuming From Here
+
+- **Done:** the fix, committed on `fix/pinned-stage-measure`.
+- **Next:** CI on the fix PR. Once the owner merges it and main's CI is green, push the `v15.0.0` tag (it runs Deploy Production Release) and hand the owner `! gh release create v15.0.0 --generate-notes --title "v15.0.0"`.
+- **Blocked on the owner:** merging the fix PR.
+- **Parked:** the WebKit scroll-lock jump. The smart-view strip case is fixed here.
+
 # Usability fixes from the modern-web-guidance audit (2026-11-20)
 
 Branch `fix/usability-audit`, not pushed. Non-trivial tier. The spec is the 2026-11-20 section of `tasks/spec.md`. The owner approved all four fixes and chose page scroll for F3 in session.

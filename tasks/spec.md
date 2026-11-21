@@ -1955,3 +1955,33 @@ test("the topbar, rail, and dock carry no scroll margin", async () => {}); // AC
 ```
 
 AC16 is checked by running the gates locally and in the PR's CI.
+
+### F3 follow-up: pin only when the stage fits (2026-11-20, release blocker)
+
+**Why:** PR #759 merged with CI's Chromium e2e red. On Linux fonts at 1024x640 the intro's
+"Schedule is empty" button wraps to its own line, and the pinned stage is 120px against the
+10rem floor. The `pinned` media query was tuned on macOS fonts, and no fixed size covers every
+font, date, and smart-view strip. The owner chose to fix before tagging v15.0.0, and chose
+"measure, then unpin" over raising the size rule.
+
+**Design:**
+- AppShell (with `fillViewport`) predicts the stage's pinned height:
+  `innerHeight - stage top (document coordinates) - main's bottom padding - footer height`.
+  The stage is main's last child, so nothing else sits below it.
+- Under 10rem, it sets `data-unpinned` on the column, and the `pinned` variant in globals.css
+  doesn't apply under that attribute. The page scrolls, as F3 already does below the floor.
+- `main` is a flex column from md in both states, so margins can't collapse differently when
+  unpinned and the prediction is the same in both states. That keeps the decision from flipping.
+- It re-checks on window resize and when main or the stage changes size (a ResizeObserver whose
+  write waits a frame, so it can't trigger a ResizeObserver loop error).
+
+**Acceptance criteria:**
+- AC17: With the smart-view strip on at 1024x640 and the longest date, the shell doesn't pin:
+  main doesn't clip, and the stage doesn't scroll on its own.
+- AC18: Resizing that window to 1024x800 pins the shell again, with a stage of at least 10rem.
+- AC19: Wherever the shell pins (1024x640, 1280x720, 768x1024), the stage is at least 10rem;
+  1280x720 and 768x1024 still pin.
+- AC20: AppShell sets `data-unpinned` on the column when the predicted stage is under 10rem,
+  clears it when a resize makes room, and never sets it without `fillViewport`.
+
+**Out of scope:** the WebKit scroll-lock jump (still parked).
