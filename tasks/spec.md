@@ -1763,7 +1763,12 @@ PocketBase wire model moves.
   `tasks/implementation-notes.md`.
 - F4: one rule set in `app/globals.css`, inside a cascade layer so Tailwind utilities still win
   (the capture input's `md:scroll-mt-44` must keep working). Focusable elements in the page's
-  `main` and app footer get `scroll-margin-top: 8rem` at every width. Below `md` they also get
+  `main` and app footer get a top scroll margin of the topbar's measured height plus 0.5rem at
+  every width. The topbar publishes that height as `--topbar-height` (8rem stands in until it
+  measures). Review round two replaced the first build's fixed 8rem: a margin taller than the bar
+  made `focus()` jump a control in plain view, and one shorter than a wrapped bar hid focus.
+  Restoring focus after a menu or the edit drawer closes goes through `restoreFocusOrMainContent`,
+  which never scrolls. Below `md` they also get
   `scroll-margin-bottom: var(--fixed-chrome-bottom)`. The shell column (`app-shell.tsx:128`)
   defines that property once and uses it for its existing bottom padding too:
   `calc(3.75rem + env(safe-area-inset-bottom))`, or `calc(10.25rem + ...)` when the capture dock
@@ -1811,8 +1816,8 @@ stage exemption exists because without it, 41 focus stops landed outside the 98p
 - Longer dates in other locales ("Mittwoch, 30. September") wrap the same way as long English
   ones.
 - Notched phones: the bottom margin includes `env(safe-area-inset-bottom)`, matching the padding.
-- Signed-in sync can make the topbar two rows at `md` widths. 8rem covers the measured two-row
-  phone topbar (123px). The `md` two-row height gets measured during implementation.
+- The topbar wraps: two rows at `md` widths (131px signed out at 768), and 252px on a phone at
+  150% text. The margin reads its measured height, so no constant has to cover every case.
 - Reduced motion turns smooth scrolling off; the margins don't depend on it.
 - iPad portrait (768x1024) must still pin.
 - Offline mode, sync conflicts, concurrent multi-device edits, and schema migrations aren't
@@ -1851,6 +1856,8 @@ F2, intro row:
   sentence is at least 12rem wide and doesn't overlap the Schedule button.
 - AC6: At 1280x720 with a 24px default font, same date, the sentence is at least 12rem wide.
 - AC7: At 1280x800, default text, the date, sentence, and button still share one row.
+- AC7a (review round two): At 390x844 the sentence's box holds no more than one font size of
+  space beyond its text. The 12rem basis applies only from `sm`; below it the row is a column.
 
 F3, pinned stage:
 
@@ -1872,6 +1879,14 @@ F4, focus not obscured:
   `scroll-margin-top: 0px`. Focusing the dock input from scrollY 600 leaves scrollY at 600.
 - AC15: At 1280x800 with a 32px default font (Chromium only): no focus stop sits fully under the
   fixed chrome.
+- AC15a (review round two): Phone 390x844 at 150% text (Chromium only): no focus stop sits fully
+  under the fixed chrome.
+- AC15b (review round two): At 768x640, every button in `main` computes a top scroll margin at
+  least as tall as the topbar.
+- AC15c (review round two): Closing a card menu (390x844 with the topbar tucked, and 1280x600)
+  or the edit drawer (390x844) leaves every painted frame at the parked offset. WebKit's menu case
+  is marked `fixme`: WebKit moves the page itself when Radix lifts the menu's scroll lock, with
+  every margin at 0, so it predates this work.
 
 All:
 
