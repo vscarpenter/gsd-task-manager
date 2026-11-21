@@ -73,8 +73,8 @@ const focusInPlace = (control: Locator) => control.evaluate((el) => (el as HTMLE
  * Every page offset painted, frame by frame, while `act` runs and for a few
  * frames after. Closing the drawer jumped the page 116px in Chromium and the
  * browser put it back a frame later, so a check of the final offset missed it.
- * Frames rather than scroll events: WebKit reports an offset it never paints
- * when a modal's scroll lock lifts, with or without the margins.
+ * Frames rather than scroll events: when a modal's scroll lock lifts, WebKit
+ * reports an offset that it usually doesn't paint.
  */
 async function scrollOffsetsDuring(page: Page, act: () => Promise<void>): Promise<number[]> {
   await page.evaluate(() => {
@@ -180,12 +180,14 @@ test.describe("Focus not obscured", () => {
   // anyway: 45px on a laptop, 88px on a phone, where it also brought back the
   // tucked topbar. Firefox recentered the page.
   test.describe("returning focus", () => {
+    // WebKit moves the page itself when a modal's scroll lock lifts: 958 to 290
+    // on a phone. For the card menu that happens before focus returns, with
+    // every scroll margin forced to 0. The drawer reached the same 290 once in a
+    // full run, though its focus returns with preventScroll.
+    test.fixme(({ browserName }) => browserName === "webkit", "WebKit jumps the page when a modal's scroll lock lifts");
+
     for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 600 }]) {
-      test(`closing a card menu leaves the page in place at ${viewport.width}px`, async ({ page, browserName }) => {
-        // WebKit moves the page itself when Radix lifts the menu's scroll lock:
-        // 958 to 290 on a phone, before focus returns and with every scroll
-        // margin forced to 0. A pre-existing bug, outside what this checks.
-        test.fixme(browserName === "webkit", "WebKit jumps the page when the menu's scroll lock lifts");
+      test(`closing a card menu leaves the page in place at ${viewport.width}px`, async ({ page }) => {
         await page.setViewportSize(viewport);
         await loadMatrixWithTasks(page);
         const trigger = page.getByRole("button", { name: "More actions" }).nth(PARKED_CARD);

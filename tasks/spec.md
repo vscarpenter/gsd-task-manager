@@ -1884,9 +1884,10 @@ F4, focus not obscured:
 - AC15b (review round two): At 768x640, every button in `main` computes a top scroll margin at
   least as tall as the topbar.
 - AC15c (review round two): Closing a card menu (390x844 with the topbar tucked, and 1280x600)
-  or the edit drawer (390x844) leaves every painted frame at the parked offset. WebKit's menu case
-  is marked `fixme`: WebKit moves the page itself when Radix lifts the menu's scroll lock, with
-  every margin at 0, so it predates this work.
+  or the edit drawer (390x844) leaves every painted frame at the parked offset. Both are marked
+  `fixme` in WebKit, which moves the page itself when a modal's scroll lock lifts. The menu case
+  predates this work: it jumps with every margin at 0. The drawer reached the same offset once in
+  a full run.
 
 All:
 
