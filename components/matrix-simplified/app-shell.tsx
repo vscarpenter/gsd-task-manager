@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { CommandIcon } from "lucide-react";
 import { DesktopIconRail, MobileIconRail } from "./icon-rail";
 import { SimplifiedTopbar } from "./topbar";
+import { usePinnedStageFit } from "./use-pinned-stage-fit";
 import dynamic from "next/dynamic";
 import { AppFooter } from "@/components/app-footer";
 import { CommandPalette } from "@/components/command-palette";
@@ -20,8 +21,10 @@ import { useAppShortcuts } from "@/lib/use-app-shortcuts";
 import { cn } from "@/lib/utils";
 
 /**
- * Classes that pin the shell to the viewport when `fillViewport` is set and the
- * screen is wide and tall enough for it (the `pinned` variant in globals.css).
+ * Classes that pin the shell to the viewport when `fillViewport` is set, the
+ * screen is wide and tall enough for it (the `pinned` variant in globals.css),
+ * and the stage gets at least 10rem (usePinnedStageFit). main is a flex column
+ * from md either way, so the stage's predicted height holds in both states.
  * main needs min-h-0! because globals.css sets `main { min-height: calc(100vh -
  * 3.5rem) }` outside any layer, which outranks a layered utility and would push
  * the footer below the fold.
@@ -36,11 +39,22 @@ const MAIN_CLASS = "mx-auto w-full max-w-[1320px] flex-1 px-4 py-5 pb-20 sm:px-9
 const COLUMN_CLASS =
   "flex min-w-0 flex-1 flex-col [--fixed-chrome-bottom:calc(3.75rem+env(safe-area-inset-bottom))] max-md:has-[[data-testid=mobile-capture-dock]]:[--fixed-chrome-bottom:calc(10.25rem+env(safe-area-inset-bottom))] pb-(--fixed-chrome-bottom) md:pb-0";
 const FILL_VIEWPORT_COLUMN = "pinned:h-dvh pinned:overflow-hidden";
-const FILL_VIEWPORT_MAIN = "pinned:flex pinned:min-h-0! pinned:flex-col pinned:overflow-hidden";
+const FILL_VIEWPORT_MAIN = "md:flex md:flex-col pinned:min-h-0! pinned:overflow-hidden";
 const HelpDrawer = dynamic(() => import('./help-drawer').then((module) => module.HelpDrawer));
 
 function openCommandPalette() {
   window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
+}
+
+/** The help drawer's open state. A "gsd:open-help" window event opens it too. */
+function useHelpDrawerOpen(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener("gsd:open-help", show);
+    return () => window.removeEventListener("gsd:open-help", show);
+  }, []);
+  return [open, setOpen];
 }
 
 interface AppShellProps {
@@ -57,7 +71,8 @@ interface AppShellProps {
   quietChromeOnScroll?: boolean;
   /**
    * Pin the shell to the viewport where the `pinned` variant holds (md and up,
-   * with a height floor; see globals.css) and hand the remaining height to the
+   * with a height floor; see globals.css) and the stage would get at least
+   * 10rem (usePinnedStageFit), and hand the remaining height to the
    * page as a flex column, so a child can scroll internally instead of the
    * page. The matrix opts in; every other route keeps page scroll. Compact
    * widths are untouched either way.
@@ -79,7 +94,9 @@ export function AppShell({
   fillViewport = false,
   children,
 }: AppShellProps) {
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useHelpDrawerOpen();
+  const columnRef = useRef<HTMLDivElement>(null);
+  usePinnedStageFit(columnRef, fillViewport);
   const [smartViewsEnabled, setSmartViewsEnabled] = useState(false);
   const { handlers, shortcutHandlers, onSelectTask, conditions } = useShellCommandHandlers();
 
@@ -89,12 +106,6 @@ export function AppShell({
     onReview: shortcutHandlers.onReview,
     onFocusQuadrant: shortcutHandlers.onFocusQuadrant,
   });
-
-  useEffect(() => {
-    const open = () => setHelpOpen(true);
-    window.addEventListener("gsd:open-help", open);
-    return () => window.removeEventListener("gsd:open-help", open);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,7 +145,7 @@ export function AppShell({
         Skip to main content
       </a>
       <DesktopIconRail onHelp={() => setHelpOpen(true)} />
-      <div className={cn(COLUMN_CLASS, fillViewport && FILL_VIEWPORT_COLUMN)}>
+      <div ref={columnRef} className={cn(COLUMN_CLASS, fillViewport && FILL_VIEWPORT_COLUMN)}>
         <SimplifiedTopbar
           title={title} titleAsLabel={titleAsLabel} caption={caption}
           searchQuery={searchQuery} onSearchChange={onSearchChange} searchInputRef={searchInputRef}

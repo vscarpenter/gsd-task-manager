@@ -142,10 +142,16 @@
    rises with the reader's text: 640px at 16px, 960px at 24px. Below it the page
    scrolls, as it does at compact widths. 48rem is the md breakpoint.
    Under 64rem wide the header and briefing wrap onto more lines, so the floor
-   there is 52rem: at 768x640 the stage was a 98px slot. iPad portrait still pins. */
+   there is 52rem: at 768x640 the stage was a 98px slot. iPad portrait still pins.
+   No size rule fits every font, though: Linux's wider sans wraps the intro's
+   button at 1024x640, and the smart-view strip adds a row. So AppShell also
+   measures the stage and sets data-unpinned on the column when pinning would
+   leave it under 10rem, and the variant steps aside there. */
 @custom-variant pinned {
   @media (width >= 64rem) and (height >= 40rem), (width >= 48rem) and (height >= 52rem) {
-    @slot;
+    &:where(:not([data-unpinned], [data-unpinned] *)) {
+      @slot;
+    }
   }
 }
 
@@ -465,8 +471,8 @@ main {
     }
   }
 
-  @variant pinned {
-    [data-testid="matrix-stage"] :where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])) {
+  [data-testid="matrix-stage"] :where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])) {
+    @variant pinned {
       scroll-margin-top: 0;
     }
   }

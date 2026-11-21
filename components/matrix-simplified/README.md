@@ -14,6 +14,7 @@ Page, shell, and grid:
 
 - `MatrixSimplified` (`index.tsx`): page root with no props. It composes `AppShell`, `CaptureBar`, `TodayStrip`, `MatrixGrid`, `EditDrawer`, `TaskDetailSheet`, `ShareTaskDialog`, and `DragLayer` inside a `DndContext`.
 - `AppShell` (`app-shell.tsx`): layout shell. Props are `title`, `titleAsLabel`, `caption`, `searchQuery`, `onSearchChange`, `searchInputRef`, `topbarRightSlot`, `mainClassName`, `quietChromeOnScroll`, `fillViewport`, and `children`.
+- `usePinnedStageFit` (`use-pinned-stage-fit.ts`): `(columnRef, enabled)`. AppShell calls it with `fillViewport`. It sets `data-unpinned` on the column when pinning would leave `matrix-stage` under 10rem, and the `pinned` variant in `globals.css` doesn't apply under that attribute.
 - `SimplifiedTopbar` (`topbar.tsx`): sticky header with the title, an optional search input, `SyncStatusDisplay`, and a right slot. Props are `title`, `titleAsLabel`, `caption`, `searchQuery`, `onSearchChange`, `searchInputRef`, `rightSlot`, and `quietOnScroll`.
 - `IconRail` (`icon-rail.tsx`): renders `DesktopIconRail` and `MobileIconRail` together. Prop is `onHelp`.
 - `DesktopIconRail` (`icon-rail.tsx`): collapsible side nav for `md` and up, with five route buttons, Help, and a collapse toggle.
@@ -150,7 +151,9 @@ Page and view:
 
 Shell:
 
-- `app-shell.tsx:FILL_VIEWPORT_MAIN`: a comment requires `min-h-0!` on `main`. `globals.css` sets an unlayered `main` min-height that outranks layered utilities.
+- `app-shell.tsx:FILL_VIEWPORT_MAIN`: a comment requires `min-h-0!` on `main`. `globals.css` sets an unlayered `main` min-height that outranks layered utilities. `main` is a flex column from md whether pinned or not, so its children's margins add up the same way in both states.
+- `use-pinned-stage-fit.ts:pinnedStageHeight`: the viewport height less the stage's top in document coordinates, `main`'s bottom padding, and the footer. It assumes `matrix-stage` is `main`'s last child. It reads the same pinned or not, so the decision can't flip back and forth.
+- `use-pinned-stage-fit.ts:usePinnedStageFit`: a write triggered by the `ResizeObserver` waits a frame, because a write inside the callback would resize the observed elements and raise a ResizeObserver loop error.
 - `app-shell.tsx:COLUMN_CLASS`: `--fixed-chrome-bottom` is the height of the fixed chrome below md (the rail, plus the capture dock when the page has one). It pads the column, and `globals.css` uses it as the bottom scroll margin on focusable content in `main` and the footer, so focus never lands under that chrome (WCAG 2.4.11).
 - `index.tsx:MatrixSimplified`: controls inside `matrix-stage` carry no top scroll margin while the shell is pinned, because the stage scrolls on its own. Controls in the phone capture dock carry none either.
 - `app-shell.tsx:AppShell`: `smartViewsEnabled` falls back to `false` when `getAppPreferences()` rejects. A `cancelled` flag drops the result after unmount.
@@ -264,8 +267,9 @@ Task actions and shared hooks:
 - `index.tsx:handleDelete`: calls `scheduleCardFocus(nextId)` after a delete. The grid's `onToggleComplete` does the same after a completion.
 - `index.tsx:MatrixSimplified`: the grid's `onSave` calls `captureInputRef.current?.focus()` after `handleSaveForLater` resolves `true`. The `CaptureBar` `onSubmit` reveals the new card with `highlightTaskById(id, { focus: false })`.
 - `app-shell.tsx:openCommandPalette`: dispatches `new CustomEvent(OPEN_COMMAND_PALETTE_EVENT)` on `window`. The constant comes from `@/lib/use-command-palette`.
-- `app-shell.tsx:AppShell`: adds and removes window listeners for `"gsd:open-help"` and `APP_PREFERENCES_EVENT`. It calls `getAppPreferences()` from `@/lib/smart-views` on mount.
+- `app-shell.tsx:AppShell`: adds and removes a window listener for `APP_PREFERENCES_EVENT`, and `useHelpDrawerOpen` one for `"gsd:open-help"`. It calls `getAppPreferences()` from `@/lib/smart-views` on mount.
 - `app-shell.tsx:AppShell`: calls `useAppShortcuts` from `@/lib/use-app-shortcuts` and `useShellCommandHandlers` from `@/lib/use-shell-command-handlers`.
+- `use-pinned-stage-fit.ts:usePinnedStageFit`: toggles `data-unpinned` on the column, adds and removes a window `"resize"` listener, and observes `main` and the stage with a `ResizeObserver`. Cleanup removes the attribute.
 - `topbar.tsx:SimplifiedTopbar`: calls `useSyncStatus` from `@/lib/hooks/use-sync-status` and `useScrollChrome(quietOnScroll)` from `@/lib/use-scroll-chrome`.
 - `icon-rail.tsx:DesktopIconRail`: reads `readRailCollapsed` as initial state and calls `writeRailCollapsed(collapsed)` in an effect. Both come from `@/lib/preferences/icon-rail`.
 - `icon-rail.tsx:DesktopIconRail`, `MobileIconRail`: call `navigateWithTransition(ROUTES[item.routeKey])` from `useViewTransition` for HOME, SAVED, DASHBOARD, SETTINGS, and ABOUT.

@@ -224,10 +224,12 @@ test.describe("Focus not obscured", () => {
   });
 
   // Pinned, the stage scrolls on its own. A topbar-sized margin there pushed 41
-  // stops below a short stage, so the stage's controls carry none.
+  // stops below a short stage, so the stage's controls carry none. 700px tall,
+  // because at 640 Linux fonts leave too little room to pin.
   test("focus stays visible inside a small pinned stage", async ({ page }) => {
-    await page.setViewportSize({ width: 1024, height: 640 });
+    await page.setViewportSize({ width: 1024, height: 700 });
     await loadMatrixWithTasks(page);
+    await expect(page.locator("main")).toHaveCSS("overflow-y", "hidden");
 
     expect(await hiddenStopsOn(page, "/")).toEqual([]);
     // In a 180px stage a margin cuts cards off rather than hiding them, which
