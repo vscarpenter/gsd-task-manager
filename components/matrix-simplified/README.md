@@ -200,7 +200,7 @@ Task detail and edit drawer:
 - `edit-drawer.tsx:EditDrawerForm`: a comment explains the hand-rolled dialog. It keeps layered Escape: the first press closes the dependency popup and the second closes the drawer.
 - `edit-drawer.tsx:DrawerFooter`: the submit button is disabled unless `hasVisibleText(draft.title)`.
 - `edit-drawer.tsx:TitleAndDescriptionFields`: the title input has no `maxLength`. Its note counts the URL-stripped title against `SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH`. The description `maxLength` is `SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH`.
-- `edit-drawer.tsx:handleTagKeyDown`: Enter or `,` adds the tag. Backspace with an empty `tagInput` removes the last tag. While an IME is composing, Enter and `,` don't add the tag, and only Enter calls `preventDefault`, so the IME can still type its comma.
+- `edit-drawer-tag-keys.ts:handleTagKeyDown`: Enter or `,` adds the tag. Backspace with an empty `tagInput` removes the last tag. While an IME is composing, Enter and `,` don't add the tag, and only Enter calls `preventDefault`, so the IME can still type its comma.
 - `edit-drawer-fields.tsx:TagsField`, `SubtasksField`: the inputs are disabled at `SCHEMA_LIMITS.MAX_TAGS` and `SCHEMA_LIMITS.MAX_SUBTASKS`. Their `maxLength` values are `TAG_MAX_LENGTH` and `SUBTASK_TITLE_MAX_LENGTH`.
 - `edit-drawer-fields.tsx:EstimateField`: the number input declares `min={1}` and `max={10080}`.
 - `edit-drawer-fields.tsx:DueDateField`: picking a preset clears the custom date. `DueTimeControls` renders only when `customDate || duePreset !== "none"`.

@@ -20,6 +20,7 @@ import { SubtasksField } from "./edit-drawer-subtasks-field";
 import { ReminderField } from "./edit-drawer-reminder-field";
 import { SnoozeField } from "./edit-drawer-snooze-field";
 import { DependenciesField } from "./edit-drawer-dependencies";
+import { handleTagKeyDown } from "./edit-drawer-tag-keys";
 import { LengthLimitNote } from "./limit-note";
 import { extractUrlsFromTitle } from "@/lib/capture-parser";
 import { isImeComposing } from "@/lib/ime";
@@ -380,28 +381,6 @@ function TitleAndDescriptionFields({
       <LengthLimitNote field="description" length={draft.description.length} max={SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH} />
     </>
   );
-}
-
-/**
- * Enter/comma commits a tag; Backspace on an empty input removes the last one.
- * While an IME composes, Enter confirms a conversion and comma types its
- * punctuation, so neither commits. Enter is swallowed either way, because in
- * the drawer's form it would submit.
- */
-function handleTagKeyDown(
-  event: React.KeyboardEvent,
-  draft: ReturnType<typeof useEditDraftState>
-): void {
-  if (event.key === "Enter") event.preventDefault();
-  if (event.key === "Enter" || event.key === ",") {
-    if (isImeComposing(event.nativeEvent)) return;
-    event.preventDefault();
-    draft.addTag();
-    return;
-  }
-  if (event.key === "Backspace" && !draft.tagInput && draft.tags.length) {
-    draft.setTags(draft.tags.slice(0, -1));
-  }
 }
 
 /** Repeat, checklist, and estimate — the fields describing the work itself. */
