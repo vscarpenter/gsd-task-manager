@@ -1,0 +1,49 @@
+name: PR shape
+
+# Holds each PR to one reviewable concern: at most 15 counted files unless the
+# PR carries the large-pr label, and version bumps only in chore(release) PRs.
+# The rules live in scripts/check-pr-shape.cjs. Title edits and label changes
+# rerun this check without rerunning CI.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+concurrency:
+  group: pr-shape-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # checkout the rules module
+  pull-requests: read # list the PR's changed files
+
+jobs:
+  pr-shape:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          script: |
+            const { checkPrShape } = require(`${process.env.GITHUB_WORKSPACE}/scripts/check-pr-shape.cjs`);
+            const pr = context.payload.pull_request;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const problems = checkPrShape({
+              title: pr.title,
+              labels: pr.labels.map((label) => label.name),
+              files: files.map(({ filename, patch }) => ({ filename, patch })),
+            });
+            for (const problem of problems) core.error(problem);
+            if (problems.length > 0) {
+              core.setFailed(`PR shape: ${problems.length} rule(s) broken. See the errors above.`);
+            } else {
+              core.info(`PR shape passes: ${files.length} changed files listed.`);
+            }
