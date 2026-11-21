@@ -486,13 +486,14 @@ describe("AppShell fillViewport", () => {
     // `pinned` needs a minimum height in rem as well as md (globals.css), so a reader
     // with large text on a short screen gets a scrolling page, not a sliver.
     const main = screen.getByRole("main");
-    expect(main.className).toContain("pinned:flex");
-    expect(main.className).toContain("pinned:flex-col");
+    // A flex column from md whether pinned or not, so its children's margins add
+    // up the same way in both states and the stage's predicted height holds.
+    expect(main).toHaveClass("md:flex", "md:flex-col");
+    expect(main).not.toHaveClass("pinned:flex", "pinned:flex-col");
     // The important variant: globals.css gives `main` an unlayered min-height
     // that a plain utility cannot override.
-    expect(main.className).toContain("pinned:min-h-0!");
-    expect(main.className).toContain("pinned:overflow-hidden");
-    expect(main.className).not.toContain("md:overflow-hidden");
+    expect(main).toHaveClass("pinned:min-h-0!", "pinned:overflow-hidden");
+    expect(main).not.toHaveClass("md:overflow-hidden");
 
     const column = main.parentElement as HTMLElement;
     expect(column.className).toContain("pinned:h-dvh");
@@ -509,5 +510,78 @@ describe("AppShell fillViewport", () => {
     const main = screen.getByRole("main");
     expect(main.className).not.toContain("pinned:overflow-hidden");
     expect((main.parentElement as HTMLElement).className).not.toContain("pinned:h-dvh");
+  });
+});
+
+describe("AppShell pins only when the stage fits", () => {
+  // The stage's pinned height is the viewport less the stage's top, main's
+  // bottom padding, and the footer: 640 - top - 24 - 40 here.
+  const VIEWPORT_PX = 640;
+  const FOOTER_PX = 40;
+  const CRAMPED_TOP_PX = 480; // leaves 96px, under 10rem
+  const ROOMY_TOP_PX = 400; // leaves 176px
+  const TALLER_VIEWPORT_PX = 800;
+  const realInnerHeight = window.innerHeight;
+  let style: HTMLStyleElement;
+
+  const setViewportHeight = (px: number) =>
+    Object.defineProperty(window, "innerHeight", { value: px, configurable: true, writable: true });
+
+  beforeEach(() => {
+    mockGetAppPreferences.mockResolvedValue({
+      id: "preferences",
+      pinnedSmartViewIds: [],
+      maxPinnedViews: 5,
+      smartViewsEnabled: false,
+    });
+    mockGetSmartViews.mockResolvedValue([]);
+    style = document.createElement("style");
+    style.textContent = "html { font-size: 16px } main { padding-bottom: 24px }";
+    document.head.append(style);
+    setViewportHeight(VIEWPORT_PX);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      return this.tagName === "FOOTER" ? FOOTER_PX : 0;
+    });
+  });
+
+  afterEach(() => {
+    style.remove();
+    setViewportHeight(realInnerHeight);
+    vi.restoreAllMocks();
+  });
+
+  function renderMatrixShell(stageTop: number, fillViewport = true): HTMLElement {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+      const top = this.dataset.testid === "matrix-stage" ? stageTop : 0;
+      return { top, bottom: top, height: 0, width: 0, left: 0, right: 0, x: 0, y: top, toJSON: () => ({}) } as DOMRect;
+    });
+    render(
+      <AppShell title="GSD Matrix" fillViewport={fillViewport}>
+        <div data-testid="matrix-stage" />
+      </AppShell>
+    );
+    return screen.getByRole("main").parentElement as HTMLElement;
+  }
+
+  it("lets the page scroll when pinning would leave the stage under 10rem", () => {
+    expect(renderMatrixShell(CRAMPED_TOP_PX)).toHaveAttribute("data-unpinned");
+  });
+
+  it("pins when the stage would get at least 10rem", () => {
+    expect(renderMatrixShell(ROOMY_TOP_PX)).not.toHaveAttribute("data-unpinned");
+  });
+
+  it("pins again once the window grows tall enough", () => {
+    const column = renderMatrixShell(CRAMPED_TOP_PX);
+    expect(column).toHaveAttribute("data-unpinned");
+
+    setViewportHeight(TALLER_VIEWPORT_PX);
+    fireEvent(window, new Event("resize"));
+
+    expect(column).not.toHaveAttribute("data-unpinned");
+  });
+
+  it("never marks a page that doesn't fill the viewport", () => {
+    expect(renderMatrixShell(CRAMPED_TOP_PX, false)).not.toHaveAttribute("data-unpinned");
   });
 });

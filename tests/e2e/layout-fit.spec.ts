@@ -40,9 +40,32 @@ async function loadLongIntro(page: Page): Promise<void> {
 const introSentence = (page: Page) => page.locator("section:has(h1) > p");
 const scheduleButton = (page: Page) => page.getByRole("button", { name: /^Schedule( is empty| · )/ });
 
-/** How the matrix shell lays out: pinned to the viewport, or scrolling with the page. */
+/** Turns on the smart-view strip, which adds a row above the stage. */
+async function turnOnSmartViewStrip(page: Page): Promise<void> {
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("GsdTaskManager");
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction("appPreferences", "readwrite");
+      transaction.objectStore("appPreferences")
+        .put({ id: "preferences", smartViewsEnabled: true, pinnedSmartViewIds: [], maxPinnedViews: 5 });
+      transaction.oncomplete = () => { db.close(); resolve(); };
+      transaction.onerror = () => { db.close(); reject(transaction.error); };
+    };
+  }));
+  await page.reload();
+  await waitForAppLoad(page);
+  await expect(page.getByRole("group", { name: "Smart views" })).toBeVisible();
+}
+
+/**
+ * How the matrix shell lays out: pinned to the viewport, or scrolling with the
+ * page. Two frames first, so a pending pin check has landed.
+ */
 function readShell(page: Page) {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const stage = document.querySelector<HTMLElement>("[data-testid='matrix-stage']")!;
     return {
       mainOverflow: getComputedStyle(document.querySelector("main")!).overflowY,
@@ -211,19 +234,48 @@ test.describe("Layout fit", () => {
     }
   });
 
-  test("a pinned stage is never shorter than 10rem", async ({ page }) => {
+  test("the shell pins only where the stage gets at least 10rem", async ({ page }) => {
     // The longest date, so the intro above the stage is at its tallest.
     await page.clock.setFixedTime(LONG_DATE);
     await page.reload();
-    for (const viewport of [{ width: 1024, height: 640 }, { width: 1280, height: 720 }, { width: 768, height: 1024 }]) {
+    const floor = await remPx(page, STAGE_FLOOR_REM);
+    for (const viewport of [{ width: 1280, height: 720 }, { width: 768, height: 1024 }]) {
       await page.setViewportSize(viewport);
       await waitForAppLoad(page);
 
       const shell = await readShell(page);
       const size = `${viewport.width}x${viewport.height}`;
       expect(shell.mainOverflow, `pinned at ${size}`).toBe("hidden");
-      expect(shell.stageHeight, `stage at ${size}`).toBeGreaterThanOrEqual(await remPx(page, STAGE_FLOOR_REM));
+      expect(shell.stageHeight, `stage at ${size}`).toBeGreaterThanOrEqual(floor);
     }
+
+    // Whether 1024x640 pins depends on the font: Linux's wider sans wraps the
+    // intro's button onto its own line. Pinned or not, the stage never drops
+    // under the floor while the page is held still.
+    await page.setViewportSize({ width: 1024, height: 640 });
+    await waitForAppLoad(page);
+    const shell = await readShell(page);
+    const pinnedTooShort = shell.mainOverflow === "hidden" && shell.stageHeight < floor;
+    expect(pinnedTooShort, `pinned stage of ${shell.stageHeight}px at 1024x640`).toBe(false);
+  });
+
+  // The smart-view strip adds a row above the stage. Pinned at 1024x640 it left
+  // the stage 112px on macOS fonts, and CI's Linux fonts got 120px without the
+  // strip. No size rule fits every font, so the shell measures the stage.
+  test("a stage too short to pin lets the page scroll, and pins once there's room", async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 640 });
+    await page.clock.setFixedTime(LONG_DATE);
+    await waitForAppLoad(page);
+    await turnOnSmartViewStrip(page);
+
+    const cramped = await readShell(page);
+    expect(cramped.mainOverflow, "main at 1024x640").not.toBe("hidden");
+    expect(cramped.stageOverflow, "stage at 1024x640").toBe("visible");
+
+    await page.setViewportSize({ width: 1024, height: 800 });
+    const roomy = await readShell(page);
+    expect(roomy.mainOverflow, "main at 1024x800").toBe("hidden");
+    expect(roomy.stageHeight, "stage at 1024x800").toBeGreaterThanOrEqual(await remPx(page, STAGE_FLOOR_REM));
   });
 
   // On a screen too short for two 280px pane rows, the stage scrolls and each
