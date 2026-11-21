@@ -60,8 +60,18 @@ async function turnOnSmartViewStrip(page: Page): Promise<void> {
 }
 
 /**
+ * Resizes and waits until the page has the new height. WebKit on Linux took
+ * about 100ms after setViewportSize resolved.
+ */
+async function resizeTo(page: Page, viewport: { width: number; height: number }): Promise<void> {
+  await page.setViewportSize(viewport);
+  await expect.poll(() => page.evaluate(() => window.innerHeight)).toBe(viewport.height);
+}
+
+/**
  * How the matrix shell lays out: pinned to the viewport, or scrolling with the
- * page. Two frames first, so a pending pin check has landed.
+ * page. The shell decides a frame or more after a resize or a change above the
+ * stage, so a check that expects a state waits for it with expect.poll.
  */
 function readShell(page: Page) {
   return page.evaluate(async () => {
@@ -240,23 +250,24 @@ test.describe("Layout fit", () => {
     await page.reload();
     const floor = await remPx(page, STAGE_FLOOR_REM);
     for (const viewport of [{ width: 1280, height: 720 }, { width: 768, height: 1024 }]) {
-      await page.setViewportSize(viewport);
+      await resizeTo(page, viewport);
       await waitForAppLoad(page);
 
-      const shell = await readShell(page);
       const size = `${viewport.width}x${viewport.height}`;
-      expect(shell.mainOverflow, `pinned at ${size}`).toBe("hidden");
-      expect(shell.stageHeight, `stage at ${size}`).toBeGreaterThanOrEqual(floor);
+      await expect.poll(async () => (await readShell(page)).mainOverflow, { message: `pinned at ${size}` }).toBe("hidden");
+      expect((await readShell(page)).stageHeight, `stage at ${size}`).toBeGreaterThanOrEqual(floor);
     }
 
     // Whether 1024x640 pins depends on the font: Linux's wider sans wraps the
     // intro's button onto its own line. Pinned or not, the stage never drops
     // under the floor while the page is held still.
-    await page.setViewportSize({ width: 1024, height: 640 });
+    await resizeTo(page, { width: 1024, height: 640 });
     await waitForAppLoad(page);
-    const shell = await readShell(page);
-    const pinnedTooShort = shell.mainOverflow === "hidden" && shell.stageHeight < floor;
-    expect(pinnedTooShort, `pinned stage of ${shell.stageHeight}px at 1024x640`).toBe(false);
+    const pinnedTooShort = async () => {
+      const shell = await readShell(page);
+      return shell.mainOverflow === "hidden" && shell.stageHeight < floor;
+    };
+    await expect.poll(pinnedTooShort, { message: "a pinned stage under 10rem at 1024x640" }).toBe(false);
   });
 
   // The smart-view strip adds a row above the stage. Pinned at 1024x640 it left
@@ -268,14 +279,14 @@ test.describe("Layout fit", () => {
     await waitForAppLoad(page);
     await turnOnSmartViewStrip(page);
 
-    const cramped = await readShell(page);
-    expect(cramped.mainOverflow, "main at 1024x640").not.toBe("hidden");
-    expect(cramped.stageOverflow, "stage at 1024x640").toBe("visible");
+    // The strip renders after its preference loads, so the shell decides after
+    // the page settles. CI's WebKit read the state two frames before it landed.
+    await expect.poll(async () => (await readShell(page)).mainOverflow, { message: "main at 1024x640" }).not.toBe("hidden");
+    expect((await readShell(page)).stageOverflow, "stage at 1024x640").toBe("visible");
 
-    await page.setViewportSize({ width: 1024, height: 800 });
-    const roomy = await readShell(page);
-    expect(roomy.mainOverflow, "main at 1024x800").toBe("hidden");
-    expect(roomy.stageHeight, "stage at 1024x800").toBeGreaterThanOrEqual(await remPx(page, STAGE_FLOOR_REM));
+    await resizeTo(page, { width: 1024, height: 800 });
+    await expect.poll(async () => (await readShell(page)).mainOverflow, { message: "main at 1024x800" }).toBe("hidden");
+    expect((await readShell(page)).stageHeight, "stage at 1024x800").toBeGreaterThanOrEqual(await remPx(page, STAGE_FLOOR_REM));
   });
 
   // On a screen too short for two 280px pane rows, the stage scrolls and each
