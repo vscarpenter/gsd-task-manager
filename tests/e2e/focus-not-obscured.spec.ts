@@ -11,6 +11,9 @@ import { findHiddenFocusStops, startAtMainContent } from "./helpers/focus-visibi
  * check needs no timing; the margins work the same with smooth scrolling.
  */
 const PRESSES = 60;
+// A walk is 120 presses, each waiting three frames. One route took WebKit on
+// CI 20 to 31 seconds, so the default 30 is too tight even for one.
+const ONE_ROUTE_TIMEOUT_MS = 60_000;
 const MULTI_ROUTE_TIMEOUT_MS = 180_000;
 const SCROLLED_Y = 600;
 const TASKS = [
@@ -113,6 +116,7 @@ test.describe("Focus not obscured", () => {
     test.use({ viewport: { width: 390, height: 844 } });
 
     test("focus never hides behind the dock, rail, or topbar", async ({ page }) => {
+      test.setTimeout(ONE_ROUTE_TIMEOUT_MS);
       await loadMatrixWithTasks(page);
 
       expect(await hiddenStopsOn(page, "/")).toEqual([]);
@@ -227,6 +231,7 @@ test.describe("Focus not obscured", () => {
   // stops below a short stage, so the stage's controls carry none. 700px tall,
   // because at 640 Linux fonts leave too little room to pin.
   test("focus stays visible inside a small pinned stage", async ({ page }) => {
+    test.setTimeout(ONE_ROUTE_TIMEOUT_MS);
     await page.setViewportSize({ width: 1024, height: 700 });
     await loadMatrixWithTasks(page);
     await expect(page.locator("main")).toHaveCSS("overflow-y", "hidden");
