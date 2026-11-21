@@ -156,6 +156,7 @@ Shell:
 - `app-shell.tsx:AppShell`: `smartViewsEnabled` falls back to `false` when `getAppPreferences()` rejects. A `cancelled` flag drops the result after unmount.
 - `topbar.tsx:SimplifiedTopbar`: the search input renders only when `onSearchChange !== undefined`.
 - `topbar.tsx:topbarClassName`: the hidden topbar moves off screen only below `md`, and returns on focus-within.
+- `capture-bar.tsx:onInputKey`: Escape blurs the input, except an Escape that `isImeComposing` reports, which cancels the conversion instead.
 - `icon-rail.tsx:MobileIconRail`: a tapped tab counts as active only while `tapped.from === pathname`.
 - `icon-rail.tsx:DesktopIconRail`: route buttons are disabled while `isPending` from `useViewTransition`. A comment requires `overflow-clip`, not hidden, so the sticky column stays put.
 
