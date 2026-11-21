@@ -264,7 +264,7 @@ Task actions and shared hooks:
 - `index.tsx:handleDelete`: calls `scheduleCardFocus(nextId)` after a delete. The grid's `onToggleComplete` does the same after a completion.
 - `index.tsx:MatrixSimplified`: the grid's `onSave` calls `captureInputRef.current?.focus()` after `handleSaveForLater` resolves `true`. The `CaptureBar` `onSubmit` reveals the new card with `highlightTaskById(id, { focus: false })`.
 - `app-shell.tsx:openCommandPalette`: dispatches `new CustomEvent(OPEN_COMMAND_PALETTE_EVENT)` on `window`. The constant comes from `@/lib/use-command-palette`.
-- `app-shell.tsx:AppShell`: adds and removes window listeners for `"gsd:open-help"` and `APP_PREFERENCES_EVENT`. It calls `getAppPreferences()` from `@/lib/smart-views` on mount.
+- `app-shell.tsx:AppShell`: adds and removes a window listener for `APP_PREFERENCES_EVENT`, and `useHelpDrawerOpen` one for `"gsd:open-help"`. It calls `getAppPreferences()` from `@/lib/smart-views` on mount.
 - `app-shell.tsx:AppShell`: calls `useAppShortcuts` from `@/lib/use-app-shortcuts` and `useShellCommandHandlers` from `@/lib/use-shell-command-handlers`.
 - `topbar.tsx:SimplifiedTopbar`: calls `useSyncStatus` from `@/lib/hooks/use-sync-status` and `useScrollChrome(quietOnScroll)` from `@/lib/use-scroll-chrome`.
 - `icon-rail.tsx:DesktopIconRail`: reads `readRailCollapsed` as initial state and calls `writeRailCollapsed(collapsed)` in an effect. Both come from `@/lib/preferences/icon-rail`.

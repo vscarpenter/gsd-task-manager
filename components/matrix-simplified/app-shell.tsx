@@ -43,6 +43,17 @@ function openCommandPalette() {
   window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
 }
 
+/** The help drawer's open state. A "gsd:open-help" window event opens it too. */
+function useHelpDrawerOpen(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener("gsd:open-help", show);
+    return () => window.removeEventListener("gsd:open-help", show);
+  }, []);
+  return [open, setOpen];
+}
+
 interface AppShellProps {
   title: string;
   /** Render the compact topbar title as a label when page content owns the h1. */
@@ -79,7 +90,7 @@ export function AppShell({
   fillViewport = false,
   children,
 }: AppShellProps) {
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useHelpDrawerOpen();
   const [smartViewsEnabled, setSmartViewsEnabled] = useState(false);
   const { handlers, shortcutHandlers, onSelectTask, conditions } = useShellCommandHandlers();
 
@@ -89,12 +100,6 @@ export function AppShell({
     onReview: shortcutHandlers.onReview,
     onFocusQuadrant: shortcutHandlers.onFocusQuadrant,
   });
-
-  useEffect(() => {
-    const open = () => setHelpOpen(true);
-    window.addEventListener("gsd:open-help", open);
-    return () => window.removeEventListener("gsd:open-help", open);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
