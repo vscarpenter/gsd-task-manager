@@ -12,6 +12,7 @@ import {
 } from "@/lib/quadrants";
 import { cn, hasVisibleText } from "@/lib/utils";
 import { useIsHydrated } from "@/lib/use-is-hydrated";
+import { isImeComposing } from "@/lib/ime";
 import { useCapturePaste } from "./use-capture-paste";
 import { hasOpenModal, isEditableShortcutTarget } from "@/lib/use-app-shortcuts";
 
@@ -303,8 +304,9 @@ export function CaptureBar({ onSubmit, onMoreOptions, inputRef: externalRef }: C
     awaitingClearRef.current = false;
   }, [text]);
 
+  // Escape leaves the field, except the one that cancels an IME conversion.
   const onInputKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
+    if (e.key === "Escape" && !isImeComposing(e.nativeEvent)) {
       internalRef.current?.blur();
     }
   };

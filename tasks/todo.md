@@ -1,6 +1,31 @@
+# Usability fixes from the modern-web-guidance audit (2026-11-20)
+
+Branch `fix/usability-audit`, not pushed. Non-trivial tier. The spec is the 2026-11-20 section of `tasks/spec.md`. The owner approved all four fixes and chose page scroll for F3 in session.
+
+## Plan
+
+- [x] Commit the spec and this plan (`64c36c26`).
+- [x] F1: `lib/ime.ts` plus guards in the tag, subtask, and dependency-search handlers and the drawer's Escape (`9055b227`). Review follow-up: Enter is always swallowed and the check sits under each key gate (`29c1ed92`).
+- [x] F2 and F3: the intro row wraps, and the `pinned` floor is width-aware (`db62e3d4`).
+- [x] F4: layered scroll margins on focusables in `main` and the footer, `--fixed-chrome-bottom` in the shell, exemptions for the phone dock and the pinned stage (`4e07741b`). E2E race fix (`1877e468`).
+- [x] Verify on the export build: new e2e specs in three engines, a real-engine IME probe through CDP, and screenshots. `a11y-reviewer` and `adversary` reviews done.
+- [x] Review round two (adversary verdict "needs changes", every finding checked against the code): phone intro height (`19c3b950`), measured focus margin and in-place focus return (`486533f1`), capture-bar composing Escape (`aac3644f`), tag handler moved out of the drawer (`87e34a27`), spec and notes (`3225d28a`).
+- [x] Gates (AC16) after round two: unit 5,113 passed, both typechecks, lint, shape, knip, build, bundle budget.
+- [x] Full export e2e after round two: 606 passed, 32 skipped, 1 failed. The failure was the WebKit drawer case of the scroll-lock jump below, so the whole focus-return group is now `fixme` in WebKit (`38891eca`). The focus spec then passed 54 of 54 over two repeats.
+- [x] Hand off: change report and quiz delivered in session. Push and PR wait for the owner.
+
+## Resuming From Here
+
+- **Done:** F1 to F4 plus both review rounds, committed on `fix/usability-audit`. Nothing is pushed.
+- **Next:** the owner's push and PR.
+- **Blocked on the owner:** push and PR. Two follow-ups are parked, not fixed here:
+  1. WebKit jumps the page when a modal's scroll lock lifts (958 to 290 on a phone). The card menu case predates this branch: it jumps with every margin forced to 0. The edit drawer hit the same 290 once in a full run. The WebKit focus-return checks in `focus-not-obscured.spec.ts` are `test.fixme`.
+  2. With the opt-in smart-view strip on, the pinned stage at 1024x640 is 112px, under the 10rem floor. It predates the branch at 1024 and up, and it needs a design call.
+- **Assumptions:** the weekly sweep's composing-Escape finding was refuted, because its panels hold no text field. The palette and toast focus returns stay as they were: the measured margin already ends the false scroll on desktop, and neither path runs while the phone topbar is tucked.
+
 # Docker image hardening (2026-11-19)
 
-Branch `chore/docker-image-hardening`, not pushed. Standard tier: three digests, a Dependabot config, five workflow steps, two guard tests, and three doc lines. The owner asked for all three steps in session.
+[PR #756](https://github.com/vscarpenter/gsd-task-manager/pull/756) was rebase-merged into `main` at `6e2608b3`. Standard tier: three digests, a Dependabot config, five workflow steps, two guard tests, and three doc lines. The owner asked for all three steps in session.
 
 ## Resuming From Here
 
@@ -13,7 +38,9 @@ Branch `chore/docker-image-hardening`, not pushed. Standard tier: three digests,
 - [x] `publish-docker.yml` builds amd64 into the local engine, installs Grype by version and SHA-256, and scans. It writes a severity table to the job summary and uploads the JSON report. All five steps run before the first registry login.
 - [x] The three new shell steps were extracted from the YAML and run in a Linux amd64 container with the runner's shell flags. All three exited 0, and the summary table matched the baseline.
 - [x] Gates in this checkout on bun 1.4.4 and Node 26.12.1. Typecheck, test typecheck, lint, shape, and knip pass. Unit: 5,082 passed in 375 files. Not run: e2e, the build, and the bundle budget, because no app code changed.
-- **Next:** the owner reviews the branch, then push and open the pull request. After merge, watch the first `Publish Docker Image` run on `main`. No pull request check runs the new steps.
+- [x] All 13 pull request checks passed. The first `Publish Docker Image` run on `main` passed too, in about 4 minutes. Its scan counted the same 52 findings as the local baseline, and it pushed `edge` and `sha-6e2608b`.
+- [x] Dependabot's first run found nothing to update. Node and Caddy were current. It skipped the Bun `1` tag under its default 3-day cooldown, because Bun 1.4.5 shipped that day.
+- **Next:** watch for Dependabot's first pull request, which should offer the Bun 1.4.5 digest once the cooldown passes. Until it opens, the digest refresh is unproven in this repo.
 - [x] The owner chose to keep the Docker-only Dependabot config (2026-11-19). The earlier config, removed on 2026-01-05 (`d90821ca`), also covered npm and GitHub Actions.
 - **Open decision for the owner:** the scan reports and doesn't block. A gate at "Critical with a fix" would stop every publish today.
 - **Found on the way, not fixed:**

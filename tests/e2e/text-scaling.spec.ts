@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { test, expect } from "./fixtures/test-fixtures";
 import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./helpers/test-helpers";
+import { findHiddenFocusStops, startAtMainContent } from "./helpers/focus-visibility";
 
 /**
  * The type ramp is rem, so text follows the browser's default font size.
@@ -9,14 +10,30 @@ import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./help
  * sideways or clipping. Only Chromium exposes the setting.
  */
 const LARGE_TEXT_PX = 24;
+const LARGE_FIXED_PX = 20;
+// 200%, the level WCAG asks text to survive.
+const DOUBLE_TEXT_PX = 32;
+const DOUBLE_FIXED_PX = 26;
 // The grid's minmax(280px,1fr) row floor.
 const PANE_FLOOR_PX = 280;
+// The narrowest the intro sentence may get before it moves to its own line.
+const SENTENCE_FLOOR_REM = 12;
+const PHONE_TASKS = [
+  "Pay rent !!", "Plan the roadmap *", "Reply to the landlord !", "Clean the garage",
+  "File taxes !!", "Read the RFC *", "Book the dentist !", "Sort the photos", "Renew passport *",
+];
+const PHONE_PRESSES = 60;
+const PHONE_FOCUS_TIMEOUT_MS = 150_000;
 
-async function useLargeText(page: Page): Promise<void> {
+async function useLargeText(page: Page, standard = LARGE_TEXT_PX, fixed = LARGE_FIXED_PX): Promise<void> {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Page.enable");
-  await cdp.send("Page.setFontSizes", { fontSizes: { standard: LARGE_TEXT_PX, fixed: 20 } });
+  await cdp.send("Page.setFontSizes", { fontSizes: { standard, fixed } });
 }
+
+/** The root font size the page actually got, so a check can't pass on default text. */
+const rootFontPx = (page: Page) =>
+  page.evaluate(() => Number.parseFloat(getComputedStyle(document.documentElement).fontSize));
 
 const sidewaysOverflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -65,6 +82,20 @@ test.describe("Text scaling at 150%", () => {
   // Pinned to a 720px screen, the header, briefing, and capture bar took 28rem
   // at this size and left the matrix a 48px scroller. The page scrolls instead,
   // so both 280px pane rows get their full height.
+  // The date and the Schedule button grow with the text and never shrink, so
+  // the sentence between them fell to 139px, about five words per line.
+  test("the intro sentence keeps 12rem at 150% text", async ({ page }) => {
+    await useLargeText(page);
+    await page.clock.setFixedTime(new Date("2026-09-30T10:00:00"));
+    await page.reload();
+    await waitForAppLoad(page);
+    await createTaskViaCaptureBar(page, "Plan the roadmap *");
+    await createTaskViaCaptureBar(page, "Read the RFC *");
+
+    const sentence = await page.locator("section:has(h1) > p").boundingBox();
+    expect(sentence!.width).toBeGreaterThanOrEqual(SENTENCE_FLOOR_REM * LARGE_TEXT_PX);
+  });
+
   test("the matrix keeps both pane rows on a laptop-height screen", async ({ page }) => {
     await useLargeText(page);
     await waitForAppLoad(page);
@@ -103,5 +134,53 @@ test.describe("Text scaling at 150%", () => {
     for (const selector of ["[data-testid='sync-button']", "button[aria-label='Open command palette']"]) {
       expect(Math.abs((await centerY(selector)) - search), selector).toBeLessThanOrEqual(4);
     }
+  });
+});
+
+// At 200% text the sticky topbar is tall enough that Tab parked dozens of
+// stops under it on the matrix. Reduced motion lands each focus scroll at once.
+test.describe("Text scaling at 200%", () => {
+  test.use({ reducedMotion: "reduce", viewport: { width: 1280, height: 800 } });
+
+  test.beforeEach(async ({ browserName, clearIndexedDB }) => {
+    test.skip(browserName !== "chromium", "only Chromium exposes the default font size");
+  });
+
+  test("focus clears the fixed chrome at 200% text", async ({ page }) => {
+    await useLargeText(page, DOUBLE_TEXT_PX, DOUBLE_FIXED_PX);
+    await waitForAppLoad(page);
+    for (const title of ["Pay rent !!", "Plan the roadmap *", "Reply to the landlord !", "Clean the garage"]) {
+      await createTaskViaCaptureBar(page, title);
+    }
+    // Reload so the scroll to the last new card can't land after the reset to the top.
+    await page.goto("/", { waitUntil: "networkidle" });
+    await waitForAppLoad(page);
+    expect(await rootFontPx(page)).toBe(DOUBLE_TEXT_PX);
+    await startAtMainContent(page);
+
+    expect(await findHiddenFocusStops(page, 45)).toEqual([]);
+  });
+});
+
+// On a phone the topbar wraps as text grows: 252px at 150%, where a fixed 8rem
+// margin is 192px, so Shift+Tab parked dozens of stops under the returned bar.
+test.describe("Focus at 150% text on a phone", () => {
+  test.use({ reducedMotion: "reduce", viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ browserName, clearIndexedDB }) => {
+    test.skip(browserName !== "chromium", "only Chromium exposes the default font size");
+  });
+
+  test("focus clears the wrapped topbar", async ({ page }) => {
+    test.setTimeout(PHONE_FOCUS_TIMEOUT_MS);
+    await useLargeText(page);
+    await waitForAppLoad(page);
+    for (const title of PHONE_TASKS) await createTaskViaCaptureBar(page, title);
+    await page.goto("/", { waitUntil: "networkidle" });
+    await waitForAppLoad(page);
+    expect(await rootFontPx(page)).toBe(LARGE_TEXT_PX);
+    await startAtMainContent(page);
+
+    expect(await findHiddenFocusStops(page, PHONE_PRESSES)).toEqual([]);
   });
 });

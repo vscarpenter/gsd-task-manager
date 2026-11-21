@@ -20,8 +20,10 @@ import { SubtasksField } from "./edit-drawer-subtasks-field";
 import { ReminderField } from "./edit-drawer-reminder-field";
 import { SnoozeField } from "./edit-drawer-snooze-field";
 import { DependenciesField } from "./edit-drawer-dependencies";
+import { handleTagKeyDown } from "./edit-drawer-tag-keys";
 import { LengthLimitNote } from "./limit-note";
 import { extractUrlsFromTitle } from "@/lib/capture-parser";
+import { isImeComposing } from "@/lib/ime";
 import type { EditDraft } from "./edit-draft";
 export type { EditDraft } from "./edit-draft";
 
@@ -59,7 +61,7 @@ export function EditDrawer({ open, task, initialDraft, allTasks, onClose, onSubm
 }
 
 /**
- * Close on Escape.
+ * Close on Escape, except the Escape that cancels an IME conversion.
  *
  * `onClose` may change identity between renders, so useEffectEvent keeps the
  * listener subscribed once while always calling the latest handler.
@@ -67,7 +69,7 @@ export function EditDrawer({ open, task, initialDraft, allTasks, onClose, onSubm
 function useEscapeToClose(onClose: () => void): void {
   const handleEscape = useEffectEvent(() => onClose());
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") handleEscape(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !isImeComposing(e)) handleEscape(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -379,21 +381,6 @@ function TitleAndDescriptionFields({
       <LengthLimitNote field="description" length={draft.description.length} max={SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH} />
     </>
   );
-}
-
-/** Enter/comma commits a tag; Backspace on an empty input removes the last one. */
-function handleTagKeyDown(
-  event: React.KeyboardEvent,
-  draft: ReturnType<typeof useEditDraftState>
-): void {
-  if (event.key === "Enter" || event.key === ",") {
-    event.preventDefault();
-    draft.addTag();
-    return;
-  }
-  if (event.key === "Backspace" && !draft.tagInput && draft.tags.length) {
-    draft.setTags(draft.tags.slice(0, -1));
-  }
 }
 
 /** Repeat, checklist, and estimate — the fields describing the work itself. */

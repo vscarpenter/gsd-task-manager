@@ -108,6 +108,20 @@ describe("MatrixIntro — compact one-row briefing", () => {
     expect(section?.className).toContain("sm:items-center");
   });
 
+  // A long weekday at 768px, or large text, left the sentence 0px between the
+  // date and the button. It now keeps 12rem and wraps onto its own line instead.
+  // Only from sm: below it the row is a column, where a basis sets the height.
+  // jsdom has no layout, so the geometry lives in layout-fit.spec.ts.
+  it("wraps the sentence onto its own line rather than squeezing it", () => {
+    const { container } = renderIntro();
+    const sentence = screen.getByText("The overdue task sits in Do First.");
+
+    expect(container.querySelector("section")).toHaveClass("sm:flex-wrap");
+    expect(sentence).toHaveClass("grow", "sm:basis-48");
+    expect(sentence).not.toHaveClass("basis-48");
+    expect(sentence).not.toHaveClass("flex-1");
+  });
+
   it("says 'Today's matrix' once to assistive tech", () => {
     renderIntro({ dateLabel: "Thursday, October 22", message: null });
 

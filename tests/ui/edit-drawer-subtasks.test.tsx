@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
@@ -68,6 +68,20 @@ describe("<EditDrawer> subtasks", () => {
       "t1",
       expect.anything()
     );
+  });
+
+  it("does not add a subtask when Enter confirms an IME conversion", async () => {
+    render(<EditDrawer open task={baseTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    const input = screen.getByLabelText(/add a subtask/i);
+    await user.type(input, "henkan");
+
+    const notCanceled = fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+
+    expect(screen.queryByRole("checkbox", { name: "henkan" })).toBeNull();
+    expect(input).toHaveValue("henkan");
+    // Swallowed all the same: Enter would otherwise submit the drawer's form.
+    expect(notCanceled).toBe(false);
   });
 
   it("shows existing subtasks with their completion state", () => {

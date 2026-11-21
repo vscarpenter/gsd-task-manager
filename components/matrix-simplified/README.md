@@ -105,7 +105,7 @@ Shared hooks and helpers:
 - `useMatrixWindowEvents` (`use-matrix-window-events.ts`): `(deps: MatrixWindowEventsDeps) => void`. It wires URL action parameters, deep-link parameters, the global `/` and `?` keys, and shell command window events.
 - `MatrixWindowEventsDeps` (`use-matrix-window-events.ts`): interface with `searchInputRef`, `captureInputRef`, `openCreateDrawer`, `highlightTaskById`, `applySmartViewById`, and `focusQuadrant`.
 - `useBackToClose` (`use-back-to-close.ts`): `(active: boolean, onBack: () => void) => void`. While active, browser Back calls `onBack`.
-- `useDialogFocus` (`use-dialog-focus.ts`): `(open, ref)` returns an `onKeyDown` handler. It restores prior focus on close and traps Tab inside `ref`.
+- `useDialogFocus` (`use-dialog-focus.ts`): `(open, ref)` returns an `onKeyDown` handler. It restores prior focus on close through `restoreFocusOrMainContent`, without scrolling, and traps Tab inside `ref`.
 - `useModalSurface` (`use-modal-surface.ts`): `(onClose: () => void) => { onMouseDown, onClick }`. It returns backdrop handlers and locks body scroll while mounted.
 - `usePaneOverflow` (`use-pane-overflow.ts`): `() => { containerRef, contentRef, moreBelow }`.
 - `useSmartViewOverflow` (`use-smart-view-overflow.ts`): `(viewCount: number) => SmartViewOverflow`, which is `{ containerRef, ghostRef, visibleCount }`.
@@ -151,9 +151,13 @@ Page and view:
 Shell:
 
 - `app-shell.tsx:FILL_VIEWPORT_MAIN`: a comment requires `min-h-0!` on `main`. `globals.css` sets an unlayered `main` min-height that outranks layered utilities.
+- `app-shell.tsx:COLUMN_CLASS`: `--fixed-chrome-bottom` is the height of the fixed chrome below md (the rail, plus the capture dock when the page has one). It pads the column, and `globals.css` uses it as the bottom scroll margin on focusable content in `main` and the footer, so focus never lands under that chrome (WCAG 2.4.11).
+- `index.tsx:MatrixSimplified`: controls inside `matrix-stage` carry no top scroll margin while the shell is pinned, because the stage scrolls on its own. Controls in the phone capture dock carry none either.
 - `app-shell.tsx:AppShell`: `smartViewsEnabled` falls back to `false` when `getAppPreferences()` rejects. A `cancelled` flag drops the result after unmount.
 - `topbar.tsx:SimplifiedTopbar`: the search input renders only when `onSearchChange !== undefined`.
 - `topbar.tsx:topbarClassName`: the hidden topbar moves off screen only below `md`, and returns on focus-within.
+- `topbar.tsx:usePublishedHeight`: a `ResizeObserver` writes the bar's `offsetHeight` to `--topbar-height` on the root, and unmount removes it. `globals.css` sets the top scroll margin on focusable content in `main` and the footer to that height plus 0.5rem (8rem before the bar measures, or with no bar), so focus clears the bar however far it wraps. `offsetHeight` ignores the tuck transform.
+- `capture-bar.tsx:onInputKey`: Escape blurs the input, except an Escape that `isImeComposing` reports, which cancels the conversion instead.
 - `icon-rail.tsx:MobileIconRail`: a tapped tab counts as active only while `tapped.from === pathname`.
 - `icon-rail.tsx:DesktopIconRail`: route buttons are disabled while `isPending` from `useViewTransition`. A comment requires `overflow-clip`, not hidden, so the sticky column stays put.
 
@@ -198,7 +202,7 @@ Task detail and edit drawer:
 - `edit-drawer.tsx:EditDrawerForm`: a comment explains the hand-rolled dialog. It keeps layered Escape: the first press closes the dependency popup and the second closes the drawer.
 - `edit-drawer.tsx:DrawerFooter`: the submit button is disabled unless `hasVisibleText(draft.title)`.
 - `edit-drawer.tsx:TitleAndDescriptionFields`: the title input has no `maxLength`. Its note counts the URL-stripped title against `SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH`. The description `maxLength` is `SCHEMA_LIMITS.TASK_DESCRIPTION_MAX_LENGTH`.
-- `edit-drawer.tsx:handleTagKeyDown`: Enter or `,` adds the tag. Backspace with an empty `tagInput` removes the last tag.
+- `edit-drawer-tag-keys.ts:handleTagKeyDown`: Enter or `,` adds the tag. Backspace with an empty `tagInput` removes the last tag. While an IME is composing, Enter and `,` don't add the tag, and only Enter calls `preventDefault`, so the IME can still type its comma.
 - `edit-drawer-fields.tsx:TagsField`, `SubtasksField`: the inputs are disabled at `SCHEMA_LIMITS.MAX_TAGS` and `SCHEMA_LIMITS.MAX_SUBTASKS`. Their `maxLength` values are `TAG_MAX_LENGTH` and `SUBTASK_TITLE_MAX_LENGTH`.
 - `edit-drawer-fields.tsx:EstimateField`: the number input declares `min={1}` and `max={10080}`.
 - `edit-drawer-fields.tsx:DueDateField`: picking a preset clears the custom date. `DueTimeControls` renders only when `customDate || duePreset !== "none"`.
@@ -222,7 +226,7 @@ Task detail and edit drawer:
 - `use-drawer-save.ts:useDrawerSave`: the dependency cycle check runs only in edit mode. A cycle error calls `setDependencyError` and aborts.
 - `use-drawer-save.ts:useDrawerSave`: edit mode passes `changedDraftFields(baseline ?? current, current)`. Create mode passes no `taskId` and no changed fields.
 - `use-discard-guard.ts:useDiscardGuard`: `requestClose` dismisses an open prompt, else prompts if `dirty`, else calls `onClose`.
-- `use-suggestion-combobox.ts:useSuggestionCombobox.onKeyDown`: Enter always calls `preventDefault`. `onPick` runs only when `activeIndex >= 0`. Escape is handled only while `open`.
+- `use-suggestion-combobox.ts:useSuggestionCombobox.onKeyDown`: Enter always calls `preventDefault`. `onPick` runs only when `activeIndex >= 0` and no IME is composing (`isImeComposing` from `@/lib/ime`). The arrows and Escape are ignored while an IME is composing. Escape is handled only while `open`.
 - `use-suggestion-combobox.ts:useAnchorRect`: a comment requires `capture: true` on the scroll listener, because the drawer's scroll container does not bubble scroll to `window`.
 
 Task actions and shared hooks:
@@ -278,7 +282,7 @@ Task actions and shared hooks:
 - `drag-layer.tsx:DragLayer`: writes `statusMessage` into an `aria-live="polite"` `role="status"` region.
 - `task-detail-sheet.tsx:TaskDetailContent`: on open, records `document.activeElement` and focuses the close button. On close, calls `restoreFocusOrMainContent` from `@/lib/focus-restoration`.
 - `task-detail-sheet.tsx:DetailActions`: the toggle button renders only when `onToggleComplete` is passed. It calls `onToggleComplete`, then `onClose`, so a toggle closes the sheet. Its label is "Mark not done" for a completed task.
-- `edit-drawer.tsx:useEscapeToClose`: adds and removes a `window` `"keydown"` listener. Escape calls the latest `onClose`.
+- `edit-drawer.tsx:useEscapeToClose`: adds and removes a `window` `"keydown"` listener. Escape calls the latest `onClose`, unless an IME is composing (the Escape that cancels a conversion).
 - `edit-drawer-dependencies.tsx:Suggestions`: renders the listbox through `createPortal` into `document.body`.
 - `use-edit-draft-state.ts:useAutofocusTitle`: sets a `setTimeout` of `UI_TIMING.FOCUS_DELAY_MS`, then focuses `titleRef.current`. Cleanup clears it.
 - `use-edit-draft-state.ts:appendSubtask`: calls `generateId` from `@/lib/id-generator` for each new subtask.

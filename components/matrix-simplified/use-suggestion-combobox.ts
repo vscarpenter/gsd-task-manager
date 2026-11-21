@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isImeComposing } from "@/lib/ime";
 
 interface SuggestionComboboxOptions {
   /** How many suggestions are currently listed. Wrapping is modulo this. */
@@ -59,13 +60,17 @@ export function useSuggestionCombobox(
   const { anchorRef, anchorRect } = useAnchorRect(open, count);
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    // While an IME composes, Enter confirms a conversion, and the arrows and
+    // Escape move through or cancel its candidates.
+    const composing = isImeComposing(event.nativeEvent);
     if (event.key === "Enter") {
       // Always swallowed: this field sits inside a form, and Enter here must
       // never submit it.
       event.preventDefault();
-      if (activeIndex >= 0) onPick(activeIndex);
+      if (activeIndex >= 0 && !composing) onPick(activeIndex);
       return;
     }
+    if (composing) return;
     if (count > 0 && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
       event.preventDefault();
       setActiveIndex((index) => nextIndex(event.key, index, count));

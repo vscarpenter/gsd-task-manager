@@ -82,6 +82,27 @@ describe("useDialogFocus — Tab trap", () => {
     document.body.removeChild(container);
   });
 
+  // The trigger is still where the user left it, and a plain focus() would
+  // scroll the page whenever it sits in the scroll-margin band under the topbar.
+  it("returns focus on close without scrolling the page", () => {
+    const opener = makeContainer('<button id="opener">Edit task</button>');
+    const trigger = opener.querySelector<HTMLElement>("#opener")!;
+    trigger.focus();
+    const dialog = makeContainer('<button id="a">A</button>');
+    const { rerender } = renderHook(({ open }) => useDialogFocus(open, { current: dialog }), {
+      initialProps: { open: true },
+    });
+    dialog.querySelector<HTMLElement>("#a")!.focus();
+    const focus = vi.spyOn(trigger, "focus");
+
+    rerender({ open: false });
+
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(trigger).toHaveFocus();
+    document.body.removeChild(opener);
+    document.body.removeChild(dialog);
+  });
+
   it("ignores non-Tab keys", () => {
     const container = makeContainer('<button id="a">A</button>');
     const { result } = renderHook(() => useDialogFocus(true, { current: container }));

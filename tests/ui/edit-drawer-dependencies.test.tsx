@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   DependenciesField,
@@ -313,6 +313,47 @@ describe("findDependencyCycleError", () => {
       await userEvent.keyboard("{ArrowDown}{Enter}");
 
       expect(onChange).toHaveBeenCalledWith(["a"]);
+    });
+
+    describe("during an IME composition", () => {
+      const alphaTasks = [
+        makeTask({ id: "a", title: "Alpha one" }),
+        makeTask({ id: "b", title: "Alpha two" }),
+      ];
+
+      it("should_not_pick_the_highlighted_task_when_enter_confirms_a_conversion", async () => {
+        const onChange = vi.fn();
+        render(<DependenciesField taskId="z" dependencies={[]} allTasks={alphaTasks} onChange={onChange} />);
+        const input = screen.getByTestId("dep-search");
+        await userEvent.type(input, "Alpha");
+        await userEvent.keyboard("{ArrowDown}");
+
+        const notCanceled = fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+
+        expect(onChange).not.toHaveBeenCalled();
+        // Swallowed all the same: Enter would otherwise submit the drawer's form.
+        expect(notCanceled).toBe(false);
+      });
+
+      it("should_leave_the_highlight_alone_while_arrow_keys_move_candidates", async () => {
+        render(<DependenciesField taskId="z" dependencies={[]} allTasks={alphaTasks} onChange={vi.fn()} />);
+        const input = screen.getByTestId("dep-search");
+        await userEvent.type(input, "Alpha");
+
+        fireEvent.keyDown(input, { key: "ArrowDown", keyCode: 229 });
+
+        expect(input).not.toHaveAttribute("aria-activedescendant");
+      });
+
+      it("should_keep_the_suggestions_open_when_escape_cancels_the_composition", async () => {
+        render(<DependenciesField taskId="z" dependencies={[]} allTasks={alphaTasks} onChange={vi.fn()} />);
+        const input = screen.getByTestId("dep-search");
+        await userEvent.type(input, "Alpha");
+
+        fireEvent.keyDown(input, { key: "Escape", isComposing: true });
+
+        expect(input).toHaveAttribute("aria-expanded", "true");
+      });
     });
 
     it("should_expose_the_listbox_relationship_to_assistive_tech", async () => {

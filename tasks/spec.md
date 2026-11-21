@@ -1708,3 +1708,250 @@ No schema, no synced data, and no runtime code changes.
   updated to 1.4.4 and to check every pin (AC4)
 - AC5 and AC6 are checked by running the commands, locally in a clean worktree and then
   in the PR's CI.
+
+# Spec: Usability fixes from the modern-web-guidance audit (2026-11-20)
+
+Tier: non-trivial. The work touches shared shell CSS, the `pinned` variant, and three keyboard
+handlers. The owner's design approval is the single gate; spec, plan, and implementation then
+run in one pass.
+
+## Goal
+
+Fix four usability defects that an audit against the modern-web-guidance catalog found and
+measured in the built app, so IME, keyboard, large-text, and tablet users get a matrix that
+works the way it does for everyone else.
+
+## Evidence
+
+Measured on 2026-11-20 against the production export (`bun run build:e2e`, served on port 3100)
+in headless Chromium, and in Firefox and WebKit where noted. The scratch scripts aren't
+committed; the new e2e specs below replace them.
+
+| ID | Finding | Measurement | Guide |
+|---|---|---|---|
+| F1 | Three custom key handlers act on the Enter that confirms an IME conversion | `edit-drawer.tsx:389` (tags: Enter and comma), `edit-drawer-subtasks-field.tsx:112` (subtasks: Enter), `use-suggestion-combobox.ts:62` (dependency search: Enter, arrows, Escape). The capture bar (native submit) and the cmdk palette already handle IME. | `ime-safe-enter-submit` |
+| F2 | The intro row crushes its sentence | 768x640, default text, Wednesday 30 September: the sentence is 0px wide, one word per line against the Schedule button (screenshot). 1280x720 at 24px text: 139px wide. | `respect-os-text-scale` |
+| F3 | The pinned matrix stage shrinks to a slot | 768x640: stage 98px tall. 864x720 at 18px text: 111px. F2's wrap would make the 768x640 slot smaller still. | `form-factor-adaptation` |
+| F4 | Keyboard focus lands fully hidden behind the sticky topbar, the fixed capture dock, or the phone rail (WCAG 2.4.11, AA) | Phone 390x844 matrix, Tab then Shift+Tab: 26 to 27 hidden stops in Chromium, Firefox, and WebKit. Phone `/about` 2, `/dashboard` 1. 1280x600: 1 to 3 per route. 200% text: dozens. | `form-factor-adaptation` |
+
+Checked and passing, so no work item: sideways overflow at 320px, 390px, 768px, 1280px, and 200%
+text (0 everywhere); WCAG 2.5.8 target size (card icons pass the spacing exception, and the
+Settings switch has a 44px coarse-pointer hit area); unnamed controls (none); reduced motion
+(smooth scroll and confetti both honor it); footer links clear the phone rail at full scroll.
+
+## Inputs / outputs
+
+No data shape changes. Nothing in `lib/schema.ts`, Dexie, the backup envelope, or the
+PocketBase wire model moves.
+
+- F1: a new helper, `isImeComposing(event: Pick<KeyboardEvent, "isComposing" | "keyCode">)`,
+  in a new `lib/ime.ts`. It returns true when `isComposing` is true or `keyCode === 229`. React
+  handlers pass `event.nativeEvent`. Each check sits under its key gate, as the guide requires,
+  so a mobile keyboard that reports 229 for an ordinary key (Backspace) still works. Enter is
+  always swallowed, because in the drawer's form it would submit, but it doesn't commit a tag,
+  add a subtask, or pick a dependency while composing. A composing comma is left to the IME.
+  The combobox also leaves its arrows and Escape to the IME. The drawer's window Escape listener (`useEscapeToClose`)
+  skips it as well. Without that, the combobox's early return would hand the IME's cancel
+  Escape to the drawer and close it, and the same Escape already closes the drawer from every
+  other field today.
+- F2: the intro `<section>` wraps from `sm` up (`sm:flex-wrap`), and the sentence gets a 12rem
+  flex-basis that can grow. When 12rem doesn't fit beside the date, the sentence moves to the
+  next line with the button instead of shrinking.
+- F3: the `pinned` custom variant in `app/globals.css` gets a width-aware height floor. Proposed:
+  `(width >= 64rem) and (height >= 40rem), (width >= 48rem) and (height >= 52rem)`. The
+  thresholds may be tuned during implementation to meet AC8 and AC9; any change gets logged in
+  `tasks/implementation-notes.md`.
+- F4: one rule set in `app/globals.css`, inside a cascade layer so Tailwind utilities still win
+  (the capture input's `md:scroll-mt-44` must keep working). Focusable elements in the page's
+  `main` and app footer get a top scroll margin of the topbar's measured height plus 0.5rem at
+  every width. The topbar publishes that height as `--topbar-height` (8rem stands in until it
+  measures). Review round two replaced the first build's fixed 8rem: a margin taller than the bar
+  made `focus()` jump a control in plain view, and one shorter than a wrapped bar hid focus.
+  Restoring focus after a menu or the edit drawer closes goes through `restoreFocusOrMainContent`,
+  which never scrolls. Below `md` they also get
+  `scroll-margin-bottom: var(--fixed-chrome-bottom)`. The shell column (`app-shell.tsx:128`)
+  defines that property once and uses it for its existing bottom padding too:
+  `calc(3.75rem + env(safe-area-inset-bottom))`, or `calc(10.25rem + ...)` when the capture dock
+  is present. These get a margin of 0: the sticky topbar, the fixed rail, the fixed capture dock,
+  and the matrix stage while pinned (through `@variant pinned`).
+
+Why a margin on the focusables and not `scroll-padding` on the page: page-level padding also
+fixed the hidden stops in all three engines, but it moved where `/` leaves the page (WebKit
+scrollY 436 instead of today's 151). That's the trap the 2026-11-17 capture-bar work hit with
+`scroll-padding-top`. A margin inside `main` leaves the topbar's own controls alone. The pinned
+stage exemption exists because without it, 41 focus stops landed outside the 98px stage at
+768x640.
+
+## Constraints
+
+- No new dependency. Bundle impact is one small helper in the edit drawer chunk and a few CSS
+  rules; `quality:bundle` must stay within budget.
+- The browser floor stays Next 16's default (Safari 16.4, Firefox 111). `:has()` already appears
+  in `app-shell.tsx:128`, so the dock condition reuses it; Firefox 111 to 120 fall back to the
+  rail-only margin. `isComposing` misses Safari's out-of-order composition end, so the helper
+  also checks `keyCode === 229` (the guide's first strategy). TypeScript marks `keyCode`
+  deprecated, and no lint rule rejects it.
+- Local-first and privacy are untouched: no network, storage, or sync change, and no pull
+  contract bump.
+- Coding standards Part 3: functions at most 40 lines, files around 400. `edit-drawer.tsx` is
+  already 470 lines. F1 must not grow it: the tag guard replaces lines rather than adding them,
+  or `handleTagKeyDown` moves to a smaller sibling file if `quality:shape` objects.
+- WCAG AA stays the baseline. Focus rings, reduced motion, and the 2.5.8 results must not regress.
+- Behavior that must not move: `/` and a click on search leave the page where they do today;
+  focusing the phone dock never scrolls the page; `revealCaptureInput` stays dormant below `md`;
+  a short desktop window still brings the capture bar out from under the topbar
+  (`layout-fit.spec.ts`).
+
+## Edge cases
+
+- Safari delivers `compositionend` before the Enter keydown that confirms it, so `isComposing`
+  reads false. The `keyCode === 229` check catches that keydown.
+- Android keyboards report keyCode 229 for ordinary characters. The guard only changes branches
+  that act on Enter, comma, arrows, or Escape, so typing itself is unaffected.
+- The tag field's Backspace branch already sees the composing text in `tagInput`, so it can't
+  remove a tag mid-composition. It stays as it is.
+- Enter on an empty tag or subtask field behaves as it does today.
+- Dependency picks still go through `onPick`, so circular-dependency validation is unchanged.
+  F1 only stops a pick from firing mid-composition.
+- Longer dates in other locales ("Mittwoch, 30. September") wrap the same way as long English
+  ones.
+- Notched phones: the bottom margin includes `env(safe-area-inset-bottom)`, matching the padding.
+- The topbar wraps: two rows at `md` widths (131px signed out at 768), and 252px on a phone at
+  150% text. The margin reads its measured height, so no constant has to cover every case.
+- Reduced motion turns smooth scrolling off; the margins don't depend on it.
+- iPad portrait (768x1024) must still pin.
+- Offline mode, sync conflicts, concurrent multi-device edits, and schema migrations aren't
+  affected, because nothing here touches task data.
+
+## Out of scope
+
+- The 24x16 task-card icons and 16x20 drag handle. They pass WCAG 2.5.8 through its spacing
+  exception.
+- The theme toggle's 40px width on touch. It passes AA and misses only the AAA 44px guidance.
+- Focus staying in the capture bar while the page scrolls to a new card, kept by owner decision
+  on 2026-11-17.
+- Focus inside dialogs and sheets, which Radix renders outside `main`.
+- Page-level `scroll-padding`, a change to smooth scrolling, or new intro copy.
+- The same IME check in the iOS and Android apps. If they share the pattern, that's a separate
+  parity item.
+- The persona-QA open decisions and the formal-verification sync backlog.
+
+## Acceptance criteria
+
+F1, IME composition:
+
+- AC1: `isImeComposing` returns true when `nativeEvent.isComposing` is true, true when `keyCode`
+  is 229, and false for an ordinary Enter.
+- AC2: In the tag field, Enter or comma during composition adds no tag and keeps the typed text.
+  A plain Enter still adds the tag.
+- AC3: In the subtask field, Enter during composition adds no subtask. A plain Enter still adds
+  one.
+- AC4: In dependency search, Enter, ArrowDown, ArrowUp, and Escape during composition don't pick,
+  move the highlight, or close the list. The existing combobox tests still pass.
+- AC4a: Escape during composition doesn't close the drawer. A plain Escape still does.
+
+F2, intro row:
+
+- AC5: At 768x640, default text, with the clock fixed to Wednesday 30 September 2026, the intro
+  sentence is at least 12rem wide and doesn't overlap the Schedule button.
+- AC6: At 1280x720 with a 24px default font, same date, the sentence is at least 12rem wide.
+- AC7: At 1280x800, default text, the date, sentence, and button still share one row.
+- AC7a (review round two): At 390x844 the sentence's box holds no more than one font size of
+  space beyond its text. The 12rem basis applies only from `sm`; below it the row is a column.
+
+F3, pinned stage:
+
+- AC8: At 768x640 and 900x660 the matrix page scrolls: `main` isn't overflow-hidden and the
+  stage isn't a scroll container.
+- AC9: At 1024x640, 1280x720, and 768x1024 the shell pins, and the stage is at least 10rem tall.
+
+F4, focus not obscured:
+
+- AC10: Phone 390x844, matrix with 9 tasks: Tab forward through the tasks, then Shift+Tab back.
+  No focus stop sits fully under the topbar, the rail, or the dock. Runs in Chromium, Firefox,
+  and WebKit.
+- AC11: Phone 390x844, `/about` and `/dashboard`: the same check.
+- AC12: At 1280x600 and 768x640 (page scroll), on the matrix, `/settings`, `/about`, and
+  `/dashboard`: no focus stop sits fully under the sticky topbar.
+- AC13: At 1024x640 (pinned): no focus stop lands outside the visible part of its scroll
+  container.
+- AC14: The topbar's controls, the rail's links, and the phone dock's input compute
+  `scroll-margin-top: 0px`. Focusing the dock input from scrollY 600 leaves scrollY at 600.
+- AC15: At 1280x800 with a 32px default font (Chromium only): no focus stop sits fully under the
+  fixed chrome.
+- AC15a (review round two): Phone 390x844 at 150% text (Chromium only): no focus stop sits fully
+  under the fixed chrome.
+- AC15b (review round two): At 768x640, every button in `main` computes a top scroll margin at
+  least as tall as the topbar.
+- AC15c (review round two): Closing a card menu (390x844 with the topbar tucked, and 1280x600)
+  or the edit drawer (390x844) leaves every painted frame at the parked offset. Both are marked
+  `fixme` in WebKit, which moves the page itself when a modal's scroll lock lifts. The menu case
+  predates this work: it jumps with every margin at 0. The drawer reached the same offset once in
+  a full run.
+
+All:
+
+- AC16: The existing unit and e2e suites pass, including `layout-fit`, `text-scaling`,
+  `quiet-chrome`, and `layout-overlap` in all three browsers on the export build. Gates:
+  `bun run test`, `bun typecheck`, `bun run typecheck:tests`, `bun lint`,
+  `bun run quality:shape`, `bun run knip`, `bun run build`, `bun run quality:bundle`.
+
+## Open question for the approval
+
+F3 changes when the shell pins. I recommend (a), the width-aware floor above: narrow `md`
+windows scroll the page the way short windows already do, with no nested scrolling. The
+alternatives are (b) a 10rem stage floor with a scrollable `main`, which keeps pinning but nests
+two scroll areas, and (c) leaving the slot as it is. Default if unanswered: (a).
+
+## Test stubs
+
+Unit (Vitest):
+
+```ts
+// tests/data/ime.test.ts (new)
+describe("isImeComposing", () => {
+  it("reports composition while the native event is composing", () => {}); // AC1
+  it("reports composition for the keyCode 229 Enter Safari sends after compositionend", () => {}); // AC1
+  it("treats an ordinary Enter as not composing", () => {}); // AC1
+});
+
+// tests/ui/edit-drawer-fields.test.tsx
+it("does not add a tag when Enter confirms an IME conversion", () => {}); // AC2
+it("does not add a tag when a comma arrives during composition", () => {}); // AC2
+it("adds the tag on a plain Enter", () => {}); // AC2
+
+// tests/ui/edit-drawer-subtasks.test.tsx
+it("does not add a subtask when Enter confirms an IME conversion", () => {}); // AC3
+it("adds a subtask on a plain Enter", () => {}); // AC3
+
+// tests/ui/edit-drawer-dependencies.test.tsx
+it("does not pick the highlighted task when Enter confirms an IME conversion", () => {}); // AC4
+it("leaves the highlight alone while arrow keys move IME candidates", () => {}); // AC4
+it("keeps the suggestions open when Escape cancels a composition", () => {}); // AC4
+
+// tests/ui/edit-drawer.test.tsx
+it("stays open when Escape cancels an IME composition", () => {}); // AC4a
+```
+
+End to end (Playwright, export build):
+
+```ts
+// tests/e2e/layout-fit.spec.ts
+test("the intro sentence keeps 12rem beside a long date at 768px", async () => {}); // AC5
+test("the intro row stays on one line at 1280px", async () => {}); // AC7
+test("narrow md windows scroll the page instead of pinning a slot", async () => {}); // AC8
+test("a pinned stage is never shorter than 10rem", async () => {}); // AC9
+
+// tests/e2e/text-scaling.spec.ts
+test("the intro sentence keeps 12rem at 150% text", async () => {}); // AC6
+test("focus clears the fixed chrome at 200% text", async () => {}); // AC15
+
+// tests/e2e/focus-not-obscured.spec.ts (new)
+test("phone focus never hides behind the dock, rail, or topbar", async () => {}); // AC10
+test("phone focus clears the rail on About and Review", async () => {}); // AC11
+test("focus clears the sticky topbar in a short window", async () => {}); // AC12
+test("focus stays visible inside a small pinned stage", async () => {}); // AC13
+test("the topbar, rail, and dock carry no scroll margin", async () => {}); // AC14
+```
+
+AC16 is checked by running the gates locally and in the PR's CI.

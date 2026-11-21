@@ -342,6 +342,17 @@ describe("<CaptureBar>", () => {
     expect(input).not.toHaveFocus();
   });
 
+  // That Escape cancels the IME's conversion; blurring would drop the composition.
+  it("keeps focus when Escape cancels an IME composition", () => {
+    render(<CaptureBar onSubmit={vi.fn()} />);
+    const input = screen.getByLabelText("Add a task");
+    input.focus();
+
+    fireEvent.keyDown(input, { key: "Escape", isComposing: true });
+
+    expect(input).toHaveFocus();
+  });
+
   it("uses a narrow-screen grid and a 16px mobile input", () => {
     render(<CaptureBar onSubmit={vi.fn()} />);
 

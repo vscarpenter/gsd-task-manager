@@ -1,6 +1,7 @@
 "use client";
 
 import { XIcon } from "lucide-react";
+import { isImeComposing } from "@/lib/ime";
 import { cn } from "@/lib/utils";
 import type { Subtask } from "@/lib/types";
 import { SCHEMA_LIMITS } from "@/lib/constants/schema";
@@ -110,8 +111,10 @@ function SubtaskEntry({
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => {
         if (e.key !== "Enter") return;
+        // Swallowed either way, or Enter submits the drawer's form. An IME's
+        // Enter confirms a conversion, so only a plain one adds the subtask.
         e.preventDefault();
-        onCommit();
+        if (!isImeComposing(e.nativeEvent)) onCommit();
       }}
       placeholder="Add a subtask…"
       aria-label="Add a subtask"

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditDrawer } from "@/components/matrix-simplified/edit-drawer";
 import type { TaskRecord } from "@/lib/types";
@@ -115,6 +115,16 @@ describe("<EditDrawer>", () => {
     render(<EditDrawer open task={mockTask} onClose={onClose} onSubmit={vi.fn()} />);
     await user.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("stays open when Escape cancels an IME composition", async () => {
+    const onClose = vi.fn();
+    render(<EditDrawer open task={mockTask} onClose={onClose} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+
+    fireEvent.keyDown(screen.getByLabelText(/^title$/i), { key: "Escape", isComposing: true });
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("asks before discarding a description edit", async () => {
@@ -260,6 +270,61 @@ describe("<EditDrawer>", () => {
       expect.objectContaining({ tags: ["work"] }),
       undefined
     );
+  });
+
+  it("does not add a tag when Enter confirms an IME conversion", async () => {
+    render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    const tagInput = screen.getByLabelText("Add a tag");
+    await user.type(tagInput, "kanji");
+
+    fireEvent.keyDown(tagInput, { key: "Enter", isComposing: true });
+
+    expect(within(screen.getByRole("group", { name: "Tags" })).queryAllByRole("button")).toHaveLength(0);
+    expect(tagInput).toHaveValue("kanji");
+  });
+
+  it("does not add a tag when a comma arrives during composition", async () => {
+    render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+    const tagInput = screen.getByLabelText("Add a tag");
+    await user.type(tagInput, "kanji");
+
+    fireEvent.keyDown(tagInput, { key: ",", keyCode: 229 });
+
+    expect(within(screen.getByRole("group", { name: "Tags" })).queryAllByRole("button")).toHaveLength(0);
+    expect(tagInput).toHaveValue("kanji");
+  });
+
+  // Enter's default action in a form field is implicit submission.
+  it("still swallows the Enter that confirms an IME conversion", async () => {
+    render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+
+    const notCanceled = fireEvent.keyDown(screen.getByLabelText("Add a tag"), { key: "Enter", keyCode: 229 });
+
+    expect(notCanceled).toBe(false);
+  });
+
+  // A Chinese IME types a full-width comma with this key.
+  it("leaves a comma typed during composition to the IME", async () => {
+    render(<EditDrawer open task={null} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+
+    const notCanceled = fireEvent.keyDown(screen.getByLabelText("Add a tag"), { key: ",", isComposing: true });
+
+    expect(notCanceled).toBe(true);
+  });
+
+  // Mobile keyboards report keyCode 229 for ordinary keys, so the composition
+  // check belongs only on the keys an IME claims.
+  it("removes the last tag on Backspace even when the keyboard reports keyCode 229", async () => {
+    render(<EditDrawer open task={mockTask} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText(/^title$/i)).toHaveFocus());
+
+    fireEvent.keyDown(screen.getByLabelText("Add a tag"), { key: "Backspace", keyCode: 229 });
+
+    expect(within(screen.getByRole("group", { name: "Tags" })).queryAllByRole("button")).toHaveLength(0);
   });
 
   describe("create mode (task is null)", () => {

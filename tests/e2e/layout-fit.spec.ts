@@ -11,12 +11,46 @@ import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./help
  * these check the geometry.
  */
 const ROW_TOLERANCE_PX = 4;
-// Under the 40rem (640px) height the shell needs before it pins.
+// Under the 40rem (640px) height a 64rem-wide shell needs before it pins.
+// Narrower md windows need 52rem.
 const UNPINNED_HEIGHT_PX = 600;
 // Where a scrolled element's top sits when it's parked behind the topbar.
 const PARKED_INSET_PX = 8;
 // How far under the topbar the capture bar sits when it's in view but inside its scroll margin.
 const VISIBLE_GAP_PX = 6;
+// The narrowest the intro sentence may get before it moves to its own line.
+const SENTENCE_FLOOR_REM = 12;
+// The least height a pinned matrix stage may have.
+const STAGE_FLOOR_REM = 10;
+// The longest English weekday and a long month, in the date heading.
+const LONG_DATE = new Date("2026-09-30T10:00:00");
+
+const remPx = (page: Page, rem: number) =>
+  page.evaluate((n) => n * Number.parseFloat(getComputedStyle(document.documentElement).fontSize), rem);
+
+/** The intro with its widest parts: a long date and the plural Schedule label. */
+async function loadLongIntro(page: Page): Promise<void> {
+  await page.clock.setFixedTime(LONG_DATE);
+  await page.reload();
+  await waitForAppLoad(page);
+  await createTaskViaCaptureBar(page, "Plan the roadmap *");
+  await createTaskViaCaptureBar(page, "Read the RFC *");
+}
+
+const introSentence = (page: Page) => page.locator("section:has(h1) > p");
+const scheduleButton = (page: Page) => page.getByRole("button", { name: /^Schedule( is empty| · )/ });
+
+/** How the matrix shell lays out: pinned to the viewport, or scrolling with the page. */
+function readShell(page: Page) {
+  return page.evaluate(() => {
+    const stage = document.querySelector<HTMLElement>("[data-testid='matrix-stage']")!;
+    return {
+      mainOverflow: getComputedStyle(document.querySelector("main")!).overflowY,
+      stageOverflow: getComputedStyle(stage).overflowY,
+      stageHeight: stage.getBoundingClientRect().height,
+    };
+  });
+}
 
 async function centerY(locator: Locator): Promise<number> {
   const rect = await locator.boundingBox();
@@ -121,6 +155,77 @@ test.describe("Layout fit", () => {
     }
   });
 
+  // The sentence sat between a date and a button that never shrink. At 768px on
+  // a Wednesday it had 0px left, so it broke one word per line.
+  test("the intro sentence keeps 12rem beside a long date at 768px", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 640 });
+    await loadLongIntro(page);
+
+    const sentence = (await introSentence(page).boundingBox())!;
+    const button = (await scheduleButton(page).boundingBox())!;
+    expect(sentence.width).toBeGreaterThanOrEqual(await remPx(page, SENTENCE_FLOOR_REM));
+    const overlaps = sentence.x < button.x + button.width && button.x < sentence.x + sentence.width
+      && sentence.y < button.y + button.height && button.y < sentence.y + sentence.height;
+    expect(overlaps, "the sentence runs into the Schedule button").toBe(false);
+  });
+
+  test("the intro row stays on one line at 1280px", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await loadLongIntro(page);
+
+    const date = await centerY(page.locator("section:has(h1) > div"));
+    for (const [name, part] of [["sentence", introSentence(page)], ["button", scheduleButton(page)]] as const) {
+      expect(Math.abs((await centerY(part)) - date), name).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+    }
+  });
+
+  // Below sm the row is a column, and there a flex-basis sets the height, so a
+  // 12rem basis left about 150px of blank space under the sentence on a phone.
+  test("the intro sentence takes only its own lines on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loadLongIntro(page);
+
+    const sentence = await introSentence(page).evaluate((p) => {
+      const text = document.createRange();
+      text.selectNodeContents(p);
+      return {
+        blank: p.getBoundingClientRect().height - text.getBoundingClientRect().height,
+        fontSize: Number.parseFloat(getComputedStyle(p).fontSize),
+      };
+    });
+    // A line's leading is the only space the box may hold beyond its text.
+    expect(sentence.blank).toBeLessThan(sentence.fontSize);
+  });
+
+  // Wide enough to pin but short, the shell left the matrix a 98px scroller at
+  // 768x640. Narrow md windows now need more height before they pin.
+  test("narrow md windows scroll the page instead of pinning a slot", async ({ page }) => {
+    for (const viewport of [{ width: 768, height: 640 }, { width: 900, height: 660 }]) {
+      await page.setViewportSize(viewport);
+      await waitForAppLoad(page);
+
+      const shell = await readShell(page);
+      const size = `${viewport.width}x${viewport.height}`;
+      expect(shell.mainOverflow, `main at ${size}`).not.toBe("hidden");
+      expect(shell.stageOverflow, `stage at ${size}`).toBe("visible");
+    }
+  });
+
+  test("a pinned stage is never shorter than 10rem", async ({ page }) => {
+    // The longest date, so the intro above the stage is at its tallest.
+    await page.clock.setFixedTime(LONG_DATE);
+    await page.reload();
+    for (const viewport of [{ width: 1024, height: 640 }, { width: 1280, height: 720 }, { width: 768, height: 1024 }]) {
+      await page.setViewportSize(viewport);
+      await waitForAppLoad(page);
+
+      const shell = await readShell(page);
+      const size = `${viewport.width}x${viewport.height}`;
+      expect(shell.mainOverflow, `pinned at ${size}`).toBe("hidden");
+      expect(shell.stageHeight, `stage at ${size}`).toBeGreaterThanOrEqual(await remPx(page, STAGE_FLOOR_REM));
+    }
+  });
+
   // On a screen too short for two 280px pane rows, the stage scrolls and each
   // row keeps its floor. The labels used to split the visible height instead,
   // so at 800px tall "Not important" sat 122px above the middle of its row.
@@ -137,7 +242,7 @@ test.describe("Layout fit", () => {
     }
   });
 
-  // Below 40rem tall the shell stops pinning and the page scrolls. The capture
+  // Below 40rem tall a wide shell stops pinning and the page scrolls. The capture
   // bar's wrapper shared the topbar's z-index and came later in the DOM, so it
   // slid over the bar for about 100px of that scroll.
   test("nothing slides over the topbar when a short window scrolls", async ({ page }) => {
