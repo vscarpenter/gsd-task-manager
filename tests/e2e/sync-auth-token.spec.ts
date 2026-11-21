@@ -215,7 +215,8 @@ test.describe("Cloud Sync auth token", () => {
     }
   });
 
-  test("doesn't count a prefetch that navigation cancels as a failed request", async ({ page }) => {
+  test("doesn't count a prefetch that navigation cancels as a failed request", async ({ page, baseURL }) => {
+    test.skip(!baseURL?.includes(":3100"), "Only production builds prefetch");
     // Holding RSC prefetches open makes the navigation below cancel one every
     // time, which on CI happened only when a prefetch was slow.
     const isPrefetch = (url: URL) => url.searchParams.has("_rsc");
