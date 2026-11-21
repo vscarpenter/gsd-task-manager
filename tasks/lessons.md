@@ -635,3 +635,25 @@ Adding a wire column is not enough. A client that pulled a record before the col
   at about 240ms each ran 28.2 to 29.6 seconds in CI's WebKit against the 30s
   default, then timed out on a run 15% slower. Compare each new test's report
   duration to its timeout, and set `test.setTimeout` when it passes 70%.
+
+## Commitment gates (2026-11-21)
+
+- **A required check gates nothing while a bypass exists.** #759 merged four
+  seconds before its required `test` check finished, through the admin bypass
+  that code-owner review forced on every owner PR. Adding more required checks
+  wouldn't have stopped it. Turning off the unsatisfiable rule and emptying the
+  bypass list did.
+- **Read the failure artifact before naming a flake's cause.** The
+  `review-remediation` flake was logged as "reads IndexedDB once without
+  polling". The failed attempt's screenshot showed the card title as "Draft
+  protectionSave this without Enter": the drawer's 50ms title autofocus took
+  the fill. A poll would have kept failing and hidden nothing; reading the
+  screenshot took a minute.
+- **Each engine names a cancelled load differently.** Chromium says
+  `net::ERR_ABORTED`, Firefox `NS_BINDING_ABORTED`, and WebKit text containing
+  "cancelled". A filter that knows only one of them fails whenever a
+  navigation cancels a prefetch in the others.
+- **Make a check and the flow it judges agree in the same PR.** The release
+  command titled its PRs "Release vX.Y.Z", so the new `pr-shape` rule would
+  have failed the next release. Grep for every producer of what a new check
+  inspects before shipping the check.
