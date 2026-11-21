@@ -18,9 +18,15 @@ const TASKS = [
   "File taxes !!", "Read the RFC *", "Book the dentist !", "Sort the photos", "Renew passport *",
 ];
 
+/**
+ * Ends on a fresh load: after a capture the matrix scrolls to the new card on a
+ * later frame, and that scroll must not land in the middle of a check.
+ */
 async function loadMatrixWithTasks(page: Page): Promise<void> {
   await waitForAppLoad(page);
   for (const title of TASKS) await createTaskViaCaptureBar(page, title);
+  await page.reload({ waitUntil: "networkidle" });
+  await waitForAppLoad(page);
 }
 
 async function hiddenStopsOn(page: Page, route: string): Promise<string[]> {
