@@ -2,52 +2,41 @@
 
 Complete these settings on GitHub to secure your repository for public contributions.
 
-## Step 1: Branch Protection Rules
+## Step 1: The `main-protection` ruleset
 
-Navigate to: **Settings → Branches → Add branch protection rule**
+Navigate to: **Settings → Rules → Rulesets → main-protection** (target: the default branch).
 
-### Branch name pattern: `main`
-
-Check these options:
+`main` is protected by a ruleset, not classic branch protection, so
+`gh api repos/{owner}/{repo}/branches/main/protection` returns 404. Read the
+live rules with `gh api repos/{owner}/{repo}/rulesets/8643215`.
 
 - [x] **Require a pull request before merging**
-  - [x] Require approvals: **1**
-  - [x] Dismiss stale pull request approvals when new commits are pushed
-  - [x] Require review from Code Owners
-  - [x] Require approval of the most recent reviewable push
+  - Required approvals: **0**. The sole owner can't approve their own PRs, so the
+    required checks are the gate.
+  - [ ] Require review from Code Owners: **off**. It can never be satisfied on the
+    owner's own PRs, and when it was on it forced a bypass on every merge, which
+    also skipped the required checks.
+  - [x] Dismiss stale approvals when new commits are pushed
+  - [x] Require conversation resolution before merging. Resolve review-bot threads
+    before merging; nothing bypasses this.
 
-- [x] **Require status checks to pass before merging**
-  - [x] Require branches to be up to date before merging
-  - Required checks produced by `.github/workflows/ci.yml`:
-    - `typecheck`
-    - `lint`
-    - `test`
-    - `build`
-  - To enable: Settings → Branches → branch protection rule for `main` →
-    "Require status checks to pass before merging" → search for each name
-    above and add it. (The checks must have run at least once on any branch
-    before they appear as searchable options.)
+- [x] **Require status checks to pass**
+  - Branches don't need to be up to date before merging.
+  - Required checks:
+    - `lint`, `typecheck`, `test`, `build` (`.github/workflows/ci.yml`)
+    - `audit` (`.github/workflows/security-audit.yml`)
+    - `e2e (chromium)`, `e2e (firefox)`, `e2e (webkit)` (`.github/workflows/ci.yml`)
+    - `pr-shape` (`.github/workflows/pr-shape.yml`). A PR over 15 counted files
+      needs the `large-pr` label, and a version bump needs a `chore(release)` title.
+  - A check must have run at least once before the ruleset can require it.
 
-- [x] **Require conversation resolution before merging**
+- [x] **Require linear history**
+- [x] **Block force pushes**
+- [x] **Restrict deletions**
 
-- [x] **Require linear history** (optional but recommended for clean git history)
-
-- [x] **Do not allow bypassing the above settings**
-  - Leave "Allow specified actors to bypass" unchecked
-
-- [x] **Restrict who can push to matching branches**
-  - Add yourself as the only allowed pusher
-  - Or leave empty to allow only PR merges
-
-- [x] **Require deployments to succeed before merging** (skip for now)
-
-- [x] **Lock branch** (leave unchecked - allows PRs)
-
-- [x] **Do not allow force pushes**
-
-- [x] **Allow deletions** (leave unchecked)
-
-Click **Create** or **Save changes**
+- [x] **No bypass list.** Leave "Bypass list" empty. Every merge, the owner's
+  included, waits for every required check. In an emergency, edit the ruleset
+  on purpose; don't merge around it.
 
 ## Step 2: General Repository Settings
 
