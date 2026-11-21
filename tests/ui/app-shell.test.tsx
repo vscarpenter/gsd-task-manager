@@ -483,7 +483,7 @@ describe("AppShell fillViewport", () => {
       </AppShell>
     );
 
-    // `pinned` is md plus a minimum height in rem (globals.css), so a reader
+    // `pinned` needs a minimum height in rem as well as md (globals.css), so a reader
     // with large text on a short screen gets a scrolling page, not a sliver.
     const main = screen.getByRole("main");
     expect(main.className).toContain("pinned:flex");

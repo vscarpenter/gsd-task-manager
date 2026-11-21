@@ -51,7 +51,8 @@ export function MatrixIntro({ dateLabel, message, scheduleCount, onFocusSchedule
         </h1>
       </div>
 
-      <p className="min-w-0 grow basis-48 text-small text-foreground-muted">
+      {/* sm only: below it the row is a column, where a basis sets the height. */}
+      <p className="min-w-0 grow sm:basis-48 text-small text-foreground-muted">
         {message ?? " "}
       </p>
 

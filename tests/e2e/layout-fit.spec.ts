@@ -11,7 +11,8 @@ import { createTaskViaCaptureBar, findTopbarCover, waitForAppLoad } from "./help
  * these check the geometry.
  */
 const ROW_TOLERANCE_PX = 4;
-// Under the 40rem (640px) height the shell needs before it pins.
+// Under the 40rem (640px) height a 64rem-wide shell needs before it pins.
+// Narrower md windows need 52rem.
 const UNPINNED_HEIGHT_PX = 600;
 // Where a scrolled element's top sits when it's parked behind the topbar.
 const PARKED_INSET_PX = 8;
@@ -178,6 +179,24 @@ test.describe("Layout fit", () => {
     }
   });
 
+  // Below sm the row is a column, and there a flex-basis sets the height, so a
+  // 12rem basis left about 150px of blank space under the sentence on a phone.
+  test("the intro sentence takes only its own lines on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loadLongIntro(page);
+
+    const sentence = await introSentence(page).evaluate((p) => {
+      const text = document.createRange();
+      text.selectNodeContents(p);
+      return {
+        blank: p.getBoundingClientRect().height - text.getBoundingClientRect().height,
+        fontSize: Number.parseFloat(getComputedStyle(p).fontSize),
+      };
+    });
+    // A line's leading is the only space the box may hold beyond its text.
+    expect(sentence.blank).toBeLessThan(sentence.fontSize);
+  });
+
   // Wide enough to pin but short, the shell left the matrix a 98px scroller at
   // 768x640. Narrow md windows now need more height before they pin.
   test("narrow md windows scroll the page instead of pinning a slot", async ({ page }) => {
@@ -193,6 +212,9 @@ test.describe("Layout fit", () => {
   });
 
   test("a pinned stage is never shorter than 10rem", async ({ page }) => {
+    // The longest date, so the intro above the stage is at its tallest.
+    await page.clock.setFixedTime(LONG_DATE);
+    await page.reload();
     for (const viewport of [{ width: 1024, height: 640 }, { width: 1280, height: 720 }, { width: 768, height: 1024 }]) {
       await page.setViewportSize(viewport);
       await waitForAppLoad(page);
@@ -220,7 +242,7 @@ test.describe("Layout fit", () => {
     }
   });
 
-  // Below 40rem tall the shell stops pinning and the page scrolls. The capture
+  // Below 40rem tall a wide shell stops pinning and the page scrolls. The capture
   // bar's wrapper shared the topbar's z-index and came later in the DOM, so it
   // slid over the bar for about 100px of that scroll.
   test("nothing slides over the topbar when a short window scrolls", async ({ page }) => {

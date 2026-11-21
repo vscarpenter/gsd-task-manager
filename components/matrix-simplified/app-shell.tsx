@@ -56,7 +56,8 @@ interface AppShellProps {
   /** Tuck the topbar away on scroll-down at compact widths. The matrix opts in. */
   quietChromeOnScroll?: boolean;
   /**
-   * Pin the shell to the viewport at md+ and hand the remaining height to the
+   * Pin the shell to the viewport where the `pinned` variant holds (md and up,
+   * with a height floor; see globals.css) and hand the remaining height to the
    * page as a flex column, so a child can scroll internally instead of the
    * page. The matrix opts in; every other route keeps page scroll. Compact
    * widths are untouched either way.
