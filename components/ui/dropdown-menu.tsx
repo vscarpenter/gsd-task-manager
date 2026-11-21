@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import { cn } from "@/lib/utils";
 
 export const DropdownMenu = DropdownMenuPrimitive.Root;
@@ -55,10 +56,28 @@ export function DropdownMenuSubContent({
 }
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
 
+/**
+ * Radix puts focus back on the trigger with a plain focus(), which scrolls the
+ * page whenever the trigger sits inside the scroll margin under the topbar.
+ * The trigger is still where the user left it (a modal menu freezes the page),
+ * so when focus was lost with the menu it goes back without a scroll. The menu
+ * names its trigger in aria-labelledby. Focus that already moved on, or a
+ * trigger that can't be found, is left to Radix.
+ */
+function returnFocusToTrigger(event: Event): void {
+  if (document.activeElement && document.activeElement !== document.body) return;
+  const menu = event.target instanceof Element ? event.target : null;
+  const trigger = document.getElementById(menu?.getAttribute("aria-labelledby") ?? "");
+  if (!trigger) return;
+  event.preventDefault();
+  restoreFocusOrMainContent(trigger);
+}
+
 export function DropdownMenuContent({
   className,
   sideOffset = 4,
   ref,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentPropsWithRef<typeof DropdownMenuPrimitive.Content>) {
   return (
@@ -66,6 +85,10 @@ export function DropdownMenuContent({
     <DropdownMenuPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}
+      onCloseAutoFocus={(event) => {
+        onCloseAutoFocus?.(event);
+        if (!event.defaultPrevented) returnFocusToTrigger(event);
+      }}
       className={cn(
         "z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-card p-1 text-foreground shadow-md",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",

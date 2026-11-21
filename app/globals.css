@@ -438,8 +438,11 @@ main {
 /* WCAG 2.4.11 Focus Not Obscured. The topbar sticks over the page, and below md
    the rail (plus the capture dock on the matrix) sits fixed over its bottom. Tab
    parked focus under that chrome, 26 times on the phone matrix, so focusable
-   content keeps a margin clear of it. 8rem covers the tallest topbar measured:
-   123px, two rows on a phone. --fixed-chrome-bottom comes from AppShell.
+   content keeps a margin clear of it. The topbar publishes its measured height
+   as --topbar-height, because it wraps as text grows (252px on a phone at 150%)
+   and a margin taller than the bar made focus() jump a control in plain view.
+   8rem stands in until the bar has measured itself, and on pages without one.
+   --fixed-chrome-bottom comes from AppShell.
    Margins on the controls, not scroll-padding on the page: page padding also
    moved where "/" leaves the page. The chrome sits outside main and needs none.
    The phone dock is fixed too, and a margin on its input would wake
@@ -448,7 +451,8 @@ main {
    Layered, so utilities such as the capture input's md:scroll-mt-44 still win. */
 @layer components {
   :where(main, main + footer) :where(a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])) {
-    scroll-margin-top: 8rem;
+    /* The extra 0.5rem keeps the focus ring and its offset clear of the bar. */
+    scroll-margin-top: calc(var(--topbar-height, 7.5rem) + 0.5rem);
   }
 
   @media (width < 48rem) {

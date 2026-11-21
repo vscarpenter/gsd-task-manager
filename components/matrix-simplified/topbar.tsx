@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { SearchIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useSyncStatus } from "@/lib/hooks/use-sync-status";
@@ -33,9 +33,12 @@ export function SimplifiedTopbar({
   const syncStatus = useSyncStatus();
   const hidden = useScrollChrome(quietOnScroll);
   const hasSearch = onSearchChange !== undefined;
+  const barRef = useRef<HTMLElement>(null);
+  usePublishedHeight(barRef);
 
   return (
     <header
+      ref={barRef}
       data-chrome-hidden={hidden ? "true" : undefined}
       className={topbarClassName(hidden)}
     >
@@ -110,6 +113,28 @@ function TopbarSearch({
  * control that takes focus while tucked away pulls the bar back, so a keyboard
  * user on a phone never types into an off-screen field.
  */
+const HEIGHT_PROPERTY = "--topbar-height";
+
+/**
+ * Publishes the bar's height on the root as --topbar-height. The bar wraps as
+ * text grows, so the scroll margins in globals.css that keep a focused control
+ * clear of it read this rather than a fixed size. offsetHeight ignores the
+ * tuck transform, so a tucked bar still reports the height it comes back at.
+ */
+function usePublishedHeight(ref: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const bar = ref.current;
+    if (!bar) return;
+    const root = document.documentElement.style;
+    const observer = new ResizeObserver(() => root.setProperty(HEIGHT_PROPERTY, `${bar.offsetHeight}px`));
+    observer.observe(bar);
+    return () => {
+      observer.disconnect();
+      root.removeProperty(HEIGHT_PROPERTY);
+    };
+  }, [ref]);
+}
+
 function topbarClassName(hidden: boolean): string {
   return cn(
     "sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-border/60",

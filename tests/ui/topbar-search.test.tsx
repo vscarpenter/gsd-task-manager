@@ -60,4 +60,30 @@ describe("SimplifiedTopbar", () => {
     expect(actions).toContainElement(screen.getByTestId("topbar-sync"));
     expect(actions).toContainElement(screen.getByRole("button", { name: "Open command palette" }));
   });
+
+  // The bar wraps as text grows (252px on a phone at 150%), so the scroll
+  // margins that keep focus clear of it read its measured height.
+  it("publishes its height for the scroll margins and withdraws it on unmount", () => {
+    vi.stubGlobal("ResizeObserver", class {
+      private readonly callback: ResizeObserverCallback;
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback;
+      }
+      observe(): void {
+        this.callback([], this as unknown as ResizeObserver);
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+    });
+    const height = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(123);
+    const root = document.documentElement.style;
+
+    const { unmount } = render(<SimplifiedTopbar title="Matrix" />);
+    expect(root.getPropertyValue("--topbar-height")).toBe("123px");
+
+    unmount();
+    expect(root.getPropertyValue("--topbar-height")).toBe("");
+    height.mockRestore();
+    vi.unstubAllGlobals();
+  });
 });

@@ -105,7 +105,7 @@ Shared hooks and helpers:
 - `useMatrixWindowEvents` (`use-matrix-window-events.ts`): `(deps: MatrixWindowEventsDeps) => void`. It wires URL action parameters, deep-link parameters, the global `/` and `?` keys, and shell command window events.
 - `MatrixWindowEventsDeps` (`use-matrix-window-events.ts`): interface with `searchInputRef`, `captureInputRef`, `openCreateDrawer`, `highlightTaskById`, `applySmartViewById`, and `focusQuadrant`.
 - `useBackToClose` (`use-back-to-close.ts`): `(active: boolean, onBack: () => void) => void`. While active, browser Back calls `onBack`.
-- `useDialogFocus` (`use-dialog-focus.ts`): `(open, ref)` returns an `onKeyDown` handler. It restores prior focus on close and traps Tab inside `ref`.
+- `useDialogFocus` (`use-dialog-focus.ts`): `(open, ref)` returns an `onKeyDown` handler. It restores prior focus on close through `restoreFocusOrMainContent`, without scrolling, and traps Tab inside `ref`.
 - `useModalSurface` (`use-modal-surface.ts`): `(onClose: () => void) => { onMouseDown, onClick }`. It returns backdrop handlers and locks body scroll while mounted.
 - `usePaneOverflow` (`use-pane-overflow.ts`): `() => { containerRef, contentRef, moreBelow }`.
 - `useSmartViewOverflow` (`use-smart-view-overflow.ts`): `(viewCount: number) => SmartViewOverflow`, which is `{ containerRef, ghostRef, visibleCount }`.
@@ -156,6 +156,7 @@ Shell:
 - `app-shell.tsx:AppShell`: `smartViewsEnabled` falls back to `false` when `getAppPreferences()` rejects. A `cancelled` flag drops the result after unmount.
 - `topbar.tsx:SimplifiedTopbar`: the search input renders only when `onSearchChange !== undefined`.
 - `topbar.tsx:topbarClassName`: the hidden topbar moves off screen only below `md`, and returns on focus-within.
+- `topbar.tsx:usePublishedHeight`: a `ResizeObserver` writes the bar's `offsetHeight` to `--topbar-height` on the root, and unmount removes it. `globals.css` sets the top scroll margin on focusable content in `main` and the footer to that height plus 0.5rem (8rem before the bar measures, or with no bar), so focus clears the bar however far it wraps. `offsetHeight` ignores the tuck transform.
 - `capture-bar.tsx:onInputKey`: Escape blurs the input, except an Escape that `isImeComposing` reports, which cancels the conversion instead.
 - `icon-rail.tsx:MobileIconRail`: a tapped tab counts as active only while `tapped.from === pathname`.
 - `icon-rail.tsx:DesktopIconRail`: route buttons are disabled while `isPending` from `useViewTransition`. A comment requires `overflow-clip`, not hidden, so the sticky column stays put.

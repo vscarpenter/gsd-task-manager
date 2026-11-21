@@ -18,12 +18,22 @@ const DOUBLE_FIXED_PX = 26;
 const PANE_FLOOR_PX = 280;
 // The narrowest the intro sentence may get before it moves to its own line.
 const SENTENCE_FLOOR_REM = 12;
+const PHONE_TASKS = [
+  "Pay rent !!", "Plan the roadmap *", "Reply to the landlord !", "Clean the garage",
+  "File taxes !!", "Read the RFC *", "Book the dentist !", "Sort the photos", "Renew passport *",
+];
+const PHONE_PRESSES = 60;
+const PHONE_FOCUS_TIMEOUT_MS = 150_000;
 
 async function useLargeText(page: Page, standard = LARGE_TEXT_PX, fixed = LARGE_FIXED_PX): Promise<void> {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Page.enable");
   await cdp.send("Page.setFontSizes", { fontSizes: { standard, fixed } });
 }
+
+/** The root font size the page actually got, so a check can't pass on default text. */
+const rootFontPx = (page: Page) =>
+  page.evaluate(() => Number.parseFloat(getComputedStyle(document.documentElement).fontSize));
 
 const sidewaysOverflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -145,8 +155,32 @@ test.describe("Text scaling at 200%", () => {
     // Reload so the scroll to the last new card can't land after the reset to the top.
     await page.goto("/", { waitUntil: "networkidle" });
     await waitForAppLoad(page);
+    expect(await rootFontPx(page)).toBe(DOUBLE_TEXT_PX);
     await startAtMainContent(page);
 
     expect(await findHiddenFocusStops(page, 45)).toEqual([]);
+  });
+});
+
+// On a phone the topbar wraps as text grows: 252px at 150%, where a fixed 8rem
+// margin is 192px, so Shift+Tab parked dozens of stops under the returned bar.
+test.describe("Focus at 150% text on a phone", () => {
+  test.use({ reducedMotion: "reduce", viewport: { width: 390, height: 844 } });
+
+  test.beforeEach(async ({ browserName, clearIndexedDB }) => {
+    test.skip(browserName !== "chromium", "only Chromium exposes the default font size");
+  });
+
+  test("focus clears the wrapped topbar", async ({ page }) => {
+    test.setTimeout(PHONE_FOCUS_TIMEOUT_MS);
+    await useLargeText(page);
+    await waitForAppLoad(page);
+    for (const title of PHONE_TASKS) await createTaskViaCaptureBar(page, title);
+    await page.goto("/", { waitUntil: "networkidle" });
+    await waitForAppLoad(page);
+    expect(await rootFontPx(page)).toBe(LARGE_TEXT_PX);
+    await startAtMainContent(page);
+
+    expect(await findHiddenFocusStops(page, PHONE_PRESSES)).toEqual([]);
   });
 });

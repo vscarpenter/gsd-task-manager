@@ -1,11 +1,14 @@
 import { useEffect, useRef, type KeyboardEvent, type RefObject } from "react";
+import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Modal-dialog focus management for a hand-rolled overlay:
- *  - captures the element focused before open and restores it when open flips false,
+ *  - captures the element focused before open and restores it when open flips false
+ *    (or #main-content if it's gone), without scrolling: a plain focus() moved the
+ *    page whenever the opener sat inside the scroll margin under the topbar,
  *  - returns an `onKeyDown` handler that traps Tab / Shift+Tab inside `ref`.
  *
  * Pair with `role="dialog"` + `aria-modal="true"` on the same element.
@@ -20,7 +23,7 @@ export function useDialogFocus(
     if (!open) return;
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     return () => {
-      previouslyFocused.current?.focus?.();
+      restoreFocusOrMainContent(previouslyFocused.current);
     };
   }, [open]);
 

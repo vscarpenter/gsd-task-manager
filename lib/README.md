@@ -135,7 +135,7 @@ Logging, dependencies, filters, quadrants, capture parser, and dates (`logger.ts
 - `due-date-presets.ts:localDayOf(iso): string`. The local calendar day of an ISO timestamp.
 - `snooze-presets.ts:SNOOZE_PRESETS`. Six presets: 15 minutes, 30 minutes, 1 hour, 3 hours, Tomorrow, and Next week.
 
-Top three, weekly sweep, commands, routes, and utilities (`top-three.ts`, `top-three-session.ts`, `weekly-sweep.ts`, `command-actions.ts`, `routes.ts`, `utils.ts`, `task-links.ts`, `share-capture.ts`, `bookmarklet.ts`, `apple-identity.ts`, `confetti.ts`, `dnd-drop-target.ts`, `focus-restoration.ts`, `pane-overflow.ts`, `prefers-reduced-motion.ts`, `task-card-memo.ts`, `swipe-gesture.ts`):
+Top three, weekly sweep, commands, routes, and utilities (`top-three.ts`, `top-three-session.ts`, `weekly-sweep.ts`, `command-actions.ts`, `routes.ts`, `utils.ts`, `task-links.ts`, `share-capture.ts`, `bookmarklet.ts`, `apple-identity.ts`, `confetti.ts`, `dnd-drop-target.ts`, `focus-restoration.ts`, `ime.ts`, `pane-overflow.ts`, `prefers-reduced-motion.ts`, `task-card-memo.ts`, `swipe-gesture.ts`):
 
 - `top-three.ts:MAX_PICKS`. The number of slots, 3.
 - `top-three.ts:todaysPicks(tasks, now, zone): TodaysPicks`. Returns today's `picks`, `overflow`, and `needsTidy`.
@@ -170,6 +170,7 @@ Top three, weekly sweep, commands, routes, and utilities (`top-three.ts`, `top-t
 - `confetti.ts:celebrateCompletion(): void`. Fires the completion confetti.
 - `dnd-drop-target.ts:containerOf(node)`, `dnd-drop-target.ts:resolveDropQuadrant(over)`, `dnd-drop-target.ts:quadrantTitle(id)`. Resolve a drag node or drop target to a quadrant.
 - `focus-restoration.ts:restoreFocusOrMainContent(origin): void`. Returns focus to the opener, or to `#main-content`.
+- `ime.ts:isImeComposing(event): boolean`. True while an input method is composing the key: `isComposing`, or keyCode 229. React handlers pass `event.nativeEvent`.
 - `pane-overflow.ts:resolvePaneOverflow(sample: PaneScrollSample): boolean`. True when a pane has more content below the visible edge.
 - `prefers-reduced-motion.ts:prefersReducedMotion(): boolean`. Reads the OS reduced-motion setting.
 - `task-card-memo.ts:TaskCardProps`. The canonical props interface for the task card component.
@@ -322,6 +323,8 @@ Top three, weekly sweep, commands, routes, and utilities:
 - `confetti.ts` creates the confetti with `useWorker: false`, because the CSP blocks a blob worker. It does nothing under reduced motion or without a 2D canvas.
 - `confetti.ts:loadLibrary` clears a failed load, so the next celebration retries the import.
 - `dnd-drop-target.ts:resolveDropQuadrant` resolves a card drop target through its sortable container. Keyboard dragging resolves `over` to a neighboring card, not a pane.
+- `ime.ts:isImeComposing` also checks keyCode 229 because Safari ends the composition before the keydown that confirms it, so `isComposing` reads false there. Mobile keyboards send 229 for ordinary keys, so callers check it only under a key gate (Enter, comma, arrows, Escape).
+- `focus-restoration.ts:restoreFocusOrMainContent` focuses with `preventScroll`. Its callers include `useDialogFocus` and `DropdownMenuContent`, whose openers sit inside the scroll margin under the topbar.
 - `pane-overflow.ts:resolvePaneOverflow` treats a position within 1 pixel of the bottom as at the bottom.
 - `swipe-gesture.ts` matches the iOS `SwipeRevealRow` rules. A leading swipe reveals one button and commits on a full swipe. A trailing swipe reveals two and is tap only.
 - `swipe-gesture.ts:lockDirection` gives ties to the vertical scroller.

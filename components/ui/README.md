@@ -20,7 +20,7 @@ It also has two toast systems: a Sonner `ThemedToaster` with a hotkey hint and f
 - `DialogTitle`, `DialogDescription` (`dialog.tsx`): styled Radix `Title` and `Description`.
 - `DrawerHint` (`drawer-hint.tsx`): props `{ shortcut = "Esc", action = "to cancel", className }`. It renders a `<kbd>` and action text, hidden on coarse pointers.
 - `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuGroup`, `DropdownMenuPortal`, `DropdownMenuSub`, `DropdownMenuRadioGroup` (`dropdown-menu.tsx`): aliases of Radix `Root`, `Trigger`, `Group`, `Portal`, `Sub`, and `RadioGroup`.
-- `DropdownMenuContent` (`dropdown-menu.tsx`): Radix `Content` in a portal. `sideOffset` defaults to 4.
+- `DropdownMenuContent` (`dropdown-menu.tsx`): Radix `Content` in a portal. `sideOffset` defaults to 4. A caller's `onCloseAutoFocus` runs first; when it doesn't `preventDefault` and focus was lost with the menu, focus returns to the trigger through `restoreFocusOrMainContent`, without scrolling.
 - `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSubTrigger` (`dropdown-menu.tsx`): styled Radix `Item`, `Label`, and `SubTrigger`, each with optional `inset`.
 - `DropdownMenuSubContent`, `DropdownMenuSeparator` (`dropdown-menu.tsx`): styled Radix `SubContent` and `Separator`.
 - `DropdownMenuCheckboxItem` (`dropdown-menu.tsx`): Radix `CheckboxItem` with a checkmark `ItemIndicator`. It takes `checked`.
@@ -62,6 +62,7 @@ It also has two toast systems: a Sonner `ThemedToaster` with a hotkey hint and f
 - `toast-focus-return.ts:forget`: tracking stops when focus lands on a node outside the toaster.
 - `switch.tsx:Switch`: a comment states that the off state needs a 3:1 control boundary (WCAG 1.4.11). Coarse pointers get a 44px pseudo-element target.
 - `segmented-control.tsx:SegmentedControl`: the radios share one `name` from `useId()`. The selected option is `value === option.value`.
+- `dropdown-menu.tsx:returnFocusToTrigger`: finds the trigger through the menu's `aria-labelledby`. It leaves the close to Radix when `document.activeElement` is neither `null` nor `body`, or when no trigger matches. Radix's own return uses a plain `focus()`, which scrolled the page under a trigger inside the topbar's scroll margin.
 - `dropdown-menu.tsx:DropdownMenuSubTrigger`: a comment states that it uses the same focus and open surface as `DropdownMenuItem`. Solid tide behind ink fell to 2.6:1.
 - `dialog.tsx:DialogContent`: renders the Close button only when `showCloseButton` is true.
 

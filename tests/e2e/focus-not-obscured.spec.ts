@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { test, expect } from "./fixtures/test-fixtures";
 import { createTaskViaCaptureBar, waitForAppLoad } from "./helpers/test-helpers";
 import { findHiddenFocusStops, startAtMainContent } from "./helpers/focus-visibility";
@@ -27,6 +27,72 @@ async function loadMatrixWithTasks(page: Page): Promise<void> {
   for (const title of TASKS) await createTaskViaCaptureBar(page, title);
   await page.reload({ waitUntil: "networkidle" });
   await waitForAppLoad(page);
+}
+
+// How far below whatever covers the top edge a parked control sits.
+const PARK_GAP_PX = 12;
+// Far enough down the board that parking it scrolls the page down, which is
+// what tucks a phone's topbar away.
+const PARKED_CARD = 3;
+const COMPACT_QUERY = "(max-width: 767px)";
+
+// A downward step the scroll chrome reads as a scroll, not jitter.
+const TUCK_STEP_PX = 40;
+
+/**
+ * Scrolls down until `control` sits just below whatever covers the top edge:
+ * the topbar on a laptop, nothing on a phone, where scrolling down tucks the bar
+ * away. The tuck only happens once the scroll chrome is listening, which under
+ * load can be after the first scroll, so a phone retries a step up and back down.
+ */
+async function parkNearTop(page: Page, control: Locator): Promise<number> {
+  const { parkedY, compact } = await control.evaluate((el, { gap, query }) => {
+    const bar = document.querySelector("[data-testid='search-input']")!.closest("header")!;
+    const tucks = matchMedia(query).matches;
+    const cover = tucks ? 0 : bar.getBoundingClientRect().height;
+    return { parkedY: el.getBoundingClientRect().top + window.scrollY - cover - gap, compact: tucks };
+  }, { gap: PARK_GAP_PX, query: COMPACT_QUERY });
+  const scrollTo = (top: number) => page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), top);
+  if (!compact) {
+    await scrollTo(parkedY);
+  } else {
+    await expect(async () => {
+      await scrollTo(parkedY - TUCK_STEP_PX);
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+      await scrollTo(parkedY);
+      await expect(page.locator("header[data-chrome-hidden='true']")).toHaveCount(1, { timeout: 500 });
+    }).toPass();
+  }
+  return page.evaluate(() => window.scrollY);
+}
+
+/** Focuses a control the way a keyboard user who reached it would: in place. */
+const focusInPlace = (control: Locator) => control.evaluate((el) => (el as HTMLElement).focus({ preventScroll: true }));
+
+/**
+ * Every page offset painted, frame by frame, while `act` runs and for a few
+ * frames after. Closing the drawer jumped the page 116px in Chromium and the
+ * browser put it back a frame later, so a check of the final offset missed it.
+ * Frames rather than scroll events: WebKit reports an offset it never paints
+ * when a modal's scroll lock lifts, with or without the margins.
+ */
+async function scrollOffsetsDuring(page: Page, act: () => Promise<void>): Promise<number[]> {
+  await page.evaluate(() => {
+    const sampler = { offsets: new Set([window.scrollY]), done: false };
+    const sample = () => {
+      sampler.offsets.add(window.scrollY);
+      if (!sampler.done) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+    Object.assign(window, { __sampler: sampler });
+  });
+  await act();
+  return page.evaluate(async () => {
+    for (let frame = 0; frame < 10; frame += 1) await new Promise(requestAnimationFrame);
+    const sampler = (window as unknown as { __sampler: { offsets: Set<number>; done: boolean } }).__sampler;
+    sampler.done = true;
+    return [...sampler.offsets];
+  });
 }
 
 async function hiddenStopsOn(page: Page, route: string): Promise<string[]> {
@@ -95,6 +161,65 @@ test.describe("Focus not obscured", () => {
       }
     });
   }
+
+  // Signed out at 768px the topbar wraps to two rows, 131px, which a fixed 8rem
+  // margin missed by 3px: a control's top edge and focus ring sat under it.
+  test("the top margin covers the topbar however it wraps", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 640 });
+    await loadMatrixWithTasks(page);
+
+    const { bar, margins } = await page.evaluate(() => ({
+      bar: document.querySelector("[data-testid='search-input']")!.closest("header")!.getBoundingClientRect().height,
+      margins: [...document.querySelectorAll("main button")].map((el) => Number.parseFloat(getComputedStyle(el).scrollMarginTop)),
+    }));
+    expect(Math.min(...margins)).toBeGreaterThanOrEqual(bar);
+  });
+
+  // Closing a menu or the drawer puts focus back on the control the user left,
+  // which is still in view. A plain focus() inside the margin band scrolled
+  // anyway: 45px on a laptop, 88px on a phone, where it also brought back the
+  // tucked topbar. Firefox recentered the page.
+  test.describe("returning focus", () => {
+    for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 600 }]) {
+      test(`closing a card menu leaves the page in place at ${viewport.width}px`, async ({ page, browserName }) => {
+        // WebKit moves the page itself when Radix lifts the menu's scroll lock:
+        // 958 to 290 on a phone, before focus returns and with every scroll
+        // margin forced to 0. A pre-existing bug, outside what this checks.
+        test.fixme(browserName === "webkit", "WebKit jumps the page when the menu's scroll lock lifts");
+        await page.setViewportSize(viewport);
+        await loadMatrixWithTasks(page);
+        const trigger = page.getByRole("button", { name: "More actions" }).nth(PARKED_CARD);
+        const parkedY = await parkNearTop(page, trigger);
+        await focusInPlace(trigger);
+
+        const offsets = await scrollOffsetsDuring(page, async () => {
+          await page.keyboard.press("Enter");
+          await expect(page.getByRole("menu")).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(trigger).toBeFocused();
+        });
+
+        expect(offsets).toEqual([parkedY]);
+      });
+    }
+
+    test("closing the edit drawer leaves the page in place on a phone", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await loadMatrixWithTasks(page);
+      const edit = page.getByRole("button", { name: "Edit task" }).nth(PARKED_CARD);
+      const parkedY = await parkNearTop(page, edit);
+      await focusInPlace(edit);
+
+      const offsets = await scrollOffsetsDuring(page, async () => {
+        await page.keyboard.press("Enter");
+        await expect(page.getByTestId("edit-title")).toBeFocused();
+        await page.keyboard.press("Escape");
+        await expect(edit).toBeFocused();
+      });
+
+      expect(offsets).toEqual([parkedY]);
+    });
+  });
 
   // Pinned, the stage scrolls on its own. A topbar-sized margin there pushed 41
   // stops below a short stage, so the stage's controls carry none.
