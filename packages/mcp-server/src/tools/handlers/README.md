@@ -63,7 +63,7 @@ Types (`types.ts`):
 - `index.ts:createToolRunner`: a handler receives its arguments only after `validateToolArgs` succeeds.
 - `index.ts:toolRegistry`: it satisfies `Record<ToolName, ToolRunner>`, so a tool needs both a schema and a handler.
 - `index.ts:WRITE_TOOL_NAMES`: for the five write tools, an error with a numeric `status` is reduced to a safe code by `sanitizePocketBaseWriteError`.
-- `input-schemas.ts:toolArgSchemas`: every top-level argument schema is a `z.strictObject`. The bulk `operation` variants and the subtask items are plain `z.object`, so unknown keys inside them are stripped, not rejected.
+- `input-schemas.ts:toolArgSchemas`: every argument object, nested ones included, is a `z.strictObject`, so an unknown key is an error. ESLint rejects `z.object` under `src/tools`.
 - `input-schemas.ts` header comment: these schemas mirror the JSON Schemas in [`../schemas`](../schemas/README.md) and must stay in sync.
 - `input-schemas.ts:validateToolArgs`: a failed parse throws `Invalid arguments for <tool>:` with one line per issue.
 - `input-schemas.ts:idSchema`: an ID is 1 to 255 characters. `subtaskIdSchema` requires at least 4.
