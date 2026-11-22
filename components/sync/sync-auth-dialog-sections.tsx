@@ -223,6 +223,7 @@ export function LogoutConfirmation({
         Signing out will discard them.
       </p>
       <ConfirmButtons
+        key={pendingChanges}
         isLoading={isLoading}
         onCancel={onCancel}
         onConfirm={onConfirm}

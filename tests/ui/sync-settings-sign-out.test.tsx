@@ -125,6 +125,19 @@ describe("sign out in Settings", () => {
     expect(await isSignedIn()).toBe(true);
   });
 
+  it("puts focus back on Cancel when it asks again", async () => {
+    await queueChanges("a");
+    renderSettings();
+    await clickSignOut();
+    await screen.findByText(/1 unsynchronized change\./);
+
+    await queueChanges("b");
+    await clickSignOut("Sign out anyway");
+    await screen.findByText(/2 unsynchronized changes/);
+
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus());
+  });
+
   it("hides sign-out when no account is connected", async () => {
     await getDb().syncMetadata.clear();
     renderSettings();
