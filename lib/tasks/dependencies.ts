@@ -5,6 +5,7 @@ import {
   runTaskSyncTransaction,
   type TransactionalSyncEnqueue,
 } from "./crud/helpers";
+import { assertRoomToAppend } from "./crud/validation-error";
 
 /**
  * Add a dependency to a task
@@ -15,6 +16,7 @@ export async function addDependency(taskId: string, dependencyId: string): Promi
     const existing = await db.tasks.get(taskId);
     if (!existing) throw new Error(`Task ${taskId} not found`);
     if (existing.dependencies.includes(dependencyId)) return existing;
+    assertRoomToAppend("dependencies", existing.dependencies);
 
     const nextRecord: TaskRecord = {
       ...existing,

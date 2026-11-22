@@ -22,7 +22,7 @@ expected() {
 SyncConvergence holds
 FastClockHoldOff holds
 FindingOtherTaskCursor QuietMeansSameCopy
-FindingPushRace QuietMeansSameCopy
+FindingPushRace holds
 FindingRetriesRunOut QuietMeansSameCopy
 FindingFastClock QuietMeansSameCopy
 BrokenPushOverwritesNewer QuietMeansNewestEdit
@@ -30,6 +30,7 @@ BrokenFailedPushDropsRow QuietMeansNewestEdit
 BrokenCursorFollowsClock QuietMeansSameCopy
 BrokenApplyIgnoresStamps UnsentEditStays
 BrokenNoHoldOff UnsentEditStays
+BrokenPushWithoutCompare QuietMeansSameCopy
 EOF
 }
 

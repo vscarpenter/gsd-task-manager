@@ -97,6 +97,17 @@ const config = [
         ignores: ["**/__tests__/**"],
         plugins: { "gsd-time": instantOrder },
         rules: { "gsd-time/instant-order": "error" },
+        files: ["packages/mcp-server/src/tools/**/*.ts"],
+        rules: {
+            "no-restricted-properties": [
+                "error",
+                {
+                    object: "z",
+                    property: "object",
+                    message: "z.object drops a misspelled argument in silence, so { due_date } cleared due dates on up to 50 tasks. Use z.strictObject, at every nesting level.",
+                },
+            ],
+        },
     },
     {
         files: ["tests/**/*.{ts,tsx,js,jsx}"],

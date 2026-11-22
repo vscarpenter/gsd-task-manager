@@ -151,9 +151,9 @@ export async function fetchBoundedRemoteTasks(
 }
 
 /**
- * Fetch all existing remote task records for the current user in one request.
- * Returns a Map of task_id -> { pbRecordId, clientUpdatedAt } for efficient
- * lookups + LWW timestamp comparison in the push path.
+ * List the account's records page by page, for reconcile and account deletion.
+ * Returns a Map of task_id -> { pbRecordId, clientUpdatedAt }. The push doesn't
+ * use it, and looks up one record at a time.
  */
 export async function fetchRemoteTaskIndex(ownerId: string): Promise<{
   index: Map<string, RemoteTaskIndexEntry>;

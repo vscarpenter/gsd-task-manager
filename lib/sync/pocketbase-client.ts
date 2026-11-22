@@ -2,8 +2,8 @@
  * PocketBase client singleton
  *
  * Provides a configured PocketBase SDK instance pointed at the self-hosted
- * server. The SDK auto-stores auth state in localStorage and handles token
- * refresh internally, eliminating the need for a custom TokenManager.
+ * server. The SDK stores auth state in localStorage. It doesn't renew the
+ * token, so pb-auth.ts does.
  */
 
 import PocketBase, { BaseAuthStore } from 'pocketbase';
