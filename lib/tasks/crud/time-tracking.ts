@@ -5,6 +5,7 @@ import { timeEntrySchema } from "@/lib/schema";
 import type { TaskRecord, TimeEntry } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./helpers";
+import { assertRoomToAppend } from "./validation-error";
 import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TIME_TRACKING");
@@ -38,6 +39,7 @@ export async function startTimeTracking(taskId: string): Promise<TaskRecord> {
       logger.warn("Task already has running timer", { taskId });
       throw new Error("Task already has a running timer");
     }
+    assertRoomToAppend("timeEntries", existing.timeEntries);
     const record: TaskRecord = {
       ...existing,
       timeEntries: [...(existing.timeEntries || []), newEntry],
