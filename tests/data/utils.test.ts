@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   cn,
@@ -11,8 +12,21 @@ import {
   daysOverdue,
 } from "@/lib/utils";
 
+/** Every font size the stylesheet declares, read from it so the list can't drift. */
+const RAMP = [...new Set(
+  [...readFileSync("app/globals.css", "utf8").matchAll(/^\s+--text-([a-z0-9]+):/gm)].map((match) => match[1]),
+)];
+
 describe("utils", () => {
   describe("cn", () => {
+    it.each(RAMP)("treats text-%s from globals.css as a size, so a color can't drop it", (size) => {
+      expect(cn(`text-${size}`, "text-foreground")).toBe(`text-${size} text-foreground`);
+    });
+
+    it.each(RAMP)("lets text-%s from globals.css replace an earlier size", (size) => {
+      expect(cn("text-lg", `text-${size}`)).toBe(`text-${size}`);
+    });
+
     it("combines class names", () => {
       const result = cn("foo", "bar");
       expect(result).toBe("foo bar");

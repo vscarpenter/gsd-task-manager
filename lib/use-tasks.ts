@@ -1,5 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db";
+import { compareInstants } from "@/lib/instant";
 import { storedTaskRecordSchema } from "@/lib/schema";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
@@ -47,13 +48,13 @@ export function useTasks(): TaskBuckets {
     const db = getDb();
     const rows = await db.tasks.toArray();
     const valid = keepValidTaskRecords(rows);
-    return valid.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    return valid.sort((a, b) => compareInstants(a.createdAt, b.createdAt));
   }, []);
 
   const isLoading = result === undefined;
   const stored = result ?? [];
   const tasks = stored.filter((task) => !task.savedAt);
-  const saved = stored.filter((task) => task.savedAt).sort((a, b) => b.savedAt!.localeCompare(a.savedAt!));
+  const saved = stored.filter((task) => task.savedAt).sort((a, b) => compareInstants(b.savedAt, a.savedAt));
 
   const byQuadrant: Record<string, TaskRecord[]> = Object.fromEntries(
     quadrantOrder.map((id) => [id, []])

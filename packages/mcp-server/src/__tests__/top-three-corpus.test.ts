@@ -110,3 +110,33 @@ describe('escalation corpus, MCP copy', () => {
     });
   }
 });
+
+describe('instants written with an offset', () => {
+  // 01:00Z on the 20th is later than 22:00Z on the 19th, and its text is earlier.
+  const LATER = '2026-10-19T20:00:00.000-05:00';
+  const EARLIER = '2026-10-19T22:00:00.000Z';
+  const now = new Date('2026-10-20T12:00:00.000Z');
+  const task = (id: string, extra: Partial<TopThreeTask>): TopThreeTask => ({
+    id, urgent: true, important: true, completed: false, createdAt: EARLIER, updatedAt: EARLIER, ...extra,
+  }) as TopThreeTask;
+
+  it('gives a shared rank to the newest edit', () => {
+    const picked = { focusDate: '2026-10-20', focusRank: 1 };
+    const tasks = [task('earlier', picked), task('later', { ...picked, updatedAt: LATER })];
+
+    expect(todaysPicks(tasks, now, 'UTC').picks).toEqual(['later', 'earlier']);
+  });
+
+  it('suggests the earlier due date first', () => {
+    const tasks = [task('later', { dueDate: LATER }), task('earlier', { dueDate: EARLIER })];
+
+    // Both are overdue by then, so only their order decides.
+    expect(suggestTopThree(tasks, new Date('2026-10-25T12:00:00.000Z'), null, 'UTC')).toEqual(['earlier', 'later']);
+  });
+
+  it('suggests the older undated task first', () => {
+    const tasks = [task('later', { createdAt: LATER }), task('earlier', { createdAt: EARLIER })];
+
+    expect(suggestTopThree(tasks, now, null, 'UTC')).toEqual(['earlier', 'later']);
+  });
+});

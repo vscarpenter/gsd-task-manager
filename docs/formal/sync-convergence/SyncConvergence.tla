@@ -6,7 +6,8 @@
 \* Code: lib/tasks/crud/update.ts, lib/tasks/crud/helpers.ts, lib/sync/queue.ts,
 \* lib/sync/pb-push.ts, lib/sync/pb-pull.ts, lib/sync/pb-sync-engine.ts,
 \* lib/sync/pb-sync-helpers.ts, lib/sync/task-mapper.ts, lib/sync/pb-realtime.ts,
-\* lib/sync/sync-coordinator.ts.
+\* lib/sync/sync-coordinator.ts, lib/sync/failed-recovery.ts,
+\* docker/pb_hooks/task-write-contract.js.
 EXTENDS Integers, Sequences, FiniteSets
 
 CONSTANTS
@@ -18,7 +19,7 @@ CONSTANTS
   OtherTasks,   \* TRUE: a pull can also apply another task's record, stamped now
   LostEvents,   \* TRUE: a realtime event can be lost (tab closed, offline, SSE gap)
   RunOut,       \* TRUE: a row's pushes can keep failing until its retries run out
-  PushOverlap,  \* TRUE: the other device can write between a push's read and its write
+  PushOverlap,  \* TRUE: a push's read and write are two steps. FALSE: one, as a write whose compare passes
   FastClock,    \* TRUE: a client whose clock runs over 5 minutes fast saves the task once
   Variant       \* "code", or one broken variant (each is named where it changes a step)
 
@@ -92,8 +93,9 @@ BeyondSkew(t) == t > now + Ceiling
 IsPending(d, i) == queue[d][i].st = "pending"
 Pending(d) == \E i \in 1..Len(queue[d]) : IsPending(d, i)
 
-\* holdsOffFarFutureRemote (pb-sync-helpers.ts), on pull and realtime alike.
-HoldsOff(d, c) == Variant # "no-hold-off" /\ BeyondSkew(c.at) /\ Pending(d)
+\* holdsOffFarFutureRemote (pb-sync-helpers.ts), on pull and realtime alike. A
+\* failed row holds off too, so any row does.
+HoldsOff(d, c) == Variant # "no-hold-off" /\ BeyondSkew(c.at) /\ queue[d] # << >>
 
 \* The strictly-newer rule: acceptsRemoteVersion (pb-pull.ts) on pull and
 \* localCopyHolds (pb-sync-engine.ts) on realtime. Both compare the clamped stamp
@@ -189,16 +191,26 @@ PushReads(d, i) ==
   /\ UNCHANGED <<now, server, local, queue, cursor, phase, events, pulled,
                  newest, fastDone>>
 
-\* The upsert, decided on the stamp that read returned.
+\* conditionalWrite (docker/pb_hooks/task-write-contract.js) compares the stored
+\* version with expected_version in the transaction that saves. A version that
+\* moved answers 412, and recordItemFailure keeps the row without charging it.
+Refused(d, i) ==
+  /\ Variant # "push-without-compare"
+  /\ ~RemoteNewer(seen[d], queue[d][i].at)
+  /\ server.at # seen[d]
+
+\* The upsert, decided on the stamp that read returned. A stale row sends nothing.
 PushWrites(d) ==
   /\ reading[d] # 0
-  /\ Decides(d, reading[d], seen[d])
+  /\ IF Refused(d, reading[d])
+     THEN UNCHANGED <<server, events, pulled, queue>>
+     ELSE Decides(d, reading[d], seen[d])
   /\ reading' = [reading EXCEPT ![d] = 0]
   /\ UNCHANGED <<now, local, cursor, phase, todo, seen, newest, fastDone>>
 
 \* The index fetch fails or the upsert throws: queue.recordAttemptFailure adds
-\* one try and marks the row "failed" at MaxRetries. Nothing re-arms a failed
-\* row. A 429 (stop) breaks the push loop, so the rest wait for the next sync.
+\* one try and marks the row "failed" at MaxRetries. Only Retry in Settings
+\* re-arms it. A 429 (stop) breaks the push loop, so the rest wait for the next sync.
 PushFails(d, i, stop) ==
   /\ phase[d] = "push" /\ i \in 1..Len(queue[d]) /\ IsPending(d, i)
   /\ \/ reading[d] = 0 /\ queue[d][i].at \in todo[d]
@@ -214,6 +226,21 @@ PushFails(d, i, stop) ==
   /\ reading' = [reading EXCEPT ![d] = 0]
   /\ UNCHANGED <<now, server, local, cursor, phase, seen, events, pulled,
                  newest, fastDone>>
+
+\* Retry in Settings (recoverFailedSyncItem, failed-recovery.ts): one transaction
+\* drops the failed rows and, with no row pending, queues the current copy. Edit 0
+\* and a clamped fast-clock copy aren't requeued: the server already has edit 0,
+\* and no config sets both RunOut and FastClock.
+YouRetry(d) ==
+  /\ reading[d] = 0
+  /\ \E i \in 1..Len(queue[d]) : queue[d][i].st = "failed"
+  /\ LET c == local[d]
+         requeue == ~Pending(d) /\ c.at = c.v /\ c.at \in 1..MaxTime
+     IN queue' = [queue EXCEPT ![d] =
+          SelectSeq(@, LAMBDA r : r.st = "pending")
+            \o (IF requeue THEN <<[at |-> c.at, st |-> "pending", tries |-> 0]>> ELSE << >>)]
+  /\ UNCHANGED <<now, server, local, cursor, phase, todo, reading, seen, events,
+                 pulled, newest, fastDone>>
 
 PushDone(d) ==
   /\ phase[d] = "push" /\ reading[d] = 0 /\ todo[d] = {}
@@ -273,6 +300,7 @@ Next ==
   \/ \E d \in Devices, i \in 1..MaxQueue : PushReads(d, i)
   \/ \E d \in Devices : PushWrites(d)
   \/ \E d \in Devices, i \in 1..MaxQueue, stop \in BOOLEAN : PushFails(d, i, stop)
+  \/ \E d \in Devices : YouRetry(d)
   \/ \E d \in Devices : PushDone(d)
   \/ \E d \in Devices, other \in BOOLEAN : Pulls(d, other)
   \/ \E d \in Devices : SyncFails(d)

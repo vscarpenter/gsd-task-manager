@@ -151,7 +151,7 @@ export function DeleteAccountDialog({
 				return;
 			}
 
-			await disableSync();
+			await disableSync("everything");
 			toast.success("Account deleted. Your tasks remain on this device.");
 			dispatch({ type: "setDeleting", value: false });
 			dispatch({ type: "reset" });

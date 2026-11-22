@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { compareInstants } from "@/lib/instant";
 import { forgetForResurrect } from "@/lib/sync/resurrect-ids";
 import { createLogger } from "@/lib/logger";
 import type { TaskRecord } from "@/lib/types";
@@ -20,7 +21,7 @@ export const TRASH_RETENTION_DAYS = 30;
 export async function listTrashedTasks(): Promise<TaskRecord[]> {
   const db = getDb();
   const rows = await db.deletedTasks.toArray();
-  return rows.sort((a, b) => (b.deletedAt ?? "").localeCompare(a.deletedAt ?? ""));
+  return rows.sort((a, b) => compareInstants(b.deletedAt, a.deletedAt));
 }
 
 export async function getTrashCount(): Promise<number> {

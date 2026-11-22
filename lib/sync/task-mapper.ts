@@ -6,7 +6,7 @@
  * the PocketBase naming convention stays contained at the sync boundary.
  */
 
-import type { TaskRecord, Subtask, TimeEntry } from '@/lib/types';
+import type { EveryField, NoneUnnamed, TaskRecord, Subtask, TimeEntry } from '@/lib/types';
 import type { RecordModel } from 'pocketbase';
 import { z } from '@/lib/zod';
 import { quadrantIdSchema, recurrenceTypeSchema, storedTaskRecordSchema, subtaskSchema, timeEntrySchema } from '@/lib/schema';
@@ -130,7 +130,7 @@ export function taskRecordToPocketBase(
   ownerId: string,
   deviceId: string,
   defaultNotifyBefore: number
-): Partial<PBTaskRecord> {
+): PBTaskRecord {
   return {
     task_id: task.id,
     owner: ownerId,
@@ -201,7 +201,7 @@ const pbTaskRecordSchema = z.object({
   focus_rank: z.number().catch(0),
 });
 
-type LocalReminderState = Pick<TaskRecord, 'notificationSent' | 'lastNotificationAt' | 'snoozedUntil'>;
+type LocalReminderState = EveryField<Pick<TaskRecord, 'notificationSent' | 'lastNotificationAt' | 'snoozedUntil'>>;
 
 /** Due dates compare as instants, since clients write the same time in different ISO forms. */
 function isSameDueInstant(local: string | undefined, remote: string | undefined): boolean {
@@ -252,7 +252,7 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
   }
 
   const r = parsed.data;
-  const mapped: TaskRecord = {
+  const mapped = {
     id: r.task_id,
     title: r.title,
     description: r.description,
@@ -277,7 +277,9 @@ export function pocketBaseToTaskRecord(record: RecordModel, existingLocal?: Task
     ...focusFromWire(r),
     ...localReminderState(existingLocal, r.due_date || undefined),
     parentTaskId: existingLocal?.parentTaskId,
-  };
+  } satisfies TaskRecord;
+  // A pulled task is live, so only the two lifecycle stamps may be left out.
+  type _Named = NoneUnnamed<Exclude<keyof TaskRecord, keyof typeof mapped | 'archivedAt' | 'deletedAt'>>;
   return validateMappedTask(mapped);
 }
 
@@ -304,9 +306,8 @@ function focusFromWire(wire: { focus_date: string; focus_rank: number }): Pick<T
 function savedTimestampToWire(savedAt?: string): string { return savedAt ?? ""; }
 function savedTimestampFromWire(savedAt: string): string | undefined { return savedAt || undefined; }
 
-/** Reject mapped rows before the cursor can acknowledge invisible tasks. */
+/** Reject a row the matrix would quarantine. The cursor can still move past it. */
 function validateMappedTask(mapped: TaskRecord): TaskRecord | null {
-  // The pull cursor must never acknowledge a row the matrix would quarantine.
   const stored = storedTaskRecordSchema.safeParse(mapped);
   if (!stored.success) {
     logger.warn('Remote task violates local storage contract, skipping', {

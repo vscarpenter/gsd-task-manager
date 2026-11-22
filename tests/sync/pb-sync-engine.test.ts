@@ -1,700 +1,239 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SYNC_CONFIG } from '@/lib/constants/sync';
-import type { classifyRemoteDeletion } from '@/lib/sync/queue';
+/**
+ * The sync engine with the real mapper, queue, retry manager, history, and
+ * fake-indexeddb. Only PocketBase, the token refresh, and toasts are faked, so a
+ * test reads back what the user and the server would see.
+ */
 
-// Mock dependencies before importing the module
-vi.mock('@/lib/sync/pocketbase-client', () => ({
-  getPocketBase: vi.fn(),
-  getCurrentUserId: vi.fn(),
-}));
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Faithful stub of the real classifier. This suite's mockTasks.toArray resolves
-// [], so the pull path never reaches it today — the stub is hygiene against a
-// future test that populates tasks, not a load-bearing gate.
-vi.mock('@/lib/sync/queue', () => ({
-  getSyncQueue: vi.fn(),
-  classifyRemoteDeletion: vi.fn<typeof classifyRemoteDeletion>((rows) => {
-    if (rows.some((row) => (row.status ?? 'pending') === 'pending')) {
-      return { verdict: 'protect', staleRowIds: [] };
-    }
-    const staleRowIds = rows.map((row) => row.id);
-    return {
-      verdict: rows.some((row) => row.status === 'failed') ? 'abandon' : 'apply',
-      staleRowIds,
-    };
-  }),
-}));
-
-vi.mock('@/lib/sync/task-mapper', () => ({
-  taskRecordToPocketBase: vi.fn((task) => ({ task_id: task.id, ...task })),
-  getPocketBaseTaskIdentity: vi.fn((record) => (
-    typeof record.id === 'string' && typeof record.task_id === 'string'
-      ? {
-          pbRecordId: record.id,
-          taskId: record.task_id,
-          clientUpdatedAt: typeof record.client_updated_at === 'string'
-            ? record.client_updated_at
-            : null,
-        }
-      : null
-  )),
-  pocketBaseToTaskRecord: vi.fn((record) => ({
-    id: record.task_id,
-    title: record.title || 'Test',
-    description: '',
-    urgent: false,
-    important: false,
-    quadrant: 'not-urgent-not-important',
-    completed: false,
-    createdAt: record.client_created_at || '2024-01-01T00:00:00.000Z',
-    updatedAt: record.client_updated_at || '2024-01-01T00:00:00.000Z',
-    recurrence: 'none',
-    tags: [],
-    subtasks: [],
-    dependencies: [],
-    notificationEnabled: true,
-    notificationSent: false,
-    timeSpent: 0,
-    timeEntries: [],
-  })),
-}));
-
-vi.mock('@/lib/db', () => {
-  const mockTasks = {
-    get: vi.fn(),
-    bulkGet: vi.fn().mockResolvedValue([]),
-    add: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-    bulkDelete: vi.fn().mockResolvedValue(undefined),
-    toArray: vi.fn().mockResolvedValue([]),
-  };
-  // Nothing is archived in these tests, so the pull's archive guard finds no
-  // matching rows and every fetched record stays applicable.
-  const mockArchivedTasks = {
-    get: vi.fn().mockResolvedValue(undefined),
-    delete: vi.fn().mockResolvedValue(undefined),
-    bulkDelete: vi.fn().mockResolvedValue(undefined),
-    where: vi.fn(() => ({
-      anyOf: vi.fn(() => ({
-        toArray: vi.fn().mockResolvedValue([]),
-      })),
-    })),
-  };
-  // Deleted rows are conditional tombstones just like archived rows. Keep this
-  // mock table present so pull-path tests exercise the real transaction shape.
-  const mockDeletedTasks = {
-    get: vi.fn().mockResolvedValue(undefined),
-    delete: vi.fn().mockResolvedValue(undefined),
-  };
-  const mockSyncMetadata = {
-    get: vi.fn(),
-    put: vi.fn(),
-  };
-  const mockSyncQueue = {
-    toArray: vi.fn().mockResolvedValue([]),
-  };
+vi.mock('@/lib/sync/pocketbase-client', async () => {
+  const { fake } = await import('../data/sync/support/fake-pocketbase');
   return {
-    getDb: vi.fn(() => ({
-      tasks: mockTasks,
-      archivedTasks: mockArchivedTasks,
-      deletedTasks: mockDeletedTasks,
-      syncMetadata: mockSyncMetadata,
-      syncQueue: mockSyncQueue,
-      transaction: vi.fn(async (_mode, _tables, callback) => callback()),
-    })),
+    getPocketBase: () => fake.pb,
+    getCurrentUserId: vi.fn(() => 'user-1'),
+    isAuthenticated: () => true,
+    clearPocketBase: () => {},
+    forgetRefusedToken: () => {},
   };
 });
+vi.mock('@/lib/sync/pb-auth', () => ({ ensureValidAuth: vi.fn(async () => true) }));
+vi.mock('@/lib/sync/notifications', () => ({ notifySyncSuccess: vi.fn(), notifySyncError: vi.fn() }));
 
-const mockRetryManager = {
-  recordSuccess: vi.fn(),
-  recordFailure: vi.fn(),
-  canSyncNow: vi.fn().mockResolvedValue(true),
-  shouldRetry: vi.fn().mockResolvedValue(true),
-};
-
-vi.mock('@/lib/sync/retry-manager', () => ({
-  getRetryManager: vi.fn(() => mockRetryManager),
-}));
-
-// fullSync attempts a silent token refresh before push/pull; keep it a no-op
-// here so these engine tests don't exercise the real auth path.
-vi.mock('@/lib/sync/pb-auth', () => ({
-  ensureValidAuth: vi.fn().mockResolvedValue(true),
-}));
-
-vi.mock('@/lib/sync-history', () => ({
-  recordSyncSuccess: vi.fn(),
-  recordSyncError: vi.fn(),
-  recordSyncPartial: vi.fn(),
-}));
-
-vi.mock('@/lib/sync/notifications', () => ({
-  notifySyncSuccess: vi.fn(),
-  notifySyncError: vi.fn(),
-}));
-
-vi.mock('@/lib/logger', () => ({
-  createLogger: vi.fn(() => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  })),
-}));
-
-import { pushLocalChanges, pullRemoteChanges, fullSync } from '@/lib/sync/pb-sync-engine';
-import { getCurrentUserId, getPocketBase } from '@/lib/sync/pocketbase-client';
-import { getSyncQueue } from '@/lib/sync/queue';
+import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { getDb } from '@/lib/db';
-import { getRetryManager } from '@/lib/sync/retry-manager';
-import { notifySyncError } from '@/lib/sync/notifications';
-import { recordSyncError } from '@/lib/sync-history';
 import { isAuthError } from '@/lib/sync/error-categorizer';
+import { notifySyncError } from '@/lib/sync/notifications';
+import { fullSync, pullRemoteChanges, pushLocalChanges } from '@/lib/sync/pb-sync-engine';
+import { getCurrentUserId } from '@/lib/sync/pocketbase-client';
+import { getSyncQueue } from '@/lib/sync/queue';
+import type { PBSyncConfig } from '@/lib/sync/types';
+import type { TaskRecord } from '@/lib/types';
+import {
+  NEWER, OLDER, SAVED, fake, localRow, resetFakeSync, seed, serverRow, signedIn,
+} from '../data/sync/support/fake-pocketbase';
 
-// Helper to create a mock PocketBase instance
-// Returns a stable collection mock so chained getList calls work correctly
-function createMockPB() {
-  const collectionMock = {
-    getList: vi.fn().mockResolvedValue([]),
-    getFirstListItem: vi.fn().mockRejectedValue({ status: 404 }),
-    create: vi.fn().mockResolvedValue({ id: 'pb-123' }),
-    update: vi.fn().mockResolvedValue({}),
-    delete: vi.fn().mockResolvedValue({}),
-  };
-  return {
-    // auth-refresh confirms the session for the owner these tests push for.
-    authStore: { token: 'token-1', clear: vi.fn() },
-    send: vi.fn().mockResolvedValue({ record: { id: 'user-123' } }),
-    // A test may swap in a collection that implements only the calls it expects.
-    collection: vi.fn((): Partial<typeof collectionMock> => collectionMock),
-    _collectionMock: collectionMock,
-  };
+const SAVED_MINUS_OVERLAP = '2026-10-20T09:59:30.000Z';
+const NEWER_MINUS_OVERLAP = '2026-10-21T09:59:30.000Z';
+const SYSTEM_UPDATED_LATER = '2026-10-25 10:00:00.000Z';
+const current = (): PBSyncConfig => signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION);
+
+const remote = (taskId: string, stamp: string, extra: Record<string, unknown> = {}) =>
+  serverRow({
+    id: `rec_${taskId}`, task_id: taskId, client_updated_at: stamp, saved_at: '', updated: SYSTEM_UPDATED_LATER, ...extra,
+  });
+
+const storedConfig = async (): Promise<PBSyncConfig> =>
+  (await getDb().syncMetadata.get('sync_config')) as PBSyncConfig;
+
+function signOutOfTheSdk(): void {
+  vi.mocked(getCurrentUserId).mockReturnValue(null);
 }
 
-// Helper to create a mock queue
-function createMockQueue() {
-  return {
-    getPending: vi.fn().mockResolvedValue([]),
-    dequeue: vi.fn(),
-    recordAttemptFailure: vi.fn(),
-    getForTask: vi.fn().mockResolvedValue([]),
-    populateFromExistingTasks: vi.fn(),
-  };
+/** The query of the first listing, which is the pull's. */
+function watchPullQuery(): () => { filter?: string; sort?: string } {
+  const list = vi.spyOn(fake.pb.collection('tasks'), 'getList');
+  return () => list.mock.calls[0][2] as { filter?: string; sort?: string };
 }
 
-describe('pb-sync-engine', () => {
-  let mockPB: ReturnType<typeof createMockPB>;
-  let mockQueue: ReturnType<typeof createMockQueue>;
+async function queueCreate(task: TaskRecord): Promise<void> {
+  await getDb().tasks.put(task);
+  await getSyncQueue().enqueue('create', task.id, task);
+}
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockPB = createMockPB();
-    mockQueue = createMockQueue();
-    (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue(mockPB);
-    (getSyncQueue as ReturnType<typeof vi.fn>).mockReturnValue(mockQueue);
-    // Pull and outcome writes only land while the config names the signed-in owner.
-    (getDb().syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
-      key: 'sync_config',
-      enabled: true,
-      userId: 'user-123',
-      deviceId: 'device-1',
+beforeEach(async () => {
+  await resetFakeSync();
+  vi.mocked(getCurrentUserId).mockReturnValue('user-1');
+  vi.mocked(notifySyncError).mockClear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('pushLocalChanges', () => {
+  beforeEach(async () => {
+    await seed({ config: current() });
+  });
+
+  it('reports no session, and leaves the queue alone, when nobody is signed in', async () => {
+    await queueCreate(localRow(SAVED));
+    signOutOfTheSdk();
+
+    const result = await pushLocalChanges('user-1');
+
+    expect(result).toMatchObject({ authenticated: false, pushedCount: 0 });
+    expect(await getDb().syncQueue.count()).toBe(1);
+  });
+
+  it('reports the session when nothing is queued', async () => {
+    expect(await pushLocalChanges('user-1')).toMatchObject({ authenticated: true, pushedCount: 0 });
+  });
+
+  it('keeps a delete and charges one try when the lookup fails', async () => {
+    await getSyncQueue().enqueue('delete', 'task-a', null);
+    vi.spyOn(fake.pb.collection('tasks'), 'getFirstListItem')
+      .mockRejectedValueOnce(Object.assign(new Error('Something went wrong.'), { status: 0 }));
+
+    const result = await pushLocalChanges('user-1');
+
+    expect(result.failedCount).toBe(1);
+    expect(await getDb().syncQueue.toArray()).toMatchObject([{ operation: 'delete', retryCount: 1 }]);
+  });
+
+  it('drops a delete the server no longer has, once it has confirmed the session', async () => {
+    await getSyncQueue().enqueue('delete', 'task-a', null);
+
+    const result = await pushLocalChanges('user-1');
+
+    expect(fake.state.events).toContain('auth-refresh');
+    expect(result.pushedCount).toBe(1);
+    expect(await getDb().syncQueue.count()).toBe(0);
+  });
+});
+
+describe('pullRemoteChanges', () => {
+  beforeEach(async () => {
+    await seed({ config: current() });
+  });
+
+  it('reports no session when nobody is signed in', async () => {
+    signOutOfTheSdk();
+
+    expect(await pullRemoteChanges(null)).toMatchObject({
+      authenticated: false, pulledCount: 0, maxObservedTimestamp: null,
     });
   });
 
-  describe('pushLocalChanges', () => {
-    it('should return authenticated: false when user is not authenticated', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue(null);
+  it('asks on client_updated_at, never on the system updated field', async () => {
+    const query = watchPullQuery();
 
-      const result = await pushLocalChanges('user-123');
+    await pullRemoteChanges(SAVED);
 
-      expect(result.authenticated).toBe(false);
-      expect(result.pushedCount).toBe(0);
-    });
+    expect(query().sort).toBe('client_updated_at,task_id,id');
+    expect(query().filter).toBe(`owner = "user-1" && client_updated_at >= "${SAVED}"`);
+  });
 
-    it('should return authenticated: true when user is authenticated', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-      mockQueue.getPending.mockResolvedValue([]);
+  it('sets the cursor to the newest applied stamp, less the overlap', async () => {
+    await seed({ config: current(), server: [remote('task-a', OLDER), remote('task-b', NEWER), remote('task-c', SAVED)] });
 
-      const result = await pushLocalChanges('user-123');
+    expect((await pullRemoteChanges(null)).maxObservedTimestamp).toBe(NEWER_MINUS_OVERLAP);
+  });
 
-      expect(result.authenticated).toBe(true);
-    });
+  it('leaves the cursor alone when the local copy already has that version', async () => {
+    await seed({ config: current(), local: [localRow(SAVED)], server: [remote('task-a', SAVED)] });
 
-    it('should not dequeue delete operations when remote index fetch fails', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
+    expect(await pullRemoteChanges(null)).toMatchObject({ pulledCount: 0, maxObservedTimestamp: null });
+  });
 
-      // Simulate index fetch failure by making getList reject
-      const mockCollection = {
-        getList: vi.fn().mockRejectedValue(new Error('Network error')),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
+  it('takes the cursor from records that have no system updated field', async () => {
+    await seed({ config: current(), server: [remote('task-a', OLDER, { updated: '' }), remote('task-b', SAVED, { updated: undefined })] });
 
-      const db = getDb();
-      (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
-        key: 'sync_config',
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-1',
-      });
+    expect(await pullRemoteChanges(null)).toMatchObject({ pulledCount: 2, maxObservedTimestamp: SAVED_MINUS_OVERLAP });
+  });
 
-      mockQueue.getPending.mockResolvedValue([
-        { id: 'q1', taskId: 'task-1', operation: 'delete', payload: null, retryCount: 0, timestamp: Date.now() },
-      ]);
+  it('has no cursor to offer when nothing came back', async () => {
+    expect((await pullRemoteChanges(SAVED)).maxObservedTimestamp).toBeNull();
+  });
 
-      const result = await pushLocalChanges('user-123');
+  it('skips an invalid record, and never moves the cursor past it', async () => {
+    await seed({ config: current(), server: [remote('task-a', SAVED), remote('task-b', NEWER, { title: 123 })] });
 
-      // Delete should NOT be dequeued
-      expect(mockQueue.dequeue).not.toHaveBeenCalled();
-      // Should be counted as failed
-      expect(result.failedCount).toBe(1);
-      // Retry should be recorded with an error message
-      expect(mockQueue.recordAttemptFailure).toHaveBeenCalledWith('q1', expect.any(String));
-    });
+    const result = await pullRemoteChanges(null);
 
-    it('should dequeue a delete the server no longer has once the session is confirmed', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
+    expect(result).toMatchObject({ pulledCount: 1, skippedCount: 1, maxObservedTimestamp: SAVED_MINUS_OVERLAP });
+    expect(await getDb().tasks.toCollection().primaryKeys()).toEqual(['task-a']);
+  });
+});
 
-      const mockCollection = {
-        getList: vi.fn().mockResolvedValue([]), // Success but empty
-        getFirstListItem: vi.fn().mockRejectedValue({ status: 404 }),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
+describe('fullSync', () => {
+  it('asks for sign-in, and records the failure, when nobody is signed in', async () => {
+    await seed({ config: { ...current(), lastSyncAt: OLDER } });
+    signOutOfTheSdk();
 
-      const db = getDb();
-      (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
-        key: 'sync_config',
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-1',
-      });
+    const result = await fullSync('auto');
 
-      mockQueue.getPending.mockResolvedValue([
-        { id: 'q1', taskId: 'task-1', operation: 'delete', payload: null, retryCount: 0, timestamp: Date.now() },
-      ]);
+    expect(result.status).toBe('error');
+    expect(isAuthError(new Error(result.error))).toBe(true);
+    expect(await storedConfig()).toMatchObject({ lastSyncAt: OLDER, consecutiveFailures: 1, lastSuccessfulSyncAt: null });
+    expect(await getDb().syncHistory.toArray()).toMatchObject([{ status: 'error' }]);
+    expect(notifySyncError).toHaveBeenCalled();
+  });
 
-      const result = await pushLocalChanges('user-123');
+  it('stores the cursor and the pull contract, and leaves the legacy cursor alone', async () => {
+    await seed({ config: { ...current(), lastSyncAt: OLDER }, server: [remote('task-a', SAVED)] });
 
-      // A refused token 404s every lookup too, so the session is confirmed first.
-      expect(mockPB.send).toHaveBeenCalledWith('/api/collections/users/auth-refresh', { method: 'POST' });
-      expect(mockQueue.dequeue).toHaveBeenCalledWith('q1');
-      expect(result.pushedCount).toBe(1);
+    expect((await fullSync('auto')).status).toBe('success');
+
+    expect(await storedConfig()).toMatchObject({
+      lastClientUpdatedAt: SAVED_MINUS_OVERLAP,
+      pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
+      lastServerUpdatedAt: null,
+      lastSyncAt: OLDER,
     });
   });
 
-  describe('pullRemoteChanges', () => {
-    it('should return authenticated: false when user is not authenticated', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue(null);
+  it('discards an unversioned server cursor and pulls everything', async () => {
+    await seed({ config: { ...signedIn(), lastSyncAt: OLDER, lastServerUpdatedAt: SAVED } });
+    const query = watchPullQuery();
 
-      const result = await pullRemoteChanges(null);
+    await fullSync('auto');
 
-      expect(result.authenticated).toBe(false);
-      expect(result.pulledCount).toBe(0);
-      expect(result.maxObservedTimestamp).toBeNull();
-    });
-
-    it('should filter and sort on client_updated_at', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      const mockCollection = {
-        getList: vi.fn().mockResolvedValue([]),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      await pullRemoteChanges('2026-06-10T15:00:00.000Z');
-
-      const listOptions = mockCollection.getList.mock.calls[0][2];
-      expect(listOptions.sort).toBe('client_updated_at,task_id,id');
-      expect(listOptions.filter).toContain('client_updated_at >= "2026-06-10T15:00:00.000Z"');
-      expect(listOptions.filter).not.toMatch(/(^|[^_])updated\s*>?=/);
-    });
-
-    it('should track maxObservedTimestamp from applied client_updated_at values', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      // PocketBase system `updated` values deliberately differ to prove they
-      // cannot influence the client_updated_at cursor.
-      const records = [
-        { id: 'pb-1', task_id: 'task-1', title: 'A', client_updated_at: '2024-01-01T00:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-18 10:00:00.000Z' },
-        { id: 'pb-2', task_id: 'task-2', title: 'B', client_updated_at: '2024-06-15T12:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-20 09:00:00.000Z' },
-        { id: 'pb-3', task_id: 'task-3', title: 'C', client_updated_at: '2024-03-10T08:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-19 08:00:00.000Z' },
-      ];
-
-      // First call returns records for pull, second call returns records for reconcileDeletedTasks index fetch
-      const mockCollection = {
-        getList: vi.fn()
-          .mockResolvedValueOnce(records) // pullRemoteChanges fetch
-          .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))), // reconcileDeletedTasks index fetch
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      const db = getDb();
-      (db.tasks.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      const result = await pullRemoteChanges(null);
-
-      expect(result.authenticated).toBe(true);
-      // Cursor is persisted with a 30s overlap subtracted so the next pull's
-      // `>=` filter can re-catch boundary records, normalized to ISO form.
-      expect(result.maxObservedTimestamp).toBe('2024-06-15T11:59:30.000Z');
-    });
-
-    it('should not advance the cursor when LWW applies no record', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      // The cursor advances only after a local state transition commits.
-      const records = [
-        { id: 'pb-1', task_id: 'task-1', title: 'A', client_updated_at: '2024-01-01T00:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-20 09:00:00.000Z' },
-      ];
-
-      const mockCollection = {
-        getList: vi.fn()
-          .mockResolvedValueOnce(records)
-          .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      const db = getDb();
-      // Local task already has the same client timestamp -> LWW no-op
-      (db.tasks.get as ReturnType<typeof vi.fn>).mockResolvedValue(
-        { id: 'task-1', updatedAt: '2024-01-01T00:00:00.000Z' },
-      );
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      const result = await pullRemoteChanges(null);
-
-      expect(result.pulledCount).toBe(0);
-      expect(result.maxObservedTimestamp).toBeNull();
-    });
-
-    it('should ignore PocketBase system updated when computing the cursor', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      const records = [
-        { id: 'pb-1', task_id: 'task-1', title: 'A', client_updated_at: '2024-06-15T12:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '' },
-        { id: 'pb-2', task_id: 'task-2', title: 'B', client_updated_at: '2024-06-16T12:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z' },
-      ];
-
-      const mockCollection = {
-        getList: vi.fn()
-          .mockResolvedValueOnce(records)
-          .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      const db = getDb();
-      (db.tasks.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      const result = await pullRemoteChanges(null);
-
-      expect(result.pulledCount).toBe(2);
-      expect(result.maxObservedTimestamp).toBe('2024-06-16T11:59:30.000Z');
-    });
-
-    it('should return null maxObservedTimestamp when no records pulled', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      const mockCollection = {
-        getList: vi.fn().mockResolvedValue([]),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      const result = await pullRemoteChanges('2024-01-01T00:00:00.000Z');
-
-      expect(result.maxObservedTimestamp).toBeNull();
-    });
-
-    it('should skip invalid records returned by pocketBaseToTaskRecord', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      const { pocketBaseToTaskRecord } = await import('@/lib/sync/task-mapper');
-      (pocketBaseToTaskRecord as ReturnType<typeof vi.fn>)
-        .mockReturnValueOnce(null)  // Invalid record
-        .mockReturnValueOnce({      // Valid record
-          id: 'task-2',
-          title: 'Valid',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        });
-
-      const records = [
-        { id: 'pb-1', task_id: 'task-1', client_updated_at: '2024-01-01T00:00:00.000Z' },
-        { id: 'pb-2', task_id: 'task-2', client_updated_at: '2024-01-02T00:00:00.000Z' },
-      ];
-
-      const mockCollection = {
-        getList: vi.fn()
-          .mockResolvedValueOnce(records) // pullRemoteChanges fetch
-          .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))), // reconcileDeletedTasks index fetch
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      const db = getDb();
-      (db.tasks.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      const result = await pullRemoteChanges(null);
-
-      expect(result.pulledCount).toBe(1); // Only the valid record
+    expect(query().filter).toBe('owner = "user-1"');
+    expect(await storedConfig()).toMatchObject({
+      lastServerUpdatedAt: null, lastClientUpdatedAt: null, pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
     });
   });
 
-  describe('fullSync', () => {
-    it('should return auth error when not authenticated and not update lastSyncAt', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue(null);
+  it('pulls everything for a legacy client-stamped cursor', async () => {
+    await seed({ config: { ...signedIn(), lastSyncAt: SAVED } });
+    const query = watchPullQuery();
 
-      const db = getDb();
-      const config = {
-        key: 'sync_config',
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-1',
-        lastSyncAt: '2024-01-01T00:00:00.000Z',
-      };
-      (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue(config);
+    await fullSync('auto');
 
-      const mockCollection = {
-        getList: vi.fn().mockResolvedValue([]),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
+    expect(query().filter).toBe('owner = "user-1"');
+  });
 
-      const result = await fullSync('auto');
+  it('records a partial push as a failure, never as a success', async () => {
+    await seed({ config: current() });
+    await queueCreate(localRow(SAVED));
+    await queueCreate(localRow(SAVED, { id: 'task-b' }));
+    vi.spyOn(fake.pb.collection('tasks'), 'create')
+      .mockRejectedValueOnce(Object.assign(new Error('Server error'), { status: 500 }));
 
-      expect(result.status).toBe('error');
-      // The sync button reads this as an auth error and offers Re-login.
-      expect(isAuthError(new Error(result.error))).toBe(true);
+    const result = await fullSync('auto');
 
-      // Verify lastSyncAt was NOT updated
-      expect(db.syncMetadata.put).not.toHaveBeenCalled();
+    expect(result.status).toBe('partial');
+    expect(fake.state.records.size).toBe(1);
+    expect(await getDb().syncQueue.toArray()).toMatchObject([{ retryCount: 1 }]);
+    expect(await storedConfig()).toMatchObject({ consecutiveFailures: 1 });
+    expect(await getDb().syncHistory.toArray()).toMatchObject([{ status: 'partial' }]);
+  });
 
-      // Verify recordFailure was called (not recordSuccess)
-      const retryManager = getRetryManager();
-      expect(retryManager.recordFailure).toHaveBeenCalled();
-      expect(retryManager.recordSuccess).not.toHaveBeenCalled();
+  it('keeps the cursor when nothing new came back', async () => {
+    await seed({ config: { ...current(), lastClientUpdatedAt: OLDER } });
 
-      // Verify error was reported
-      expect(recordSyncError).toHaveBeenCalled();
-      expect(notifySyncError).toHaveBeenCalled();
-    });
+    expect((await fullSync('auto')).status).toBe('success');
 
-    it('should use applied client_updated_at for the pull cursor', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      const records = [
-        { id: 'pb-1', task_id: 'task-1', title: 'A', client_updated_at: '2024-06-15T12:00:00.000Z', client_created_at: '2024-01-01T00:00:00.000Z', updated: '2024-06-16 03:00:00.000Z' },
-      ];
-
-      // pushLocalChanges returns early (no pending items), so no getList for push.
-      // pullRemoteChanges calls getList once, then reconcileDeletedTasks calls it again.
-      const mockCollection = {
-        getList: vi.fn()
-          .mockResolvedValueOnce(records) // pullRemoteChanges fetch
-          .mockResolvedValueOnce(records.map(r => ({ id: r.id, task_id: r.task_id }))), // reconcileDeletedTasks index fetch
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      mockQueue.getPending.mockResolvedValue([]);
-      mockQueue.getForTask.mockResolvedValue([]);
-
-      const db = getDb();
-      const config = {
-        key: 'sync_config',
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-1',
-        lastSyncAt: '2024-01-01T00:00:00.000Z',
-      };
-      (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue(config);
-      (db.tasks.bulkGet as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      const result = await fullSync('auto');
-
-      expect(result.status).toBe('success');
-
-      // The provenance-safe field carries the client_updated_at cursor.
-      const putCalls = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls;
-      expect(putCalls.length).toBeGreaterThan(0);
-      const putCall = putCalls[0][0];
-      // Cursor is persisted with a 30s overlap subtracted; see pb-pull.ts.
-      expect(putCall.lastClientUpdatedAt).toBe('2024-06-15T11:59:30.000Z');
-      expect(putCall.pullCursorVersion).toBe(SYNC_CONFIG.PULL_CURSOR_VERSION);
-      expect(putCall.lastServerUpdatedAt).toBeNull();
-      // The legacy client-stamped cursor is left untouched (only read once,
-      // for migration).
-      expect(putCall.lastSyncAt).toBe('2024-01-01T00:00:00.000Z');
-    });
-
-    it('should discard an unversioned server cursor and perform a full pull', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      const mockCollection = {
-        getList: vi.fn().mockResolvedValue([]),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-      mockQueue.getPending.mockResolvedValue([]);
-
-      const db = getDb();
-      (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
-        key: 'sync_config',
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-1',
-        lastSyncAt: '2024-01-01T00:00:00.000Z',
-        lastServerUpdatedAt: '2024-06-01T00:00:00.000Z',
-      });
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      await fullSync('auto');
-
-      const pullOptions = mockCollection.getList.mock.calls[0][2];
-      expect(pullOptions.filter).toBe('owner = "user-123"');
-      const putCall = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      expect(putCall.lastServerUpdatedAt).toBeNull();
-      expect(putCall.lastClientUpdatedAt).toBeNull();
-      expect(putCall.pullCursorVersion).toBe(SYNC_CONFIG.PULL_CURSOR_VERSION);
-    });
-
-    it('should perform a full pull for a legacy client-stamped cursor', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      const mockCollection = {
-        getList: vi.fn().mockResolvedValue([]),
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-      mockQueue.getPending.mockResolvedValue([]);
-
-      const db = getDb();
-      // Old-build config: only the client-stamped cursor exists. It predates
-      // every pull contract, so the first sync pulls everything once.
-      (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue({
-        key: 'sync_config',
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-1',
-        lastSyncAt: '2024-06-15T12:00:00.000Z',
-      });
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      await fullSync('auto');
-
-      const pullOptions = mockCollection.getList.mock.calls[0][2];
-      expect(pullOptions.filter).toBe('owner = "user-123"');
-    });
-
-    it('should not call recordSuccess on partial failure', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      // Set up push to partially fail
-      const mockCollection = {
-        getList: vi.fn().mockResolvedValue([]),
-        create: vi.fn()
-          .mockResolvedValueOnce({ id: 'pb-1' }) // First succeeds
-          .mockRejectedValueOnce(new Error('Server error')), // Second fails
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      mockQueue.getPending.mockResolvedValue([
-        { id: 'q1', taskId: 'task-1', operation: 'create', payload: { id: 'task-1', title: 'A', updatedAt: '2024-01-01T00:00:00.000Z' }, retryCount: 0, timestamp: Date.now() },
-        { id: 'q2', taskId: 'task-2', operation: 'create', payload: { id: 'task-2', title: 'B', updatedAt: '2024-01-01T00:00:00.000Z' }, retryCount: 0, timestamp: Date.now() },
-      ]);
-
-      const db = getDb();
-      const config = {
-        key: 'sync_config',
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-1',
-        lastSyncAt: null,
-      };
-      (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue(config);
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      const result = await fullSync('auto');
-
-      expect(result.status).toBe('partial');
-
-      // recordSuccess should NOT have been called
-      const retryManager = getRetryManager();
-      expect(retryManager.recordSuccess).not.toHaveBeenCalled();
-      // recordFailure SHOULD have been called
-      expect(retryManager.recordFailure).toHaveBeenCalled();
-    });
-
-    it('should preserve existing cursor when no new records are pulled', async () => {
-      (getCurrentUserId as ReturnType<typeof vi.fn>).mockReturnValue('user-123');
-
-      const mockCollection = {
-        getList: vi.fn().mockResolvedValue([]), // No records
-        create: vi.fn(),
-        update: vi.fn(),
-        delete: vi.fn(),
-      };
-      mockPB.collection.mockReturnValue(mockCollection);
-
-      mockQueue.getPending.mockResolvedValue([]);
-
-      const db = getDb();
-      const existingCursor = '2024-03-01T00:00:00.000Z';
-      const config = {
-        key: 'sync_config',
-        enabled: true,
-        userId: 'user-123',
-        deviceId: 'device-1',
-        lastSyncAt: null,
-        lastClientUpdatedAt: existingCursor,
-        pullCursorVersion: SYNC_CONFIG.PULL_CURSOR_VERSION,
-        lastServerUpdatedAt: null,
-      };
-      (db.syncMetadata.get as ReturnType<typeof vi.fn>).mockResolvedValue(config);
-      (db.tasks.toArray as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-
-      const result = await fullSync('auto');
-
-      expect(result.status).toBe('success');
-
-      // Cursor should remain at the existing value (not advance to now)
-      const putCalls = (db.syncMetadata.put as ReturnType<typeof vi.fn>).mock.calls;
-      expect(putCalls.length).toBeGreaterThan(0);
-      const putCall = putCalls[0][0];
-      expect(putCall.lastClientUpdatedAt).toBe(existingCursor);
-      expect(putCall.lastServerUpdatedAt).toBeNull();
-    });
+    expect(await storedConfig()).toMatchObject({ lastClientUpdatedAt: OLDER, lastServerUpdatedAt: null });
   });
 });

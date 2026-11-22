@@ -181,7 +181,7 @@ export class SyncQueue {
   }
 
   /**
-   * Clear all pending operations (use with caution!)
+   * Delete every queue row, failed ones included (use with caution!)
    */
   async clear(): Promise<void> {
     const db = getDb();

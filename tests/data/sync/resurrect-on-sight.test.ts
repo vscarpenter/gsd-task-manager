@@ -89,7 +89,7 @@ describe('remembering', () => {
     await queue.enqueue('delete', 't-archive', localRow(SAVED, { id: 't-archive' }));
     await queue.enqueue('update', 't-edit', localRow(SAVED, { id: 't-edit' }));
 
-    await disableSync();
+    await disableSync('everything');
 
     await expect(remembered()).resolves.toEqual(['t-trash']);
     await expect(getDb().syncQueue.count()).resolves.toBe(0);

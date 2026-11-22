@@ -4,7 +4,7 @@ import { createLogger } from "@/lib/logger";
 import { readDefaultReminder } from "@/lib/notifications/default-reminder";
 import { resolveQuadrantId } from "@/lib/quadrants";
 import { taskDraftSchema } from "@/lib/schema";
-import type { TaskDraft, TaskRecord } from "@/lib/types";
+import type { EveryField, TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./helpers";
 import { TaskValidationError } from "./validation-error";
@@ -98,7 +98,7 @@ function mergeTaskUpdates(
   existing: TaskRecord,
   updates: Partial<TaskDraft>,
   defaultReminder: number
-): TaskDraft {
+): EveryField<TaskDraft> {
   return {
     title: updates.title ?? existing.title,
     description: updates.description ?? existing.description,

@@ -1,8 +1,8 @@
 /**
  * Sync-specific types for PocketBase backend
  *
- * PocketBase handles auth tokens and realtime subscriptions internally
- * via its SDK.
+ * The SDK stores the auth token and runs realtime. The app renews the token
+ * itself (pb-auth.ts).
  */
 
 import type { TaskRecord } from '@/lib/types';
@@ -86,11 +86,7 @@ export interface SyncQueueItem {
   failedAt?: number;
 }
 
-// ============================================================================
-// Remote task index entry (used by fetchRemoteTaskIndex for push LWW guard)
-// ============================================================================
-
-/** One row of the remote task index used by push/pull pre-fetch. */
+/** One remote record's identity and version, from a listing or a single lookup. */
 export interface RemoteTaskIndexEntry {
   pbRecordId: string;
   clientUpdatedAt: string;

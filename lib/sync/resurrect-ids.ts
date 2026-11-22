@@ -21,9 +21,10 @@ export async function rememberForResurrect(taskIds: string[]): Promise<void> {
 }
 
 /**
- * Forget ids. An id matters only while its Trash row exists, so each way out of
- * Trash (restore, undo, delete forever, empty, purge) forgets it in the same
- * transaction, which keeps the list no longer than Trash (S-WEB-05).
+ * Forget ids. An id matters only while its Trash row exists, so restore, undo,
+ * delete forever, empty, and purge forget it in the same transaction (S-WEB-05).
+ * A pull or a Replace import that takes a task out of Trash doesn't. The next
+ * resurrect run forgets those.
  */
 export async function forgetForResurrect(taskIds: string[]): Promise<void> {
   if (taskIds.length === 0) return;

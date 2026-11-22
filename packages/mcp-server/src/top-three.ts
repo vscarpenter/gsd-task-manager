@@ -107,9 +107,21 @@ function compareText(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/** Stored instants may carry an offset, so their text order isn't their time order. Missing is oldest. */
+function compareInstants(a: string | null | undefined, b: string | null | undefined): number {
+  const left = timeOf(a);
+  const right = timeOf(b);
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function timeOf(instant: string | null | undefined): number {
+  const ms = Date.parse(instant ?? '');
+  return Number.isNaN(ms) ? -Infinity : ms;
+}
+
 /** Lowest rank, then newest updatedAt, then id: the two-device conflict rule. */
 function byConflictRule(a: TopThreeTask, b: TopThreeTask): number {
-  return (a.focusRank ?? 0) - (b.focusRank ?? 0) || compareText(b.updatedAt, a.updatedAt) || compareText(a.id, b.id);
+  return (a.focusRank ?? 0) - (b.focusRank ?? 0) || compareInstants(b.updatedAt, a.updatedAt) || compareText(a.id, b.id);
 }
 
 function pickedOn(tasks: TopThreeTask[], date: string): TopThreeTask[] {
@@ -130,14 +142,14 @@ export function todaysPicks(tasks: TopThreeTask[], now: Date, zone: string): Tod
 
 function byDueThenImportant(a: TopThreeTask, b: TopThreeTask): number {
   return (
-    compareText(a.dueDate ?? '', b.dueDate ?? '') ||
+    compareInstants(a.dueDate, b.dueDate) ||
     Number(b.important) - Number(a.important) ||
     compareText(a.id, b.id)
   );
 }
 
 function byCreated(a: TopThreeTask, b: TopThreeTask): number {
-  return compareText(a.createdAt, b.createdAt) || compareText(a.id, b.id);
+  return compareInstants(a.createdAt, b.createdAt) || compareText(a.id, b.id);
 }
 
 /** Suggested ids, in order: overdue Q1, escalating, Q1 with a due date, then the rest of Q1. */
