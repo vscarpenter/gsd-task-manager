@@ -76,7 +76,7 @@ export async function archiveOldTasks(
   const db = getDb();
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-  const cutoffIso = cutoffDate.toISOString();
+  const cutoffMs = cutoffDate.getTime();
   const now = new Date().toISOString();
 
   const { getSyncConfig } = await import("@/lib/sync/config");
@@ -90,7 +90,7 @@ export async function archiveOldTasks(
       const allTasks = await db.tasks.toArray();
       const eligible = allTasks.filter((task) => {
         if (task.savedAt || !task.completed || !task.completedAt) return false;
-        return task.completedAt < cutoffIso;
+        return Date.parse(task.completedAt) < cutoffMs;
       });
 
       if (eligible.length === 0) {

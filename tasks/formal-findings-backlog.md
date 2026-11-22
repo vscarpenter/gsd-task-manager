@@ -36,9 +36,17 @@ You edit a task, then delete or archive it. The edit's push fails once, the dele
 
 ### `WEB-FAILED-PUSH-STRANDED` · P2 · an edit whose push retries run out never leaves the device
 
+**Partly addressed 2026-11-14.** Retry in Settings re-arms a failed row, and the model has that step. Nothing re-arms one by itself, so `FindingRetriesRunOut.cfg` still breaks.
+
 Five failed syncs in a row mark the queue row `failed` (`recordAttemptFailure`, `lib/sync/queue.ts:150`). `getPending` (`:103`) skips failed rows, and nothing re-arms them, so the server and every other device keep the old copy. The health monitor counts failed rows but never sends them again. Fix: re-arm failed rows on launch and on a manual sync, as iOS and Android do. That changes the rule in `HOLDOFF-FAILED-ROWS`, so the two land in the same PR. Evidence: `verify-sync-convergence`, `FindingRetriesRunOut.cfg`.
 
+### `WEB-OUTAGE-TRASHES` · P2 (decision) · an outage can move a new task to Trash
+
+A failure with no answer (status 0, a 429, a 5xx, or an unreadable lookup) spends the same budget as a rejection. Create a task during an outage and sync five times. The row is marked failed. The next good pull doesn't list the task, so `classifyRemoteDeletion` abandons it to Trash. Found and replayed on the real engine on 2026-11-22. One fix is to charge only rejections, which `Proposed-transientFree.cfg` checks against all four rules. As a code edit it fails two existing tests, in `pb-push-session.test.ts` and `pb-push.test.ts`. The other fix is the re-arm in `WEB-FAILED-PUSH-STRANDED`. Evidence: `verify-retry-budget`, `Finding-outageTrashes.cfg`.
+
 ### `CONDITIONAL-UPDATE` · update to the existing P3 row · now replayed on web
+
+**Fixed 2026-11-14 by `40a8bc5` (ADR 0021).** `FindingPushRace.cfg` holds, and `BrokenPushWithoutCompare.cfg` replays the bug. The rest of this entry describes the code before the fix.
 
 `verify-sync-convergence` replayed this race against the real code (`FindingPushRace.cfg`). Both pushes read the original. B writes its edit, and A's upsert, decided on that stale read, overwrites it with A's older edit. Both open devices end on B's edit, but the server keeps A's, and so does any device that signs in later. Suggest raising the row to P2. The fix still needs the owner decision the row asks for.
 

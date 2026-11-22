@@ -2,7 +2,6 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
@@ -61,7 +60,7 @@ jobs:
 
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -90,6 +89,10 @@ jobs:
         run: bun run test -- --coverage
         env:
           CI: true
+      # In this job on purpose: "test" is a required check, so a broken model blocks a merge.
+      - name: Model-check the TLA+ specs
+        if: ${{ !cancelled() }}
+        run: bash scripts/check-models.sh
 
   mcp-coverage:
     runs-on: ubuntu-24.04

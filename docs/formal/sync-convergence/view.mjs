@@ -54,6 +54,7 @@ export const step = (action, from, to) => {
     case "PushSends":
     case "PushWrites": {
       const d = mover(from, to, ["queue", "reading"]);
+      if (JSON.stringify(from.queue[d]) === JSON.stringify(to.queue[d])) return `the server refuses ${d}'s stale write`;
       return JSON.stringify(from.server) === JSON.stringify(to.server)
         ? `${d} drops its edit as older than the server's`
         : `${d} sends its edit`;
@@ -70,6 +71,8 @@ export const step = (action, from, to) => {
       if (from.cursor[d] !== to.cursor[d]) return `${d} pulls, and its cursor moves ahead`;
       return `${d} pulls and gets nothing new`;
     }
+    case "YouRetry":
+      return `you tap Retry on ${mover(from, to, ["queue"])}`;
     case "SyncFails":
       return `${mover(from, to, ["phase"])}'s sync fails`;
     case "EventArrives": {

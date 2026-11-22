@@ -1,3 +1,4 @@
+import { SCHEMA_LIMITS } from "@/lib/constants/schema";
 import type { z } from "@/lib/zod";
 
 /** One failed field: names, codes, and limits only, never the user's text. */
@@ -43,7 +44,20 @@ const LIST_LIMITS: Record<string, LimitCopy> = {
   tags: (max) => `A task can have up to ${max} tags.`,
   subtasks: (max) => `A task can have up to ${max} subtasks.`,
   dependencies: (max) => `A task can depend on up to ${max} other tasks.`,
+  timeEntries: (max) => `A task can have up to ${max} timer sessions.`,
 };
+
+const APPENDABLE = {
+  dependencies: SCHEMA_LIMITS.MAX_DEPENDENCIES,
+  timeEntries: SCHEMA_LIMITS.MAX_TIME_ENTRIES,
+} as const;
+
+/** The matrix hides a row past a limit, so an append refuses before it writes one. */
+export function assertRoomToAppend(field: keyof typeof APPENDABLE, current: readonly unknown[] = []): void {
+  const maximum = APPENDABLE[field];
+  if (current.length < maximum) return;
+  throw new TaskValidationError([{ path: [field], code: "too_big", origin: "array", maximum }], `${field} is full`);
+}
 
 /** The sentence a failed save uses, for a field that has reached its limit. */
 export function stringLimitMessage(field: LimitedField, maximum: number): string {
