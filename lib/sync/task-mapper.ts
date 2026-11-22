@@ -304,9 +304,8 @@ function focusFromWire(wire: { focus_date: string; focus_rank: number }): Pick<T
 function savedTimestampToWire(savedAt?: string): string { return savedAt ?? ""; }
 function savedTimestampFromWire(savedAt: string): string | undefined { return savedAt || undefined; }
 
-/** Reject mapped rows before the cursor can acknowledge invisible tasks. */
+/** Reject a row the matrix would quarantine. The cursor can still move past it. */
 function validateMappedTask(mapped: TaskRecord): TaskRecord | null {
-  // The pull cursor must never acknowledge a row the matrix would quarantine.
   const stored = storedTaskRecordSchema.safeParse(mapped);
   if (!stored.success) {
     logger.warn('Remote task violates local storage contract, skipping', {

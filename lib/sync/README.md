@@ -203,7 +203,7 @@ Push, pull, engine, and realtime:
 - `pb-push.ts:pushSingleItem` charges an upsert whose listed version fails `task-mapper.ts:isWireVersion`, the strict wire parse. A delete is sent anyway with that raw version, and skips the stale check. The server answers 412 only if the record changed after the lookup.
 - `pb-push.ts:isStaleDelete` skips an archive's delete when the remote is newer than the archived version (B-46).
 - `pb-push.ts:createPushSessionCheck` confirms the session before a create and before dropping a delete that found no remote record. A refused token reads as a guest and 404s every lookup.
-- `pb-push.ts:pushLocalChanges` stops on a session check failure without charging queue rows. `isSessionCheckFailure` counts `StaleSyncSessionError` as one. A retired row never re-arms.
+- `pb-push.ts:pushLocalChanges` stops on a session check failure without charging queue rows. `isSessionCheckFailure` counts `StaleSyncSessionError` as one. Only a manual Retry in Settings re-arms a retired row.
 - `pb-push.ts:pushLocalChanges` runs sequentially with `THROTTLE_MS` between items, and aborts the loop when an item throws a 429. A 429 on the per-item lookup (`pb-sync-helpers.ts:fetchRemoteTaskEntry`) charges that row one attempt, and the loop continues.
 - `pb-push.ts:recordItemFailure` persists a stable error code only, never the raw message.
 - `pb-push.ts:upsertRemoteTask` takes `saved_at`, `focus_date`, and `focus_rank` from the current row (`placementToWire`), not the queued payload.
@@ -231,7 +231,7 @@ Helpers, wire mapping, queue, resurrection, and coordinator:
 - `task-mapper.ts:placementToWire` reads placement from the current row. A row no longer in `tasks` sends none of the keys, so the server keeps its values (C4-6).
 - `task-mapper.ts:pbTaskRecordSchema` never rejects a record for a bad `focus_date` or `focus_rank`. `focusFromWire` turns an invalid pair into neither field.
 - `queue.ts:recordAttemptFailure` moves a row to `'failed'` at `SYNC_CONFIG.MAX_RETRIES` instead of deleting it. It truncates `lastError` to 500 characters.
-- `queue.ts:getPending` never returns a failed row, and nothing re-arms one.
+- `queue.ts:getPending` never returns a failed row. Only `failed-recovery.ts:recoverFailedSyncItem`, on a manual Retry, re-arms one.
 - `queue.ts:isPendingSyncQueueItem` treats an undefined status as pending, for rows that predate v14.
 - `queue.ts:classifyRemoteDeletion` protects a task with any pending row. With only failed rows the verdict is `'abandon'`, and the caller moves the task to Trash.
 - `queue.ts:classifyRemoteDeletion` returns `staleRowIds` that the caller deletes in the same transaction. A dead row can never outlive the task it guarded.
