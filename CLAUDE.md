@@ -166,7 +166,9 @@ Detail moved to `.claude/rules/testing.md` — auto-loads when editing `tests/**
 
 ## Git Workflow
 
-**Default commit flow**: when the user says "commit and push", "commit, push, create a PR", or any close variant, invoke the `commit-commands:commit-push-pr` skill — don't manually compose the steps. Write a descriptive conventional commit message, bump the version if appropriate, create a PR unless told otherwise.
+**Default commit flow**: when the user says "commit and push", "commit, push, create a PR", or any close variant, invoke the `commit-commands:commit-push-pr` skill rather than composing the steps by hand. Write a descriptive conventional commit message and create a PR unless told otherwise. Leave the version alone: bumps go in their own `chore(release)` PR (see `.claude/commands/release.md`), and the `pr-shape` check fails any other PR that changes a `package.json` version.
+
+**PR shape**: one concern per PR, at most 15 changed files (lockfiles and `tasks/` don't count). The `pr-shape` check enforces both limits; add the `large-pr` label only when one concern needs more files.
 
 **Branch rule**: never commit on `main`. Create a feature branch (`<type>/<short-desc>`) first. A `PreToolUse` hook (`.claude/hooks/no-main-commits.sh`) enforces this.
 

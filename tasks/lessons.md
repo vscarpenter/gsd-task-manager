@@ -623,3 +623,37 @@ Adding a wire column is not enough. A client that pulled a record before the col
   it watches.** The next delivery skips the shallower target and the browser
   raises "ResizeObserver loop completed with undelivered notifications", which
   the e2e console fixture treats as a failure. Defer the write a frame.
+- **A green e2e job can carry a flaky test.** Playwright passes a job whose test
+  failed and then passed on retry. #760's own run had the new strip test flaky,
+  and it failed on main. Read each engine's HTML report for `flaky` outcomes
+  before asking to merge, not just the check's status.
+- **Wait for a layout decision instead of reading it a fixed frame later.** The
+  shell decides a frame or more after a resize or a change above the stage, and
+  WebKit on Linux took about 100ms to apply `setViewportSize`. Resize until
+  `innerHeight` matches, then `expect.poll` for the state.
+- **Budget a long Tab walk by its CI duration, not its local one.** 120 presses
+  at about 240ms each ran 28.2 to 29.6 seconds in CI's WebKit against the 30s
+  default, then timed out on a run 15% slower. Compare each new test's report
+  duration to its timeout, and set `test.setTimeout` when it passes 70%.
+
+## Commitment gates (2026-11-21)
+
+- **A required check gates nothing while a bypass exists.** #759 merged four
+  seconds before its required `test` check finished, through the admin bypass
+  that code-owner review forced on every owner PR. Adding more required checks
+  wouldn't have stopped it. Turning off the unsatisfiable rule and emptying the
+  bypass list did.
+- **Read the failure artifact before naming a flake's cause.** The
+  `review-remediation` flake was logged as "reads IndexedDB once without
+  polling". The failed attempt's screenshot showed the card title as "Draft
+  protectionSave this without Enter": the drawer's 50ms title autofocus took
+  the fill. A poll would have kept failing and hidden nothing; reading the
+  screenshot took a minute.
+- **Each engine names a cancelled load differently.** Chromium says
+  `net::ERR_ABORTED`, Firefox `NS_BINDING_ABORTED`, and WebKit text containing
+  "cancelled". A filter that knows only one of them fails whenever a
+  navigation cancels a prefetch in the others.
+- **Make a check and the flow it judges agree in the same PR.** The release
+  command titled its PRs "Release vX.Y.Z", so the new `pr-shape` rule would
+  have failed the next release. Grep for every producer of what a new check
+  inspects before shipping the check.

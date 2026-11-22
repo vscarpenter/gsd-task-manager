@@ -1985,3 +1985,44 @@ font, date, and smart-view strip. The owner chose to fix before tagging v15.0.0,
   clears it when a resize makes room, and never sets it without `fillViewport`.
 
 **Out of scope:** the WebKit scroll-lock jump (still parked).
+
+# Spec: Make the two-week commitments mechanical (2026-11-21)
+
+**Goal.** Turn the three commitments from the 2026-11-21 review into gates that hold without willpower. The owner approved the design in session: required e2e with no bypass, a narrower quiz rule, and a required PR-shape check with a label override.
+
+**Done before this spec.** The `main-protection` ruleset (id 8643215) now requires `e2e (chromium)`, `e2e (firefox)`, and `e2e (webkit)` next to the five existing checks. Code-owner review is off, because the sole owner can't approve their own PRs, and the admin bypass is gone. The ruleset before the change is saved for rollback.
+
+## Part 1: PR shape check
+
+**Inputs.** The PR's title, its label names, and its changed files from the GitHub API (`filename`, plus `patch` when GitHub returns one).
+
+**Outputs.** A list of problems. An empty list passes. The `pr-shape` job prints each problem and fails when the list isn't empty.
+
+**Rules.**
+- Size: more than 15 counted files is a problem, unless the PR carries the `large-pr` label. Lockfiles (`bun.lock` and `package-lock.json` at any depth) and anything under `tasks/` don't count.
+- Release: a change to a top-level `"version"` line in any `package.json` is a problem unless the title starts with `chore(release)`. The label doesn't override this rule. A nested `"version"` key, indented deeper than one level, doesn't count.
+
+**Constraints.** Pure logic in `scripts/check-pr-shape.cjs`, run by `actions/github-script` in `.github/workflows/pr-shape.yml`, the same shape as `apply-risk-label.yml`. Read-only permissions, `persist-credentials: false`, and a timeout. It runs on `opened`, `synchronize`, `reopened`, `edited`, `labeled`, and `unlabeled`, so a title fix or a label reruns it without rerunning CI.
+
+**Edge cases.** A PR with exactly 15 counted files passes. A PR of only lockfile or `tasks/` changes passes at any size. A `package.json` patch GitHub omits (a huge diff) can't be read, so the release rule treats it as unchanged; the size rule still applies.
+
+**Acceptance criteria.**
+- AC1: 15 counted files pass; 16 fail with a message naming the count and the `large-pr` label.
+- AC2: Lockfiles and `tasks/` files don't count toward the 15.
+- AC3: The `large-pr` label passes a PR over 15 files.
+- AC4: A top-level version change fails unless the title starts with `chore(release)`, and the label doesn't help.
+- AC5: A nested `"version"` key change and a non-version `package.json` change don't trigger the release rule.
+- AC6: The workflow meets the existing workflow guards (`tests/data/pipeline-workflows.test.ts`).
+- AC7: After the PR merges, the ruleset requires `pr-shape`.
+
+**Test stubs.** `tests/data/check-pr-shape.test.ts`: one case per AC1 to AC5, built from file lists and patches.
+
+## Part 2: Narrow the comprehension quiz
+
+`coding-standards.md` keeps the change report for every non-trivial change, but the quiz applies only to changes that can lose or corrupt user data: sync, persisted data shapes, import and export, and write paths an external client calls. The repo's `CLAUDE.md` names those paths. Claude doesn't hand over a merge command for those PRs until the quiz is answered.
+
+## Part 3: Fix the known e2e flakes
+
+Each flake gets its own PR: `sync-auth-token.spec.ts` in WebKit, `review-remediation.spec.ts:48`, and the WebKit `test.fixme` in `focus-not-obscured.spec.ts`. Each PR shows red evidence before the fix and a stress run after it. A flake whose root cause is in a third-party library gets an issue instead of a guess.
+
+**Out of scope.** Shortening the focus walks that #762 gave 60 seconds; the rule going forward is no new timeout raises. The global `~/.claude/CLAUDE.md` quiz line, which lives outside this repo.

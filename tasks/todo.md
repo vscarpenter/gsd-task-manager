@@ -1,19 +1,44 @@
+# Commitment gates (2026-11-21)
+
+From the 2026-11-21 weekly review. Non-trivial tier (CI infra plus the merge gate); the owner approved the design in session. Spec: "Make the two-week commitments mechanical" at the end of `tasks/spec.md`. Check-in on 2026-12-05.
+
+- [x] Ruleset 8643215: e2e (chromium, firefox, webkit) required, code-owner review off, admin bypass removed. Old ruleset saved in the session scratchpad.
+- [x] Spec and plan.
+- [x] PR A `ci/pr-shape-check`: `scripts/check-pr-shape.cjs` (test-first), `.github/workflows/pr-shape.yml`, and `.github/REPOSITORY_SETTINGS.md` Step 1. Also titles release PRs `chore(release): vX.Y.Z` in `.claude/commands/release.md` and drops the bump step from the `CLAUDE.md` commit flow, or the next release would fail the check.
+- [x] PR B `docs/narrow-comprehension-quiz`: `coding-standards.md` and `CLAUDE.md`.
+- [x] PR C `test/sync-auth-token-webkit-cancel`: the filter knew only Chromium's name for a cancelled load. New test holds RSC prefetches open; red in WebKit and Firefox, green in all three; WebKit stress 50 of 50.
+- [x] PR D `test/review-remediation-poll-save`: the drawer's 50ms title autofocus took the subtask fill (CI screenshot). Waits for title focus now; 150 of 150 over 10 repeats in three engines.
+- [ ] PR E: WebKit `test.fixme` in `focus-not-obscured.spec.ts`. Not fixed: the cause sits in the scroll-lock layer and needs a real Safari check. Issue drafted, waiting for the owner's go-ahead to file it.
+- [ ] After PR A merges: add `pr-shape` to the ruleset's required checks.
+
+## Resuming From Here
+
+- **Done:** ruleset 8643215 changed (e2e x3 required, no code-owner review, no bypass). PRs A to D committed on their own branches, none pushed. Memory: `two-week-commitments-2026-11-21`, `main-merge-gate-mechanics` (with rollback steps).
+- **Next:** with the owner's go-ahead, push and open PRs A to D, create the `large-pr` label, and file the WebKit scroll-lock issue. After all four merge, add `pr-shape` to the ruleset's required checks (a required check that hasn't run blocks a PR).
+- **Blocked on the owner:** pushes, PRs, the label, the issue, and every merge.
+- **Assumptions:** "version bump in its own PR" is enforced by the PR title (`chore(release)`), not a file allowlist, because release PRs touch the MCP About section and tests too (#755).
+- **Check-in:** 2026-12-05, graded against git log; see the memory note.
+
+
 # Release blocker: pin only when the stage fits (2026-11-20)
 
-Branch `fix/pinned-stage-measure`, off `d4f813d0`. Standard tier: two components, CSS, and tests; the owner approved the design in session. Spec: the "F3 follow-up" section at the end of `tasks/spec.md`. v15.0.0 is not tagged; tagging deploys.
+[PR #760](https://github.com/vscarpenter/gsd-task-manager/pull/760) was squash-merged as `4cd0ccb7`. Standard tier: two components, CSS, and tests; the owner approved the design in session. Spec: the "F3 follow-up" section at the end of `tasks/spec.md`. v15.0.0 shipped to production on 2026-11-21.
 
 - [x] Spec addendum and plan.
 - [x] Red: AppShell unit tests (AC20) and e2e for the strip case (AC17, AC18) and the floor (AC19). The strip case failed on the pre-fix build (main clipped at 1024x640).
 - [x] Green: measure in AppShell, veto in the `pinned` variant, main a flex column from md (`d14d94f1`). The help drawer state moved into `useHelpDrawerOpen` first, to stay under AppShell's code-shape ceiling (`dd794d8e`).
 - [x] Gates: unit 5,117 passed, typecheck, test typecheck, lint, shape, knip, build, bundle. Layout, focus, and text-scaling specs: 83 passed in three engines. Full export e2e: 608 passed, 33 skipped, 1 failed (the known Firefox `share-target.spec.ts` service-worker flake, 8 of 8 alone).
-- [ ] Push and PR; the owner merges; tag v15.0.0 once main is green.
+- [x] Push and PR #760; merged as `4cd0ccb7` on the owner's go-ahead.
+- [x] Main's WebKit e2e went red twice after merging, both times in tests. The strip test read the shell before it decided: [PR #761](https://github.com/vscarpenter/gsd-task-manager/pull/761) (`2faaaff8`) waits for the resize and polls. Then the pinned-stage focus walk timed out: it had run 28.2 to 29.6 seconds against the 30-second default. [PR #762](https://github.com/vscarpenter/gsd-task-manager/pull/762) (`4cb9ce55`) gives both single-route walks 60 seconds.
+- [x] Main green on `4cb9ce55`. Tag `v15.0.0` pushed. The owner approved the production environment, and Deploy Production Release run 44873055822 passed every job, smoke test included. Production `sw.js` reports 15.0.0, and its CSS carries the measured-unpin rule. The Docker image for v15.0.0 published.
 
 ## Resuming From Here
 
-- **Done:** the fix, committed on `fix/pinned-stage-measure`.
-- **Next:** CI on the fix PR. Once the owner merges it and main's CI is green, push the `v15.0.0` tag (it runs Deploy Production Release) and hand the owner `! gh release create v15.0.0 --generate-notes --title "v15.0.0"`.
-- **Blocked on the owner:** merging the fix PR.
-- **Parked:** the WebKit scroll-lock jump. The smart-view strip case is fixed here.
+- **Done:** v15.0.0 is in production (#759, #760, #761, #762). The [GitHub release](https://github.com/vscarpenter/gsd-task-manager/releases/tag/v15.0.0) went up on 2026-11-21 at 16:01Z, with generated notes covering #756 to #762, after the owner asked for it.
+- **Next:** nothing for this release.
+- **Cleanup done 2026-11-21:** deleted the merged local branches `fix/usability-audit`, `fix/pinned-stage-measure`, `test/pinned-stage-e2e-wait`, and `test/focus-walk-timeout`, after each tip matched its merged PR's head (#759 to #762). Their remote branches were already gone.
+- **Parked:** the WebKit scroll-lock jump, and marking SonarCloud's css:S8776 on the `pinned` variant a false positive.
+- **Known flakes, older than this release:** `sync-auth-token.spec.ts` in WebKit (aborted prefetch requests count as failed; 6 of the last 12 main runs) and `review-remediation.spec.ts:48` (Firefox and WebKit; the 2026-11-21 commitment work found the cause was the drawer's title autofocus, not a missing poll). Both pass on retry.
 
 # Usability fixes from the modern-web-guidance audit (2026-11-20)
 

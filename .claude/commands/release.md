@@ -21,7 +21,7 @@ Release the gsd-taskmanager app or MCP server. Replaces the recurring "bump vers
 3. **Version bump** — update `package.json` and `packages/mcp-server/package.json` if the MCP server is part of the release. Use `npm version --no-git-tag-version` or edit directly.
 4. **Verification gate** — run `bun typecheck && bun lint && bun run test`. Halt if any fail.
 5. **Commit** — `chore(release): vX.Y.Z` with a body listing the user-visible changes since the previous tag (`git log --oneline <prev-tag>..HEAD`).
-6. **Push and PR** — push the branch, open a PR titled `Release vX.Y.Z` with the changelog as the body.
+6. **Push and PR**: push the branch and open a PR titled `chore(release): vX.Y.Z` with the changelog as the body. The `pr-shape` check fails a version bump in a PR with any other title.
 7. **Wait for review or self-merge** — if the user has authority, ask whether to merge immediately.
 8. **Tag** — after merge, `git fetch origin main`, `git tag vX.Y.Z`, `git push origin vX.Y.Z`.
 9. **GitHub release** — `gh release create vX.Y.Z --generate-notes --title "vX.Y.Z"`.
