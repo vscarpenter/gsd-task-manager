@@ -52,11 +52,9 @@ function buildPreservedSyncMetadata(deviceId: string) {
 
 /** Clear every table in one transaction, keeping deviceId for a future sync. */
 async function clearTables(db: GsdDatabase, cleared: string[]): Promise<void> {
-	const config = await getSyncConfig();
-	const deviceId = config?.deviceId;
-
 	const allTables = [...db.tables];
 	await db.transaction("rw", allTables, async () => {
+		const deviceId = (await getSyncConfig())?.deviceId;
 		for (const table of allTables) {
 			// react-doctor-disable-next-line react-doctor/async-await-in-loop -- one transaction must fail atomically
 			await table.clear();

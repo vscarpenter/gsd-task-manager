@@ -6,7 +6,6 @@ name: PR shape
 # rerun this check without rerunning CI.
 on:
   pull_request:
-    branches: [main]
     types: [opened, synchronize, reopened, edited, labeled, unlabeled]
 
 concurrency:
