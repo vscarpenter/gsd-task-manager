@@ -27,17 +27,19 @@ Each rule is an INVARIANT in `TaskTombstones.tla`.
 
 ## The findings
 
-The code at the sync commit broke four of the five rules. On 2026-11-08 each path was replayed in Vitest against the real writers, and each one reproduced. Findings 4 and 5 are fixed.
+None is open in the model. The model found seven on 2026-11-08, and each was replayed on the real writers. Six are configs that undo the fix and must keep failing.
 
-1. **An import writes an id into a second table** (`OneTable`, `Finding-1-import.cfg`). `applyTasks` in merge mode gives a backup task a fresh id only when the id is live here. Merging a backup that has the task live, while it's in Trash or archived, leaves it in both. A replace with a 1.0.0 backup does the same. `applyArchivedTasks` doesn't check `deletedTasks`, so an archived row lands beside a Trash row. Rule 4 in `.claude/rules/archive-tombstone.md` calls the replace case legitimate, which contradicts rule 1.
-2. **Undo doesn't clear an archive row** (`OneTable`, `Finding-2-undo.cfg`). You delete the task, another device edits it, that edit arrives live, the task is archived, and then you press Undo. `restoreTask` in `lib/tasks/crud/restore.ts` puts it back in `tasks` and leaves the archive row.
-3. **Reinstate checks only the archive** (`OneTable`, `Finding-3-reinstate.cfg`). You delete an archived task forever, another device edits it, that edit arrives live, and you press Undo on that toast. `reinstateArchivedTask` writes the archive row beside the live one.
-4. **A queued edit re-created a deleted task's server copy. Fixed on 2026-11-22.** `claimQueuedWrite` in `lib/sync/queued-write.ts` sends a create or update only for a live task. `Broken-pushSendsStaleWrite.cfg` undoes that and breaks `ServerStaysDeleted`.
-5. **A queued delete removed a restored task everywhere. Fixed on 2026-11-22.** `claimQueuedWrite` sends a delete only for a task that isn't live. `Broken-pushSendsStaleDelete.cfg` undoes that and breaks `NoLoss`. `tests/data/sync/queued-write-intent.test.ts` replays both bugs on the real engine.
-6. **Writers act on the session they read before their transaction** (`NoComeback` in `Finding-6-config-read.cfg`, `NoLoss` in `Finding-6-config-read-loss.cfg`). `runTaskSyncTransaction`, `restoreFromTrash`, and `restoreTask` in `lib/archive.ts` read `sync_config` before the transaction opens. If a sign-in from another tab lands in that gap, a delete is remembered instead of queued, and resurrect on sight brings it back. A restore in the same gap queues nothing, and reconcile drops the task.
-7. **Outside the model: Undo fails while signed in. Fixed on 2026-11-10:** the scope is now `async`, and `tests/data/tasks/restore-signed-in.test.ts` reproduces the failure under fake-indexeddb. `restoreTask` in `lib/tasks/crud/restore.ts` throws Dexie's "Transaction committed too early". `runTaskSyncTransaction` passes a plain arrow, not an `async` function, as the transaction scope, so Dexie stops tracking the native awaits. When `forgetForResurrect` returns early, the queue write runs in a transaction of its own. The task comes back anyway, but the toast says the Undo failed. It started with #701 (`bf4ba13e`). It showed first under fake-indexeddb. On 2026-11-08 a probe of the same writes in Chrome, with the app's Dexie 4.4.6, failed 20 of 20 runs under a plain arrow scope and passed 20 of 20 under an `async` one. A simpler probe with fewer awaits passed under both, so the failure depends on how many native awaits sit between two writes.
+| Finding | Fixed by | Replay | Breaks |
+|---|---|---|---|
+| 1. An import writes an id into a second table | `6446d47`: `applyTasks` and `applyArchivedTasks` check all three tables | `Broken-importWritesSecondTable` | `OneTable` |
+| 2. Undo leaves the archive row | `bringBackInTransaction` in `lib/task-tables.ts` | `Broken-undoKeepsArchive` | `OneTable` |
+| 3. Reinstate checks only the archive | `isStoredInTransaction` in `lib/task-tables.ts` | `Broken-reinstateChecksOnlyArchive` | `OneTable` |
+| 4. A queued edit re-creates a deleted task | `claimQueuedWrite` in `lib/sync/queued-write.ts` | `Broken-pushSendsStaleWrite` | `ServerStaysDeleted` |
+| 5. A queued delete removes a restored task everywhere | `claimQueuedWrite` | `Broken-pushSendsStaleDelete` | `NoLoss` |
+| 6. Writers act on a session read before their transaction | `1ef6553` (#735): they read `sync_config` inside it | `Broken-configReadEarly`, `Broken-configReadEarlyLoss` | `NoComeback`, `NoLoss` |
+| 7. Undo fails while signed in (outside the model) | #714: the transaction scope is async | `tests/data/tasks/restore-signed-in.test.ts` | |
 
-`Fixed.cfg` applies one proposed fix per finding, listed in `AllFixes` in the model, and every rule holds. Each `Finding-*.cfg` applies every fix but its own, so it shows that finding alone. The fixes are proposals, not code. Model the code's real fix when one lands.
+`tests/data/one-table-exploration.test.ts` checks `OneTable` on the real writers, so drift in this model can't hide a break of that rule.
 
 ## Run the check
 
@@ -45,29 +47,9 @@ The code at the sync commit broke four of the five rules. On 2026-11-08 each pat
 bash docs/formal/task-tombstones/check.sh
 ```
 
-It runs 14 configs through `scripts/tlc.sh`, which pins TLC 1.7.4 by hash and finds Java 21. The first run downloads the jar. A full run takes about 70 seconds, most of it `Fixed.cfg`. It prints one line per config and exits 0 only when every line says `ok`:
+It runs 13 configs through `scripts/tlc.sh`, which pins TLC 1.7.4 by hash and needs Java 11 or later. The first run downloads the jar. CI runs it on every PR, in the required `test` job. It prints one line per config and exits 0 only when every line says `ok`.
 
-```
-ok   TaskTombstones               expected OneTable           got OneTable                 34 states    1s
-ok   Fixed                        expected holds              got holds               1234722 states   32s
-ok   Finding-1-import             expected OneTable           got OneTable                 34 states    0s
-ok   Finding-2-undo               expected OneTable           got OneTable              21308 states    1s
-ok   Finding-3-reinstate          expected OneTable           got OneTable               3929 states    1s
-ok   Finding-6-config-read        expected NoComeback         got NoComeback           382731 states    8s
-ok   Finding-6-config-read-loss   expected NoLoss             got NoLoss               440486 states    8s
-ok   Broken-restoreKeepsTrashRow  expected OneTable           got OneTable                317 states    1s
-ok   Broken-pullSkipsTrashGuard   expected NoComeback         got NoComeback             1682 states    1s
-ok   Broken-absoluteTombstone     expected NewerEditWins      got NewerEditWins           236 states    1s
-ok   Broken-resurrectSkipsDelete  expected NoComeback         got NoComeback           369018 states    8s
-ok   Broken-reconcileSkipsQueue   expected NoLoss             got NoLoss                80804 states    2s
-ok   Broken-pushSendsStaleWrite   expected ServerStaysDeleted got ServerStaysDeleted
-ok   Broken-pushSendsStaleDelete  expected NoLoss             got NoLoss
-TLC output: /var/folders/.../task-tombstones.XXXXXX
-```
-
-`TaskTombstones.cfg` is the code as it is. TLC stops at the first rule that breaks, which is `OneTable`. `Fixed.cfg` must hold. Each `Broken-*.cfg` sets the `Variant` constant on top of every fix, removing one guard the code has, so each rule has been seen to fail. `NewerEditWins` holds on the code as it is (3,020,211 states on 2026-11-08, checked alone). The `Finding-*` configs show the other rules each failing on real paths.
-
-A new break usually flips several lines at once, because TLC reports only the first rule it finds broken, and a short new path can come before a finding's longer one. Start from `Fixed`: it has every fix on, so its break is the new one.
+`TaskTombstones.cfg` is the code as it is, and every rule must hold. Each `Broken-*.cfg` sets the `Variant` constant to remove one guard the code has, so each rule has been seen to fail.
 
 Read every result, pass or fail, with the pstack `/statechart` skill. On a break, it tells TLC's shortest path as steps in plain words. Give it `view.mjs` as the view, and send its output to a scratch folder outside the repo. The model is far over the chart's state budget, so the chart draws only the bug paths. For a passing config, it lists no path and draws no chart. Then name what you checked instead.
 
@@ -77,7 +59,7 @@ Read every result, pass or fail, with the pstack `/statechart` skill. On a break
 2. **Run the check before you touch the model.** A pass here only says the old description still holds.
 3. **Map each change to a model action** through the coverage record. A change has no effect, or the model no longer describes the code, or the promise changed on purpose, or the promise may be broken. Decide from the model, not from the commit message.
 4. **Update `TaskTombstones.tla` from the code**, as "Update the model for an intended change" says. Write the update before you rerun, and don't shape it by what passes.
-5. **Rerun the check and read the result with `/statechart`.** A config that no longer matches is the signal. If `Fixed.cfg` breaks, the change broke a rule the fixes otherwise keep. If a `Finding-*` config now holds, the change fixed that finding. Replay any new break against the code (next section).
+5. **Rerun the check and read the result with `/statechart`.** A config that no longer matches is the signal. If `TaskTombstones.cfg` breaks, the change broke a rule, or the model no longer describes the code. Replay any new break against the code (next section).
 6. **Break the new guard once.** If the change adds a guard, add a `Variant` that removes it, a `Broken-*.cfg` for it, and a line in `check.sh`. Confirm the rule fails. A model that can't fail proves nothing.
 7. **Move the sync commit** only when every change is accounted for and the check matches.
 
@@ -109,8 +91,8 @@ Run it with `bun run test tests/data/<file>.test.ts`, then `mv` it to a scratch 
 
 - **The code changed shape.** Edit the action the coverage record names. One Dexie transaction is one action. A read before the transaction opens is its own step, as `YouStart` is for the session read. A network read and the transaction that uses it are two steps, as `PullFetches` and `PullApplies` are.
 - **A new writer reaches `tasks`, `archivedTasks`, or `deletedTasks`.** Add an action for it, put it in `Next`, and add a row to the coverage record. It also needs a row in the writer table of `.claude/rules/archive-tombstone.md`. If it can move the task between tables, add it to the view's `step()` labels.
-- **A finding is fixed in the code.** Make the model's code path do what the fix does. Remove that fix's `Fix(...)` test so the fixed branch always runs, drop it from `AllFixes`, delete its `Finding-*.cfg`, remove its line from `check.sh`, and update the expected first break of `TaskTombstones.cfg`. When the last finding is fixed, `TaskTombstones.cfg` must hold.
-- **A new guard protects a rule.** Add a `Variant` value that removes it, a `Broken-*.cfg` for it with every fix on, and a line in `check.sh`.
+- **A finding is fixed in the code.** Make the code path do what the fix does, and add a `Variant` and a `Broken-*.cfg` that undo it. `TaskTombstones.cfg` must hold again.
+- **A new guard protects a rule.** Add a `Variant` value that removes it, a `Broken-*.cfg` for it, and a line in `check.sh`.
 - **The promise changed on purpose.** Change a rule only with evidence: a spec, an ADR, an owner decision, or the tests and commit message of the change. Put the old wording, the new wording, and the evidence in the commit message and in the rule's comment.
 - Keep the model update in its own commit, apart from any product fix.
 
@@ -121,9 +103,9 @@ Run it with `bun run test tests/data/<file>.test.ts`, then `mv` it to a scratch 
 | `Take`, `ApplyCopy`, `Newer` | `lib/sync/pb-pull.ts` | `applyPreparedRecord`, `remoteVersionWins`, `acceptsRemoteVersion` |
 | | `lib/sync/pb-sync-engine.ts` | `applyRemoteChange`, `localCopyHolds` |
 | | `lib/sync/pb-sync-helpers.ts` | `isRemoteNewerThanArchive` |
-| `YouStart`, `Cfg`, `Quiet` | `lib/tasks/crud/helpers.ts`, `lib/trash.ts`, `lib/archive.ts` | `runTaskSyncTransaction`, `restoreFromTrash`, `restoreTask`: `getSyncConfig` before the transaction |
+| `YouStart`, `Cfg`, `Quiet` | `lib/tasks/crud/helpers.ts`, `lib/trash.ts`, `lib/archive.ts` | `runTaskSyncTransaction`, `restoreFromTrash`, `restoreTask`: `getSyncConfig` inside the transaction |
 | `YouDelete` | `lib/tasks/crud/delete.ts`, `lib/sync/resurrect-ids.ts` | `deleteTask`, `rememberForResurrect` |
-| `YouUndo` | `lib/tasks/crud/restore.ts` | `restoreTask`, `forgetForResurrect` |
+| `YouUndo`, `Newest` | `lib/tasks/crud/restore.ts`, `lib/task-tables.ts` | `restoreTask`, `bringBackInTransaction`, `forgetForResurrect` |
 | `YouRestoreFromTrash` | `lib/trash.ts` | `restoreFromTrash` |
 | `YouRestoreFromArchive` | `lib/archive.ts` | `restoreTask` (`tasks.add` throws on a live id) |
 | `YouEdit` | `lib/tasks/crud/update.ts` | `updateTask`, and every live edit through `runTaskSyncTransaction` |
@@ -151,20 +133,22 @@ These write the same tables, and the model leaves them out on purpose. Migration
 
 Move this commit forward only after you've read every change to covered code since it, updated the model where needed, and seen the check match. If the check is blocked, leave the commit where it is and say so. Record a commit on `main`, because a squash merge drops branch commits.
 
+On 2026-11-22 findings 1 to 6, the import, and the push claim were brought up to date. The sync commit stays until Retry and Dismiss are modeled.
+
 ## Bounds and what's left out
 
 - **One task id, one web device, and the server.** Another device acts only on the server. Its own Trash, its queue, and its stale deletes aren't modeled. Dependencies and subtasks on other tasks are left out.
-- **Bounds:** stamps up to 4, so three stamps after the starting version, at most three queue rows, and one import per run. `Fixed.cfg` covers 1,234,722 states in about 32 seconds. Each added stamp multiplies the states several times over, so raise `MaxClock` only for a one-off run.
+- **Bounds:** stamps up to 4, so three stamps after the starting version, at most three queue rows, and one import per run. `TaskTombstones.cfg` covers over a million states. Each added stamp multiplies the states several times over, so raise `MaxClock` only for a one-off run.
 - **Time has no skew.** Every stamp is later than the ones before it, so the far-future hold-off (`holdsOffFarFutureRemote`) never fires, and the pull cursor never hides a newer edit. The model's pull reads the server copy whatever its stamp, as the first pull after a sign-in does.
 - **A push's server read, claim, write, and dequeue are one step.** Another device can edit between the read and the delete in the code. That race is conditional delete's (the B-47 remainder), with its own spec.
 - **Ordinary syncs only.** The backfill sync that pulls before it pushes, and its field repair, aren't modeled.
-- **Only a sign-in or sign-out lands between a writer's config read and its transaction.** The gap is a few microtasks. Any other step there has the same effect as one before the read, because the transaction re-reads every row except the config.
+- **Only a sign-in or sign-out lands between your act and its transaction.** The gap is a few microtasks, and the transaction reads every row and the config.
 - **A toast's Undo survives background steps and closes at your next explicit action.** The delete toast lasts five seconds (`TOAST_DURATION.LONG`), and the archive page's toast uses sonner's default. Auto-archive counts as a background step, and the model doesn't gate it on a pull.
 - **Any live task can be archived.** The completed-and-old test that `archiveOldTasks` applies isn't modeled.
-- **Each writer's transaction is atomic.** Finding 7 shows Undo's isn't today.
+- **Each writer's transaction is atomic.**
 - **Realtime holds one event.** A newer event from the other device replaces one not yet delivered, and sign-out drops it.
 - **Trash expiry counts as your delete.** ADR 0015 makes Trash the safety floor, so a task reconcile moved to Trash, because its edits never reached the server, may expire after 30 days. `NoLoss` doesn't count that.
-- **Not modeled:** the device-local fields that `mapOverLocalCopy` carries over, migration v15, Reset Everything, the MCP server, and the iOS and Android clients.
+- **Not modeled:** Retry and Dismiss in Settings (`failed-recovery.ts`), which need per-row retry counts, the equal-version coalescing and tie break, the device-local fields that `mapOverLocalCopy` carries over, migration v15, Reset Everything, the MCP server, and the iOS and Android clients.
 
 ## Related skills
 

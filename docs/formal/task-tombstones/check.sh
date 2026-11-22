@@ -16,13 +16,12 @@ out="$(mktemp -d "${TMPDIR:-/tmp}/task-tombstones.XXXXXX")"
 
 # config:expected result
 expectations=(
-  "TaskTombstones:OneTable"
-  "Fixed:holds"
-  "Finding-1-import:OneTable"
-  "Finding-2-undo:OneTable"
-  "Finding-3-reinstate:OneTable"
-  "Finding-6-config-read:NoComeback"
-  "Finding-6-config-read-loss:NoLoss"
+  "TaskTombstones:holds"
+  "Broken-importWritesSecondTable:OneTable"
+  "Broken-undoKeepsArchive:OneTable"
+  "Broken-reinstateChecksOnlyArchive:OneTable"
+  "Broken-configReadEarly:NoComeback"
+  "Broken-configReadEarlyLoss:NoLoss"
   "Broken-restoreKeepsTrashRow:OneTable"
   "Broken-pullSkipsTrashGuard:NoComeback"
   "Broken-absoluteTombstone:NewerEditWins"
@@ -57,7 +56,7 @@ for entry in "${expectations[@]}"; do
     verdict="FAIL"
     failures=$((failures + 1))
   fi
-  printf '%s %-28s expected %-18s got %-18s %8s states %4ss\n' \
+  printf '%s %-33s expected %-18s got %-18s %8s states %4ss\n' \
     "$verdict" "$config" "$expected" "$got" "${states:-?}" "$seconds"
 done
 
