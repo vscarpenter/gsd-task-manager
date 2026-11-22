@@ -94,7 +94,7 @@ Helpers, wire mapping, queue, resurrection, and coordinator (`pb-sync-helpers.ts
 - `pb-sync-helpers.ts:mapOverLocalCopy(record, remoteTask, ...localCopies): TaskRecord | null`. Maps a pulled record over this device's copy.
 - `task-mapper.ts:PBTaskRecord`. Shape of a task in the PocketBase `tasks` collection (snake_case fields).
 - `task-mapper.ts:PocketBaseTaskIdentity`, `task-mapper.ts:PocketBaseRealtimeEnvelope`. Parsed identity and realtime envelope shapes.
-- `task-mapper.ts:taskRecordToPocketBase(task, ownerId, deviceId, defaultNotifyBefore): Partial<PBTaskRecord>`. Maps a local task to the wire format.
+- `task-mapper.ts:taskRecordToPocketBase(task, ownerId, deviceId, defaultNotifyBefore): PBTaskRecord`. Maps a local task to the wire format.
 - `task-mapper.ts:pocketBaseToTaskRecord(record, existingLocal?): TaskRecord | null`. Validates and maps a remote record to a local task.
 - `task-mapper.ts:placementToWire(current)`. Returns `saved_at`, `focus_date`, and `focus_rank` from the current row.
 - `task-mapper.ts:clampClientTimestamp(iso, nowMs?): string`. Caps a far-future client timestamp.
