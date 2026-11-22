@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { modifyRow } from "@/lib/db-row";
 import { BUILT_IN_SMART_VIEWS, type SmartView } from "@/lib/filters";
 import { smartViewSchema } from "@/lib/schema";
 import type { AppPreferences } from "@/lib/types";
@@ -68,6 +69,11 @@ export async function getSmartView(id: string): Promise<SmartView | undefined> {
   return stored ? parseStoredSmartView(stored) : undefined;
 }
 
+/** A row can be missing on the first load, before migrations seed it. */
+function withDefaults(stored: AppPreferences | undefined): AppPreferences {
+  return stored ? { ...DEFAULT_APP_PREFERENCES, ...stored, id: "preferences" } : DEFAULT_APP_PREFERENCES;
+}
+
 /**
  * Get app preferences.
  *
@@ -79,32 +85,12 @@ export async function getSmartView(id: string): Promise<SmartView | undefined> {
  */
 export async function getAppPreferences(): Promise<AppPreferences> {
   const db = getDb();
-  const prefs = await db.appPreferences.get("preferences");
-
-  // Return defaults if not found (for initial load before migration runs)
-  if (!prefs) {
-    return DEFAULT_APP_PREFERENCES;
-  }
-
-  return {
-    ...DEFAULT_APP_PREFERENCES,
-    ...prefs,
-    id: "preferences",
-  };
+  return withDefaults(await db.appPreferences.get("preferences"));
 }
 
 /**
  * Update app preferences
  */
 export async function updateAppPreferences(updates: Partial<Omit<AppPreferences, 'id'>>): Promise<AppPreferences> {
-  const db = getDb();
-  const existing = await getAppPreferences();
-
-  const updated = {
-    ...existing,
-    ...updates
-  };
-
-  await db.appPreferences.put(updated);
-  return updated;
+  return modifyRow(getDb().appPreferences, "preferences", (stored) => ({ ...withDefaults(stored), ...updates }));
 }

@@ -149,33 +149,35 @@ export class SyncQueue {
    */
   async recordAttemptFailure(id: string, errorMessage: string): Promise<void> {
     const db = getDb();
-    const item = await db.syncQueue.get(id);
+    await db.transaction('rw', db.syncQueue, async () => {
+      const item = await db.syncQueue.get(id);
 
-    if (!item) return;
+      if (!item) return;
 
-    const nextRetryCount = item.retryCount + 1;
-    const exhausted = nextRetryCount >= SYNC_CONFIG.MAX_RETRIES;
-    const now = Date.now();
+      const nextRetryCount = item.retryCount + 1;
+      const exhausted = nextRetryCount >= SYNC_CONFIG.MAX_RETRIES;
+      const now = Date.now();
 
-    const update: Partial<SyncQueueItem> = {
-      retryCount: nextRetryCount,
-      lastError: truncateError(errorMessage),
-      lastAttemptAt: now,
-    };
-
-    if (exhausted) {
-      update.status = 'failed';
-      update.failedAt = now;
-      logger.warn('Sync queue item marked failed after exhausting retries', {
-        id,
-        taskId: item.taskId,
-        operation: item.operation,
+      const update: Partial<SyncQueueItem> = {
         retryCount: nextRetryCount,
-        lastError: update.lastError,
-      });
-    }
+        lastError: truncateError(errorMessage),
+        lastAttemptAt: now,
+      };
 
-    await db.syncQueue.update(id, update);
+      if (exhausted) {
+        update.status = 'failed';
+        update.failedAt = now;
+        logger.warn('Sync queue item marked failed after exhausting retries', {
+          id,
+          taskId: item.taskId,
+          operation: item.operation,
+          retryCount: nextRetryCount,
+          lastError: update.lastError,
+        });
+      }
+
+      await db.syncQueue.update(id, update);
+    });
   }
 
   /**

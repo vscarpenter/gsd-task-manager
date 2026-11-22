@@ -1,8 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
 	notificationChecker,
-	resetTaskNotification,
-	snoozeTaskNotification,
 	getDueSoonCount,
 } from "@/lib/notification-checker";
 import type { TaskRecord, NotificationSettings } from "@/lib/types";
@@ -452,72 +450,6 @@ describe("NotificationChecker", () => {
 
 			const lastCheck = notificationChecker.getLastCheckTime();
 			expect(lastCheck).toEqual(now);
-		});
-	});
-
-	describe("resetTaskNotification", () => {
-		it("should reset notification state for a task", async () => {
-			const task = createTask({
-				id: "task-1",
-				notificationSent: true,
-				lastNotificationAt: new Date().toISOString(),
-				snoozedUntil: new Date().toISOString(),
-			});
-
-			mockDb.tasks.get.mockResolvedValue(task);
-
-			await resetTaskNotification("task-1");
-
-			expect(mockDb.tasks.put).toHaveBeenCalledWith(
-				expect.objectContaining({
-					id: "task-1",
-					notificationSent: false,
-					lastNotificationAt: undefined,
-					snoozedUntil: undefined,
-				}),
-			);
-		});
-
-		it("should do nothing if task not found", async () => {
-			mockDb.tasks.get.mockResolvedValue(null);
-
-			await resetTaskNotification("nonexistent");
-
-			expect(mockDb.tasks.put).not.toHaveBeenCalled();
-		});
-	});
-
-	describe("snoozeTaskNotification", () => {
-		it("should snooze task for specified minutes", async () => {
-			const now = new Date("2025-01-15T12:00:00Z");
-			vi.setSystemTime(now);
-
-			const task = createTask({
-				id: "task-1",
-				notificationSent: true,
-			});
-
-			mockDb.tasks.get.mockResolvedValue(task);
-
-			await snoozeTaskNotification("task-1", 30);
-
-			const expectedSnoozeUntil = new Date("2025-01-15T12:30:00Z").toISOString();
-
-			expect(mockDb.tasks.put).toHaveBeenCalledWith(
-				expect.objectContaining({
-					id: "task-1",
-					snoozedUntil: expectedSnoozeUntil,
-					notificationSent: false, // Reset so it can notify again
-				}),
-			);
-		});
-
-		it("should do nothing if task not found", async () => {
-			mockDb.tasks.get.mockResolvedValue(null);
-
-			await snoozeTaskNotification("nonexistent", 30);
-
-			expect(mockDb.tasks.put).not.toHaveBeenCalled();
 		});
 	});
 

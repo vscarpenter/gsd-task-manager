@@ -243,55 +243,6 @@ class NotificationChecker {
 export const notificationChecker = new NotificationChecker();
 
 /**
- * Reset notification state for a task (e.g., when due date changes)
- */
-export async function resetTaskNotification(taskId: string): Promise<void> {
-	const db = getDb();
-	const task = await db.tasks.get(taskId);
-
-	if (!task) {
-		return;
-	}
-
-	const updated: TaskRecord = {
-		...task,
-		notificationSent: false,
-		lastNotificationAt: undefined,
-		snoozedUntil: undefined,
-	};
-
-	await db.tasks.put(updated);
-}
-
-/**
- * Snooze a task notification for a specified duration
- * @param taskId - The task ID
- * @param minutes - How many minutes to snooze
- */
-export async function snoozeTaskNotification(
-	taskId: string,
-	minutes: number,
-): Promise<void> {
-	const db = getDb();
-	const task = await db.tasks.get(taskId);
-
-	if (!task) {
-		return;
-	}
-
-	const snoozeUntil = new Date();
-	snoozeUntil.setMinutes(snoozeUntil.getMinutes() + minutes);
-
-	const updated: TaskRecord = {
-		...task,
-		snoozedUntil: snoozeUntil.toISOString(),
-		notificationSent: false,
-	};
-
-	await db.tasks.put(updated);
-}
-
-/**
  * Get count of tasks that are due soon (within notification window)
  * Used for badge display
  */
