@@ -67,7 +67,7 @@ This package holds the write paths for live tasks: create, update, complete, mov
 - `duplicate.ts:copyTitle` shortens the original title so the suffixed title stays within `SCHEMA_LIMITS.TASK_TITLE_MAX_LENGTH`.
 - `duplicate.ts:buildDuplicateRecord` deletes the `archivedAt` key instead of setting it to `undefined`. The strict export schema would otherwise drop the copy from backups.
 - `snooze.ts:snoozeTask` throws for negative minutes and for minutes above `TIME_TRACKING.MAX_SNOOZE_MINUTES`. A new snooze sets `notificationSent` to `false`.
-- `time-tracking.ts:startTimeTracking` throws when the task already has a running timer. `time-tracking.ts:stopTimeTracking` throws when none is running.
+- `time-tracking.ts:startTimeTracking` throws when the task already has a running timer, or when it holds `MAX_TIME_ENTRIES` entries. `time-tracking.ts:stopTimeTracking` throws when none is running.
 - `time-tracking.ts:stopTimeTracking` validates `notes` against `timeEntrySchema.shape.notes` before it opens the transaction.
 - `validation-error.ts:TaskValidationIssue` carries names, codes, and limits only, never the user's text.
 
