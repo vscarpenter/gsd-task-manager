@@ -6,9 +6,9 @@
  */
 
 import { readDefaultReminder } from '@/lib/notifications/default-reminder';
-import { getPocketBase } from './pocketbase-client';
 import { getSyncQueue } from './queue';
 import { preparePendingForSession } from './push-queue';
+import { claimQueuedWrite, sendTaskCreate, sendTaskDelete, sendTaskUpdate } from './queued-write';
 import { isWireVersion, placementToWire, taskRecordToPocketBase } from './task-mapper';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
@@ -89,16 +89,6 @@ async function assertPushSessionCurrent(ownerId: string): Promise<void> {
   });
 }
 
-/** Replace/retry removes old row ids, invalidating already captured snapshots. */
-async function isPushItemCurrent(id: string, ownerId: string): Promise<boolean> {
-  const db = getDb();
-  return db.transaction('r', [db.syncMetadata, db.syncQueue], async () => {
-    await assertSyncSessionCurrent(ownerId);
-    const current = await db.syncQueue.get(id);
-    return Boolean(current && current.status !== 'failed');
-  });
-}
-
 type QueuedTask = NonNullable<SyncQueueItem['payload']>;
 
 /**
@@ -166,18 +156,13 @@ async function upsertRemoteTask(
   payload: SyncQueueItem['payload'], pbRecordId: string | undefined,
   ownerId: string, deviceId: string, queueId: string, expectedVersion?: string,
 ): Promise<string | null> {
-  const pb = getPocketBase();
   const { task, storeOnRow, pbData } = await preparePushFields(payload!, ownerId, deviceId, expectedVersion);
-  if (!(await isPushItemCurrent(queueId, ownerId))) return null;
+  const claim = await claimQueuedWrite('upsert', queueId, ownerId);
+  if (!claim) return null;
 
   let recordId = pbRecordId;
-  if (recordId) {
-    await pb.send(`/api/gsd/tasks/${encodeURIComponent(recordId)}`, {
-      method: 'PATCH', body: { expected_version: expectedVersion, data: pbData },
-    });
-  } else {
-    recordId = (await pb.collection('tasks').create(pbData)).id;
-  }
+  if (recordId) await sendTaskUpdate(claim, recordId, expectedVersion, pbData);
+  else recordId = await sendTaskCreate(claim, pbData);
 
   if (storeOnRow) await settleRowOffset(task, ownerId);
   return recordId;
@@ -347,10 +332,9 @@ async function pushDelete(
       await dequeueForSession(ownerId, item.id);
       return 'skipped';
     }
-    if (!(await isPushItemCurrent(item.id, ownerId))) return 'skipped';
-    await getPocketBase().send(`/api/gsd/tasks/${encodeURIComponent(remote.pbRecordId)}`, {
-      method: 'DELETE', body: { expected_version: remote.clientUpdatedAt },
-    });
+    const claim = await claimQueuedWrite('delete', item.id, ownerId);
+    if (!claim) return 'skipped';
+    await sendTaskDelete(claim, remote.pbRecordId, remote.clientUpdatedAt);
     await dequeueForSession(ownerId, item.id);
     return 'pushed';
   }

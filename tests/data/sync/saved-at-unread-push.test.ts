@@ -206,8 +206,7 @@ describe('push reads saved_at from the row as it is now', () => {
 
     await fullSync('auto');
 
-    expect(fake.state.writes).toHaveLength(1);
-    expect(fake.state.writes[0].body).not.toHaveProperty('saved_at');
+    expect(fake.state.writes).toEqual([]);
     expect(serverSavedAt()).toBe(SAVED);
   });
 });

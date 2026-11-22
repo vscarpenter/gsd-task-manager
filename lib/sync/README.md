@@ -206,6 +206,7 @@ Push, pull, engine, and realtime:
 - `pb-push.ts:pushLocalChanges` stops on a session check failure without charging queue rows. `isSessionCheckFailure` counts `StaleSyncSessionError` as one. A retired row never re-arms.
 - `pb-push.ts:pushLocalChanges` runs sequentially with `THROTTLE_MS` between items, and aborts the loop when an item throws a 429. A 429 on the per-item lookup (`pb-sync-helpers.ts:fetchRemoteTaskEntry`) charges that row one attempt, and the loop continues.
 - `pb-push.ts:recordItemFailure` persists a stable error code only, never the raw message.
+- `queued-write.ts:claimQueuedWrite` guards every push write. It sends an upsert only for a live task and a delete only for a task that isn't live. Otherwise it removes the row and returns null. The three `send*` functions need its claim.
 - `pb-push.ts:upsertRemoteTask` takes `saved_at`, `focus_date`, and `focus_rank` from the current row (`placementToWire`), not the queued payload.
 - `pb-push.ts:resolveNotifyBefore` never sends a null offset (D-10). It sends the payload's value, else the stored row's, else this device's default.
 - `pb-push.ts:settleRowOffset` writes the resolved offset only when the row's `updatedAt` still matches. It bumps no stamp and queues nothing.
@@ -228,7 +229,7 @@ Helpers, wire mapping, queue, resurrection, and coordinator:
 - `task-mapper.ts:localReminderState` keeps `notificationSent`, `lastNotificationAt`, and `snoozedUntil` from the local copy. A pull that moves the due date resets them.
 - `task-mapper.ts:pocketBaseToTaskRecord` always takes `parentTaskId` from the local record. It has no wire field (WEB-PULL-PARENT).
 - `task-mapper.ts:taskRecordToPocketBase` always sends a numeric `notify_before` (D-10). Empty optional strings go out as `''`.
-- `task-mapper.ts:placementToWire` reads placement from the current row. A row no longer in `tasks` sends none of the keys, so the server keeps its values (C4-6).
+- `task-mapper.ts:placementToWire` reads placement from the current row. A row no longer in `tasks` sends none of the keys, so the server keeps its values (C4-6). `claimQueuedWrite` sends nothing at all for such a row.
 - `task-mapper.ts:pbTaskRecordSchema` never rejects a record for a bad `focus_date` or `focus_rank`. `focusFromWire` turns an invalid pair into neither field.
 - `queue.ts:recordAttemptFailure` moves a row to `'failed'` at `SYNC_CONFIG.MAX_RETRIES` instead of deleting it. It truncates `lastError` to 500 characters.
 - `queue.ts:getPending` never returns a failed row, and nothing re-arms one.
