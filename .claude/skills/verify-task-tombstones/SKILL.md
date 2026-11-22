@@ -27,13 +27,13 @@ Each rule is an INVARIANT in `TaskTombstones.tla`.
 
 ## The findings
 
-The code as it is breaks four of the five rules. On 2026-11-08 each path was replayed in Vitest against the real writers, and each one reproduced. Findings 1 to 6 are still open.
+The code at the sync commit broke four of the five rules. On 2026-11-08 each path was replayed in Vitest against the real writers, and each one reproduced. Findings 4 and 5 are fixed.
 
 1. **An import writes an id into a second table** (`OneTable`, `Finding-1-import.cfg`). `applyTasks` in merge mode gives a backup task a fresh id only when the id is live here. Merging a backup that has the task live, while it's in Trash or archived, leaves it in both. A replace with a 1.0.0 backup does the same. `applyArchivedTasks` doesn't check `deletedTasks`, so an archived row lands beside a Trash row. Rule 4 in `.claude/rules/archive-tombstone.md` calls the replace case legitimate, which contradicts rule 1.
 2. **Undo doesn't clear an archive row** (`OneTable`, `Finding-2-undo.cfg`). You delete the task, another device edits it, that edit arrives live, the task is archived, and then you press Undo. `restoreTask` in `lib/tasks/crud/restore.ts` puts it back in `tasks` and leaves the archive row.
 3. **Reinstate checks only the archive** (`OneTable`, `Finding-3-reinstate.cfg`). You delete an archived task forever, another device edits it, that edit arrives live, and you press Undo on that toast. `reinstateArchivedTask` writes the archive row beside the live one.
-4. **A queued edit re-creates a deleted task's server copy** (`ServerStaysDeleted`, `Finding-4-stale-write.cfg`). You edit the task and then delete or archive it. The edit's push fails once, the delete goes through, and the retried edit creates the server record again. `pushSingleItem` never asks where the task lives here. TLC's shortest path gets there another way: a push run that read its rows before a sign-out keeps sending them after the next sign-in.
-5. **A queued delete removes a restored task everywhere** (`NoLoss`, `Finding-5-stale-delete.cfg`). You delete the task, then restore it from Trash, Undo, or import it. The delete's push fails once and the create goes through. The next sync sends the old delete, and `isStaleDelete` lets it pass, because the restored copy keeps its old `updatedAt`. Reconcile then drops the live task with no Trash row.
+4. **A queued edit re-created a deleted task's server copy. Fixed on 2026-11-22.** `claimQueuedWrite` in `lib/sync/queued-write.ts` sends a create or update only for a live task. `Broken-pushSendsStaleWrite.cfg` undoes that and breaks `ServerStaysDeleted`.
+5. **A queued delete removed a restored task everywhere. Fixed on 2026-11-22.** `claimQueuedWrite` sends a delete only for a task that isn't live. `Broken-pushSendsStaleDelete.cfg` undoes that and breaks `NoLoss`. `tests/data/sync/queued-write-intent.test.ts` replays both bugs on the real engine.
 6. **Writers act on the session they read before their transaction** (`NoComeback` in `Finding-6-config-read.cfg`, `NoLoss` in `Finding-6-config-read-loss.cfg`). `runTaskSyncTransaction`, `restoreFromTrash`, and `restoreTask` in `lib/archive.ts` read `sync_config` before the transaction opens. If a sign-in from another tab lands in that gap, a delete is remembered instead of queued, and resurrect on sight brings it back. A restore in the same gap queues nothing, and reconcile drops the task.
 7. **Outside the model: Undo fails while signed in. Fixed on 2026-11-10:** the scope is now `async`, and `tests/data/tasks/restore-signed-in.test.ts` reproduces the failure under fake-indexeddb. `restoreTask` in `lib/tasks/crud/restore.ts` throws Dexie's "Transaction committed too early". `runTaskSyncTransaction` passes a plain arrow, not an `async` function, as the transaction scope, so Dexie stops tracking the native awaits. When `forgetForResurrect` returns early, the queue write runs in a transaction of its own. The task comes back anyway, but the toast says the Undo failed. It started with #701 (`bf4ba13e`). It showed first under fake-indexeddb. On 2026-11-08 a probe of the same writes in Chrome, with the app's Dexie 4.4.6, failed 20 of 20 runs under a plain arrow scope and passed 20 of 20 under an `async` one. A simpler probe with fewer awaits passed under both, so the failure depends on how many native awaits sit between two writes.
 
@@ -53,8 +53,6 @@ ok   Fixed                        expected holds              got holds         
 ok   Finding-1-import             expected OneTable           got OneTable                 34 states    0s
 ok   Finding-2-undo               expected OneTable           got OneTable              21308 states    1s
 ok   Finding-3-reinstate          expected OneTable           got OneTable               3929 states    1s
-ok   Finding-4-stale-write        expected ServerStaysDeleted got ServerStaysDeleted    23930 states    2s
-ok   Finding-5-stale-delete       expected NoLoss             got NoLoss               263555 states    5s
 ok   Finding-6-config-read        expected NoComeback         got NoComeback           382731 states    8s
 ok   Finding-6-config-read-loss   expected NoLoss             got NoLoss               440486 states    8s
 ok   Broken-restoreKeepsTrashRow  expected OneTable           got OneTable                317 states    1s
@@ -62,6 +60,8 @@ ok   Broken-pullSkipsTrashGuard   expected NoComeback         got NoComeback    
 ok   Broken-absoluteTombstone     expected NewerEditWins      got NewerEditWins           236 states    1s
 ok   Broken-resurrectSkipsDelete  expected NoComeback         got NoComeback           369018 states    8s
 ok   Broken-reconcileSkipsQueue   expected NoLoss             got NoLoss                80804 states    2s
+ok   Broken-pushSendsStaleWrite   expected ServerStaysDeleted got ServerStaysDeleted
+ok   Broken-pushSendsStaleDelete  expected NoLoss             got NoLoss
 TLC output: /var/folders/.../task-tombstones.XXXXXX
 ```
 
@@ -135,6 +135,7 @@ Run it with `bun run test tests/data/<file>.test.ts`, then `mv` it to a scratch 
 | `YouSignOut` | `lib/sync/config/disable.ts`, `lib/sync/resurrect-ids.ts` | `disableSync`, `resetSyncConfigState`, `trashDeleteTaskIds` |
 | `OtherDeviceEdits`, `OtherDeviceDeletes` | `lib/sync/pb-push.ts` on the other device | `upsertRemoteTask` re-creates a deleted record; its delete removes it |
 | `RealtimeArrives` | `lib/sync/pb-realtime.ts`, `lib/sync/pb-sync-engine.ts`, `lib/sync/queue.ts` | the `device_id` echo filter, `applyRemoteChange`, `applyRemoteDeletion`, `classifyRemoteDeletion` |
+| `Claimed` | `lib/sync/queued-write.ts` | `claimQueuedWrite` |
 | `SyncStarts`, `PushSends`, `PushFails`, `PushDone` | `lib/sync/pb-sync-engine.ts`, `lib/sync/pb-push.ts`, `lib/sync/queue.ts` | `fullSync`, `runSyncPasses`, `pushLocalChanges`, `pushSingleItem`, `isStaleDelete`, `isRemoteNewer`, `getPending`, `recordAttemptFailure` |
 | `PullFetches`, `PullFails`, `PullApplies` | `lib/sync/pb-pull.ts` | `pullRemoteChanges`, `applyRemoteRecords` |
 | `ReconcileFetches`, `ReconcileSkips`, `ReconcileApplies` | `lib/sync/pb-pull.ts`, `lib/sync/pb-sync-helpers.ts` | `reconcileDeletedTasks`, `planRemoteAbsence`, `fetchRemoteTaskIndex`, `confirmSessionIdentity` |
@@ -155,7 +156,7 @@ Move this commit forward only after you've read every change to covered code sin
 - **One task id, one web device, and the server.** Another device acts only on the server. Its own Trash, its queue, and its stale deletes aren't modeled. Dependencies and subtasks on other tasks are left out.
 - **Bounds:** stamps up to 4, so three stamps after the starting version, at most three queue rows, and one import per run. `Fixed.cfg` covers 1,234,722 states in about 32 seconds. Each added stamp multiplies the states several times over, so raise `MaxClock` only for a one-off run.
 - **Time has no skew.** Every stamp is later than the ones before it, so the far-future hold-off (`holdsOffFarFutureRemote`) never fires, and the pull cursor never hides a newer edit. The model's pull reads the server copy whatever its stamp, as the first pull after a sign-in does.
-- **A push's server read, write, and dequeue are one step.** Another device can edit between the read and the delete in the code. That race is conditional delete's (the B-47 remainder), with its own spec.
+- **A push's server read, claim, write, and dequeue are one step.** Another device can edit between the read and the delete in the code. That race is conditional delete's (the B-47 remainder), with its own spec.
 - **Ordinary syncs only.** The backfill sync that pulls before it pushes, and its field repair, aren't modeled.
 - **Only a sign-in or sign-out lands between a writer's config read and its transaction.** The gap is a few microtasks. Any other step there has the same effect as one before the read, because the transaction re-reads every row except the config.
 - **A toast's Undo survives background steps and closes at your next explicit action.** The delete toast lasts five seconds (`TOAST_DURATION.LONG`), and the archive page's toast uses sonner's default. Auto-archive counts as a background step, and the model doesn't gate it on a pull.

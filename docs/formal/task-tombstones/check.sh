@@ -21,8 +21,6 @@ expectations=(
   "Finding-1-import:OneTable"
   "Finding-2-undo:OneTable"
   "Finding-3-reinstate:OneTable"
-  "Finding-4-stale-write:ServerStaysDeleted"
-  "Finding-5-stale-delete:NoLoss"
   "Finding-6-config-read:NoComeback"
   "Finding-6-config-read-loss:NoLoss"
   "Broken-restoreKeepsTrashRow:OneTable"
@@ -30,6 +28,8 @@ expectations=(
   "Broken-absoluteTombstone:NewerEditWins"
   "Broken-resurrectSkipsDelete:NoComeback"
   "Broken-reconcileSkipsQueue:NoLoss"
+  "Broken-pushSendsStaleWrite:ServerStaysDeleted"
+  "Broken-pushSendsStaleDelete:NoLoss"
 )
 
 failures=0

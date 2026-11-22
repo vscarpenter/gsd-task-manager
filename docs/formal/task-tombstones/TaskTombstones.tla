@@ -51,8 +51,6 @@ AllFixes == {
   "importKeepsOneTable",       \* importTasks never writes an id into a second table
   "undoClearsArchive",         \* restoreTask (Undo) also clears an archivedTasks row
   "reinstateChecksAllTables",  \* reinstateArchivedTask writes only when no table has the id
-  "pushDropsTombstonedWrite",  \* pushSingleItem drops a create or update for an id in Trash or the archive here
-  "pushDropsDeleteOfLiveTask", \* pushSingleItem drops a delete for an id that is live here
   "readConfigInTransaction"    \* the writers read sync_config inside their transaction
 }
 Fix(f) == f \in Fixes
@@ -63,7 +61,9 @@ Broken == {
   "pullSkipsTrashGuard",   \* applyPreparedRecord and applyRemoteChange without the deletedTasks check
   "absoluteTombstone",     \* isRemoteNewerThanArchive always false (ADR 0013's rejected first version)
   "resurrectSkipsDelete",  \* waitsForThisDevice without the pending-delete check
-  "reconcileSkipsQueue"    \* reconcileDeletedTasks without classifyRemoteDeletion's protect
+  "reconcileSkipsQueue",   \* reconcileDeletedTasks without classifyRemoteDeletion's protect
+  "pushSendsStaleWrite",   \* claimQueuedWrite without the live check on a create or update
+  "pushSendsStaleDelete"   \* claimQueuedWrite without the live check on a delete
 }
 
 NoRow == [has |-> FALSE, ver |-> 0, at |-> 0]
@@ -420,9 +420,17 @@ SyncStarts ==
 \* is newer than the archived version an archive's delete carries.
 StaleDelete(r) == srv.ver > r.at \/ (r.pay > 0 /\ srv.ver > r.pay)
 
+\* claimQueuedWrite (queued-write.ts), in one transaction just before the request:
+\* the row is still pending, and it agrees with where the task lives now.
+Claimed(r) ==
+  /\ \E i \in 1..Len(queue) : queue[i].at = r.at /\ Pending(queue[i])
+  /\ IF r.op = "delete"
+     THEN ~live.has \/ Variant = "pushSendsStaleDelete"
+     ELSE live.has \/ Variant = "pushSendsStaleWrite"
+
 \* pushSingleItem (pb-push.ts) for the next row this run read. The row's server
-\* read, its write, and its dequeue are one step here. The row may have left the
-\* queue since the run read it; the push still sends it.
+\* read, its claim, its write, and its dequeue are one step here. A row that
+\* can't be claimed leaves the queue unsent.
 PushSends ==
   /\ Quiet /\ phase = "push" /\ todo # <<>> /\ signedIn
   /\ LET r == Head(todo)
@@ -430,11 +438,11 @@ PushSends ==
      IN
      /\ todo' = Tail(todo) /\ queue' = q
      /\ IF r.op = "delete"
-        THEN /\ srv' = IF srv.has /\ ~StaleDelete(r) /\ ~(Fix("pushDropsDeleteOfLiveTask") /\ live.has)
+        THEN /\ srv' = IF srv.has /\ ~StaleDelete(r) /\ Claimed(r)
                        THEN NoCopy ELSE srv
              /\ NoFlags
         ELSE IF (srv.has /\ srv.ver > r.pay)   \* isRemoteNewer: a stale write is dropped
-                \/ (Fix("pushDropsTombstonedWrite") /\ Tombstoned)
+                \/ ~Claimed(r)
         THEN UNCHANGED srv /\ NoFlags
         ELSE /\ srv' = Copy(r.pay)
              /\ Flags(FALSE, FALSE, InOneTable /\ ~srv.has /\ Tombstoned /\ ~PendingDelete(q))
