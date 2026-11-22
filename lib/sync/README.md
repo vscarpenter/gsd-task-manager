@@ -85,7 +85,7 @@ Helpers, wire mapping, queue, resurrection, and coordinator (`pb-sync-helpers.ts
 - `pb-sync-helpers.ts:fetchBoundedRemoteTasks(options): Promise<RecordModel[]>`. Fetches a complete, capped task listing page by page.
 - `pb-sync-helpers.ts:fetchRemoteTaskIndex(ownerId)`. Returns a map of task id to `RemoteTaskIndexEntry`, plus `fetchSucceeded`.
 - `pb-sync-helpers.ts:fetchRemoteTaskEntry(ownerId, taskId)`. Looks up one remote task. Returns `entry` and `fetchSucceeded`. It needs a valid `id` and `task_id` but takes `client_updated_at` raw, as `""` when absent or not a string, so a delete can send it as `expected_version`. The index and identity readers stay strict.
-- `pb-sync-helpers.ts:confirmSessionIdentity(ownerId): Promise<void>`. Asks the server whether this session is the owner's.
+- `pb-sync-helpers.ts:confirmSessionIdentity(ownerId): Promise<OwnerConfirmed>`. Asks the server whether this session is the owner's. Creating, dropping a delete on a 404, reconcile, and resurrect each require what it returns.
 - `pb-sync-helpers.ts:SessionIdentityMismatchError`, `pb-sync-helpers.ts:SessionRejectedError`. Errors for another account's record and for a refused token.
 - `pb-sync-helpers.ts:readClientUpdatedAt(record): string | undefined`. Reads the raw `client_updated_at`.
 - `pb-sync-helpers.ts:isBeyondClockSkew(iso, nowMs?): boolean`. True for a stamp past the skew ceiling.

@@ -6,6 +6,7 @@
 
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
+import type { OwnerConfirmed } from './pb-sync-helpers';
 import { getPocketBase } from './pocketbase-client';
 import { isPendingSyncQueueItem } from './queue';
 import { assertSyncSessionCurrent } from './sync-session';
@@ -54,7 +55,9 @@ export async function sendTaskUpdate(
   });
 }
 
-export async function sendTaskCreate(_claim: Claim<'upsert'>, data: Partial<PBTaskRecord>): Promise<string> {
+export async function sendTaskCreate(
+  _claim: Claim<'upsert'>, _absent: OwnerConfirmed, data: Partial<PBTaskRecord>,
+): Promise<string> {
   return (await getPocketBase().collection('tasks').create(data)).id;
 }
 

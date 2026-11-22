@@ -203,6 +203,13 @@ export class SessionRejectedError extends Error {
 
 const AUTH_REFRESH_PATH = '/api/collections/users/auth-refresh';
 
+// The class isn't exported and its member is private, so only confirmSessionIdentity
+// can make one. Anything that acts on a task's absence takes one.
+class OwnerConfirmed {
+  constructor(private readonly ownerId: string) {}
+}
+export type { OwnerConfirmed };
+
 /**
  * Ask the server whether this session is really the owner's. A token the server
  * rejects reads as a guest: `tasks` lists as 200 with zero items and every lookup
@@ -214,7 +221,7 @@ const AUTH_REFRESH_PATH = '/api/collections/users/auth-refresh';
  * SessionIdentityMismatchError for another account's record; and the original
  * error when the server can't be reached. The caller must then write nothing.
  */
-export async function confirmSessionIdentity(ownerId: string): Promise<void> {
+export async function confirmSessionIdentity(ownerId: string): Promise<OwnerConfirmed> {
   const pb = getPocketBase();
   const sentToken = pb.authStore.token;
   let answer: { record?: { id?: unknown } } | undefined;
@@ -226,6 +233,7 @@ export async function confirmSessionIdentity(ownerId: string): Promise<void> {
     throw new SessionRejectedError();
   }
   if (answer?.record?.id !== ownerId) throw new SessionIdentityMismatchError();
+  return new OwnerConfirmed(ownerId);
 }
 
 export async function fetchRemoteTaskEntry(

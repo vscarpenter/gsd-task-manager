@@ -22,7 +22,7 @@ vi.mock('@/lib/sync/notifications', () => ({ notifySyncSuccess: vi.fn(), notifyS
 import { archiveTaskNow, restoreTask as restoreFromArchive } from '@/lib/archive';
 import { getDb } from '@/lib/db';
 import { fullSync } from '@/lib/sync/pb-sync-engine';
-import type { claimQueuedWrite, sendTaskDelete } from '@/lib/sync/queued-write';
+import type { claimQueuedWrite, sendTaskCreate, sendTaskDelete } from '@/lib/sync/queued-write';
 import { deleteTask, updateTask } from '@/lib/tasks/crud';
 import { restoreTask as undoDelete } from '@/lib/tasks/crud/restore';
 import { deleteFromTrashForever, restoreFromTrash } from '@/lib/trash';
@@ -172,4 +172,11 @@ export async function claimTypeProof(claim: typeof claimQueuedWrite, send: typeo
   const upsert = await claim('upsert', 'row', 'user');
   // @ts-expect-error an upsert claim can't authorize a delete
   if (upsert) await send(upsert, 'rec', 'version');
+}
+
+// Never called. A 404 alone is what a refused token gets, so it can't authorize a create.
+export async function absenceTypeProof(claim: typeof claimQueuedWrite, create: typeof sendTaskCreate): Promise<void> {
+  const upsert = await claim('upsert', 'row', 'user');
+  // @ts-expect-error only confirmSessionIdentity can confirm an absence
+  if (upsert) await create(upsert, { ownerId: 'user' }, {});
 }

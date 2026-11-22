@@ -22,6 +22,7 @@ import {
   getCurrentUserId,
   fetchRemoteTaskEntry,
 } from './pb-sync-helpers';
+import type { OwnerConfirmed } from './pb-sync-helpers';
 import { sanitizeSyncError, isTransientSyncFailure, extractRetryAfterMs } from './error-categorizer';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
 import { StaleSyncSessionError, assertSyncSessionCurrent } from './sync-session';
@@ -153,16 +154,19 @@ async function preparePushFields(payload: QueuedTask, ownerId: string, deviceId:
 
 /** Create when absent; otherwise compare and write atomically on the server. */
 async function upsertRemoteTask(
-  payload: SyncQueueItem['payload'], pbRecordId: string | undefined,
-  ownerId: string, deviceId: string, queueId: string, expectedVersion?: string,
+  payload: SyncQueueItem['payload'], target: UpsertTarget,
+  ownerId: string, deviceId: string, queueId: string,
 ): Promise<string | null> {
+  const expectedVersion = 'recordId' in target ? target.version : undefined;
   const { task, storeOnRow, pbData } = await preparePushFields(payload!, ownerId, deviceId, expectedVersion);
   const claim = await claimQueuedWrite('upsert', queueId, ownerId);
   if (!claim) return null;
 
-  let recordId = pbRecordId;
-  if (recordId) await sendTaskUpdate(claim, recordId, expectedVersion, pbData);
-  else recordId = await sendTaskCreate(claim, pbData);
+  let recordId: string;
+  if ('recordId' in target) {
+    recordId = target.recordId;
+    await sendTaskUpdate(claim, recordId, expectedVersion, pbData);
+  } else recordId = await sendTaskCreate(claim, target.confirmedAbsent, pbData);
 
   if (storeOnRow) await settleRowOffset(task, ownerId);
   return recordId;
@@ -175,6 +179,9 @@ async function upsertRemoteTask(
 type PushItemOutcome = 'pushed' | 'skipped' | 'index_unavailable';
 
 /** What fetchRemoteTaskEntry found for one queued task. */
+/** An upsert updates the record the lookup found, or creates one for a confirmed absence. */
+type UpsertTarget = { recordId: string; version: string } | { confirmedAbsent: OwnerConfirmed };
+
 interface RemoteLookup {
   entry: RemoteTaskIndexEntry | null;
   fetchSucceeded: boolean;
@@ -190,18 +197,15 @@ interface RemoteLookup {
  * nothing leaves the queue for good, so each one asks after its own lookup.
  */
 interface PushSessionCheck {
-  beforeCreate(): Promise<void>;
-  beforeDroppingDelete(): Promise<void>;
+  beforeCreate(): Promise<OwnerConfirmed>;
+  beforeDroppingDelete(): Promise<OwnerConfirmed>;
 }
 
 function createPushSessionCheck(ownerId: string): PushSessionCheck {
-  let confirmed = false;
-  const confirm = async (): Promise<void> => {
-    await confirmSessionIdentity(ownerId);
-    confirmed = true;
-  };
+  let confirmed: OwnerConfirmed | null = null;
+  const confirm = async (): Promise<OwnerConfirmed> => (confirmed = await confirmSessionIdentity(ownerId));
   return {
-    beforeCreate: () => (confirmed ? Promise.resolve() : confirm()),
+    beforeCreate: () => (confirmed ? Promise.resolve(confirmed) : confirm()),
     beforeDroppingDelete: confirm,
   };
 }
@@ -309,8 +313,10 @@ async function pushUpsert(
     return 'skipped';
   }
 
-  if (!remote) await ctx.session.beforeCreate();
-  const written = await upsertRemoteTask(item.payload, remote?.pbRecordId, ctx.ownerId, ctx.deviceId, item.id, remote?.clientUpdatedAt);
+  const target: UpsertTarget = remote
+    ? { recordId: remote.pbRecordId, version: remote.clientUpdatedAt }
+    : { confirmedAbsent: await ctx.session.beforeCreate() };
+  const written = await upsertRemoteTask(item.payload, target, ctx.ownerId, ctx.deviceId, item.id);
   if (written === null) return 'skipped';
   await dequeueForSession(ctx.ownerId, item.id);
   return 'pushed';
@@ -346,9 +352,12 @@ async function pushDelete(
   }
 
   // The remote record is gone and the session is the owner's, so the local delete is a no-op.
-  await session.beforeDroppingDelete();
-  await dequeueForSession(ownerId, item.id);
+  await dropAbsentDelete(await session.beforeDroppingDelete(), ownerId, item.id);
   return 'pushed';
+}
+
+function dropAbsentDelete(_absent: OwnerConfirmed, ownerId: string, id: string): Promise<void> {
+  return dequeueForSession(ownerId, id);
 }
 
 /**
