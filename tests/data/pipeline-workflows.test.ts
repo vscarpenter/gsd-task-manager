@@ -174,4 +174,14 @@ describe("pipeline workflows", () => {
     expect(blocks.length).toBeGreaterThan(0);
     expect(interpolated).toEqual([]);
   });
+
+  // PR #346 was stacked on another branch and merged with no lint, test, or build.
+  it("runs every required check on a stacked pull request", () => {
+    const requiredCheckWorkflows = ["ci.yml", "security-audit.yml", "pr-shape.yml"];
+    const limitedToMain = requiredCheckWorkflows.filter((name) =>
+      /^  pull_request:\n(?: {4}.*\n)*? {4}branches:/m.test(readWorkflow(`${WORKFLOW_DIR}/${name}`))
+    );
+
+    expect(limitedToMain, "remove `branches:` under `pull_request:`").toEqual([]);
+  });
 });
