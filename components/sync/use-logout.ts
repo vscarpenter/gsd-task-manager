@@ -31,6 +31,7 @@ export function useLogout({
   const [pendingChanges, setPendingChanges] = useState(0);
 
   const askFirst = (count: number) => {
+    setError(null);
     setPendingChanges(count);
     setShowLogoutConfirm(true);
   };

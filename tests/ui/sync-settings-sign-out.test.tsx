@@ -138,6 +138,19 @@ describe("sign out in Settings", () => {
     await vi.waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus());
   });
 
+  it("renders a new confirmation when it asks again, so the new count is announced", async () => {
+    await queueChanges("a");
+    renderSettings();
+    await clickSignOut();
+    const first = await screen.findByRole("group", { name: "Confirm sign out" });
+
+    await queueChanges("b");
+    await clickSignOut("Sign out anyway");
+    await screen.findByText(/2 unsynchronized changes/);
+
+    expect(screen.getByRole("group", { name: "Confirm sign out" })).not.toBe(first);
+  });
+
   it("hides sign-out when no account is connected", async () => {
     await getDb().syncMetadata.clear();
     renderSettings();
@@ -162,5 +175,18 @@ describe("sign out in the sync dialog", () => {
     expect(result.current.pendingChanges).toBe(2);
     expect(await queued()).toBe(2);
     expect(await isSignedIn()).toBe(true);
+  });
+
+  it("clears an older error when it asks again", async () => {
+    await queueChanges("a");
+    const setError = vi.fn();
+    const { result } = renderHook(() => useLogout({ onSignedOut: vi.fn(), setIsLoading: vi.fn(), setError }));
+    await act(() => result.current.handleLogout());
+    setError.mockClear();
+
+    await queueChanges("b");
+    await act(() => result.current.performLogout());
+
+    expect(setError).toHaveBeenCalledWith(null);
   });
 });

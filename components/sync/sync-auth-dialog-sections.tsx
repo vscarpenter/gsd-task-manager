@@ -213,6 +213,7 @@ export function LogoutConfirmation({
 
   return (
     <div
+      key={pendingChanges}
       role="group"
       aria-label="Confirm sign out"
       aria-describedby={descriptionId}
@@ -223,7 +224,6 @@ export function LogoutConfirmation({
         Signing out will discard them.
       </p>
       <ConfirmButtons
-        key={pendingChanges}
         isLoading={isLoading}
         onCancel={onCancel}
         onConfirm={onConfirm}
