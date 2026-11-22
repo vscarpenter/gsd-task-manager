@@ -38,7 +38,7 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `archiveOldTasks` | `lib/archive.ts` | Idempotent `put`, one transaction |
 | `restoreTask` | `lib/archive.ts` | One transaction, clears the archived row |
 | `archiveTaskNow` | `lib/archive.ts` | One transaction, idempotent `put` |
-| `reinstateArchivedTask` | `lib/archive.ts` | Writes only when the id is absent |
+| `reinstateArchivedTask` | `lib/archive.ts` | Writes only when no table has the id (`isStoredInTransaction`) |
 | `applyRemoteRecords` | `lib/sync/pb-pull.ts` | Archive guard, un-archives on a newer edit and maps it over the archive or Trash row (`mapOverLocalCopy`), so this device's reminder state survives; session check first, with `syncMetadata` in scope |
 | `applyRemoteChange` | `lib/sync/pb-sync-engine.ts` | Same guard and merge, realtime path; session check first, with `syncMetadata` in scope |
 | Migration v15 | `lib/db-migrations.ts` | Deletes only duplicates that stay archivable |
@@ -47,7 +47,7 @@ Sync had no awareness of `archivedTasks`. Archiving deleted the task locally but
 | `applyArchivedTasks` | `lib/tasks/import-export.ts` | Idempotent `put`; live copy wins on a contradictory payload; absent key ≠ delete |
 | `deleteTask` | `lib/tasks/crud/delete.ts` | Moves live → `deletedTasks` in one transaction; idempotent `put` |
 | `restoreFromTrash` | `lib/trash.ts` | One transaction; clears the trash row |
-| `restoreTask` (undo) | `lib/tasks/crud/restore.ts` | `put` + clears any trash row for the same id |
+| `restoreTask` (undo) | `lib/tasks/crud/restore.ts` | `bringBackInTransaction`: the newest copy, in `tasks` alone |
 | `purgeExpiredTrash` | `lib/trash.ts` | Deletes only rows with a `deletedAt` past the window |
 | `deleteFromTrashForever` | `lib/trash.ts` | One transaction over deletedTasks+syncMetadata; forgets the id for resurrect on sight |
 | `emptyTrash` | `lib/trash.ts` | One transaction over deletedTasks+syncMetadata; clears Trash and forgets every id |

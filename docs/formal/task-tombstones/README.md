@@ -17,13 +17,12 @@ The module header lists the files it models. They sit under `lib/tasks/crud/`, `
 
   | Config | Expected result |
   |---|---|
-  | `TaskTombstones.cfg` | `OneTable` |
-  | `Fixed.cfg` | `holds` |
-  | `Finding-1-import.cfg` | `OneTable` |
-  | `Finding-2-undo.cfg` | `OneTable` |
-  | `Finding-3-reinstate.cfg` | `OneTable` |
-  | `Finding-6-config-read.cfg` | `NoComeback` |
-  | `Finding-6-config-read-loss.cfg` | `NoLoss` |
+  | `TaskTombstones.cfg` | `holds` |
+  | `Broken-importWritesSecondTable.cfg` | `OneTable` |
+  | `Broken-undoKeepsArchive.cfg` | `OneTable` |
+  | `Broken-reinstateChecksOnlyArchive.cfg` | `OneTable` |
+  | `Broken-configReadEarly.cfg` | `NoComeback` |
+  | `Broken-configReadEarlyLoss.cfg` | `NoLoss` |
   | `Broken-restoreKeepsTrashRow.cfg` | `OneTable` |
   | `Broken-pullSkipsTrashGuard.cfg` | `NoComeback` |
   | `Broken-absoluteTombstone.cfg` | `NewerEditWins` |
@@ -34,17 +33,15 @@ The module header lists the files it models. They sit under `lib/tasks/crud/`, `
 
 - `TaskTombstones.tla` (module `TaskTombstones`):
   - Constants: `MaxClock`, `MaxQueue`, `Variant`, `Fixes`.
-  - `AllFixes` names four fixes: `importKeepsOneTable`, `undoClearsArchive`, `reinstateChecksAllTables`, `readConfigInTransaction`. The module comment says none of them is in the code.
-  - `Broken` names seven variants: `restoreKeepsTrashRow`, `pullSkipsTrashGuard`, `absoluteTombstone`, `resurrectSkipsDelete`, `reconcileSkipsQueue`, `pushSendsStaleWrite`, `pushSendsStaleDelete`.
+  - `Fixes` is empty in the code config. Every fix it once named has shipped, so no step reads it.
+  - `Broken` names 11 variants: `restoreKeepsTrashRow`, `pullSkipsTrashGuard`, `absoluteTombstone`, `resurrectSkipsDelete`, `reconcileSkipsQueue`, `pushSendsStaleWrite`, `pushSendsStaleDelete`, `importWritesSecondTable`, `undoKeepsArchive`, `reinstateChecksOnlyArchive`, `configReadEarly`.
   - `Spec == Init /\ [][Next]_vars`. It has no fairness condition.
   - `Next` joins 30 named actions. User actions include `YouDelete`, `YouUndo`, `YouRestoreFromTrash`, `YouRestoreFromArchive`, `YouEdit`, `YouArchive`, `YouEmptyTrash`, `YouImport`, `YouSignIn`, and `YouSignOut`. Sync actions include `PushSends`, `PullApplies`, `ReconcileApplies`, and `ResurrectApplies`.
   - `Bounds` limits `clock` and the queue length. Every config uses it as a `CONSTRAINT`.
 - Config groups:
-  - `TaskTombstones.cfg`: `Variant = "code"` and `Fixes = {}`.
-  - `Fixed.cfg`: `Variant = "code"` with all four fixes.
-  - `Finding-*.cfg`: all fixes except the one the file name refers to.
-  - `Broken-*.cfg`: one `Broken` variant on top of all four fixes.
-  - Every config sets `MaxClock = 4` and `MaxQueue = 3`. `Finding-6-config-read-loss.cfg` checks only `TypeOK` and `NoLoss`. The others check all six invariants.
+  - `TaskTombstones.cfg`: `Variant = "code"`. Every rule holds.
+  - `Broken-*.cfg`: one `Broken` variant each. Most replay a bug that shipped.
+  - Every config sets `MaxClock = 4` and `MaxQueue = 3`. `Broken-configReadEarlyLoss.cfg` checks only `TypeOK` and `NoLoss`. The others check all six invariants.
 - `view.mjs` exports `title`, `state(v)`, `group(v)`, `colors`, and `step(action, from, to)`. They are pure functions with no imports.
 
 ## Invariants

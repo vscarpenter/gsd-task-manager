@@ -75,6 +75,8 @@ Each one needed a second tab or a stale dialog, plus a window of a few IndexedDB
 
 ### `WEB-RESTORE-ONE-TABLE` · P3 · two restore paths write a live row beside an archive row
 
+**Fixed 2026-11-22.** Both Undo writers go through `lib/task-tables.ts`, and `tests/data/one-table-exploration.test.ts` explores every order of the real writers. The rest of this entry describes the code before the fix.
+
 Both need another device's edit to arrive live before you tap Undo. In the first, you delete a task, the edit brings it back, it gets archived, and Undo's `restoreTask` (`lib/tasks/crud/restore.ts:21`) puts it in `tasks` beside the archive row. In the second, you delete an archived task forever, the edit brings it back, and Undo's `reinstateArchivedTask` (`lib/archive.ts:260`) writes the archive row beside the live one. The task then shows in two places, and a later restore can overwrite edits. Fix, as the model proposes it: Undo clears an archive row, and reinstate writes only when no table has the id. Evidence: `verify-task-tombstones`, `Finding-2-undo.cfg` and `Finding-3-reinstate.cfg`.
 
 ### `WEB-FAST-CLOCK-SPLIT` · P3 · a client with a fast clock can split a device that has nothing queued
