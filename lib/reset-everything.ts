@@ -118,7 +118,7 @@ async function clearSessionData(): Promise<{ success: boolean; errors: string[] 
 	const errors: string[] = [];
 
 	try {
-		await disableSync();
+		await disableSync("everything");
 		logger.info("Sync disabled successfully");
 		return { success: true, errors: [] };
 	} catch (err) {

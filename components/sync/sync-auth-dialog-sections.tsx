@@ -213,6 +213,7 @@ export function LogoutConfirmation({
 
   return (
     <div
+      key={pendingChanges}
       role="group"
       aria-label="Confirm sign out"
       aria-describedby={descriptionId}

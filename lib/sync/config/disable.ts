@@ -14,6 +14,24 @@ import { clearAppCaches } from "@/lib/browser-cache";
 const logger = createLogger('SYNC_CONFIG');
 
 /**
+ * What a sign-out may discard: as many unsynced changes as the user agreed to
+ * lose, or `everything` where nothing may stop it (reset, account deletion,
+ * ending every session).
+ */
+type MayDiscard = number | 'everything';
+
+/** More changes were waiting than the user agreed to lose, so nothing was written. */
+export class UnsyncedChangesError extends Error {
+  readonly count: number;
+
+  constructor(count: number) {
+    super('Signing out would discard unsynced changes');
+    this.name = 'UnsyncedChangesError';
+    this.count = count;
+  }
+}
+
+/**
  * Reset sync config to disabled state and wipe per-user sync artefacts.
  *
  * Important on shared/kiosk devices: the next user on the same browser
@@ -23,7 +41,7 @@ const logger = createLogger('SYNC_CONFIG');
  *
  * Returns false, and writes nothing, when no sync_config row exists.
  */
-async function resetSyncConfigState(): Promise<boolean> {
+async function resetSyncConfigState(mayDiscard: MayDiscard): Promise<boolean> {
   const db = getDb();
 
   // One transaction, the disabled config first: closing the tab partway must
@@ -33,6 +51,10 @@ async function resetSyncConfigState(): Promise<boolean> {
   return db.transaction('rw', [db.syncMetadata, db.syncQueue, db.syncHistory], async () => {
     const current = (await db.syncMetadata.get('sync_config')) as PBSyncConfig | undefined;
     if (!current) return false;
+    if (mayDiscard !== 'everything') {
+      const queued = await db.syncQueue.count();
+      if (queued > mayDiscard) throw new UnsyncedChangesError(queued);
+    }
     const localTaskOwnerUserId = current.localTaskOwnerUserId ?? current.userId ?? null;
 
     await db.syncMetadata.put({
@@ -84,12 +106,14 @@ async function clearBrowserCaches(): Promise<void> {
 
 /**
  * Disable sync (logout)
+ *
+ * @throws UnsyncedChangesError when that would discard more than `mayDiscard`.
  */
-export async function disableSync(): Promise<void> {
+export async function disableSync(mayDiscard: MayDiscard): Promise<void> {
   // Persist the disabled config before any other awaited step. An in-flight
   // sync re-reads this row before each local write and before each pushed row,
   // so it stops at its next step. A request already sent still completes.
-  const hadConfig = await resetSyncConfigState();
+  const hadConfig = await resetSyncConfigState(mayDiscard);
 
   // Clear PocketBase auth state (token + localStorage)
   clearPocketBase();
