@@ -51,6 +51,9 @@ test.describe('review remediation', () => {
     await card.hover();
     await card.getByRole('button', { name: 'Edit task', exact: true }).click();
     await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Draft protection');
+    // The drawer focuses the title 50ms after it opens. Filling the subtask
+    // first let that focus land mid-fill on CI, so the text went into the title.
+    await expect(page.getByLabel('Title', { exact: true })).toBeFocused();
     await page.getByLabel('Add a subtask', { exact: true }).fill('Save this without Enter');
     await page.keyboard.press('ControlOrMeta+k');
     await expect(page.getByPlaceholder('Search tasks, actions, settings...')).toHaveCount(0);
