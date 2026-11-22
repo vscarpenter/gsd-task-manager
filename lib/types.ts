@@ -152,3 +152,15 @@ export interface AppPreferences {
   maxPinnedViews: number; // Maximum number of views that can be pinned (default: 5)
   smartViewsEnabled: boolean; // Exposes Smart Views in the matrix and command palette
 }
+
+/**
+ * A hand-written copy of T. Every field must be named, even one that may be
+ * undefined, so a field added to T can't be left out of the copy.
+ */
+export type EveryField<T> = { [K in keyof Required<T>]: T[K] };
+
+/**
+ * For a copy that spreads some fields in: compiles only when nothing is unnamed,
+ * and the error lists what is.
+ */
+export type NoneUnnamed<Unnamed extends never> = Unnamed;

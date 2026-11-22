@@ -49,7 +49,7 @@ describe("Saved task lifecycle", () => {
     expect(taskRecordSchema.parse(task).savedAt).toBe(task.savedAt);
     const wire = taskRecordToPocketBase(task, "owner", "device", 15);
     expect(wire.saved_at).toBe(task.savedAt);
-    expect(pocketBaseToTaskRecord(wire as RecordModel)?.savedAt).toBe(task.savedAt);
+    expect(pocketBaseToTaskRecord({ ...wire, id: "rec", collectionId: "tasks", collectionName: "tasks" } as RecordModel)?.savedAt).toBe(task.savedAt);
     expect(taskRecordToPocketBase({ ...task, savedAt: undefined }, "owner", "device", 15).saved_at).toBe("");
     const json = await exportToJson();
     await getDb().tasks.clear();
