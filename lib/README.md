@@ -224,7 +224,7 @@ Database, schema, archive, and trash:
 - `schema.ts:archiveSettingsSchema` limits `archiveAfterDays` to 30, 60, or 90.
 - `zod.ts` sets `jitless: true`, so Zod never probes `new Function` under the production CSP.
 - `archive.ts:archiveOldTasks`, `archive.ts:restoreTask`, and `archive.ts:archiveTaskNow` each run one `rw` transaction over `tasks`, `archivedTasks`, and `syncQueue`.
-- `archive.ts:restoreTask` and `archive.ts:archiveTaskNow` resolve the sync config and queue before the transaction opens. Awaiting a non-Dexie promise inside a transaction lets it commit early.
+- `archive.ts:restoreTask` and `archive.ts:archiveTaskNow` import `getSyncConfig` and get the queue before the transaction opens, then read the config inside it. Awaiting a non-Dexie promise inside a transaction lets it commit early.
 - `archive.ts:archiveOldTasks` writes with `bulkPut`, not `bulkAdd`. One duplicate key would abort every archive run on the device.
 - `archive.ts:chooseArchiveSnapshot` never replaces an existing archived row with an older or unparseable live copy.
 - `archive.ts:archiveOldTasks` skips tasks with `savedAt` and tasks without `completedAt`.

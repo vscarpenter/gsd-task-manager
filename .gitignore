@@ -61,6 +61,7 @@ sync.md
 !.claude/skills/verify-gsd/
 .claude/skills/verify-gsd/journeys/adhoc/
 !.claude/skills/verify-reminders/
+!.claude/skills/verify-retry-budget/
 !.claude/skills/verify-sync-convergence/
 !.claude/skills/verify-sync-session/
 !.claude/skills/verify-task-tombstones/

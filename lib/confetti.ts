@@ -3,8 +3,7 @@
  *
  * Uses canvas-confetti's `useWorker: false` mode so the animation runs on
  * the main thread instead of a Web Worker. The worker approach creates a
- * blob: URL worker which is blocked by our CSP (`script-src 'self'` has
- * no blob: fallback, and `worker-src` is not set).
+ * blob: URL worker, which the self-host CSP blocks (`worker-src 'self'`).
  *
  * Respects `prefers-reduced-motion` so users who opt out of motion get
  * only the toast — no animation. Feature-detects canvas so jsdom-based

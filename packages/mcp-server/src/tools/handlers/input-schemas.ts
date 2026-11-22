@@ -77,7 +77,7 @@ export const createTaskArgsSchema = z.strictObject({
   dueDate: optionalIsoDatetime,
   tags: tagsSchema.optional(),
   subtasks: z
-    .array(z.object({ title: subtaskTitleSchema, completed: z.boolean() }))
+    .array(z.strictObject({ title: subtaskTitleSchema, completed: z.boolean() }))
     .max(SCHEMA_LIMITS.MAX_SUBTASKS)
     .optional(),
   recurrence: recurrenceSchema.optional(),
@@ -101,7 +101,7 @@ export const updateTaskArgsSchema = z.strictObject({
   tags: tagsSchema.optional(),
   subtasks: z
     .array(
-      z.object({
+      z.strictObject({
         id: subtaskIdSchema,
         title: subtaskTitleSchema,
         completed: z.boolean(),
@@ -130,19 +130,19 @@ export const deleteTaskArgsSchema = z.strictObject({
 });
 
 const bulkOperationSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('complete'), completed: z.boolean() }),
-  z.object({
+  z.strictObject({ type: z.literal('complete'), completed: z.boolean() }),
+  z.strictObject({
     type: z.literal('move_quadrant'),
     urgent: z.boolean(),
     important: z.boolean(),
   }),
-  z.object({ type: z.literal('add_tags'), tags: nonEmptyTagsSchema }),
-  z.object({ type: z.literal('remove_tags'), tags: nonEmptyTagsSchema }),
-  z.object({
+  z.strictObject({ type: z.literal('add_tags'), tags: nonEmptyTagsSchema }),
+  z.strictObject({ type: z.literal('remove_tags'), tags: nonEmptyTagsSchema }),
+  z.strictObject({
     type: z.literal('set_due_date'),
     dueDate: z.union([z.literal(''), z.iso.datetime({ offset: true })]).optional(),
   }),
-  z.object({ type: z.literal('delete') }),
+  z.strictObject({ type: z.literal('delete') }),
 ]);
 
 export const bulkUpdateTasksArgsSchema = z.strictObject({

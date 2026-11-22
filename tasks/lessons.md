@@ -657,3 +657,27 @@ Adding a wire column is not enough. A client that pulled a record before the col
   command titled its PRs "Release vX.Y.Z", so the new `pr-shape` rule would
   have failed the next release. Grep for every producer of what a new check
   inspects before shipping the check.
+
+## Repeated mistakes made impossible (2026-11-22)
+
+- **Put the decision in the transaction that writes.** It was the most repeated
+  bug here. A screen that counts, then calls a writer that clears, will lose
+  data. Hand the writer the limit and let it count.
+- **A catch that returns null turns unknown into empty.** The #531 refactor did
+  that to sign-out, and the next `if` read it as permission.
+- **Prove a check can fail before you trust it.** A suite passed while three
+  files never ran, and two engine cases passed because their mocks threw.
+  Replay the past bug, and require every file to report.
+- **A comment that says "must" is a check nobody runs.** Several such comments
+  were false when checked. Encode the rule, then delete the sentence.
+- **A field list copied by hand drifts.** Derive it from the type, the schema,
+  or the stylesheet, or make the compiler demand every entry.
+- **Measure why an old test passed before you describe it.** Reading gave the
+  wrong cause for one of the engine cases. A probe gave the right one.
+- **Squash-merged stacks need a rebase.** Simulate the squash order before you
+  hand over a merge order. A clean merge test doesn't show it.
+
+## 2026-11-22: main-commit guard
+
+- **A guard on command text needs tests for each spelling.** Matching `git commit` missed `git -c ... commit`. Test blocked and allowed cases against real repositories, and read the branch where the command runs, which `-C` can move.
+- **Decode shell quoting by its rules.** Deleting quote characters broke paths that contain them and let commits onto main. Fuzz a decoder against Bash itself.

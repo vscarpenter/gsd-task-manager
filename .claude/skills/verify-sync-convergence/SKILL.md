@@ -27,7 +27,7 @@ The harm when it breaks: an edit you made shows on one device and never reaches 
 bash docs/formal/sync-convergence/check.sh
 ```
 
-It runs every config through `bash scripts/tlc.sh`, which pins and hash-checks TLC 1.7.4 on Java 21. It prints one line per config and exits 0 only when every result matches its expected outcome. The full run takes about a minute and a half. Name configs to run only those, such as `bash docs/formal/sync-convergence/check.sh SyncConvergence FindingPushRace`. The last lines print the folder that holds TLC's output for each config, counterexamples included.
+It runs every config through `bash scripts/tlc.sh`, which pins and hash-checks TLC 1.7.4 on Java 21. It prints one line per config and exits 0 only when every result matches its expected outcome. The full run takes about two minutes. Name configs to run only those, such as `bash docs/formal/sync-convergence/check.sh SyncConvergence FindingPushRace`. The last lines print the folder that holds TLC's output for each config, counterexamples included.
 
 Expected result at the sync commit:
 
@@ -36,7 +36,7 @@ Expected result at the sync commit:
 | `SyncConvergence` | holds (414,897 states) | Nothing: edits on both devices, pushes that fail and retry, syncs that fail, lost realtime events |
 | `FastClockHoldOff` | holds (1,629,373 states) | A client with a fast clock saves the task once; checks only `UnsentEditStays` |
 | `FindingOtherTaskCursor` | breaks `QuietMeansSameCopy` | Another task's record moves the shared pull cursor (finding 1) |
-| `FindingPushRace` | breaks `QuietMeansSameCopy` | The other device writes between a push's read and its write (finding 2) |
+| `FindingPushRace` | holds | The other device writes between a push's read and its write, and the server refuses the stale write (finding 2, fixed) |
 | `FindingRetriesRunOut` | breaks `QuietMeansSameCopy` | Pushes keep failing until a row's retries run out (finding 3) |
 | `FindingFastClock` | breaks `QuietMeansSameCopy` | A client with a fast clock saves the task once (finding 4) |
 | `BrokenPushOverwritesNewer` | breaks `QuietMeansNewestEdit` | Push drops its `isRemoteNewer` check |
@@ -44,6 +44,7 @@ Expected result at the sync commit:
 | `BrokenCursorFollowsClock` | breaks `QuietMeansSameCopy` | Every pull moves the cursor to now minus the overlap |
 | `BrokenApplyIgnoresStamps` | breaks `UnsentEditStays` | Pull and realtime skip the strictly-newer check |
 | `BrokenNoHoldOff` | breaks `UnsentEditStays` | `holdsOffFarFutureRemote` always says no |
+| `BrokenPushWithoutCompare` | breaks `QuietMeansSameCopy` | The server writes without comparing the version the push read, the bug `40a8bc5` fixed |
 
 Each finding config differs from a config that holds by one environment constant, so its break comes from that one addition. The broken variants are code mutations, chosen with the `Variant` constant, that prove each rule can fail. A finding config that starts to hold means someone fixed that finding, and a broken variant that starts to hold means the model stopped checking that rule. Either one is a reason to look, not a pass.
 
@@ -51,10 +52,10 @@ Read every result, failing or passing, with the `/statechart` skill, giving it `
 
 ## Sync commit
 
-`dd32e08c` (chore(release): v14.8.0). At that commit, every file in the coverage record matches what the model describes. Move this line forward only after you've read the diff of every covered file since `dd32e08c`. You must also confirm that the model still describes the code at the new commit. To see what changed, uncommitted edits included:
+`9c0d443` (test(e2e): wait for the drawer's title focus before typing a subtask). At that commit, every file in the coverage record matches what the model describes. Move this line forward only after you've read the diff of every covered file since `9c0d443`. You must also confirm that the model still describes the code at the new commit. To see what changed, uncommitted edits included:
 
 ```sh
-git diff --stat dd32e08c -- lib/sync lib/tasks/crud lib/constants/sync.ts
+git diff --stat 9c0d443 -- lib/sync lib/tasks/crud lib/constants/sync.ts docker/pb_hooks/task-write-contract.js
 ```
 
 ## Coverage record
@@ -67,6 +68,8 @@ Each comment in `SyncConvergence.tla` names the function its step models.
 | `SyncStarts`, `phase` | `lib/sync/sync-coordinator.ts`, `lib/sync/pb-sync-engine.ts` | `SyncCoordinator.requestSync`, `drainQueue`, `fullSync`, `runSyncPasses` (push, then pull) |
 | `todo` | `lib/sync/pb-push.ts`, `lib/sync/queue.ts` | `pushLocalChanges` tries what `getPending` returned at its start |
 | `PushSends`, `PushReads`, `PushWrites`, `Decides`, `RemoteNewer` | `lib/sync/pb-push.ts`, `lib/sync/pb-sync-helpers.ts` | `pushSingleItem`, `isRemoteNewer`, `upsertRemoteTask`, `fetchRemoteTaskEntry` |
+| `Refused` | `docker/pb_hooks/task-write-contract.js`, `lib/sync/pb-push.ts` | `conditionalWrite` answers 412; `recordItemFailure` keeps the row uncharged |
+| `YouRetry` | `lib/sync/failed-recovery.ts` | `recoverFailedSyncItem`, `retryItem` |
 | `PushFails` | `lib/sync/queue.ts`, `lib/sync/pb-push.ts` | `recordAttemptFailure`; the `catch` and 429 `break` in `pushLocalChanges`; the `index_unavailable` path in `pushSingleItem` |
 | `SyncFails` | `lib/sync/pb-sync-engine.ts` | `fullSync`'s `catch` to `reportSyncError`, and `reportAuthFailure` |
 | `Pulls`, `cursor` | `lib/sync/pb-pull.ts`, `lib/sync/pb-sync-engine.ts` | `pullRemoteChanges` (`>=` filter), `applyPreparedRecord`, `remoteVersionWins`, `acceptsRemoteVersion`, `findMaxAppliedClientUpdated`, `CURSOR_OVERLAP_MS`, `updateSyncCursor`, `resolvePullCursor` |
@@ -109,11 +112,11 @@ When the code changes on purpose, update the step that models it, and update the
 
 ## Findings at the sync commit
 
-Each finding was replayed against the real code at `dd32e08c`, and each replay failed on the property while its control passed.
+Each finding was replayed against the real code at `dd32e08c`, and each replay failed on the property while its control passed. Finding 2 is fixed. Findings 1, 3, and 4 still break at `9c0d443`.
 
 1. **An edit that reaches the server behind the other device's cursor is never pulled** (`FindingOtherTaskCursor`). A edits the task while offline, stamped minute 1. Another client saves a different task at minute 3, and B's `fullSync` applies it, so `updateSyncCursor` sets B's `lastClientUpdatedAt` to 2:30. A comes online, and `pushSingleItem` writes its minute-1 edit. B's tab is closed, so the realtime event is lost. Every later `pullRemoteChanges` on B asks for `client_updated_at >= 2:30`, so B shows the old copy until someone edits the task again. The cursor is one per account, so any other task moves it. Replay: B still showed "Original" after two more syncs. The control, with no other task, passed.
-2. **Two pushes of one task can leave the server on the older edit** (`FindingPushRace`). A edits at minute 1, and B edits at minute 2. A's `fetchRemoteTaskEntry` returns the original, and so does B's. B writes its edit. A's upsert, decided on its stale read, overwrites it with A's older edit, because the server has no compare-and-set on `client_updated_at`. Realtime hands A B's edit, and B's pull rejects A's older stamp, so both devices show B's edit. The server keeps A's, and so does any device that signs in later. Replay: the server ended on "A edit" stamped 12:01 while B held "B edit". The control passed.
-3. **A push whose retries run out never reaches the server** (`FindingRetriesRunOut`). A edits, and five syncs in a row fail to read the remote entry, so `recordAttemptFailure` marks the row `failed`. `getPending` skips failed rows, and nothing re-arms them. A keeps its edit, and B and the server keep the old copy. The health monitor reports failed items, but nothing sends the edit again. Replay: after the server recovered, the server and B still held "Original".
+2. **Two pushes of one task could leave the server on the older edit. Fixed by `40a8bc5`.** A and B both read the original. B wrote its edit, then A's upsert, decided on the stale read, overwrote it. The server now compares `expected_version` and saves in one transaction (ADR 0021). A's write gets a 412 and keeps its row. `FindingPushRace` holds, and `BrokenPushWithoutCompare` replays the bug.
+3. **A push whose retries run out never reaches the server** (`FindingRetriesRunOut`). A edits, and five syncs in a row fail to read the remote entry, so `recordAttemptFailure` marks the row `failed`. `getPending` skips failed rows, and only Retry in Settings re-arms them. A keeps its edit, and B and the server keep the old copy. The health monitor reports failed items, but nothing sends the edit again. Replay: after the server recovered, the server and B still held "Original".
 4. **A fast clock's save splits the device that took it** (`FindingFastClock`). A edits and hasn't pushed. A client whose clock runs a year fast saves the task. B has nothing queued, so its pull takes that copy, and `clampClientTimestamp` stamps it now plus 5 minutes. A pushes, and `isRemoteNewer` never loses to a far-future stamp, so the server gets A's edit. B's realtime event and its pulls compare A's stamp with B's clamped one and keep the fast clock's copy. TLC's shortest path splits A the same way, through the fast clock's realtime event arriving after A's push dequeued the row. Replay: B showed "Fast clock" while the server held "A edit".
 
 ## Bounds, assumptions, and what's left out
@@ -124,7 +127,7 @@ Assumptions:
 
 - Every device clock reads the same tick, and each edit gets its own tick. Only the fast clock client is skewed.
 - A pull is one step: fetch, apply, and cursor write. The apply re-reads the local row in its transaction and keeps the newer copy, so a stale fetch can only offer an older copy, which it rejects.
-- In the code, a push of one row is two steps: `fetchRemoteTaskEntry`, then the upsert. Every config but `FindingPushRace` assumes no other write lands between them and models the push as one step. `FindingPushRace` drops that assumption, and that exposes finding 2.
+- In the code, a push of one row is two steps: `fetchRemoteTaskEntry`, then the upsert. The server saves only if the version is still the one read, so a write that lands behaves as one step. `FindingPushRace` and `BrokenPushWithoutCompare` model the two steps. Every other config models one.
 - "Another task's record" in a pull is stamped at the current tick: the case where another client saved it just now.
 - Realtime events arrive in any order and at any time, or not at all where `LostEvents` allows it. A device never gets its own events.
 
@@ -133,7 +136,8 @@ Left out:
 - Deletes, archive, Trash, `reconcileDeletedTasks`, and `resurrectOnSight`.
 - The backfill pull after a pull contract bump (`mergeSameVersion`).
 - Field-level content, such as placement read from the current row or `notify_before`. A copy is one whole edit.
-- Two devices stamping the same millisecond.
+- Two devices stamping the same millisecond, and the coalescing and one-millisecond tie break that handle it (`push-queue.ts`, `preparePushFields`).
+- Dismiss in Settings (`dismissItem`), which moves the task to Trash.
 - Retry backoff and auto-sync blocking.
 - Sign-in, sign-out, the session fence, and two tabs on one device.
 - A write that reached the server while its client saw an error.

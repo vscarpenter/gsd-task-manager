@@ -2,7 +2,7 @@
  * Push engine: local -> PocketBase
  *
  * Pushes pending sync queue items to PocketBase, handling create/update/delete.
- * Pre-fetches remote task index for efficient lookups and throttles requests.
+ * Looks up each record just before it writes, and throttles requests.
  */
 
 import { readDefaultReminder } from '@/lib/notifications/default-reminder';
@@ -208,7 +208,7 @@ function createPushSessionCheck(ownerId: string): PushSessionCheck {
 
 /**
  * The session check failed, not this row. Charging the row would retire it after
- * MAX_RETRIES, and nothing re-arms a retired row, so the push stops instead.
+ * MAX_RETRIES until a manual Retry in Settings, so the push stops instead.
  * A session that ended mid-push counts too: the row is no longer this push's.
  */
 function isSessionCheckFailure(error: unknown): boolean {

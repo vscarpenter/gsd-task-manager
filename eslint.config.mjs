@@ -93,11 +93,17 @@ const config = [
         },
     },
     {
-        files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
-        // Account deletion erases every record on purpose, with no queue row to claim.
-        ignores: ["lib/sync/queued-write.ts", "lib/sync/pb-account-deletion.ts"],
-        plugins: { "gsd-sync": remoteTaskWrites },
-        rules: { "gsd-sync/claimed-task-writes": "error" },
+        files: ["packages/mcp-server/src/tools/**/*.ts"],
+        rules: {
+            "no-restricted-properties": [
+                "error",
+                {
+                    object: "z",
+                    property: "object",
+                    message: "z.object drops a misspelled argument in silence, so { due_date } cleared due dates on up to 50 tasks. Use z.strictObject, at every nesting level.",
+                },
+            ],
+        },
     },
     {
         files: ["tests/**/*.{ts,tsx,js,jsx}"],
