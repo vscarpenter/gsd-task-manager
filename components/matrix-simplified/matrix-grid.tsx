@@ -1,5 +1,6 @@
 "use client";
 
+import { compareInstants } from "@/lib/instant";
 import { quadrants, type RedesignQuadrantKey } from "@/lib/quadrants";
 import type { QuadrantId, TaskRecord } from "@/lib/types";
 import { QuadrantPane } from "./quadrant-pane";
@@ -165,7 +166,7 @@ function groupByQuadrant(tasks: TaskRecord[]): Record<RedesignQuadrantKey, TaskR
 
 function byActiveThenDueDate(a: TaskRecord, b: TaskRecord): number {
   if (a.completed !== b.completed) return a.completed ? 1 : -1;
-  if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+  if (a.dueDate && b.dueDate) return compareInstants(a.dueDate, b.dueDate);
   if (a.dueDate) return -1;
   if (b.dueDate) return 1;
   return 0;

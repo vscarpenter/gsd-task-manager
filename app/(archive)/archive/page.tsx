@@ -9,6 +9,7 @@ import { AppShell } from "@/components/matrix-simplified/app-shell";
 import { Button } from "@/components/ui/button";
 import { TaskCard } from "@/components/task-card";
 import { listArchivedTasks, restoreTask, deleteArchivedTask, archiveTaskNow, reinstateArchivedTask } from "@/lib/archive";
+import { compareInstants } from "@/lib/instant";
 import type { TaskRecord } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -25,11 +26,7 @@ function useColumnCount(): number {
 }
 
 function sortByArchivedDate(tasks: TaskRecord[]): TaskRecord[] {
-  return [...tasks].sort((a, b) => {
-    const aDate = a.archivedAt || "";
-    const bDate = b.archivedAt || "";
-    return bDate.localeCompare(aDate);
-  });
+  return [...tasks].sort((a, b) => compareInstants(b.archivedAt, a.archivedAt));
 }
 
 interface ArchivedTaskCardProps {
