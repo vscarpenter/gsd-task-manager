@@ -1,6 +1,7 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
+import remoteTaskWrites from "./config/eslint/remote-task-writes.mjs";
 
 const config = [
     {
@@ -90,6 +91,13 @@ const config = [
         rules: {
             "react-hooks/incompatible-library": "off",
         },
+    },
+    {
+        files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+        // Account deletion erases every record on purpose, with no queue row to claim.
+        ignores: ["lib/sync/queued-write.ts", "lib/sync/pb-account-deletion.ts"],
+        plugins: { "gsd-sync": remoteTaskWrites },
+        rules: { "gsd-sync/claimed-task-writes": "error" },
     },
     {
         files: ["tests/**/*.{ts,tsx,js,jsx}"],
