@@ -5,6 +5,13 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- `bulk_update_tasks` rejects an unknown key inside `operation`. A misspelled
+  `due_date` used to be dropped, which cleared the due date on every listed task.
+  Subtask items in `create_task` and `update_task` reject unknown keys too.
+
 ## [1.5.0] - 2026-11-18
 
 ### Added
