@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `bulk_update_tasks` rejects an unknown key inside `operation`. A misspelled
+  `due_date` used to be dropped, which cleared the due date on every listed task.
+  Subtask items in `create_task` and `update_task` reject unknown keys too.
 - `get_top_three` orders picks and suggestions by time. A timestamp written
   with an offset, such as `-05:00`, sorted by its text before.
 
