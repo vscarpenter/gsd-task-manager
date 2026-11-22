@@ -26,7 +26,13 @@ Both paths replayed against the real code on 2026-11-08 (`toggleCompleted`, `del
 
 ## Run the model
 
-Check the rules with the repo's pinned checker:
+Check every config against the result it should have:
+
+```sh
+bash docs/diagrams/task-lifecycle-model/check.sh
+```
+
+To see one config's output, use the repo's pinned checker:
 
 ```sh
 M=docs/diagrams/task-lifecycle-model
@@ -57,7 +63,7 @@ Only the newest Undo toast is modeled. sonner stacks toasts, so an older Undo ca
 
 ## Directory contract
 
-This section records the contract of the source files here: `TaskLifecycle.tla`, the three `.cfg` files, and the two view files.
+This section records the contract of the source files here: `check.sh`, `TaskLifecycle.tla`, the three `.cfg` files, and the two view files.
 
 ### Interface
 
@@ -83,9 +89,9 @@ This section records the contract of the source files here: `TaskLifecycle.tla`,
 
 ### Side Effects
 
-- None. The module, the configs, and the view files perform no I/O.
-- This directory has no runner script. `scripts/tlc.sh` runs the model. See [scripts](../../../scripts/README.md).
+- The module, the configs, and the view files perform no I/O.
+- `check.sh` runs `scripts/tlc.sh` once per config and leaves TLC's output in a temp folder. See [scripts](../../../scripts/README.md).
 
 ### Verification
 
-- No automated check found. Run the model by hand with `bash scripts/tlc.sh`, as "Run the model" above shows.
+- Run: `bash docs/diagrams/task-lifecycle-model/check.sh`. CI's required `test` job runs it through `scripts/check-models.sh`.
