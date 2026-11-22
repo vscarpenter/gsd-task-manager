@@ -1,4 +1,4 @@
-# Code Standards & Agentic Guidance v18.0
+# Code Standards & Agentic Guidance v18.1
 
 **Purpose.** Directives governing how LLMs approach complex, multi-step development tasks. Optimized for the Claude Code harness. Every directive applies to every coding session.
 
@@ -97,8 +97,8 @@ Rules only work if the model is holding them when it matters. Load each rule at 
 
 **3. Comprehension Gate (Non-trivial tier)**
 * Before PR, generate a change report: context, intent, what changed, why it changed, and existing code paths affected.
-* Attach a quiz testing edge cases and blast radius. Default to 3 to 5 questions; scale up to 10 when the change touches data models, public interfaces, or shared infrastructure.
-* The user must pass before merging. A miss means re-reading the report, not retaking until lucky.
+* Attach a quiz only when the change can lose or corrupt user data: sync, persisted data shapes and migrations, import and export, or a write path an external client calls. The project's `CLAUDE.md` names those paths. Default to 3 to 5 questions; scale up to 10 when the change touches several of them.
+* The user must pass before merging. Don't hand over a merge command for a quizzed change until the quiz is answered. A miss means re-reading the report, not retaking until lucky.
 * Never merge code you cannot explain.
 
 ---
@@ -226,11 +226,11 @@ Complete the checklist for your tier before declaring a task "Done" or ending a 
 - [ ] Spec was approved before coding; no unapproved contract drift.
 - [ ] All acceptance criteria have corresponding passing tests.
 - [ ] ADR written for architectural changes.
-- [ ] Change report generated and comprehension quiz passed, sized to blast radius.
+- [ ] Change report generated; for a change that can lose or corrupt user data, comprehension quiz passed.
 - [ ] `tasks/lessons.md` updated with corrections from this session; implementation ledger distilled and deleted.
 
 ---
 
 > "Code should be safe to modify, easy to reason about, and boring to maintain. When in doubt, simplify."
 >
-> Vinny Carpenter, Document Version 18.0
+> Vinny Carpenter, Document Version 18.1

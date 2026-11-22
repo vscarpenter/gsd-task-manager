@@ -157,6 +157,15 @@ Detail moved to path-scoped rules — see `.claude/rules/pocketbase-sync.md` and
 
 **Verification:** Run `bun run test -- --coverage` after implementation. Coverage for changed files must be ≥80% across statements, lines, and functions.
 
+### Comprehension quiz scope
+The quiz in `coding-standards.md` (Phase 3, Comprehension Gate) applies to PRs that touch any of these paths, where a misunderstanding can lose or corrupt user data:
+- `lib/sync/**`
+- `lib/schema.ts`, `lib/db.ts`, `lib/db-migrations.ts`, `docker/pb_migrations/**`, `docker/pb_hooks/**`
+- `lib/tasks/import-export.ts`, `lib/tasks/import-check.ts`, `lib/tasks/import-id-remap.ts`
+- `packages/mcp-server/src/write-ops.ts`, `packages/mcp-server/src/write-ops/**`, `packages/mcp-server/src/tools/handlers/write-handlers.ts`
+
+Other non-trivial PRs get the change report without a quiz.
+
 ### Pre-commit
 - Run `bun run test`, `bun typecheck`, `bun run typecheck:tests`, `bun lint`, `bun run quality:shape`, and `bun run knip` before committing (CI's lint job runs the last three)
 - Static export mode means no API routes or SSR
