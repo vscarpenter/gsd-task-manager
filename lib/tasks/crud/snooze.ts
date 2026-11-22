@@ -7,7 +7,6 @@ import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TASK_CRUD");
 
-/** Build a snoozed copy of a task record */
 function buildSnoozedRecord(existing: TaskRecord, minutes: number): TaskRecord {
   if (minutes === 0) {
     return { ...existing, snoozedUntil: undefined, updatedAt: isoNow() };
@@ -64,24 +63,15 @@ export async function snoozeTask(
   }
 }
 
-/**
- * Clear the snooze for a task
- */
 export async function clearSnooze(id: string): Promise<TaskRecord> {
   return snoozeTask(id, 0);
 }
 
-/**
- * Check if a task is currently snoozed
- */
 export function isTaskSnoozed(task: TaskRecord): boolean {
   if (!task.snoozedUntil) return false;
   return new Date(task.snoozedUntil) > new Date();
 }
 
-/**
- * Get remaining snooze time in minutes
- */
 export function getRemainingSnoozeMinutes(task: TaskRecord): number {
   if (!task.snoozedUntil) return 0;
   const remaining = new Date(task.snoozedUntil).getTime() - Date.now();

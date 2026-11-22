@@ -66,12 +66,8 @@ export function logError(error: unknown, context: ErrorContext): LoggedError {
   return loggedError;
 }
 
-/**
- * Create user-friendly error messages based on error type
- */
 export function getUserErrorMessage(error: unknown, defaultMessage: string): string {
   if (error instanceof Error) {
-    // Map known error types to user-friendly messages
     if (error.message.includes('not found')) {
       return 'The item you\'re looking for could not be found. It may have been deleted.';
     }
@@ -81,7 +77,6 @@ export function getUserErrorMessage(error: unknown, defaultMessage: string): str
     if (error.message.includes('IndexedDB')) {
       return 'Unable to access local storage. Please check your browser settings.';
     }
-    // For Zod validation errors
     if (error.name === 'ZodError') {
       return 'The data provided is invalid. Please check your input and try again.';
     }
@@ -90,11 +85,7 @@ export function getUserErrorMessage(error: unknown, defaultMessage: string): str
   return defaultMessage;
 }
 
-/**
- * Common error contexts for the application
- */
 export const ErrorActions = {
-  // Task operations
   CREATE_TASK: 'create_task',
   UPDATE_TASK: 'update_task',
   DELETE_TASK: 'delete_task',
@@ -102,25 +93,19 @@ export const ErrorActions = {
   MOVE_TASK: 'move_task_to_quadrant',
   SNOOZE_TASK: 'snooze_task',
 
-  // Import/Export
   EXPORT_TASKS: 'export_tasks',
   IMPORT_TASKS: 'import_tasks',
   PARSE_JSON: 'parse_import_file',
 
-  // Subtasks
   ADD_SUBTASK: 'add_subtask',
   DELETE_SUBTASK: 'delete_subtask',
   TOGGLE_SUBTASK: 'toggle_subtask',
 
-  // Smart Views
   SAVE_SMART_VIEW: 'save_smart_view',
   DELETE_SMART_VIEW: 'delete_smart_view',
   LOAD_SMART_VIEWS: 'load_smart_views'
 } as const;
 
-/**
- * Common user-facing error messages
- */
 export const ErrorMessages = {
   TASK_SAVE_FAILED: 'Unable to save task. Please try again.',
   TASK_DELETE_FAILED: 'Failed to delete task. Please try again.',

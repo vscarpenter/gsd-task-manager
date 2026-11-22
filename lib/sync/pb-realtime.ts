@@ -66,9 +66,6 @@ export async function subscribe(deviceId: string): Promise<void> {
   }
 }
 
-/**
- * Stop listening for realtime changes
- */
 export function unsubscribe(): void {
   subscriptionGeneration++;
   subscriptionPromise = null;
@@ -81,9 +78,6 @@ export function unsubscribe(): void {
 }
 
 
-/**
- * Handle a single realtime event from PocketBase SSE
- */
 async function handleRealtimeEvent(event: RecordSubscription<RecordModel>): Promise<void> {
   // Validate the record shape before doing anything else. Fails closed on
   // missing / non-string fields — see realtimeRecordShape above.

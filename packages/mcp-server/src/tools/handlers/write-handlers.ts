@@ -23,11 +23,6 @@ function formatRecurringInstance(instance: Task | undefined, dryRun: boolean): s
   return `\n\n${summary}:\n\n${JSON.stringify(instance, null, 2)}`;
 }
 
-/**
- * Write operation tool handlers for modifying task data
- * All handlers support dry-run mode for previewing changes
- */
-
 export async function handleCreateTask(config: GsdConfig, args: CreateTaskInput): Promise<McpToolResponse> {
   const result = await createTask(config, args);
 

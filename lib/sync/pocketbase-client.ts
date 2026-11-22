@@ -68,9 +68,6 @@ export function forgetRefusedToken(pb: PocketBase, refusedToken: string): void {
   if (refusedToken && pb.authStore.token === refusedToken) pb.authStore.clear();
 }
 
-/**
- * Check if the current user is authenticated
- */
 export function isAuthenticated(): boolean {
   const pb = getPocketBase();
   return pb.authStore.isValid;

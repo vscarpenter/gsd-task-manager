@@ -6,9 +6,6 @@ import {
   type TransactionalSyncEnqueue,
 } from "./crud/helpers";
 
-/**
- * Add a dependency to a task
- */
 export async function addDependency(taskId: string, dependencyId: string): Promise<TaskRecord> {
   const db = getDb();
   return runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
@@ -27,9 +24,6 @@ export async function addDependency(taskId: string, dependencyId: string): Promi
   });
 }
 
-/**
- * Remove a dependency from a task
- */
 export async function removeDependency(taskId: string, dependencyId: string): Promise<TaskRecord> {
   const db = getDb();
   return runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {

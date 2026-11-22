@@ -25,7 +25,6 @@ function errorMessage(err: unknown): string {
 	return err instanceof Error ? err.message : "Unknown error";
 }
 
-/** Build a minimal sync metadata record that preserves deviceId */
 function buildPreservedSyncMetadata(deviceId: string) {
 	return {
 		key: "sync_config" as const,

@@ -224,7 +224,6 @@ export class SyncCoordinator {
   }
 }
 
-// Singleton instance
 let coordinatorInstance: SyncCoordinator | null = null;
 
 export function getSyncCoordinator(): SyncCoordinator {

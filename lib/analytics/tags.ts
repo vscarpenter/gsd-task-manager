@@ -1,18 +1,12 @@
 import type { TaskRecord } from "@/lib/types";
 import type { TagStatistic } from "./types";
 
-/**
- * Calculate statistics for each tag
- */
 export function calculateTagStatistics(tasks: TaskRecord[]): TagStatistic[] {
   const tagMap = buildTagMap(tasks);
   const stats = convertTagMapToStats(tagMap);
   return sortByCountDescending(stats);
 }
 
-/**
- * Build map of tag counts and completions
- */
 function buildTagMap(tasks: TaskRecord[]): Map<string, { total: number; completed: number }> {
   const tagMap = new Map<string, { total: number; completed: number }>();
 
@@ -25,9 +19,6 @@ function buildTagMap(tasks: TaskRecord[]): Map<string, { total: number; complete
   return tagMap;
 }
 
-/**
- * Update counts for a single tag
- */
 function updateTagCounts(
   tagMap: Map<string, { total: number; completed: number }>,
   tag: string,
@@ -41,9 +32,6 @@ function updateTagCounts(
   tagMap.set(tag, existing);
 }
 
-/**
- * Convert tag map to array of statistics
- */
 function convertTagMapToStats(
   tagMap: Map<string, { total: number; completed: number }>
 ): TagStatistic[] {
@@ -56,9 +44,6 @@ function convertTagMapToStats(
   return stats;
 }
 
-/**
- * Create a single tag statistic object
- */
 function createTagStatistic(tag: string, total: number, completed: number): TagStatistic {
   return {
     tag,
@@ -68,9 +53,6 @@ function createTagStatistic(tag: string, total: number, completed: number): TagS
   };
 }
 
-/**
- * Sort tag statistics by count in descending order
- */
 function sortByCountDescending(stats: TagStatistic[]): TagStatistic[] {
   return stats.sort((a, b) => b.count - a.count);
 }

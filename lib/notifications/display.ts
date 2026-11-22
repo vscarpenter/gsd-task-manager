@@ -15,9 +15,6 @@ import { isResetPending } from "@/lib/reset-lock";
 
 const logger = createLogger("NOTIFICATIONS");
 
-/**
- * Get active service worker registration
- */
 async function getActiveServiceWorker(): Promise<ServiceWorkerRegistration | undefined> {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator) || !navigator.serviceWorker) {
     return undefined;
@@ -39,17 +36,11 @@ async function getActiveServiceWorker(): Promise<ServiceWorkerRegistration | und
   }
 }
 
-/**
- * Check if the task is currently snoozed
- */
 function isTaskSnoozed(task: TaskRecord): boolean {
   if (!task.snoozedUntil) return false;
   return new Date(task.snoozedUntil) > new Date();
 }
 
-/**
- * Generate notification title based on time until due
- */
 function getNotificationTitle(task: TaskRecord, minutesUntil: number): string {
   // An all-day task counts calendar days: hours to its midnight is a time nobody chose.
   if (task.dueDate !== undefined && timeOf(task.dueDate) === undefined) {
@@ -76,9 +67,6 @@ function getNotificationTitle(task: TaskRecord, minutesUntil: number): string {
   return `Due in ${days}d: ${task.title}`;
 }
 
-/**
- * Create notification options object
- */
 function createNotificationOptions(
   task: TaskRecord,
   settings: NotificationSettings
@@ -99,9 +87,6 @@ function createNotificationOptions(
   };
 }
 
-/**
- * Display notification using fallback Notification API
- */
 function displayFallbackNotification(title: string, options: NotificationOptions): void {
   const notification = new Notification(title, options);
 
@@ -115,9 +100,6 @@ function displayFallbackNotification(title: string, options: NotificationOptions
   }, NOTIFICATION_TIMING.AUTO_CLOSE_DURATION);
 }
 
-/**
- * Check if notification should be shown for task
- */
 function shouldShowTaskNotification(
   task: TaskRecord,
   settings: NotificationSettings
@@ -202,9 +184,6 @@ export async function showSweepReminder(): Promise<boolean> {
   }
 }
 
-/**
- * Test notification - shows a sample notification
- */
 export async function showTestNotification(): Promise<boolean> {
   const permission = checkNotificationPermission();
 

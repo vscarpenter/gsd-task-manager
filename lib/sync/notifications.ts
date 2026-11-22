@@ -1,8 +1,3 @@
-/**
- * Sync notification handler
- * Provides user-friendly notifications for sync events and failures
- */
-
 import { toast } from 'sonner';
 
 export interface SyncNotificationOptions {
@@ -10,9 +5,6 @@ export interface SyncNotificationOptions {
 }
 
 
-/**
- * Show notification for successful sync operations
- */
 export function notifySyncSuccess(
     pushedCount: number,
     pulledCount: number,
@@ -23,7 +15,6 @@ export function notifySyncSuccess(
     const totalChanges = pushedCount + pulledCount;
 
     if (totalChanges === 0) {
-        // Silent success - no changes
         return;
     }
 
@@ -41,9 +32,6 @@ export function notifySyncSuccess(
     });
 }
 
-/**
- * Show notification for sync failures
- */
 export function notifySyncError(
     error: string,
     isPermanent: boolean = false,

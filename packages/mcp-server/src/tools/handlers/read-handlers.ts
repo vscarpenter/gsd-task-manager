@@ -11,10 +11,6 @@ import { getTokenStatus } from '../../auth/token-status.js';
 import { redactPocketBaseHost } from '../../api/client.js';
 import type { McpToolResponse } from './types.js';
 
-/**
- * Read-only tool handlers for accessing task data and metadata
- */
-
 export async function handleGetSyncStatus(config: GsdConfig): Promise<McpToolResponse> {
   const status = await getSyncStatus(config);
   const pb = getPocketBase(config);

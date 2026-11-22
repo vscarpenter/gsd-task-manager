@@ -1,9 +1,5 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
-/**
- * Analytics tool schemas for productivity metrics and insights
- */
-
 export const getProductivityMetricsTool: Tool = {
   name: 'get_productivity_metrics',
   description:

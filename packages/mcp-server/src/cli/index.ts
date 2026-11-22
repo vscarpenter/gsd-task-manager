@@ -12,9 +12,6 @@ export interface CLIOptions {
   mode: 'mcp' | 'setup' | 'validate' | 'help';
 }
 
-/**
- * Parse command line arguments
- */
 export function parseCLIArgs(args: string[]): CLIOptions {
   const flags = args.slice(2); // Skip node and script path
 
@@ -32,9 +29,6 @@ export function parseCLIArgs(args: string[]): CLIOptions {
   return { mode: 'mcp' };
 }
 
-/**
- * Show help message
- */
 export function showHelp(): void {
   console.log(`
 🎯 GSD Task Manager MCP Server
@@ -75,9 +69,6 @@ VERSION: ${VERSION}
 `);
 }
 
-/**
- * Get Claude Desktop config file path for current platform
- */
 export function getClaudeConfigPath(): string {
   const home = homedir();
   const os = platform();
@@ -92,9 +83,6 @@ export function getClaudeConfigPath(): string {
   }
 }
 
-/**
- * Create readline interface for user input
- */
 function createReadline() {
   return createInterface({
     input: process.stdin,
@@ -102,9 +90,6 @@ function createReadline() {
   });
 }
 
-/**
- * Prompt user for input
- */
 export async function prompt(question: string, defaultValue?: string): Promise<string> {
   const rl = createReadline();
 

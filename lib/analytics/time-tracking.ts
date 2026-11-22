@@ -1,37 +1,20 @@
-/**
- * Time tracking analytics
- *
- * Provides metrics and statistics for time tracking data:
- * - Total time spent across all tasks
- * - Estimated vs actual time comparisons
- * - Time spent per quadrant
- * - Tasks with running timers
- */
-
 import type { TaskRecord, QuadrantId } from "@/lib/types";
 import { formatTimeSpent } from "@/lib/tasks/crud/time-tracking";
 
-/** Summary of time tracking data */
 export interface TimeTrackingSummary {
-  /** Total minutes tracked across all tasks */
   totalMinutesTracked: number;
-  /** Total minutes estimated across all tasks */
   totalMinutesEstimated: number;
   /** Number of tasks with time entries */
   tasksWithTimeTracking: number;
-  /** Number of tasks with estimates */
   tasksWithEstimates: number;
-  /** Number of tasks currently being tracked */
   tasksWithRunningTimers: number;
   /** Average accuracy (actual/estimated * 100) */
   estimationAccuracy: number;
-  /** Tasks that exceeded their estimates */
   overEstimateTasks: number;
   /** Tasks completed under estimate */
   underEstimateTasks: number;
 }
 
-/** Time distribution by quadrant */
 export interface QuadrantTimeDistribution {
   quadrantId: QuadrantId;
   totalMinutes: number;
@@ -39,7 +22,6 @@ export interface QuadrantTimeDistribution {
   averageMinutesPerTask: number;
 }
 
-/** Task time comparison for estimation accuracy */
 export interface TaskTimeComparison {
   taskId: string;
   title: string;
@@ -50,9 +32,6 @@ export interface TaskTimeComparison {
   isCompleted: boolean;
 }
 
-/**
- * Calculate overall time tracking summary
- */
 export function calculateTimeTrackingSummary(tasks: TaskRecord[]): TimeTrackingSummary {
   let totalMinutesTracked = 0;
   let totalMinutesEstimated = 0;
@@ -81,7 +60,6 @@ export function calculateTimeTrackingSummary(tasks: TaskRecord[]): TimeTrackingS
       tasksWithEstimates++;
       totalMinutesEstimated += task.estimatedMinutes;
 
-      // Calculate estimation accuracy for tasks with both estimate and actual time
       if (timeSpent > 0) {
         const accuracy = (timeSpent / task.estimatedMinutes) * 100;
         accuracySum += accuracy;
@@ -108,9 +86,6 @@ export function calculateTimeTrackingSummary(tasks: TaskRecord[]): TimeTrackingS
   };
 }
 
-/**
- * Get time distribution by quadrant
- */
 export function getTimeByQuadrant(tasks: TaskRecord[]): QuadrantTimeDistribution[] {
   const quadrantMap = new Map<QuadrantId, { total: number; count: number }>();
 

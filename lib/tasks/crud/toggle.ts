@@ -100,9 +100,6 @@ async function toggleCompletedTransaction(
   }
 }
 
-/**
- * Build the updated task record with completion status
- */
 function buildCompletedRecord(
   existing: TaskRecord,
   completed: boolean
@@ -116,9 +113,6 @@ function buildCompletedRecord(
   };
 }
 
-/**
- * Create and queue a new recurring task instance
- */
 async function createAndQueueRecurringInstance(
   existing: TaskRecord,
   enqueue: TransactionalSyncEnqueue,
@@ -131,9 +125,6 @@ async function createAndQueueRecurringInstance(
   return newInstance;
 }
 
-/**
- * Build a new recurring task instance based on completed task
- */
 function buildRecurringInstance(existing: TaskRecord): TaskRecord {
   const now = isoNow();
   const nextDueDate = calculateNextDueDate(existing.dueDate, existing.recurrence);
@@ -158,9 +149,6 @@ function buildRecurringInstance(existing: TaskRecord): TaskRecord {
   };
 }
 
-/**
- * Calculate the next due date for a recurring task
- */
 function calculateNextDueDate(
   currentDueDate: string | undefined,
   recurrence: string

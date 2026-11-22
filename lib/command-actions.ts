@@ -1,14 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import type { FilterCriteria } from "@/lib/filters";
 
-/**
- * Section types for grouping command actions
- */
 export type CommandSection = 'actions' | 'navigation' | 'views' | 'settings';
 
-/**
- * Command action interface
- */
 export interface CommandAction {
   id: string;
   label: string;
@@ -22,11 +16,7 @@ export interface CommandAction {
   focusAfterExecute?: 'restore' | 'handoff';
 }
 
-/**
- * Command action builder helpers
- */
 export interface CommandActionHandlers {
-  // Core actions
   onNewTask: () => void;
   onToggleTheme: () => void;
   onExportTasks: () => Promise<void>;
@@ -36,7 +26,6 @@ export interface CommandActionHandlers {
   onSendFeedback: () => void;
   onOpenWhatsNew: () => void;
 
-  // Navigation
   onViewDashboard: () => void;
   onViewMatrix: () => void;
   onViewArchive: () => void;
@@ -44,17 +33,11 @@ export interface CommandActionHandlers {
   onStartSweep: () => void;
   onViewSyncHistory?: () => void;
 
-  // Smart views
   onApplySmartView: (criteria: FilterCriteria, viewId: string) => void;
 
-  // Sync
   onTriggerSync?: () => Promise<void>;
 }
 
-/**
- * Build all command actions from handlers
- * This allows us to dynamically inject handlers from components
- */
 export function buildCommandActions(
   handlers: CommandActionHandlers,
   builtInSmartViews: Array<{ id: string; name: string; icon?: string; criteria: FilterCriteria; description?: string }>,
@@ -65,7 +48,6 @@ export function buildCommandActions(
   // Import icon components dynamically
   const actions: CommandAction[] = [];
 
-  // Core actions section
   actions.push(
     {
       id: 'new-task',
@@ -100,10 +82,8 @@ export function buildCommandActions(
     }
   );
 
-  // Navigation section
   actions.push(...buildNavigationActions(handlers));
 
-  // Add sync history navigation if sync is enabled
   if (conditions.isSyncEnabled && handlers.onViewSyncHistory) {
     actions.push({
       id: 'view-sync-history',
@@ -116,7 +96,6 @@ export function buildCommandActions(
     });
   }
 
-  // Settings section
   actions.push(
     {
       id: 'open-settings',
@@ -153,7 +132,6 @@ export function buildCommandActions(
     }
   );
 
-  // Add sync action if enabled
   if (conditions.isSyncEnabled && handlers.onTriggerSync) {
     actions.push({
       id: 'sync-now',
@@ -165,7 +143,6 @@ export function buildCommandActions(
     });
   }
 
-  // Add smart view actions
   builtInSmartViews.forEach((view) => {
     actions.push({
       id: `view-${view.id}`,

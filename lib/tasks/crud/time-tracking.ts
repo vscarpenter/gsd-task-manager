@@ -9,9 +9,6 @@ import { TIME_TRACKING } from "@/lib/constants";
 
 const logger = createLogger("TIME_TRACKING");
 
-/**
- * Calculate total time spent from time entries
- */
 function calculateTimeSpent(entries: TimeEntry[]): number {
   return entries.reduce((total, entry) => {
     if (!entry.endedAt) return total;
@@ -22,9 +19,6 @@ function calculateTimeSpent(entries: TimeEntry[]): number {
   }, 0);
 }
 
-/**
- * Start a new time tracking session for a task
- */
 export async function startTimeTracking(taskId: string): Promise<TaskRecord> {
   const db = getDb();
   const newEntry: TimeEntry = {
@@ -53,7 +47,6 @@ export async function startTimeTracking(taskId: string): Promise<TaskRecord> {
   return nextRecord;
 }
 
-/** Close the running entry and recalculate total time */
 function closeRunningEntry(
   entries: TimeEntry[],
   runningIndex: number,
@@ -68,9 +61,6 @@ function closeRunningEntry(
   return { updatedEntries, timeSpent: calculateTimeSpent(updatedEntries) };
 }
 
-/**
- * Stop the running time tracking session for a task
- */
 export async function stopTimeTracking(
   taskId: string,
   notes?: string
@@ -115,23 +105,14 @@ export async function stopTimeTracking(
 }
 
 
-/**
- * Check if a task has a running timer
- */
 export function hasRunningTimer(task: TaskRecord): boolean {
   return task.timeEntries?.some((e) => !e.endedAt) ?? false;
 }
 
-/**
- * Get the running time entry for a task
- */
 export function getRunningEntry(task: TaskRecord): TimeEntry | undefined {
   return task.timeEntries?.find((e) => !e.endedAt);
 }
 
-/**
- * Format time in minutes to human-readable string
- */
 export function formatTimeSpent(minutes: number): string {
   if (minutes < 1) return "< 1m";
   if (minutes < TIME_TRACKING.MINUTES_PER_HOUR) return `${minutes}m`;

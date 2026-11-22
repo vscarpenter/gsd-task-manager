@@ -5,9 +5,6 @@ import { useSync } from "@/lib/hooks/use-sync";
 import { useRetryCountdown } from "@/lib/hooks/use-retry-countdown";
 import { UI_TIMING } from "@/lib/constants/ui";
 
-/**
- * Format timestamp to human-readable relative time
- */
 function formatRelativeTime(timestamp: string | null): string {
   if (!timestamp) return "Never";
 

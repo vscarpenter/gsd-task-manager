@@ -11,7 +11,6 @@
  * - tasks/import-export.ts - Data import/export operations
  */
 
-// CRUD operations
 export {
   listTasks,
   createTask,
@@ -34,21 +33,18 @@ export {
   formatTimeSpent,
 } from "./tasks/crud";
 
-// Subtask operations
 export {
   toggleSubtask,
   addSubtask,
   deleteSubtask
 } from "./tasks/subtasks";
 
-// Dependency operations
 export {
   addDependency,
   removeDependency,
   removeDependencyReferences
 } from "./tasks/dependencies";
 
-// Import/Export operations
 export {
   exportTasks,
   importTasks,

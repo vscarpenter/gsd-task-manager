@@ -51,12 +51,10 @@ export function extractUrlsFromTitle(title: string): ExtractedUrls {
   const urls: string[] = [];
   let working = title;
 
-  // We build the cleaned title by iterating matches and replacing valid URLs.
-  // Using a replacer lets us handle invalid candidates gracefully (leave them in place).
   working = working.replace(TITLE_URL_PATTERN, (raw) => {
     const trimmed = raw.replace(TRAILING_PUNCTUATION, "");
     const safe = sanitizeTitleUrl(trimmed);
-    if (!safe) return raw; // leave invalid/unsafe candidates untouched
+    if (!safe) return raw;
     if (!urls.includes(safe)) urls.push(safe); // dedupe repeats; still remove from title
     // Trailing punctuation (e.g. a period at the end of a sentence) is dropped
     // along with the URL — it was sentence-level punctuation around the link.

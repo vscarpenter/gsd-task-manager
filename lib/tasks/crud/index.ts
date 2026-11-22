@@ -7,31 +7,22 @@
  * Re-exports from modular files for backward compatibility.
  */
 
-// List and clear operations
 export { listTasks, clearTasks } from "./list";
 
-// Create operation
 export { createTask } from "./create";
 
-// Update operation
 export { updateTask } from "./update";
 
-// Toggle completion (with recurring task support)
 export { toggleCompleted } from "./toggle";
 
-// Delete operation
 export { deleteTask } from "./delete";
 
-// Restore operation (undo delete)
 export { restoreTask } from "./restore";
 
-// Move to quadrant (drag-and-drop)
 export { moveTaskToQuadrant } from "./move";
 
-// Duplicate task
 export { duplicateTask } from "./duplicate";
 
-// Snooze operations
 export {
   snoozeTask,
   clearSnooze,
@@ -40,7 +31,6 @@ export {
   formatSnoozeRemaining,
 } from "./snooze";
 
-// Time tracking operations
 export {
   startTimeTracking,
   stopTimeTracking,

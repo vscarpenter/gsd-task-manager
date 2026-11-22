@@ -26,7 +26,6 @@ export interface ChromeScrollSample {
   previousY: number;
 }
 
-/** Whether the chrome should be hidden after this scroll sample. */
 export function resolveChromeHidden({ hidden, y, previousY }: ChromeScrollSample): boolean {
   if (y < SCROLL_CHROME.HIDE_AFTER) return false;
   const delta = y - previousY;
