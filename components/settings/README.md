@@ -74,7 +74,7 @@ Most sections are thin wrappers over `@/lib` functions. The page shell lives in 
 - `sweep-reminder-rows.tsx:SweepReminderRows`: turning the reminder off keeps `weekday` and `time`. Only `enabled` changes.
 - `sweep-reminder-rows.tsx:SweepReminderRows`: requests permission only when enabling and `checkNotificationPermission() === "default"`.
 - `sync-account-row.tsx:SyncAccountRow`: renders `null` unless `status?.enabled`.
-- `sync-account-row.tsx:SyncAccountRow.handleSignOut`: reads status again before sign-out. `pendingCount > 0` shows a confirmation first, because `disableSync` discards the queue.
+- `sync-account-row.tsx:SyncAccountRow.handleSignOut`: reads status again before sign-out. `pendingCount > 0` shows a confirmation first. `disableSync` gets the count the user agreed to lose, `0` when nothing was shown, and the row asks again when it refuses.
 - `sync-account-row.tsx:asSignedOut`: after a successful sign-out the snapshot is `enabled: false, email: null, pendingCount: 0`.
 - `sync-auth-token-row.tsx:SyncAuthTokenRow`: renders `null` when `authStore.token` is falsy. The server snapshot is `false`.
 - `sync-auth-token-row.tsx:copyAuthToken`: refuses the copy with an error toast when `!token || !authStore.isValid`. It reads the token at click time, with no `await` before the clipboard write.
@@ -113,7 +113,7 @@ Most sections are thin wrappers over `@/lib` functions. The page shell lives in 
 - `sweep-reminder-rows.tsx:SweepReminderRows.toggle`: calls `checkNotificationPermission` and `requestNotificationPermission` from `@/lib/notifications` when enabling.
 - `sweep-reminder-rows.tsx:SweepReminderRows`: renders a `next/link` to `ROUTES.SWEEP`.
 - `sync-account-row.tsx:SyncAccountRow`: calls `getSyncStatus` from `@/lib/sync/config` on mount and on a sign-out click.
-- `sync-account-row.tsx:signOutAndReport`: calls `disableSync` from `@/lib/sync/config`. It shows "Signed out" or "Sign out failed", and logs the failure with `logger.error`.
+- `sync-account-row.tsx:signOutAndReport`: calls `disableSync` from `@/lib/sync/config`. It shows "Signed out", asks again on `UnsyncedChangesError`, or shows "Sign out failed" and logs the failure with `logger.error`.
 - `sync-account-row.tsx:readStatus`: on failure calls `logger.error("Failed to load sync status")` through `createLogger("UI")` from `@/lib/logger`.
 - `sync-auth-token-row.tsx:SyncAuthTokenRow`: subscribes to `getPocketBase().authStore.onChange` from `@/lib/sync/pocketbase-client` through `useSyncExternalStore`.
 - `sync-auth-token-row.tsx:copyAuthToken`: calls `navigator.clipboard.writeText(currentStore.token)`. It shows "Auth token copied", "Sign in again to copy your token.", or a copy-failure toast.

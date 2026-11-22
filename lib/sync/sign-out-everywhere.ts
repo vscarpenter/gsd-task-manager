@@ -76,7 +76,7 @@ export async function signOutEverywhere(): Promise<SignOutEverywhereResult> {
   }
 
   try {
-    await disableSync();
+    await disableSync("everything");
   } catch (error) {
     clearPocketBase();
     throw new LocalSignOutIncompleteError(result.otherSessionsEnded, error);

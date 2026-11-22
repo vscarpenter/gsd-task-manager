@@ -61,7 +61,7 @@ describe('sync_config writes read the row they replace', () => {
 
       // Sign out is clicked in a dialog that shows the older session. Account A's
       // sign-in saves in the same moment.
-      const signOut = disableSync();
+      const signOut = disableSync('everything');
       const signIn = db.syncMetadata.put(signedIn('user-a'));
       await Promise.all([signOut, signIn]);
 
@@ -73,7 +73,7 @@ describe('sync_config writes read the row they replace', () => {
     it('should_write_the_signed_out_row_for_the_account_that_is_signed_in', async () => {
       await getDb().syncMetadata.put(signedIn('user-a'));
 
-      await disableSync();
+      await disableSync('everything');
 
       const config = await storedConfig();
       expect(config?.enabled).toBe(false);
@@ -81,8 +81,22 @@ describe('sync_config writes read the row they replace', () => {
       expect(config?.localTaskOwnerUserId).toBe('user-a');
     });
 
+    it('should_keep_a_change_queued_while_sign_out_starts', async () => {
+      const db = getDb();
+      await db.syncMetadata.put(signedIn('user-a'));
+
+      const signOut = disableSync(0);
+      const edit = db.syncQueue.add({
+        id: 'late', taskId: 'a-task', operation: 'delete', timestamp: 1, retryCount: 0, payload: null,
+      });
+      await Promise.allSettled([signOut, edit]);
+
+      // Sign-out saw an empty queue, so it was never allowed to discard this change.
+      expect(await db.syncQueue.count()).toBe(1);
+    });
+
     it('should_write_nothing_when_no_sync_config_exists', async () => {
-      await disableSync();
+      await disableSync('everything');
 
       expect(await storedConfig()).toBeUndefined();
     });
