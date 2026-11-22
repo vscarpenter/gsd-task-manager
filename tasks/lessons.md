@@ -676,3 +676,8 @@ Adding a wire column is not enough. A client that pulled a record before the col
   wrong cause for one of the engine cases. A probe gave the right one.
 - **Squash-merged stacks need a rebase.** Simulate the squash order before you
   hand over a merge order. A clean merge test doesn't show it.
+
+## 2026-11-22: main-commit guard
+
+- **A guard on command text needs tests for each spelling.** Matching `git commit` missed `git -c ... commit`. Test blocked and allowed cases against real repositories, and read the branch where the command runs, which `-C` can move.
+- **Decode shell quoting by its rules.** Deleting quote characters broke paths that contain them and let commits onto main. Fuzz a decoder against Bash itself.
