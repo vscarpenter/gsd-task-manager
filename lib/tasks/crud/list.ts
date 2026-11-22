@@ -22,9 +22,6 @@ export async function listTasks(): Promise<TaskRecord[]> {
   }
 }
 
-/**
- * Clear all tasks from the database
- */
 export async function clearTasks(): Promise<void> {
   try {
     const db = getDb();

@@ -11,9 +11,6 @@ import { TaskValidationError } from "./validation-error";
 
 const logger = createLogger("TASK_CRUD");
 
-/**
- * Update an existing task with partial updates
- */
 export async function updateTask(
   id: string,
   updates: Partial<TaskDraft>
@@ -119,9 +116,6 @@ function mergeTaskUpdates(
   };
 }
 
-/**
- * Build the updated task record with notification state handling
- */
 function buildUpdatedRecord(
   existing: TaskRecord,
   validated: TaskDraft,

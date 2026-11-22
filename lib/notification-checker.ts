@@ -24,18 +24,11 @@ import { sameReminder } from "@/lib/notifications/background-db";
 
 const logger = createLogger("NOTIFICATIONS");
 
-/**
- * NotificationChecker class
- * Periodically checks for tasks that are due and sends notifications
- */
 class NotificationChecker {
 	private intervalId: NodeJS.Timeout | null = null;
 	private lastCheck: Date | null = null;
 	private isChecking = false;
 
-	/**
-	 * Check all tasks and send notifications for those that are due
-	 */
 	async checkAndNotify(): Promise<void> {
 		if (this.isChecking) return;
 		this.isChecking = true;
@@ -49,9 +42,6 @@ class NotificationChecker {
 		}
 	}
 
-	/**
-	 * Core notification logic — check permissions, query tasks, and notify
-	 */
 	private async processNotifications(): Promise<void> {
 		// A page that loads locked hydrates the app once before the lock screen
 		// renders, so this can run while the previous user's tasks are still stored.
@@ -106,9 +96,6 @@ class NotificationChecker {
 		if (await showSweepReminder()) markSweepFired(occurrence);
 	}
 
-	/**
-	 * Update the app badge with the count of tasks due soon
-	 */
 	private async updateBadge(): Promise<void> {
 		try {
 			const count = await getDueSoonCount();
@@ -118,9 +105,6 @@ class NotificationChecker {
 		}
 	}
 
-	/**
-	 * Check a single task and send notification if needed
-	 */
 	private async checkTask(
 		task: TaskRecord,
 		now: Date,
@@ -136,11 +120,10 @@ class NotificationChecker {
 			dueDate.getTime() - now.getTime(),
 		);
 
-		// Determine notification window (use task-specific or default)
 		const notifyBefore = task.notifyBefore ?? defaultReminder;
 
 		const shouldNotify =
-			!task.notificationSent && // Haven't sent notification yet
+			!task.notificationSent &&
 			isReminderDue({
 				dueIso: task.dueDate,
 				notifyBefore,
@@ -181,27 +164,19 @@ class NotificationChecker {
 		});
 	}
 
-	/**
-	 * Start the notification checker
-	 * @param intervalMinutes - How often to check (in minutes)
-	 */
 	start(
 		intervalMinutes: number = NOTIFICATION_TIMING.DEFAULT_CHECK_INTERVAL_MINUTES,
 	): void {
-		// Prevent multiple starts - only start if not already running
 		if (this.intervalId) {
 			return;
 		}
 
-		// Check immediately
 		this.checkAndNotify();
 
-		// Set up interval to check periodically
 		this.intervalId = setInterval(() => {
 			this.checkAndNotify();
 		}, intervalMinutes * NOTIFICATION_TIMING.MS_PER_MINUTE);
 
-		// Only log in development
 		if (process.env.NODE_ENV === "development") {
 			logger.debug(
 				`Notification checker started (checking every ${intervalMinutes} minute(s))`,
@@ -209,24 +184,17 @@ class NotificationChecker {
 		}
 	}
 
-	/**
-	 * Stop the notification checker
-	 */
 	stop(): void {
 		if (this.intervalId) {
 			clearInterval(this.intervalId);
 			this.intervalId = null;
 
-			// Only log in development
 			if (process.env.NODE_ENV === "development") {
 				logger.debug("Notification checker stopped");
 			}
 		}
 	}
 
-	/**
-	 * Check if the checker is currently running
-	 */
 	isRunning(): boolean {
 		return this.intervalId !== null;
 	}
@@ -316,7 +284,6 @@ export async function getDueSoonCount(): Promise<number> {
 			end: settings.quietHoursEnd,
 		});
 
-		// Count tasks within notification window
 		if (now >= fire && now < expires) {
 			count++;
 		}

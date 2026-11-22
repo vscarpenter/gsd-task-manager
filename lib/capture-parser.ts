@@ -51,12 +51,10 @@ export function extractUrlsFromTitle(title: string): ExtractedUrls {
   const urls: string[] = [];
   let working = title;
 
-  // We build the cleaned title by iterating matches and replacing valid URLs.
-  // Using a replacer lets us handle invalid candidates gracefully (leave them in place).
   working = working.replace(TITLE_URL_PATTERN, (raw) => {
     const trimmed = raw.replace(TRAILING_PUNCTUATION, "");
     const safe = sanitizeTitleUrl(trimmed);
-    if (!safe) return raw; // leave invalid/unsafe candidates untouched
+    if (!safe) return raw;
     if (!urls.includes(safe)) urls.push(safe); // dedupe repeats; still remove from title
     // Trailing punctuation (e.g. a period at the end of a sentence) is dropped
     // along with the URL — it was sentence-level punctuation around the link.
@@ -121,7 +119,6 @@ export function parseCapture(input: string): ParsedCapture {
     working = working.replace(DOUBLE_BANG, "");
   }
 
-  // Check for single ! (reset lastIndex)
   SINGLE_BANG.lastIndex = 0;
   if (SINGLE_BANG.test(working)) {
     urgent = true;
@@ -129,7 +126,6 @@ export function parseCapture(input: string): ParsedCapture {
     working = working.replace(SINGLE_BANG, "");
   }
 
-  // Check for * (reset lastIndex)
   STAR.lastIndex = 0;
   if (STAR.test(working)) {
     important = true;
@@ -137,7 +133,6 @@ export function parseCapture(input: string): ParsedCapture {
     working = working.replace(STAR, "");
   }
 
-  // Collapse whitespace and trim
   const title = working.replace(/\s+/g, " ").trim();
 
   return { title, urgent, important, tags };

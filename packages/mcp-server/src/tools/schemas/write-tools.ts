@@ -1,10 +1,6 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { SCHEMA_LIMITS } from '../../constants.js';
 
-/**
- * Write operation tool schemas for modifying task data
- */
-
 export const createTaskTool: Tool = {
   name: 'create_task',
   description:

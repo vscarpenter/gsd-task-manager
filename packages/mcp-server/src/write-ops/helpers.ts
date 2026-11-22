@@ -1,8 +1,3 @@
-/**
- * Helper functions for write operations
- * Includes ID generation, quadrant logic, and PocketBase push
- */
-
 import { randomUUID } from 'node:crypto';
 import type { GsdConfig, PBTask } from '../types.js';
 import { pbTaskSnapshotFields, taskDependencyPatchToPBFields, taskToPBFields } from '../types.js';
@@ -26,18 +21,12 @@ export function escapeFilterValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-/**
- * Generate unique ID for new tasks
- */
 export function generateTaskId(): string {
   // From node:crypto, not the global: Node 18 has no global crypto without a flag.
   const uuid = randomUUID();
   return uuid.replace(/-/g, '');
 }
 
-/**
- * Derive quadrant from urgent/important flags
- */
 export function deriveQuadrant(urgent: boolean, important: boolean): string {
   if (urgent && important) return 'urgent-important';
   if (!urgent && important) return 'not-urgent-important';
@@ -45,9 +34,6 @@ export function deriveQuadrant(urgent: boolean, important: boolean): string {
   return 'not-urgent-not-important';
 }
 
-/**
- * Create a task in PocketBase
- */
 export async function createTaskInPB(
   config: GsdConfig,
   task: Task,
@@ -59,7 +45,6 @@ export async function createTaskInPB(
 
   await pb.collection('tasks').create(fields);
 
-  // Invalidate cache after successful write
   getTaskCache().invalidate();
 }
 
@@ -78,7 +63,6 @@ export async function updateTaskInPB(
   const fields = taskToPBFields(task, ownerId, deviceId);
   await conditionalMutation(config, pbRecordId, 'PATCH', expectedVersion, fields);
 
-  // Invalidate cache after successful write
   getTaskCache().invalidate();
 }
 
@@ -94,7 +78,6 @@ export async function deleteTaskInPB(
 
   await conditionalMutation(config, pbRecordId, 'DELETE', expectedVersion);
 
-  // Invalidate cache after successful write
   getTaskCache().invalidate();
 }
 
@@ -108,9 +91,6 @@ async function isConfirmedNotFound(config: GsdConfig, error: unknown): Promise<b
   return true;
 }
 
-/**
- * Find PocketBase record ID by client-side task_id
- */
 async function findPBRecordId(config: GsdConfig, taskId: string): Promise<string> {
   const pb = getPocketBase(config);
 

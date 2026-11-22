@@ -122,9 +122,6 @@ export function getPocketBaseRealtimeEnvelope(
   };
 }
 
-/**
- * Convert a local TaskRecord to the PocketBase tasks collection format
- */
 export function taskRecordToPocketBase(
   task: TaskRecord,
   ownerId: string,

@@ -27,7 +27,6 @@ function parseStoredSmartView(view: unknown): SmartView | undefined {
  * Get all Smart Views (built-in + custom)
  */
 export async function getSmartViews(): Promise<SmartView[]> {
-  // Convert built-in views to full SmartView objects
   const builtInViews: SmartView[] = BUILT_IN_SMART_VIEWS.map(view => ({
     ...view,
     id: `built-in-${view.name.toLowerCase().replace(/\s+/g, '-')}`,
@@ -48,21 +47,15 @@ export async function getSmartViews(): Promise<SmartView[]> {
     .map(parseStoredSmartView)
     .filter((view): view is SmartView => view !== undefined);
 
-  // Return built-in views first, then custom views
   return [...builtInViews, ...customViews];
 }
 
-/**
- * Get a specific Smart View by ID
- */
 export async function getSmartView(id: string): Promise<SmartView | undefined> {
-  // Check if it's a built-in view
   if (id.startsWith('built-in-')) {
     const allViews = await getSmartViews();
     return allViews.find(v => v.id === id);
   }
 
-  // Otherwise, fetch from database
   const db = getDb();
   const stored = await db.smartViews.get(id);
   return stored ? parseStoredSmartView(stored) : undefined;

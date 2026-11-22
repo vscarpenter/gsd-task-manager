@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
-// Configuration
 export interface GsdConfig {
   pocketBaseUrl: string;
-  authToken: string; // PocketBase auth token
+  authToken: string;
 }
 
 // PocketBase task record (snake_case, as stored in PB)
@@ -110,7 +109,6 @@ export type SyncStatus = {
   lastSyncAt: string | null;
 };
 
-// Task stats
 export interface TaskStats {
   totalTasks: number | null;
   activeTasks: number | null;
@@ -126,9 +124,6 @@ function isValidRecurrence(value: string): value is Task['recurrence'] {
   return VALID_RECURRENCES.has(value as Task['recurrence']);
 }
 
-/**
- * Convert a PocketBase task record to frontend Task format
- */
 export function pbTaskToTask(pb: PBTask): Task {
   const task = {
     id: pb.task_id,
@@ -161,9 +156,6 @@ export function pbTaskToTask(pb: PBTask): Task {
   return task;
 }
 
-/**
- * Convert a Task to PocketBase record fields for create/update
- */
 export function taskToPBFields(
   task: Task,
   ownerId: string,

@@ -1,25 +1,14 @@
-/**
- * Configuration validation utilities
- * Tests environment variables, PocketBase connectivity, auth, and task access
- */
-
 import type { GsdConfig, SyncStatus } from '../tools.js';
 import { getSyncStatus, listTasks } from '../tools.js';
 import { redactPocketBaseHost } from '../api/client.js';
 import { isSafePocketBaseUrl, UNSAFE_POCKETBASE_URL_MESSAGE } from '../server/config.js';
 
-/**
- * Validation check result
- */
 export interface ValidationCheck {
   name: string;
   status: '✓' | '⚠' | '✗';
   details: string;
 }
 
-/**
- * Check required environment variables
- */
 function validateEnvironmentVariables(): {
   pbUrl: string;
   authToken: string;
@@ -39,9 +28,6 @@ function validateEnvironmentVariables(): {
   return { pbUrl, authToken };
 }
 
-/**
- * Test PocketBase connectivity via health endpoint
- */
 async function validatePBConnection(pbUrl: string): Promise<ValidationCheck> {
   try {
     const response = await fetch(`${pbUrl}/api/health`);
@@ -70,9 +56,6 @@ async function validatePBConnection(pbUrl: string): Promise<ValidationCheck> {
 /**
  * Create sync status check result
  */
-/**
- * Validate authentication token and check sync status
- */
 async function validateAuthentication(config: GsdConfig): Promise<ValidationCheck[]> {
   const failed: ValidationCheck = { name: 'Authentication', status: '✗', details: 'Token validation failed' };
   let status: SyncStatus;
@@ -91,9 +74,6 @@ async function validateAuthentication(config: GsdConfig): Promise<ValidationChec
   ];
 }
 
-/**
- * Test task access by listing tasks
- */
 async function validateTaskAccess(config: GsdConfig): Promise<ValidationCheck> {
   try {
     const tasks = await listTasks(config);
@@ -111,9 +91,6 @@ async function validateTaskAccess(config: GsdConfig): Promise<ValidationCheck> {
   }
 }
 
-/**
- * Print validation results
- */
 function printValidationResults(checks: ValidationCheck[]): void {
   console.log('Validation Results:\n');
   checks.forEach((check) => {
@@ -143,9 +120,6 @@ function displayOverallStatus(checks: ValidationCheck[]): void {
   }
 }
 
-/**
- * Validate existing configuration (main orchestrator)
- */
 export async function runValidation(): Promise<void> {
   console.log(`
 🔍 GSD MCP Server Configuration Validator
@@ -153,7 +127,6 @@ export async function runValidation(): Promise<void> {
 
   const checks: ValidationCheck[] = [];
 
-  // Step 1: Environment variables
   const { pbUrl, authToken } = validateEnvironmentVariables();
 
   // Gate the destination through the shared policy before any request so a
@@ -173,19 +146,15 @@ export async function runValidation(): Promise<void> {
 
   const config: GsdConfig = { pocketBaseUrl: pbUrl, authToken };
 
-  // Step 2: PocketBase connectivity
   const connectivityCheck = await validatePBConnection(pbUrl);
   checks.push(connectivityCheck);
 
-  // Step 3: Authentication & sync status
   const authChecks = await validateAuthentication(config);
   checks.push(...authChecks);
 
-  // Step 4: Task access
   const taskCheck = await validateTaskAccess(config);
   checks.push(taskCheck);
 
-  // Print results and overall status
   printValidationResults(checks);
   displayOverallStatus(checks);
 }

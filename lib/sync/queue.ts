@@ -1,8 +1,3 @@
-/**
- * Sync queue manager for offline operations
- * Tracks pending sync operations when offline.
- */
-
 import { getDb } from '@/lib/db';
 import type { TaskRecord } from '@/lib/types';
 import type { SyncQueueItem } from './types';
@@ -74,9 +69,6 @@ export function classifyRemoteDeletion(rowsForTask: SyncQueueItem[]): RemoteDele
 }
 
 export class SyncQueue {
-  /**
-   * Add operation to sync queue
-   */
   async enqueue(
     operation: 'create' | 'update' | 'delete',
     taskId: string,
@@ -125,17 +117,11 @@ export class SyncQueue {
     return all.filter(item => item.status === 'failed');
   }
 
-  /**
-   * Remove operation from queue (after successful sync)
-   */
   async dequeue(id: string): Promise<void> {
     const db = getDb();
     await db.syncQueue.delete(id);
   }
 
-  /**
-   * Remove multiple operations from queue
-   */
   async dequeueBulk(ids: string[]): Promise<void> {
     const db = getDb();
     await db.syncQueue.bulkDelete(ids);
@@ -186,9 +172,6 @@ export class SyncQueue {
     await db.syncQueue.clear();
   }
 
-  /**
-   * Get operations for a specific task
-   */
   async getForTask(taskId: string): Promise<SyncQueueItem[]> {
     const db = getDb();
     return db.syncQueue.where('taskId').equals(taskId).toArray();
@@ -220,12 +203,8 @@ export class SyncQueue {
 
 }
 
-// Singleton instance
 let queueInstance: SyncQueue | null = null;
 
-/**
- * Get or create sync queue instance
- */
 export function getSyncQueue(): SyncQueue {
   if (!queueInstance) {
     queueInstance = new SyncQueue();

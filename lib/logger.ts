@@ -99,9 +99,6 @@ function sanitizeValue(value: unknown): unknown {
   return value;
 }
 
-/**
- * Get minimum log level based on environment
- */
 function getMinLogLevel(): LogLevel {
   if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
     return 'info';
@@ -112,9 +109,6 @@ function getMinLogLevel(): LogLevel {
   return 'debug';
 }
 
-/**
- * Compare log levels for filtering
- */
 function shouldLog(level: LogLevel, minLevel: LogLevel): boolean {
   const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
   const levelIndex = levels.indexOf(level);
@@ -139,12 +133,10 @@ export function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefine
 
   const sanitized = { ...metadata };
 
-  // Sanitize URLs with tokens
   if (sanitized.url && typeof sanitized.url === 'string') {
     sanitized.url = maskSensitiveString(sanitized.url);
   }
 
-  // Remove sensitive fields
   for (const key of Object.keys(sanitized)) {
     if (SENSITIVE_KEY_PATTERN.test(key) || TASK_CONTENT_KEY_PATTERN.test(key)) {
       sanitized[key] = '***';
@@ -156,9 +148,6 @@ export function sanitizeMetadata(metadata?: LogMetadata): LogMetadata | undefine
   return sanitized;
 }
 
-/**
- * Format log output with structured data
- */
 function formatLog(
   level: LogLevel,
   context: LogContext,
@@ -222,9 +211,6 @@ function formatLogPrefix(
   return `[${context}] ${message}${detail}`;
 }
 
-/**
- * Logger class with context-aware logging
- */
 export class Logger {
   private context: LogContext;
   private minLevel: LogLevel;
@@ -243,18 +229,12 @@ export class Logger {
     }
   }
 
-  /**
-   * Log info message
-   */
   info(message: string, metadata?: LogMetadata): void {
     if (shouldLog('info', this.minLevel)) {
       formatLog('info', this.context, message, metadata);
     }
   }
 
-  /**
-   * Log warning message
-   */
   warn(message: string, metadata?: LogMetadata): void {
     if (shouldLog('warn', this.minLevel)) {
       formatLog('warn', this.context, message, metadata);
@@ -278,9 +258,6 @@ export class Logger {
     }
   }
 
-  /**
-   * Create a child logger with the same configuration
-   */
   child(context: LogContext): Logger {
     return new Logger(context, this.minLevel);
   }

@@ -1,8 +1,4 @@
 /**
- * Error categorizer - classifies sync errors for appropriate handling
- */
-
-/**
  * Check if error is transient (network/timeout/5xx)
  */
 export function isTransientError(error: Error): boolean {

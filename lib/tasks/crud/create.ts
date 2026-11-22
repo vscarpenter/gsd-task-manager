@@ -62,9 +62,6 @@ export async function createTask(input: TaskDraft): Promise<TaskRecord> {
   }
 }
 
-/**
- * Build a complete TaskRecord from validated draft data
- */
 function buildTaskRecord(validated: TaskDraft): TaskRecord {
   const now = isoNow();
 

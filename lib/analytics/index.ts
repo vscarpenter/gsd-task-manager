@@ -1,17 +1,3 @@
-/**
- * Analytics module - Productivity metrics and task statistics
- *
- * This module provides comprehensive analytics for task management:
- * - Core metrics (completion rates, counts, distributions)
- * - Streak tracking (current and longest)
- * - Tag-based analytics
- * - Completion trends over time
- * - Recurrence breakdowns
- * - Quadrant performance analysis
- * - Time tracking analytics
- */
-
-// Re-export all types
 export type {
   ProductivityMetrics,
   TrendDataPoint
@@ -26,7 +12,6 @@ export type {
   QuadrantTimeDistribution,
 } from "./time-tracking";
 
-// Re-export all functions
 export {
   calculateMetrics,
   getQuadrantPerformance

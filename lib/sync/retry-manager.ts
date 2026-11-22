@@ -1,8 +1,3 @@
-/**
- * Retry Manager - handles exponential backoff for failed sync operations
- * Tracks consecutive failures and calculates appropriate retry delays
- */
-
 import { getSyncConfig, updateSyncConfig } from './config';
 import { createLogger } from '@/lib/logger';
 import { SYNC_CONFIG } from '@/lib/constants/sync';
@@ -12,16 +7,12 @@ const logger = createLogger('SYNC_RETRY');
 
 const { MAX_RETRIES, RETRY_DELAYS, MAX_RETRY_AFTER_MS } = SYNC_CONFIG;
 
-/** Optional hints a caller can attach to a recorded failure. */
 export interface RecordFailureOptions {
   /** Server-provided Retry-After delay (ms); overrides exponential backoff. */
   retryAfterMs?: number | null;
 }
 
 export class RetryManager {
-  /**
-   * Record a sync failure and update retry metadata
-   */
   async recordFailure(error: Error, options?: RecordFailureOptions): Promise<void> {
     const config = await getSyncConfig();
     if (!config) {
@@ -66,9 +57,6 @@ export class RetryManager {
     return this.getNextRetryDelay(consecutiveFailures);
   }
 
-  /**
-   * Record a sync success and reset failure counter
-   */
   async recordSuccess(): Promise<void> {
     const config = await getSyncConfig();
     if (!config) {
@@ -76,7 +64,6 @@ export class RetryManager {
       return;
     }
 
-    // Only update if there were previous failures
     if (config.consecutiveFailures > 0) {
       logger.info('Recording sync success, resetting failure counter');
 
@@ -96,14 +83,10 @@ export class RetryManager {
   getNextRetryDelay(failureCount?: number): number {
     const failures = failureCount ?? 0;
 
-    // Cap at max delay
     const index = Math.min(failures - 1, RETRY_DELAYS.length - 1);
     return index >= 0 ? RETRY_DELAYS[index] : RETRY_DELAYS[0];
   }
 
-  /**
-   * Check if should retry (not exceeded max retries)
-   */
   async shouldRetry(): Promise<boolean> {
     const config = await getSyncConfig();
     if (!config) {
@@ -121,29 +104,21 @@ export class RetryManager {
     return shouldRetry;
   }
 
-  /**
-   * Get current retry count from config
-   */
   async getRetryCount(): Promise<number> {
     const config = await getSyncConfig();
     return config?.consecutiveFailures ?? 0;
   }
 
-  /**
-   * Check if sync can run now (nextRetryAt has passed)
-   */
   async canSyncNow(): Promise<boolean> {
     const config = await getSyncConfig();
     if (!config) {
       return false;
     }
 
-    // If no retry scheduled, can sync
     if (!config.nextRetryAt) {
       return true;
     }
 
-    // Check if retry time has passed
     const now = Date.now();
     const canSync = now >= config.nextRetryAt;
 
@@ -159,12 +134,8 @@ export class RetryManager {
   }
 }
 
-// Singleton instance
 let retryManagerInstance: RetryManager | null = null;
 
-/**
- * Get or create retry manager instance
- */
 export function getRetryManager(): RetryManager {
   if (!retryManagerInstance) {
     retryManagerInstance = new RetryManager();

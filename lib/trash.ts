@@ -77,7 +77,6 @@ export async function restoreFromTrash(taskId: string): Promise<void> {
   }
 }
 
-/** Remove a single trashed task for good. */
 export async function deleteFromTrashForever(taskId: string): Promise<void> {
   const db = getDb();
   await db.transaction("rw", [db.deletedTasks, db.syncMetadata], async () => {

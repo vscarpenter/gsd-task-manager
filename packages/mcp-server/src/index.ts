@@ -3,17 +3,9 @@
 import { parseCLIArgs, showHelp, runSetupWizard, runValidation } from './cli.js';
 import { reportStartupFailure, startMcpServer } from './server/startup.js';
 
-/**
- * GSD Task Manager MCP Server
- *
- * Main entry point for the Model Context Protocol server.
- * Handles CLI argument parsing and server initialization.
- */
 async function main() {
-  // Parse CLI arguments
   const options = parseCLIArgs(process.argv);
 
-  // Handle CLI modes
   if (options.mode === 'help') {
     showHelp();
     process.exit(0);

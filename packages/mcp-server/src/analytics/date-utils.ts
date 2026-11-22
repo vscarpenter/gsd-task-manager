@@ -6,9 +6,6 @@ import type { Task } from '../tools.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-/**
- * Get start of day (00:00:00.000)
- */
 export function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -27,9 +24,6 @@ export function startOfWeek(date: Date): Date {
   return d;
 }
 
-/**
- * Get start of month (1st day 00:00:00.000)
- */
 export function startOfMonth(date: Date): Date {
   const d = new Date(date);
   d.setDate(1);
@@ -37,23 +31,14 @@ export function startOfMonth(date: Date): Date {
   return d;
 }
 
-/**
- * Check if date1 is after date2
- */
 export function isAfter(date1: Date, date2: Date): boolean {
   return date1.getTime() > date2.getTime();
 }
 
-/**
- * Check if date1 is before date2
- */
 export function isBefore(date1: Date, date2: Date): boolean {
   return date1.getTime() < date2.getTime();
 }
 
-/**
- * Subtract days from a date
- */
 export function subDays(date: Date, days: number): Date {
   const d = new Date(date);
   d.setDate(d.getDate() - days);
@@ -88,18 +73,12 @@ export function daysBetweenKeys(laterKey: string, earlierKey: string): number {
   return Math.round((Date.parse(laterKey) - Date.parse(earlierKey)) / MS_PER_DAY);
 }
 
-/**
- * Check if task is due today
- */
 export function isDueToday(task: Task, today: Date): boolean {
   if (!task.dueDate) return false;
   const dueDate = startOfDay(new Date(task.dueDate));
   return dueDate.getTime() === today.getTime();
 }
 
-/**
- * Check if task is due this week
- */
 export function isDueThisWeek(task: Task, today: Date): boolean {
   if (!task.dueDate) return false;
   const dueDate = new Date(task.dueDate);

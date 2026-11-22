@@ -53,20 +53,14 @@ function matchingActions(actions: CommandAction[], search: string): CommandActio
   const searchLower = search.toLowerCase();
 
   return actions.filter(action => {
-    // Check condition
     if (action.condition && !action.condition()) return false;
 
-    // Check label
     if (action.label.toLowerCase().includes(searchLower)) return true;
 
-    // Check keywords
     return action.keywords.some(kw => kw.includes(searchLower));
   });
 }
 
-/**
- * Hook to manage command palette state and filtering
- */
 export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPaletteOptions) {
   const [state, dispatch] = useReducer(paletteReducer, INITIAL_PALETTE_STATE);
   const { open, search, selectedActionId } = state;
@@ -165,24 +159,19 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
   const setSelectedActionId = (value: string | null) =>
     dispatch({ type: "setSelectedActionId", value });
 
-  // Filter actions by search query
   const filteredActions = matchingActions(actions, search);
 
-  // Filter tasks by search query (only show if search is 2+ chars)
   const matchingTasks = (() => {
     if (!search || search.length < 2) return [];
 
-    // Use the existing filter system to search tasks
     const results = applyFilters(tasks, {
       searchQuery: search,
-      status: 'active' // Only show active tasks in command palette
+      status: 'active'
     });
 
-    // Limit to top matches
     return results.slice(0, SEARCH_CONFIG.MAX_COMMAND_PALETTE_RESULTS);
   })();
 
-  // Execute an action and close palette
   const executeAction = (action: CommandAction) => {
     // The action may navigate or open another focus-managed surface. In that
     // case its destination owns focus; returning to the palette opener would
@@ -194,7 +183,6 @@ export function useCommandPalette({ actions, tasks, onSelectTask }: UseCommandPa
     setOpen(false);
   };
 
-  // Handle task selection (navigate to matrix and highlight)
   const selectTask = (taskId: string) => {
     returnFocusRef.current = null;
     if (onSelectTask) {
