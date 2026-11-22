@@ -1,5 +1,6 @@
 import { SYNC_CONFIG } from "@/lib/constants/sync";
 import { daysUntilDue, evaluateEscalation } from "@/lib/escalation";
+import { compareInstants } from "@/lib/instant";
 import type { TaskRecord } from "@/lib/types";
 
 /**
@@ -96,7 +97,7 @@ function hasPick(task: Pick<TopThreeTask, "focusDate" | "focusRank">): boolean {
 function byConflictRule(a: TopThreeTask, b: TopThreeTask): number {
   return (
     (a.focusRank ?? 0) - (b.focusRank ?? 0) ||
-    (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0) ||
+    compareInstants(b.updatedAt, a.updatedAt) ||
     compareText(a.id, b.id)
   );
 }
@@ -150,14 +151,14 @@ export function tidy(tasks: TopThreeTask[], now: Date, zone: string): FocusWrite
 
 function byDueThenImportant(a: TopThreeTask, b: TopThreeTask): number {
   return (
-    compareText(a.dueDate ?? "", b.dueDate ?? "") ||
+    compareInstants(a.dueDate, b.dueDate) ||
     Number(b.important) - Number(a.important) ||
     compareText(a.id, b.id)
   );
 }
 
 function byCreated(a: TopThreeTask, b: TopThreeTask): number {
-  return compareText(a.createdAt, b.createdAt) || compareText(a.id, b.id);
+  return compareInstants(a.createdAt, b.createdAt) || compareText(a.id, b.id);
 }
 
 /** Suggested ids, in order: overdue Q1, escalating, Q1 with a due date, then the rest of Q1. */
@@ -285,10 +286,11 @@ export function pullMerge({ storedContract, tombstoned, local, remote }: PullMer
       ? { action: "none", conflict: false, row: null }
       : { action: "insert", conflict: false, row: remote };
   }
-  if (remote.updatedAt > local.updatedAt) {
+  const order = compareInstants(remote.updatedAt, local.updatedAt);
+  if (order > 0) {
     return { action: "take-remote", conflict: true, row: remote };
   }
-  if (remote.updatedAt < local.updatedAt) return unreadFieldsToCopy(storedContract, local, remote);
+  if (order < 0) return unreadFieldsToCopy(storedContract, local, remote);
   return isBelow(storedContract, FOCUS_FIRST_READ)
     ? { action: "take-remote", conflict: false, row: remote }
     : { action: "none", conflict: false, row: local };

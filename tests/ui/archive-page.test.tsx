@@ -131,6 +131,19 @@ beforeEach(async () => {
 });
 
 describe("ArchivePage with TanStack Query + Virtual", () => {
+  it("puts the newest archive first, whatever offset it was written in", async () => {
+    mockListArchivedTasks.mockResolvedValue([
+      createMockArchivedTask({ id: "earlier", title: "Archived earlier", archivedAt: "2026-10-19T22:00:00.000Z" }),
+      createMockArchivedTask({ id: "later", title: "Archived later", archivedAt: "2026-10-19T20:00:00.000-05:00" }),
+    ]);
+
+    render(<ArchivePage />, { wrapper: createQueryWrapper() });
+
+    const later = await screen.findByText("Archived later");
+    const earlier = screen.getByText("Archived earlier");
+    expect(later.compareDocumentPosition(earlier) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("shows loading state initially", async () => {
     mockListArchivedTasks.mockImplementation(
       () => new Promise(() => {}) // Never resolves

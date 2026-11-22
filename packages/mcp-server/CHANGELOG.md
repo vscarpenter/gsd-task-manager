@@ -5,6 +5,12 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- `get_top_three` orders picks and suggestions by time. A timestamp written
+  with an offset, such as `-05:00`, sorted by its text before.
+
 ## [1.5.0] - 2026-11-18
 
 ### Added

@@ -136,7 +136,7 @@ Page and view:
 - `matrix-view.ts:deriveMatrixView`: applies the search query after the smart view. `isFiltered` is true for an effective smart view or a non-blank query.
 - `matrix-view.ts:deriveMatrixView`, `tally`: counts tally `visibleTasks` when filtered and `all` otherwise. Overdue counts only incomplete tasks.
 - `matrix-grid.tsx:groupByQuadrant`: urgent and important is q1, important only is q2, urgent only is q3, and the rest is q4.
-- `matrix-grid.tsx:byActiveThenDueDate`: sorts incomplete tasks first, then `dueDate` ascending by `localeCompare`. Tasks without a `dueDate` come last.
+- `matrix-grid.tsx:byActiveThenDueDate`: sorts incomplete tasks first, then `dueDate` ascending as an instant (`compareInstants`). Tasks without a `dueDate` come last.
 - `matrix-grid.tsx:MatrixGrid`, `PANE_ROWS`: the grid has at most two columns, switched by the container query `@min-[696px]`. Pane rows have a 280px floor.
 - `matrix-grid.tsx:AxisFrame`: axis labels are `aria-hidden` and hidden below the 696px container width.
 - `matrix-grid-skeleton.tsx:CARD_COUNT`: skeleton card counts per pane are `[3, 2, 2, 1]`.
