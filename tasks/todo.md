@@ -15,9 +15,9 @@ The owner asked for the mistakes this repo repeats to be found in its history an
 
 ## Resuming From Here
 
-- **Done:** 20 draft PRs, #768 to #787, plus this handoff. None merged.
-- **Merge order:** 768, 769, 770, 775, 776, 773, 783, 784, 771, 772, 774, 777, 778, 779, 780, 782, 785, 786, 787, 781. A simulated squash of that order lands all 20. Before merging 776, 783, 774, and 780, rebase each onto main with `--onto main <old tip of its parent>`. Where `eslint.config.mjs` or the MCP changelog conflicts, keep both sides.
-- **Blocked on the owner:** the quizzes in 769, 772, 778, 781, 782, 783, and 787, every merge, and these decisions.
+- **Done:** #768, #771, #773, #777, #779, #784, #785, and #786 merged on 2026-11-22. The other 12 PRs are open.
+- **Merge order:** 769, 770, 775, 776, 783, 772, 774, 778, 782, 787, 781. Each waits for its quiz or its parent. Before merging one, merge main into it and wait for green CI. Their older runs predate #768 and #777, and a squashed parent breaks a child's `pr-shape` count. The owner approved those pushes, without force. Where additive changes conflict, keep both sides.
+- **Blocked on the owner:** the quizzes in 769, 772, 778, 781, 782, 783, and 787. #780 stays open by the owner's decision, and it edits a quizzed path with no quiz yet. The owner waived #781's SonarCloud failure only. These decisions are also open.
   - Retry budget: an outage can move a new task to Trash (`WEB-OUTAGE-TRASHES`, modeled in #784).
   - Pull contract: a pull that skipped a record still moves the cursor. During a backfill it also stamps the contract and can push an empty `saved_at` over the server's. Every fix touches the contract iOS shares.
   - Slow clock: a device an hour behind can overwrite a newer edit (`isRemoteNewer`'s skew ceiling).
