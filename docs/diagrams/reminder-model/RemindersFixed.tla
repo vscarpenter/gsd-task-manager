@@ -86,7 +86,7 @@ SnoozeHourPasses ==
 YouSnooze ==
   /\ snooze # "holding"
   /\ snooze' = "holding" /\ shows' = 0
-  /\ sent' = IF Break = "snoozeKeepsSent" THEN sent ELSE FALSE
+  /\ sent' = sent
   /\ UNCHANGED <<dueWin, legacyOffset, seen, seenSnooze, early>>
 
 \* clearSnooze: the menu offers it only while a snooze holds. Leaves notificationSent.
