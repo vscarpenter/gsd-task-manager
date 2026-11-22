@@ -18,6 +18,7 @@ import {
   holdsOffFarFutureRemote,
   readClientUpdatedAt,
 } from './pb-sync-helpers';
+import type { OwnerConfirmed } from './pb-sync-helpers';
 import { isPendingSyncQueueItem } from './queue';
 import { StaleSyncSessionError, assertSyncSessionCurrent } from './sync-session';
 import { getPocketBaseTaskId, pocketBaseToTaskRecord } from './task-mapper';
@@ -32,12 +33,12 @@ const logger = createLogger('SYNC_ENGINE');
 export async function resurrectOnSight(ownerId: string): Promise<void> {
   const remembered = await readRememberedTaskIds();
   if (remembered.length === 0) return;
-  const records = await listAccount(ownerId);
-  if (!records) return;
+  const listing = await listAccount(ownerId);
+  if (!listing) return;
 
-  const byTaskId = new Map(records.map((record) => [getPocketBaseTaskId(record), record]));
+  const byTaskId = new Map(listing.records.map((record) => [getPocketBaseTaskId(record), record]));
   try {
-    await applyResurrections(ownerId, remembered, byTaskId);
+    await applyResurrections(listing.confirmed, ownerId, remembered, byTaskId);
   } catch (error) {
     // The push already committed, so a failed step mustn't fail the sync. The
     // transaction rolled back, so nothing was forgotten, and the next run retries.
@@ -47,6 +48,7 @@ export async function resurrectOnSight(ownerId: string): Promise<void> {
 }
 
 async function applyResurrections(
+  _confirmed: OwnerConfirmed,
   ownerId: string,
   remembered: string[],
   byTaskId: Map<string | null, RecordModel>,
@@ -68,15 +70,14 @@ async function applyResurrections(
  * A guest listing is empty, so the owner is confirmed before the listing counts.
  * A refused session fails the sync, so the user is asked to sign in again.
  */
-async function listAccount(ownerId: string): Promise<RecordModel[] | null> {
+async function listAccount(ownerId: string): Promise<{ records: RecordModel[]; confirmed: OwnerConfirmed } | null> {
   try {
     assertSafeRecordId(ownerId, 'ownerId');
     const records = await fetchBoundedRemoteTasks({
       filter: `owner = "${escapeFilterValue(ownerId)}"`,
       sort: 'task_id,id',
     });
-    await confirmSessionIdentity(ownerId);
-    return records;
+    return { records, confirmed: await confirmSessionIdentity(ownerId) };
   } catch (error) {
     if (error instanceof SessionRejectedError) throw error;
     logger.warn('Resurrect on sight skipped: no complete listing for this account', {
