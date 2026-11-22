@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { execFileSync, spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -44,6 +44,9 @@ const MUST_BLOCK: Array<[Checkout, string]> = [
   ["feature", 'echo "don\'t"\ngit -C "{root}/main checkout" commit -m \'x\''],
   ["feature", 'git -C . commit -m x; git -C "{root}/main checkout" commit -m y'],
   ["plain", 'git -C "{root}/main checkout" commit -m x'],
+  ["feature", String.raw`git -C "../main's \"copy\" \\b" commit -m x`],
+  ["feature", String.raw`git -C '../main'\''s "copy" \b' commit -m x`],
+  ["feature", String.raw`git -C ../main\'s\ \"copy\"\ \\b commit -m x`],
 ];
 
 const MUST_ALLOW: Array<[Checkout, string]> = [
@@ -60,6 +63,9 @@ const MUST_ALLOW: Array<[Checkout, string]> = [
   ["feature", 'git -C "{root}/other" commit -m x'],
   ["feature", 'git -C "$UNKNOWN" commit -m x'],
   ["feature", 'git commit -m "fix: catch git -C <dir> commit"'],
+  ["main checkout", String.raw`git -C "../feature's \"copy\" \\b" commit -m x`],
+  ["main checkout", String.raw`git -C '../feature'\''s "copy" \b' commit -m x`],
+  ["main checkout", String.raw`git -C ../feature\'s\ \"copy\"\ \\b commit -m x`],
 ];
 
 describe.each(HOOKS)("%s", (hook) => {
@@ -91,6 +97,10 @@ describe.each(HOOKS)("%s", (hook) => {
       git("-C", repo, "commit", "-q", "--allow-empty", "-m", "init");
     }
     git("-C", "main checkout", "worktree", "add", "-q", "-b", "fix/example", "../feature");
+
+    // Second names for both checkouts, using each character that shell quoting treats specially.
+    symlinkSync(join(root, "main checkout"), join(root, String.raw`main's "copy" \b`));
+    symlinkSync(join(root, "feature"), join(root, String.raw`feature's "copy" \b`));
 
     const installed = join(root, "main checkout", hook);
     mkdirSync(dirname(installed), { recursive: true });

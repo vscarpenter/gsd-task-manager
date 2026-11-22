@@ -11,9 +11,9 @@ The guard matched the literal text `git commit`, so `git -c ... commit` and `git
 
 ## Resuming From Here
 
-- **Done:** red (42 failed, 30 passed), then green (72 passed). Rebased onto `be2f48e`: 5,270 tests, both typechecks, lint, shape, and knip pass. A live Claude Code probe blocked `git -c ... commit` on main and allowed it on a feature branch.
-- **Next:** get the PR's CI green and merge it. The owner approved the push and PR on 2026-11-22. The main checkout keeps the old hook until the PR merges and someone pulls.
-- **Blocked on the owner:** the merge.
+- **Done:** red (42 failed, 30 passed), then green (72 passed). Review of #789 found that quotes and backslashes in a `-C` path broke the branch check both ways. The fix went red (8 failed), then green (84 passed). Rebased onto `be2f48e`: 5,282 tests, both typechecks, lint, shape, and knip pass. A live Claude Code probe blocked `git -c ... commit` on main and allowed it on a feature branch.
+- **Next:** push the quote fix to #789, answer the review thread, get CI green, and merge. The main checkout keeps the old hook until the PR merges and someone pulls.
+- **Blocked on the owner:** pushing the quote fix, the thread reply, and the merge.
 - **Assumptions:** `-C` into another repository is allowed. An unresolvable `-C` path uses the session's branch.
 - **Known gaps:** `cd <dir> && git commit` uses the session's branch. Git aliases, `--git-dir`, and detached HEAD get past the guard. The Codex hook config points at a Mac path, and only the script was tested.
 - **Older flake:** `bun run test -- --coverage` failed on the Linux desktop with and without this change, in `matrix-simplified.test.tsx` (1-second `findByRole`). With that wait raised, a 5-second timeout failed in `onboarding-gate.test.tsx` instead. CI passes.

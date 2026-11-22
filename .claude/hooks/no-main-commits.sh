@@ -49,7 +49,8 @@ targets=$(printf '%s' "$command" | node -e '
     for (const [, path] of options.matchAll(new RegExp(gap + option, "g"))) {
       if (path === undefined) continue;
       const value = path
-        .replace(/\\(.)|["\x27]/g, "$1")
+        .replace(/"((?:\\[\s\S]|[^"\\])*)"|\x27([^\x27]*)\x27|\\(.)/g, (_, double, single, escaped) =>
+          double?.replace(/\\([\\"$\x60])/g, "$1") ?? single ?? escaped)
         .replace(/^(?:~|\$HOME|\$\{HOME\})(?=\/|$)/, () => require("os").homedir());
       dir = require("path").resolve(dir, value);
     }

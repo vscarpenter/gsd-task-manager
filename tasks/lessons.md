@@ -680,3 +680,4 @@ Adding a wire column is not enough. A client that pulled a record before the col
 ## 2026-11-22: main-commit guard
 
 - **A guard on command text needs tests for each spelling.** Matching `git commit` missed `git -c ... commit`. Test blocked and allowed cases against real repositories, and read the branch where the command runs, which `-C` can move.
+- **Decode shell quoting by its rules.** Deleting quote characters broke paths that contain them and let commits onto main. Fuzz a decoder against Bash itself.
