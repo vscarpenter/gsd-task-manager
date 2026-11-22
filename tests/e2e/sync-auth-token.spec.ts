@@ -9,6 +9,13 @@ const diagnostics = new WeakMap<Page, {
   warnings: string[];
 }>();
 
+// Each engine names a cancelled load differently. These match the checks
+// Playwright itself makes: WebKit's text contains "cancelled" on every platform.
+function isCancelled(errorText: string | undefined): boolean {
+  if (!errorText) return false;
+  return errorText === "net::ERR_ABORTED" || errorText === "NS_BINDING_ABORTED" || errorText.includes("cancelled");
+}
+
 const SYNTHETIC_USER = {
   id: "e2etokenuser0001",
   collectionId: "_pb_users_auth_",
@@ -61,7 +68,7 @@ async function seedSyncConfig(page: Page): Promise<void> {
   }), SYNTHETIC_USER);
 }
 
-async function openConnectedCloudSync(page: Page, token: string): Promise<void> {
+async function routeBackend(page: Page): Promise<void> {
   // Never send synthetic authorization to a real local or hosted backend.
   await page.route("**/api/**", async (route) => {
     diagnostics.get(page)?.apiRequests.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`);
@@ -70,6 +77,10 @@ async function openConnectedCloudSync(page: Page, token: string): Promise<void> 
       body: JSON.stringify({ code: 200, message: "Healthy", items: [], totalItems: 0 }),
     });
   });
+}
+
+async function openConnectedCloudSync(page: Page, token: string): Promise<void> {
+  await routeBackend(page);
   await waitForAppLoad(page);
   await seedSyncConfig(page);
   await setAuth(page, token);
@@ -87,7 +98,7 @@ test.describe("Cloud Sync auth token", () => {
     diagnostics.set(page, report);
     page.on("requestfailed", (request) => {
       // Navigation can cancel Next prefetches; these are not failed application requests.
-      if (request.failure()?.errorText !== "net::ERR_ABORTED") report.failedRequests.push(request.url());
+      if (!isCancelled(request.failure()?.errorText)) report.failedRequests.push(request.url());
     });
     page.on("response", (response) => {
       if (response.status() >= 400) report.badResponses.push(`${response.status()} ${response.url()}`);
@@ -202,5 +213,20 @@ test.describe("Cloud Sync auth token", () => {
         await testInfo.attach(`cloud-sync-${viewport.width}-${theme}`, { path: screenshot, contentType: "image/png" });
       }
     }
+  });
+
+  test("doesn't count a prefetch that navigation cancels as a failed request", async ({ page, baseURL }) => {
+    test.skip(!baseURL?.includes(":3100"), "Only production builds prefetch");
+    // Holding RSC prefetches open makes the navigation below cancel one every
+    // time, which on CI happened only when a prefetch was slow.
+    const isPrefetch = (url: URL) => url.searchParams.has("_rsc");
+    await page.route(isPrefetch, () => {});
+    await routeBackend(page);
+    const prefetch = page.waitForRequest((request) => isPrefetch(new URL(request.url())));
+    await waitForAppLoad(page);
+    const pending = await prefetch;
+    const cancelled = page.waitForEvent("requestfailed", (request) => request === pending);
+    await page.goto("/settings");
+    await cancelled;
   });
 });
