@@ -296,6 +296,33 @@ async function clickBrowserSync(page: Page): Promise<void> {
   await syncButton.click();
 }
 
+async function countBrowserRows(page: Page, storeName: string): Promise<number> {
+  return page.evaluate(async (name) => {
+    const database = await new Promise<IDBDatabase>((resolveDatabase, reject) => {
+      const request = indexedDB.open('GsdTaskManager');
+      request.onsuccess = () => resolveDatabase(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const total = await new Promise<number>((resolveCount, reject) => {
+      const request = database.transaction(name).objectStore(name).count();
+      request.onsuccess = () => resolveCount(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return total;
+  }, storeName);
+}
+
+/** Sync now, and wait until the app records how that sync ended. */
+async function finishBrowserSync(page: Page): Promise<void> {
+  const before = await countBrowserRows(page, 'syncHistory');
+  await clickBrowserSync(page);
+  await waitForAsyncValue(
+    async () => (await countBrowserRows(page, 'syncHistory')) > before || undefined,
+    'the sync outcome'
+  );
+}
+
 describeSystem('PocketBase authenticated system boundary', () => {
   let handleToolCall: typeof import('../../tools/handlers/index.js').handleToolCall;
   let dataDirectory = '';
@@ -1014,6 +1041,35 @@ describeSystem('PocketBase authenticated system boundary', () => {
       await savedItem.waitFor({ state: 'hidden', timeout: 10_000 });
       await page.getByRole('button', { name: 'Matrix', exact: true }).click();
       await page.getByTestId('task-card').filter({ hasText: reconnectTitle }).waitFor({ state: 'visible', timeout: 10_000 });
+
+      // WEB-STALE-DELETE-RESTORE: delete, Undo, and one dropped request lost the task everywhere.
+      const undoneCard = page.getByTestId('task-card').filter({ hasText: browserPushTitle });
+      await undoneCard.hover();
+      await undoneCard.getByTestId('delete-task').click();
+      await page
+        .locator('[data-sonner-toast]')
+        .filter({ hasText: 'Task deleted' })
+        .getByRole('button', { name: 'Undo', exact: true })
+        .click();
+      await undoneCard.waitFor({ state: 'visible' });
+      let droppedDelete = false;
+      await page.route('**/api/gsd/tasks/**', async (route) => {
+        if (!droppedDelete && route.request().method() === 'DELETE') {
+          droppedDelete = true;
+          await route.abort('connectionfailed');
+          return;
+        }
+        await route.continue();
+      });
+      await finishBrowserSync(page);
+      await finishBrowserSync(page);
+      await page.unroute('**/api/gsd/tasks/**');
+      const ownerRecords = await admin
+        .collection('tasks')
+        .getFullList({ filter: `owner = "${browserAuth.record.id}"` });
+      expect(ownerRecords.map((record) => record.title)).toContain(browserPushTitle);
+      expect(await undoneCard.count()).toBe(1);
+
       expect(pageErrors).toEqual([]);
       await context.close();
     } catch (error) {
