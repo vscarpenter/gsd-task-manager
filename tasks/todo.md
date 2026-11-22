@@ -1,3 +1,31 @@
+# Repeated mistakes made impossible (2026-11-22)
+
+The owner asked for the mistakes this repo repeats to be found in its history and made impossible, by architecture, then types, then lint, then tests, with formal models for state machines. Standard to non-trivial per PR. Every check replays a real past bug, and each PR body holds its proof.
+
+- [x] #768 runs every TLA+ model in the required `test` job. #773, #776, and #784 bring models up to the code or add one.
+- [x] #769, #770, #783: a push needs a claim, and acting on absence needs a confirmed owner.
+- [x] #772, #774: read and write in one transaction, with a lint.
+- [x] #775: one lifecycle table, with an exhaustive test over the real writers.
+- [x] #771: MCP arguments are strict at every level.
+- [x] #778: sign-out counts what it discards inside its transaction.
+- [x] #779, #780: instants compare as time, with a lint.
+- [x] #782: each hand-written task copy names every field.
+- [x] #785: no writer takes a task past a limit. #786: `cn`'s type ramp follows the stylesheet.
+- [x] #777: the engine suite runs on a real database. #781, #787: restating comments deleted, false ones corrected.
+
+## Resuming From Here
+
+- **Done:** #768, #771, #773, #777, #779, #784, #785, and #786 merged on 2026-11-22. The other 12 PRs are open.
+- **Merge order:** 769, 770, 775, 776, 783, 772, 774, 778, 782, 787, 781. Each waits for its quiz or its parent. Before merging one, merge main into it and wait for green CI. Their older runs predate #768 and #777, and a squashed parent breaks a child's `pr-shape` count. The owner approved those pushes, without force. Where additive changes conflict, keep both sides.
+- **Blocked on the owner:** the quizzes in 769, 772, 778, 781, 782, 783, and 787. #780 stays open by the owner's decision, and it edits a quizzed path with no quiz yet. The owner waived #781's SonarCloud failure only. These decisions are also open.
+  - Retry budget: an outage can move a new task to Trash (`WEB-OUTAGE-TRASHES`, modeled in #784).
+  - Pull contract: a pull that skipped a record still moves the cursor. During a backfill it also stamps the contract and can push an empty `saved_at` over the server's. Every fix touches the contract iOS shares.
+  - Slow clock: a device an hour behind can overwrite a newer edit (`isRemoteNewer`'s skew ceiling).
+  - Ruleset: `pocketbase-system` and `mcp-coverage` aren't required, so the real-database test and the MCP type guards can fail without blocking a merge.
+- **Not done:** a lock that fails when modeled code changes and its model doesn't, the remaining mock-based suites, and the review's other wrong descriptions and unenforced constraints.
+- **Assumptions:** "newest `updatedAt`" in the top three spec means a point in time. iOS and Android weren't checked for any of these bugs.
+
+
 # Commitment gates (2026-11-21)
 
 From the 2026-11-21 weekly review. Non-trivial tier (CI infra plus the merge gate); the owner approved the design in session. Spec: "Make the two-week commitments mechanical" at the end of `tasks/spec.md`. Check-in on 2026-12-05.
