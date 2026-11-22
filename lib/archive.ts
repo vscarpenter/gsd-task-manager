@@ -61,14 +61,9 @@ export async function updateArchiveSettings(
  * Archive completed tasks older than specified days
  * Returns count of archived tasks
  *
- * The read (find eligible tasks), bulkAdd, and bulkDelete all run inside a
- * single Dexie transaction. Without this, two overlapping calls (e.g. two
- * open tabs, or the hourly auto-archive racing a manual "Archive now" click)
- * can both read the same eligible tasks before either commits its
- * bulkDelete, so the second call's bulkAdd collides with keys the first
- * call already inserted. IndexedDB serializes transactions with overlapping
- * table scope, so the second call now re-reads tasks after the first has
- * already removed them.
+ * The read and both writes share one transaction, so overlapping runs (two
+ * tabs, or the hourly run and "Archive now") can't move, count, or queue the
+ * same task twice.
  */
 export async function archiveOldTasks(
   daysOld: number

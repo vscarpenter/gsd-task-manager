@@ -245,9 +245,8 @@ export async function pullRemoteChanges(
     logger.warn('Skipped invalid remote records during pull', { skippedCount });
   }
 
-  // Only records actually committed locally may advance the watermark.
-  // Invalid, archive-suppressed, and LWW-skipped records remain eligible for
-  // a later overlapping pull instead of poisoning the cursor.
+  // Only records committed here advance the watermark. A skipped record older
+  // than the new cursor isn't fetched again until a full pull.
   const maxApplied = findMaxAppliedClientUpdated(appliedRecords);
   const maxObservedTimestamp = maxApplied
     ? new Date(new Date(maxApplied).getTime() - CURSOR_OVERLAP_MS).toISOString()
@@ -259,19 +258,6 @@ export async function pullRemoteChanges(
   return { pulledCount, skippedCount, authenticated: true, maxObservedTimestamp };
 }
 
-/**
- * Remove local tasks that no longer exist remotely.
- * Tasks with pending sync operations are preserved.
- *
- * Self-healing by design: this re-fetches the remote index and deletes locals
- * absent from it. On a single PocketBase node, getFullList reflects committed
- * writes, so a task just pushed (and dequeued) in this same fullSync is present.
- * On a replicated/proxied backend, read-after-write lag could briefly hide such
- * a task and delete it locally. Recovery relies on the recently-pushed record's
- * `client_updated_at` falling inside the next pull's CURSOR_OVERLAP_MS window,
- * so it is re-fetched and re-added (it still exists remotely). The
- * pending-op guard below covers the common not-yet-pushed case directly.
- */
 interface RemoteAbsencePlan {
   /** Tasks leaving `db.tasks`, whether trashed or dropped outright. */
   deleteIds: string[];
@@ -315,6 +301,11 @@ function planRemoteAbsence(
   return plan;
 }
 
+/**
+ * Remove local tasks the account no longer lists, keeping any with a pending
+ * write. A task that read lag hides is removed too. It comes back only if its
+ * client stamp falls inside a later pull's window.
+ */
 async function reconcileDeletedTasks(ownerId: string): Promise<void> {
   const { index: remoteIndex, fetchSucceeded } = await fetchRemoteTaskIndex(ownerId);
   if (!fetchSucceeded) {

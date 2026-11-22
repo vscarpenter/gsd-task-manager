@@ -68,7 +68,7 @@ export function useErrorHandler(): (error: unknown, context: ErrorContext) => vo
  * try {
  *   await deleteTask(taskId);
  *   handleSuccess('Task deleted', async () => {
- *     await createTask(taskData);
+ *     await restoreTask(task);
  *   });
  * } catch (error) {
  *   handleError(error, { ... });
