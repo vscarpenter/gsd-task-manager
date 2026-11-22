@@ -1,6 +1,7 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
+import transactionScope from "./config/eslint/transaction-scope.mjs";
 
 const config = [
     {
@@ -90,6 +91,13 @@ const config = [
         rules: {
             "react-hooks/incompatible-library": "off",
         },
+    },
+    {
+        files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+        // Dexie runs every migration inside the one version-change transaction.
+        ignores: ["lib/db-migrations.ts"],
+        plugins: { "gsd-db": transactionScope },
+        rules: { "gsd-db/atomic-writes": "error" },
     },
     {
         files: ["tests/**/*.{ts,tsx,js,jsx}"],
