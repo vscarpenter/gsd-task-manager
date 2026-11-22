@@ -84,6 +84,7 @@ export interface Task {
   updatedAt: string;
 }
 
+// Task filters
 export interface TaskFilters {
   quadrant?: string;
   completed?: boolean;
