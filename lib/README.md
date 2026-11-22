@@ -229,7 +229,7 @@ Database, schema, archive, and trash:
 - `archive.ts:chooseArchiveSnapshot` never replaces an existing archived row with an older or unparseable live copy.
 - `archive.ts:archiveOldTasks` skips tasks with `savedAt` and tasks without `completedAt`.
 - `archive.ts:archiveOldTasks` and `archive.ts:archiveTaskNow` enqueue a remote `delete` that carries the task. `archive.ts:restoreTask` enqueues an `update`. All three enqueue only when sync is enabled.
-- `archive.ts:reinstateArchivedTask` writes only when the id is absent, inside one transaction on `archivedTasks`. It enqueues nothing, because `archivedTasks` is never synced.
+- `archive.ts:reinstateArchivedTask` writes only when no lifecycle table has the id, inside one transaction over all three. It enqueues nothing, because `archivedTasks` is never synced.
 - `trash.ts:TRASH_RETENTION_DAYS` is deliberately not configurable. Trash retention is a safety floor (ADR 0015).
 - `trash.ts:restoreFromTrash` runs one transaction over `tasks`, `deletedTasks`, `syncQueue`, and `syncMetadata`. An id lives in exactly one lifecycle table (ADR 0013).
 - `trash.ts:restoreFromTrash`, `deleteFromTrashForever`, `emptyTrash`, and `purgeExpiredTrash` each call `forgetForResurrect` in the same transaction as the Trash write.

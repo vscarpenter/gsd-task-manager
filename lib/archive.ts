@@ -8,6 +8,7 @@
 import { getDb } from "@/lib/db";
 import type { TaskRecord, ArchiveSettings } from "@/lib/types";
 import { getSyncQueue } from "@/lib/sync/queue";
+import { isStoredInTransaction } from "@/lib/task-tables";
 import { ARCHIVE_CONFIG } from "@/lib/constants";
 
 function chooseArchiveSnapshot(
@@ -229,8 +230,8 @@ export async function deleteArchivedTask(taskId: string): Promise<void> {
  * Takes the whole record because the row is already gone by the time undo runs,
  * so the caller is the only remaining source of truth for it.
  *
- * Writes only when the id is absent, and reports success either way. An existing
- * row means one of two things, and skipping is right for both:
+ * Writes only when no table has the id, and reports success either way. An
+ * existing row means one of these, and skipping is right for each:
  *
  *   - the undo already ran (a double-click, or a toast still on screen), which
  *     is why this cannot simply `add` — that threw ConstraintError; or
@@ -239,7 +240,9 @@ export async function deleteArchivedTask(taskId: string): Promise<void> {
  *     pull re-adds the task (the archive guard no longer suppresses it — this
  *     row was just deleted) and auto-archive files it away again. The snapshot
  *     held by the toast is from delete time, so writing it unconditionally would
- *     discard the intervening edit.
+ *     discard the intervening edit; or
+ *   - the id came back to the board or went to Trash, so archiving it would put
+ *     one id in two tables.
  *
  * The stored row is therefore never older than the one being offered, so the
  * read and the write must be one transaction — two undos racing could otherwise
@@ -251,11 +254,8 @@ export async function deleteArchivedTask(taskId: string): Promise<void> {
 export async function reinstateArchivedTask(task: TaskRecord): Promise<void> {
   const db = getDb();
 
-  await db.transaction("rw", db.archivedTasks, async () => {
-    const existing = await db.archivedTasks.get(task.id);
-    if (existing) {
-      return;
-    }
+  await db.transaction("rw", [db.tasks, db.archivedTasks, db.deletedTasks], async () => {
+    if (await isStoredInTransaction(task.id)) return;
     await db.archivedTasks.put(task);
   });
 }
