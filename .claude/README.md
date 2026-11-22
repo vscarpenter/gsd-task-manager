@@ -61,7 +61,7 @@ If you genuinely need to edit one of these, tell Claude in plain language and ed
 
 ### `PreToolUse`: `no-main-commits.sh`
 **Fires before:** every `Bash` call.
-**Blocks (exits with code 2):** a `git commit` command while the current branch is `main` or `master`. Create a feature branch first.
+**Blocks (exits with code 2):** a commit on `main` or `master`, including one with global options such as `git -c` or `git --no-pager`. With `git -C <path>`, it checks the branch at that path and skips other repositories. If it can't resolve the path, it checks the session's branch. Create a feature branch first.
 
 ### `PostToolUse` — `lint-on-edit.sh`
 **Fires after:** every successful `Edit`, `Write`, or `MultiEdit` on a `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, or `.cjs` file.
