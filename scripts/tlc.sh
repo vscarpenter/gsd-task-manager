@@ -38,8 +38,14 @@ ensure_jar() {
   if [ ! -f "$jar" ]; then
     mkdir -p "$cache"
     echo "tlc.sh: downloading tla2tools ${TLA_VERSION}" >&2
-    curl -fsSL -o "$jar.part" "$TLA_URL"
-    mv "$jar.part" "$jar"
+    # check-models.sh runs several checkers at once, so each gets its own download.
+    local part
+    part="$(mktemp "$jar.XXXXXX")"
+    if ! curl -fsSL --retry 3 -o "$part" "$TLA_URL"; then
+      rm -f "$part"
+      die "could not download $TLA_URL"
+    fi
+    mv -f "$part" "$jar"
   fi
   # Check the hash on every run: a cached jar that changed is not the pinned checker.
   [ "$(sha256_of "$jar")" = "$TLA_SHA256" ] || die "$jar does not match the pinned sha256"

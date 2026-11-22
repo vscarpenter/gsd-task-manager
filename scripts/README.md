@@ -38,6 +38,7 @@ Each entry gives the usage, the environment variables the script reads, and the 
 
 ### Quality gates
 
+- `check-models.sh`: `bash scripts/check-models.sh`. It runs every TLA+ model under `docs/` in parallel. It exits 1 when a model fails, has no `check.sh`, or has a config that never ran. The CI `test` job runs it.
 - `check-code-shape.cjs`: `node scripts/check-code-shape.cjs [--print-baseline]`. It exits 1 on a ratchet failure. It exports `analyzeCodeShape()`, `compareCodeShape(baseline, current)`, `measuredValue(message)`, and `validateDebtLedger(ledger, current, now)`. The root `quality:shape` script runs it. It reads `code-shape-baseline.json` and `code-shape-debt.json`.
 - `check-bundle-budget.cjs`: `node scripts/check-bundle-budget.cjs [--write-baseline]`. It exits 1 on a budget failure. It exports `measureFirstLoad(outDir)`, `compareBundleBudget(budget, current)`, and `toBaseline(current, allowanceBytes)`. The root `quality:bundle` script runs it. It reads `bundle-budget.json`.
 - `check-dependency-licenses.cjs`: `node scripts/check-dependency-licenses.cjs [--policy <path>] [--root <dir>]... [--sbom <path>]`. It sets exit code 1 on a violation. The root `license:check` script runs it. It reads `license-policy.json` by default. With no `--root`, it scans `node_modules` and `packages/mcp-server/node_modules` under the current directory. It throws on an unknown or incomplete argument. The file calls `main()` on load with no `require.main` guard.
@@ -132,7 +133,7 @@ Each entry gives the usage, the environment variables the script reads, and the 
 - `smoke-test.sh`: five `curl` reads against `SITE_URL`. No writes.
 - `setup-pocketbase-feedback-collection.sh`: one `GET $PB_URL/api/collections/feedback`, two `GET $PB_URL/api/gsd/feedback-controls`, and two `GET $PB_URL/api/settings`. Each pair reads once before the settings change and once after.
 - `triage-run.sh`: `gh issue list` and `gh pr list` reads against `GSD_TRIAGE_REPO`.
-- `tlc.sh:ensure_jar`: downloads `tla2tools.jar` from the tlaplus GitHub release with `curl -fsSL` when the cached jar is absent.
+- `tlc.sh:ensure_jar`: downloads `tla2tools.jar` from the tlaplus GitHub release with `curl -fsSL --retry 3` into its own temp file when the cached jar is absent.
 - `run-pocketbase-system-test.sh:download_pocketbase`: downloads two PocketBase release archives from GitHub with `curl -fsSL`.
 
 ### Local files and processes
