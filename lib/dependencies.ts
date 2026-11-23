@@ -35,12 +35,10 @@ export function wouldCreateCircularDependency(
   dependencyId: string,
   allTasks: TaskRecord[]
 ): boolean {
-  // Can't depend on itself (trivial cycle)
   if (taskId === dependencyId) {
     return true;
   }
 
-  // Build a map of task dependencies for O(1) lookup during BFS
   const dependencyMap = new Map<string, string[]>();
   allTasks.forEach(task => {
     dependencyMap.set(task.id, task.dependencies || []);
@@ -48,7 +46,7 @@ export function wouldCreateCircularDependency(
 
   // BFS: Check if the dependency task (or any of its transitive dependencies) already depends on this task
   const visited = new Set<string>(); // Prevent infinite loops and redundant checks
-  const queue: string[] = [dependencyId]; // Start from the proposed dependency
+  const queue: string[] = [dependencyId];
 
   while (queue.length > 0) {
     const currentId = queue.shift()!;
@@ -58,12 +56,10 @@ export function wouldCreateCircularDependency(
     }
     visited.add(currentId);
 
-    // If we found a path back to the original task, it's circular
     if (currentId === taskId) {
       return true;
     }
 
-    // Add all dependencies of the current task to the queue
     const deps = dependencyMap.get(currentId) || [];
     queue.push(...deps);
   }
@@ -100,12 +96,6 @@ export function getBlockedTasks(taskId: string, allTasks: TaskRecord[]): TaskRec
   );
 }
 
-/**
- * Get uncompleted tasks that are blocking this task
- * @param task - The task to check
- * @param allTasks - All tasks in the system
- * @returns Array of uncompleted blocking tasks
- */
 export function getUncompletedBlockingTasks(task: TaskRecord, allTasks: TaskRecord[]): TaskRecord[] {
   return getBlockingTasks(task, allTasks).filter(t => !t.completed);
 }
@@ -167,12 +157,10 @@ export function validateDependencies(
   dependencies: string[],
   allTasks: TaskRecord[]
 ): { valid: boolean; error?: string } {
-  // Check for self-reference
   if (dependencies.includes(taskId)) {
     return { valid: false, error: "A task cannot depend on itself" };
   }
 
-  // Check that all dependency tasks exist
   const taskIds = new Set(allTasks.map(t => t.id));
   const missingTasks = dependencies.filter(depId => !taskIds.has(depId));
   if (missingTasks.length > 0) {
@@ -182,7 +170,6 @@ export function validateDependencies(
     };
   }
 
-  // Check for circular dependencies
   const tasksById = new Map(allTasks.map(t => [t.id, t]));
   for (const depId of dependencies) {
     if (wouldCreateCircularDependency(taskId, depId, allTasks)) {

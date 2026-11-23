@@ -1,8 +1,4 @@
 /**
- * Typed error classes for the MCP server.
- */
-
-/**
  * Thrown when a precondition check (e.g., the PocketBase `client_updated_at`
  * value has not changed between the read and the write) fails.
  *

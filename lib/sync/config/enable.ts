@@ -9,9 +9,6 @@ import { createLogger } from "@/lib/logger";
 
 const logger = createLogger('SYNC_CONFIG');
 
-/**
- * Queue existing tasks for initial sync push
- */
 async function queueExistingTasks(): Promise<void> {
   const queue = getSyncQueue();
   const populatedCount = await queue.populateFromExistingTasks();
@@ -28,7 +25,6 @@ async function queueExistingTasks(): Promise<void> {
  * work left is queueing the existing tasks.
  */
 export async function enableSync(): Promise<void> {
-  // Queue existing local tasks for initial push
   await queueExistingTasks();
 
   logger.info('Sync enabled');

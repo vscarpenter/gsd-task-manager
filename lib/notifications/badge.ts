@@ -12,10 +12,6 @@ export function isBadgeSupported(): boolean {
   return typeof navigator !== "undefined" && "setAppBadge" in navigator;
 }
 
-/**
- * Set the app badge to a specific count
- * Shows a badge on the PWA icon with the given number
- */
 export async function setAppBadge(count: number): Promise<void> {
   if (!isBadgeSupported()) {
     return;
@@ -32,9 +28,6 @@ export async function setAppBadge(count: number): Promise<void> {
   }
 }
 
-/**
- * Clear the app badge
- */
 export async function clearAppBadge(): Promise<void> {
   if (!isBadgeSupported()) {
     return;

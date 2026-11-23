@@ -58,10 +58,8 @@ export function useSyncStatus({
   const retryCountdown = useRetryCountdown(nextRetryAt);
   const previousAuthErrorRef = useRef(false);
 
-  // Detect authentication errors - derive from error state
   const hasAuthError = error ? isAuthError(new Error(error)) : false;
 
-  // Trigger callback once when we transition into an auth error state
   useEffect(() => {
     if (hasAuthError && !previousAuthErrorRef.current && error) {
       // react-doctor-disable-next-line react-doctor/no-pass-data-to-parent -- one-shot toast on an external-state transition; no event source

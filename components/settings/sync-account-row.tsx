@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getSyncStatus, disableSync } from "@/lib/sync/config";
+import { UnsyncedChangesError } from "@/lib/sync/config/disable";
 import { createLogger } from "@/lib/logger";
 import { SettingsRow } from "./shared-components";
 import { LogoutConfirmation } from "@/components/sync/sync-auth-dialog-sections";
@@ -12,13 +13,20 @@ const logger = createLogger("UI");
 
 type SyncStatusSnapshot = Awaited<ReturnType<typeof getSyncStatus>>;
 
-/** Disconnect the account and tell the user. Resolves `true` when it worked. */
-async function signOutAndReport(): Promise<boolean> {
+/** Disconnect the account and tell the user, or ask again. Resolves `true` when it worked. */
+async function signOutAndReport(
+	agreedToLose: number,
+	askAgain: (unsynced: number) => void,
+): Promise<boolean> {
 	try {
-		await disableSync();
+		await disableSync(agreedToLose);
 		toast.success("Signed out");
 		return true;
 	} catch (error) {
+		if (error instanceof UnsyncedChangesError) {
+			askAgain(error.count);
+			return false;
+		}
 		logger.error("Sign out failed", error instanceof Error ? error : undefined);
 		toast.error("Sign out failed");
 		return false;
@@ -94,21 +102,21 @@ export function SyncAccountRow() {
 		void readStatus().then(setStatus);
 	}, []);
 
-	async function handleSignOut() {
-		// Re-read rather than trust the mounted snapshot: the queue may have
-		// filled since this page loaded, and disableSync discards it.
-		const fresh = await readStatus();
-		if (fresh) setStatus(fresh);
-		if (fresh && fresh.pendingCount > 0) {
-			setShowConfirm(true);
-			return;
-		}
-		await confirmSignOut();
+	function askAgain(pendingCount: number) {
+		setStatus((prev) => (prev ? { ...prev, pendingCount } : prev));
+		setShowConfirm(true);
 	}
 
-	async function confirmSignOut() {
+	async function handleSignOut() {
+		const fresh = await readStatus();
+		if (fresh) setStatus(fresh);
+		if (fresh && fresh.pendingCount > 0) setShowConfirm(true);
+		else await signOut(0);
+	}
+
+	async function signOut(agreedToLose: number) {
 		setIsSigningOut(true);
-		if (await signOutAndReport()) {
+		if (await signOutAndReport(agreedToLose, askAgain)) {
 			setStatus((prev) => (prev ? asSignedOut(prev) : prev));
 			setShowConfirm(false);
 		}
@@ -123,7 +131,7 @@ export function SyncAccountRow() {
 			isSigningOut={isSigningOut}
 			showConfirm={showConfirm}
 			onSignOut={handleSignOut}
-			onConfirm={confirmSignOut}
+			onConfirm={() => void signOut(status.pendingCount)}
 			onCancel={() => setShowConfirm(false)}
 		/>
 	);

@@ -4,9 +4,6 @@ import { createMcpLogger } from '../utils/logger.js';
 
 const logger = createMcpLogger('SYNC_STATUS');
 
-/**
- * Get sync status from PocketBase health check
- */
 export async function getSyncStatus(config: GsdConfig): Promise<SyncStatus> {
   try {
     const { pb } = await requireUsersPrincipal(config);
@@ -30,9 +27,6 @@ export async function getSyncStatus(config: GsdConfig): Promise<SyncStatus> {
   }
 }
 
-/**
- * Get task statistics from PocketBase
- */
 export async function getTaskStats(config: GsdConfig): Promise<TaskStats> {
   const pb = getPocketBase(config);
 

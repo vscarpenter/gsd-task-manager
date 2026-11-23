@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { disableSync, getSyncStatus } from "@/lib/sync/config";
+import { UnsyncedChangesError } from "@/lib/sync/config/disable";
 
 export interface LogoutControls {
   showLogoutConfirm: boolean;
@@ -29,10 +30,16 @@ export function useLogout({
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [pendingChanges, setPendingChanges] = useState(0);
 
-  const performLogout = async () => {
+  const askFirst = (count: number) => {
+    setError(null);
+    setPendingChanges(count);
+    setShowLogoutConfirm(true);
+  };
+
+  const signOut = async (agreedToLose: number) => {
     setIsLoading(true);
     try {
-      await disableSync();
+      await disableSync(agreedToLose);
       onSignedOut();
       setError(null);
       setShowLogoutConfirm(false);
@@ -40,21 +47,19 @@ export function useLogout({
       onSuccess?.();
       setIsLoading(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Logout failed");
+      if (err instanceof UnsyncedChangesError) askFirst(err.count);
+      else setError(err instanceof Error ? err.message : "Logout failed");
       setIsLoading(false);
     }
   };
 
   const handleLogout = async () => {
     const status = await getSyncStatus();
-    if (status.pendingCount > 0) {
-      setPendingChanges(status.pendingCount);
-      setShowLogoutConfirm(true);
-      return;
-    }
-
-    await performLogout();
+    if (status.pendingCount > 0) askFirst(status.pendingCount);
+    else await signOut(0);
   };
+
+  const performLogout = () => signOut(pendingChanges);
 
   const cancelLogout = () => setShowLogoutConfirm(false);
 

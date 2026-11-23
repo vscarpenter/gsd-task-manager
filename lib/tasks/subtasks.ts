@@ -6,9 +6,6 @@ import type { TaskRecord } from "@/lib/types";
 import { isoNow } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./crud/helpers";
 
-/**
- * Toggle a subtask's completion status
- */
 export async function toggleSubtask(taskId: string, subtaskId: string, completed: boolean): Promise<TaskRecord> {
   const db = getDb();
   return runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {
@@ -27,9 +24,6 @@ export async function toggleSubtask(taskId: string, subtaskId: string, completed
   });
 }
 
-/**
- * Add a new subtask to a task
- */
 export async function addSubtask(taskId: string, title: string): Promise<TaskRecord> {
   const db = getDb();
   const validation = subtaskSchema.safeParse({
@@ -58,9 +52,6 @@ export async function addSubtask(taskId: string, title: string): Promise<TaskRec
   });
 }
 
-/**
- * Delete a subtask from a task
- */
 export async function deleteSubtask(taskId: string, subtaskId: string): Promise<TaskRecord> {
   const db = getDb();
   return runTaskSyncTransaction(async ({ syncEnabled, enqueue }) => {

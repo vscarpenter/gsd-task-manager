@@ -128,7 +128,6 @@ export const taskRecordSchema = taskDraftSchema
 		notificationSent: z.boolean().default(false),
 		lastNotificationAt: z.iso.datetime({ offset: true }).optional(),
 		snoozedUntil: z.iso.datetime({ offset: true }).optional(),
-		// Time tracking fields
 		timeSpent: z.number().int().min(0).optional(), // Total minutes spent (calculated)
 		timeEntries: z.array(timeEntrySchema).max(SCHEMA_LIMITS.MAX_TIME_ENTRIES).default([]),
 	})

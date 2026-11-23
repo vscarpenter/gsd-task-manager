@@ -5,10 +5,6 @@ import { redactPocketBaseHost } from '../../api/client.js';
 import { VERSION } from '../../version.js';
 import type { McpToolResponse } from './types.js';
 
-/**
- * System tool handlers for configuration validation and help
- */
-
 type ConfigCheck = {
   name: string;
   status: 'success' | 'warning' | 'error';
@@ -35,7 +31,6 @@ async function checkAuthentication(config: GsdConfig): Promise<ConfigCheck> {
 export async function handleValidateConfig(config: GsdConfig): Promise<McpToolResponse> {
   const checks: ConfigCheck[] = [];
 
-  // Check PocketBase connectivity
   try {
     const pb = getPocketBase(config);
     await pb.health.check();
@@ -54,7 +49,6 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
 
   checks.push(await checkAuthentication(config));
 
-  // Check task access
   try {
     const tasks = await listTasks(config);
     checks.push({
@@ -79,10 +73,6 @@ export async function handleValidateConfig(config: GsdConfig): Promise<McpToolRe
     ],
   };
 }
-
-// ---------------------------------------------------------------------------
-// Help section builders
-// ---------------------------------------------------------------------------
 
 function buildToolsHelpSection(): string {
   return `# GSD Task Manager MCP Server - Help
@@ -248,9 +238,6 @@ export async function handleGetHelp(args: { topic?: string }): Promise<McpToolRe
   return { content: [{ type: 'text' as const, text: helpText.trim() }] };
 }
 
-/**
- * Handle get_cache_stats tool
- */
 export async function handleGetCacheStats(args: { reset?: boolean }): Promise<McpToolResponse> {
   const cache = getTaskCache();
   const stats = cache.getStats();

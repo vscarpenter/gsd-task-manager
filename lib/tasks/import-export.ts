@@ -526,9 +526,6 @@ export function assertWithinImportSize(raw: string): void {
   }
 }
 
-/**
- * Import tasks from JSON string with merge or replace mode
- */
 export async function importFromJson(raw: string, mode: "replace" | "merge" = "replace"): Promise<void> {
   assertWithinImportSize(raw);
 
@@ -556,9 +553,6 @@ export async function exportToJsonWithReport(): Promise<ExportReport> {
   return { json: JSON.stringify(payload, null, 2), skippedCount };
 }
 
-/**
- * Export all tasks as a JSON string
- */
 export async function exportToJson(): Promise<string> {
   return (await exportToJsonWithReport()).json;
 }

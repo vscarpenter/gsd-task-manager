@@ -2,14 +2,12 @@
 
 // Re-export all notification functionality for backward compatibility
 
-// Display functions
 export {
   showTaskNotification,
   showSweepReminder,
   showTestNotification
 } from "./display";
 
-// Permission functions
 export {
   isNotificationSupported,
   checkNotificationPermission,
@@ -18,7 +16,6 @@ export {
   isInQuietHours
 } from "./permissions";
 
-// Settings functions
 export {
   getNotificationSettings,
   updateNotificationSettings,
@@ -27,7 +24,6 @@ export {
   setQuietHoursEdge
 } from "./settings";
 
-// Badge functions
 export {
   isBadgeSupported,
   setAppBadge,

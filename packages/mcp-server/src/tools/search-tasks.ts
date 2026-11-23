@@ -15,9 +15,6 @@ export async function searchTasks(
   return tasks.filter((task) => matchesSearchQuery(task, queryLower));
 }
 
-/**
- * Check if a task matches the search query
- */
 function matchesSearchQuery(task: Task, queryLower: string): boolean {
   return (
     task.title.toLowerCase().includes(queryLower) ||
@@ -27,16 +24,10 @@ function matchesSearchQuery(task: Task, queryLower: string): boolean {
   );
 }
 
-/**
- * Check if any tag matches the search query
- */
 function matchesTaskTags(tags: string[], queryLower: string): boolean {
   return tags.some((tag) => tag.toLowerCase().includes(queryLower));
 }
 
-/**
- * Check if any subtask matches the search query
- */
 function matchesSubtasks(
   subtasks: Array<{ id: string; title: string; completed: boolean }>,
   queryLower: string

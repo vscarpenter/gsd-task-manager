@@ -5,7 +5,6 @@
  * Re-exports from modular files for backward compatibility.
  */
 
-// Get/Set operations
 export {
   getSyncConfig,
   updateSyncConfig,
@@ -15,8 +14,6 @@ export {
   getSyncStatus,
 } from "./get-set";
 
-// Enable sync
 export { enableSync } from "./enable";
 
-// Disable sync
 export { disableSync } from "./disable";

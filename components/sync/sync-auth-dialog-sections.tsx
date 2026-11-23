@@ -15,7 +15,6 @@ interface OAuthCallbacks {
   onError: (err: Error) => void;
 }
 
-/** Spinner shown while checking session validity */
 export function RefreshingSection() {
   return (
     <div className="flex items-center justify-center py-8">
@@ -33,7 +32,6 @@ interface SessionExpiredSectionProps {
   logout: LogoutControls;
 }
 
-/** UI for when the session token has expired */
 export function SessionExpiredSection({
   syncStatus,
   error,
@@ -88,7 +86,6 @@ function AccountNoteText({ provider, email }: { provider?: string | null; email:
   );
 }
 
-/** UI for when the user is authenticated and sync is active */
 export function AuthenticatedSection({
   syncStatus,
   error,
@@ -156,7 +153,6 @@ interface UnauthenticatedSectionProps {
   oauthCallbacks: OAuthCallbacks;
 }
 
-/** UI for when no sync account is connected */
 export function UnauthenticatedSection({
   error,
   oauthCallbacks,
@@ -201,7 +197,6 @@ interface LogoutConfirmationProps {
   onConfirm: () => void;
 }
 
-/** Warning banner shown when user has unsynced changes */
 export function LogoutConfirmation({
   pendingChanges,
   isLoading,
@@ -213,6 +208,7 @@ export function LogoutConfirmation({
 
   return (
     <div
+      key={pendingChanges}
       role="group"
       aria-label="Confirm sign out"
       aria-describedby={descriptionId}
@@ -321,7 +317,6 @@ function SignOutEverywhereConfirmation({
   );
 }
 
-/** Cancel and confirm buttons shared by the two sign-out confirmations. */
 function ConfirmButtons({
   isLoading,
   onCancel,
@@ -355,7 +350,6 @@ function ConfirmButtons({
   );
 }
 
-/** Inline error message banner */
 function ErrorMessage({ error }: { error: string | null }) {
   if (!error) return null;
 

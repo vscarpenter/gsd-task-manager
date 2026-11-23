@@ -48,7 +48,7 @@ Its hooks cover dialog state, sign-out (this device and all devices), sync statu
 - `sync-button.tsx:SyncButton.handleSync`: when sync is not enabled, it opens the auth dialog and returns. With `hasAuthError`, it shows a toast, opens the dialog, and returns. Otherwise it awaits `sync()`.
 - `sync-button.tsx:SyncButton`: the button is `disabled={isSyncing}`. `TooltipProvider` uses `delayDuration={300}`.
 - `sync-button.tsx:SyncStatusOverlays`: the pending badge requires `isEnabled && !hasAuthError && pendingCount > 0`. The countdown requires `!hasAuthError && retryCountdown > 0`.
-- `use-logout.ts:useLogout.handleLogout`: when `status.pendingCount > 0`, it sets `showLogoutConfirm` and `pendingChanges` and returns without signing out. Only `AuthenticatedSection` renders `LogoutConfirmation`; `SessionExpiredSection` shows nothing.
+- `use-logout.ts:useLogout.handleLogout`: when `status.pendingCount > 0`, it sets `showLogoutConfirm` and `pendingChanges` and returns without signing out. Otherwise it signs out with `0` agreed to lose. `AuthenticatedSection` and `SessionExpiredSection` both show `LogoutConfirmation` through `LocalSignOut`.
 - `use-sign-out-everywhere.ts:FALLBACK_NOTICE_MS`: the fallback warning toast lasts `10_000` ms.
 - `use-sign-out-everywhere.ts:useSignOutEverywhere.onConfirm`: `finally` always sets `showConfirm` and `isLoading` to false.
 - `use-sign-out-everywhere.ts:signOutEverywhereFailure`: `LocalSignOutIncompleteError` gets its own message, prefixed by `err.otherSessionsEnded`. Other errors report "You're still signed in".
@@ -92,7 +92,7 @@ Its hooks cover dialog state, sign-out (this device and all devices), sync statu
 - `sync-button.tsx:SyncButton`: shows a Sonner `toast(message, { id, duration, action })` for each health notification, and a toast with a "Re-login" action on an auth error.
 - `sync-button.tsx:SyncButton.handleSync`: shows "Please re-login to continue syncing" for `SYNC_TOAST_DURATION.MEDIUM`.
 - `use-logout.ts:useLogout.handleLogout`: calls `getSyncStatus` from `@/lib/sync/config`.
-- `use-logout.ts:useLogout.performLogout`: calls `disableSync` from `@/lib/sync/config`, then `toast.success("Logged out successfully")`.
+- `use-logout.ts:useLogout.performLogout`: calls `disableSync(pendingChanges)` from `@/lib/sync/config`, then `toast.success("Logged out successfully")`. On `UnsyncedChangesError` it asks again with the new count.
 - `use-sign-out-everywhere.ts:useSignOutEverywhere.onRequest`: calls `getSyncStatus` from `@/lib/sync/config`.
 - `use-sign-out-everywhere.ts:useSignOutEverywhere.onConfirm`: calls `signOutEverywhere` from `@/lib/sync/sign-out-everywhere`. It shows "Signed out of all devices" or a warning that the server cannot end other sessions.
 - `use-sync-auth-dialog.ts:loadSyncStatus`: reads Dexie with `db.syncMetadata.get("sync_config")` through `getDb` from `@/lib/db`.

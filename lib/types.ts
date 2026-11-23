@@ -8,12 +8,11 @@ export interface Subtask {
   completed: boolean;
 }
 
-/** A time tracking entry for when user actively works on a task */
 export interface TimeEntry {
   id: string;
   startedAt: string; // ISO 8601 timestamp
   endedAt?: string;  // ISO 8601 timestamp, null if currently running
-  notes?: string;    // Optional notes about what was done
+  notes?: string;
 }
 
 export interface TaskRecord {
@@ -25,16 +24,14 @@ export interface TaskRecord {
   quadrant: QuadrantId;
   dueDate?: string;
   completed: boolean;
-  completedAt?: string; // Timestamp when task was marked complete
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
-  // New fields for enhancements
   recurrence: RecurrenceType;
   tags: string[];
   subtasks: Subtask[];
   parentTaskId?: string; // For recurring task instances
   dependencies: string[]; // IDs of tasks that must be completed first
-  // Notification fields
   notifyBefore?: number; // minutes before due date
   notificationEnabled: boolean;
   notificationSent: boolean;
@@ -45,13 +42,11 @@ export interface TaskRecord {
   /** Top three: the local YYYY-MM-DD this task is picked for, and its slot 1 to 3 (spec-top-three.md). */
   focusDate?: string;
   focusRank?: number;
-  // Archive field
-  archivedAt?: string; // Timestamp when task was archived
+  archivedAt?: string;
   deletedAt?: string; // Timestamp when task was moved to trash (ADR 0015)
-  // Time tracking fields
-  estimatedMinutes?: number; // Estimated time to complete task
+  estimatedMinutes?: number;
   timeSpent?: number; // Total time spent in minutes (calculated from timeEntries)
-  timeEntries?: TimeEntry[]; // Array of time tracking sessions
+  timeEntries?: TimeEntry[];
 }
 
 export interface TaskDraft {
@@ -68,7 +63,7 @@ export interface TaskDraft {
   notificationEnabled?: boolean;
   focusDate?: string;
   focusRank?: number;
-  estimatedMinutes?: number; // Estimated time to complete task
+  estimatedMinutes?: number;
 }
 
 /**
@@ -135,15 +130,15 @@ export interface SyncHistoryRecord {
   id: string;
   timestamp: string; // ISO 8601 timestamp
   status: "success" | "error" | "conflict" | "partial";
-  pushedCount: number; // Number of local changes pushed
-  pulledCount: number; // Number of remote changes pulled
-  conflictsResolved: number; // Number of conflicts automatically resolved
+  pushedCount: number;
+  pulledCount: number;
+  conflictsResolved: number;
   /** Items that failed to push in this sync cycle. Only set for status='partial'. */
   failedCount?: number;
   errorMessage?: string; // Error message if status is "error"
   duration?: number; // Sync duration in milliseconds
   deviceId: string; // Device that performed the sync
-  triggeredBy: "user" | "auto"; // Whether sync was manual or automatic
+  triggeredBy: "user" | "auto";
 }
 
 export interface AppPreferences {
@@ -152,3 +147,15 @@ export interface AppPreferences {
   maxPinnedViews: number; // Maximum number of views that can be pinned (default: 5)
   smartViewsEnabled: boolean; // Exposes Smart Views in the matrix and command palette
 }
+
+/**
+ * A hand-written copy of T. Every field must be named, even one that may be
+ * undefined, so a field added to T can't be left out of the copy.
+ */
+export type EveryField<T> = { [K in keyof Required<T>]: T[K] };
+
+/**
+ * For a copy that spreads some fields in: compiles only when nothing is unnamed,
+ * and the error lists what is.
+ */
+export type NoneUnnamed<Unnamed extends never> = Unnamed;

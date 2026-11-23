@@ -189,7 +189,7 @@ describe('Sync Config', () => {
     it('should disable sync and clear user fields', async () => {
       const storedVersion = (await getSyncConfig())?.pullCursorVersion;
 
-      await disableSync();
+      await disableSync('everything');
 
       const config = await getSyncConfig();
 
@@ -208,8 +208,31 @@ describe('Sync Config', () => {
       expect(config?.nextRetryAt).toBeNull();
     });
 
+    it('should refuse to discard more changes than the user agreed to lose', async () => {
+      await expect(disableSync(0)).rejects.toMatchObject({ count: 1 });
+
+      expect(await db.syncQueue.count()).toBe(1);
+      expect((await getSyncConfig())?.enabled).toBe(true);
+    });
+
+    it('should keep the sign-in token when it refuses to sign out', async () => {
+      const { clearPocketBase } = await import('@/lib/sync/pocketbase-client');
+      vi.mocked(clearPocketBase).mockClear();
+
+      await disableSync(0).catch(() => undefined);
+
+      expect(clearPocketBase).not.toHaveBeenCalled();
+    });
+
+    it('should sign out when the queue holds no more than the user agreed to lose', async () => {
+      await disableSync(1);
+
+      expect(await db.syncQueue.count()).toBe(0);
+      expect((await getSyncConfig())?.enabled).toBe(false);
+    });
+
     it('should preserve the local task owner marker from the disabled sync user', async () => {
-      await disableSync();
+      await disableSync('everything');
 
       const config = await getSyncConfig();
 
@@ -220,7 +243,7 @@ describe('Sync Config', () => {
       const queueCountBefore = await db.syncQueue.count();
       expect(queueCountBefore).toBeGreaterThan(0);
 
-      await disableSync();
+      await disableSync('everything');
 
       const queueCountAfter = await db.syncQueue.count();
       expect(queueCountAfter).toBe(0);
@@ -229,7 +252,7 @@ describe('Sync Config', () => {
     it('should call clearPocketBase', async () => {
       const { clearPocketBase } = await import('@/lib/sync/pocketbase-client');
 
-      await disableSync();
+      await disableSync('everything');
 
       expect(clearPocketBase).toHaveBeenCalled();
     });
@@ -241,7 +264,7 @@ describe('Sync Config', () => {
         return [];
       });
 
-      await disableSync();
+      await disableSync('everything');
 
       expect(enabledWhileClearingCaches).toBe(false);
     });
@@ -249,7 +272,7 @@ describe('Sync Config', () => {
     it('should clear app service worker caches', async () => {
       mockClearAppCaches.mockResolvedValueOnce(['gsd-runtime-v9.3.7']);
 
-      await disableSync();
+      await disableSync('everything');
 
       expect(mockClearAppCaches).toHaveBeenCalledTimes(1);
     });
@@ -258,7 +281,7 @@ describe('Sync Config', () => {
       await db.syncMetadata.clear();
 
       // Should not throw — auth and browser caches are still cleared for privacy.
-      await expect(disableSync()).resolves.not.toThrow();
+      await expect(disableSync('everything')).resolves.not.toThrow();
       expect(mockClearAppCaches).toHaveBeenCalledTimes(1);
     });
 
@@ -293,7 +316,7 @@ describe('Sync Config', () => {
       const historyCountBefore = await db.syncHistory.count();
       expect(historyCountBefore).toBe(2);
 
-      await disableSync();
+      await disableSync('everything');
 
       const historyCountAfter = await db.syncHistory.count();
       expect(historyCountAfter).toBe(0);

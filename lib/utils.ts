@@ -22,10 +22,6 @@ export function cn(...classNames: Array<string | undefined | false | null>): str
 
 const relativeTimeFormatter = new Intl.RelativeTimeFormat(DATE_CONFIG.LOCALE, { numeric: "auto" });
 
-/**
- * Extract a human-readable message from an unknown caught error.
- * Use in catch blocks to safely access the error message.
- */
 export function formatErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
 }
@@ -94,7 +90,6 @@ export function isOverdue(value?: string): boolean {
   }
   const date = new Date(value);
   const now = new Date();
-  // Set both to start of day for fair comparison
   date.setHours(0, 0, 0, 0);
   now.setHours(0, 0, 0, 0);
   return date < now;
@@ -111,9 +106,6 @@ export function daysOverdue(value?: string): number {
   return days > 0 ? days : 0;
 }
 
-/**
- * Check if a date is due today
- */
 export function isDueToday(value?: string): boolean {
   if (!value) {
     return false;

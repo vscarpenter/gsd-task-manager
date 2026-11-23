@@ -15,7 +15,7 @@ This package reads and writes the sync configuration row. The row lives in the D
 - `get-set.ts:isSyncEnabled(): Promise<boolean>`. Returns the `enabled` flag, or `false` when no config exists.
 - `get-set.ts:getSyncStatus(): Promise<SyncStatus>`. Returns `enabled`, `email`, `lastSyncAt`, `pendingCount`, and `deviceId`.
 - `enable.ts:enableSync(): Promise<void>`. Queues every existing local task for the first push.
-- `disable.ts:disableSync(): Promise<void>`. Signs the device out of sync and wipes per-user sync state.
+- `disable.ts:disableSync(mayDiscard: number | 'everything'): Promise<void>`. Signs the device out of sync and wipes per-user sync state. It throws `UnsyncedChangesError` when more changes wait than `mayDiscard` allows.
 - `index.ts`. Re-exports all eight functions above.
 
 ## Invariants
@@ -24,7 +24,7 @@ This package reads and writes the sync configuration row. The row lives in the D
 - `get-set.ts:updateSyncConfig` reads the row and writes `{...current, ...updates}` inside one `rw` transaction over `syncMetadata`. It never writes back a row read earlier.
 - `get-set.ts:updateAutoSyncConfig` clamps `intervalMinutes` to the range 1 to 30.
 - `get-set.ts:getAutoSyncConfig` defaults to enabled, a 2 minute interval, sync on focus, sync on online, and a 30000 ms debounce.
-- `disable.ts:resetSyncConfigState` runs one `rw` transaction over `syncMetadata`, `syncQueue`, and `syncHistory`. It takes no argument and reads the `sync_config` row inside that transaction. It writes the disabled config first. A closed tab must never leave Trash deletes queued and unremembered behind a signed-out config.
+- `disable.ts:resetSyncConfigState` runs one `rw` transaction over `syncMetadata`, `syncQueue`, and `syncHistory`. It reads the `sync_config` row and, unless `mayDiscard` is `'everything'`, counts the queue inside that transaction. A count over the limit, or one that fails, writes nothing. It writes the disabled config first. A closed tab must never leave Trash deletes queued and unremembered behind a signed-out config.
 - `disable.ts:resetSyncConfigState` returns `false` and writes nothing when the row is absent. Otherwise it writes the signed-out row and returns `true`.
 - `disable.ts:resetSyncConfigState` keeps `pullCursorVersion` unchanged. Only a completed pull may stamp a newer one (ADR 0019).
 - `disable.ts:resetSyncConfigState` remembers the id of every queued Trash delete before it clears the queue. It calls `rememberForResurrect(trashDeleteTaskIds(...))` for this.
@@ -37,7 +37,7 @@ This package reads and writes the sync configuration row. The row lives in the D
 - `get-set.ts:getSyncConfig` reads `syncMetadata`. `get-set.ts:updateSyncConfig` reads and writes `syncMetadata` in one `rw` transaction.
 - `get-set.ts:getSyncStatus` reads `syncMetadata` and counts `syncQueue`.
 - `enable.ts:enableSync` calls `getSyncQueue().populateFromExistingTasks()`, which writes sync queue entries. It logs through the `SYNC_CONFIG` logger.
-- `disable.ts:disableSync` writes `syncMetadata`, then clears `syncQueue` and `syncHistory`. It reads the `sync_config` row inside that transaction. With no row it writes nothing to IndexedDB, and it still calls `clearPocketBase()` and `clearBrowserCaches()`. The queue and history stay, and no Trash delete is remembered.
+- `disable.ts:disableSync` writes `syncMetadata`, then clears `syncQueue` and `syncHistory`. A refused sign-out does neither, and it keeps the token. It reads the `sync_config` row inside that transaction. With no row it writes nothing to IndexedDB, and it still calls `clearPocketBase()` and `clearBrowserCaches()`. The queue and history stay, and no Trash delete is remembered.
 - `disable.ts:disableSync` calls `clearPocketBase()`, which clears the PocketBase auth token and its localStorage entry.
 - `disable.ts:clearBrowserCaches` calls `clearAppCaches()` from `lib/browser-cache.ts`. A failure there is logged as a warning and does not stop the sign-out.
 

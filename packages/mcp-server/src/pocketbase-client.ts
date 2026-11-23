@@ -1,10 +1,3 @@
-/**
- * PocketBase client for MCP server
- *
- * Creates an authenticated PocketBase instance using the auth token
- * from the MCP server configuration.
- */
-
 import PocketBase from 'pocketbase';
 import { redactPocketBaseHost } from './api/client.js';
 import { SuperuserPrincipalError } from './errors.js';
@@ -37,9 +30,6 @@ function parseRetryAfterMs(value: string | null): number | null {
   return Number.isNaN(date) ? null : Math.max(0, date - Date.now());
 }
 
-/**
- * Get or create an authenticated PocketBase client
- */
 export function getPocketBase(config: GsdConfig): PocketBase {
   if (!pbInstance || pbUrl !== config.pocketBaseUrl) {
     pbInstance?.authStore.clear();
@@ -179,9 +169,6 @@ export function clearPocketBase(): void {
   pbToken = '';
 }
 
-/**
- * Get the current user's ID from the auth store
- */
 export function getCurrentUserId(config: GsdConfig): string {
   const pb = getPocketBase(config);
   const model = pb.authStore.record;

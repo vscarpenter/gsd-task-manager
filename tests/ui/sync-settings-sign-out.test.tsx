@@ -1,30 +1,34 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+/**
+ * Sign-out on a real database. It discards the sync queue, so each test reads
+ * back what the user kept. Only PocketBase and toasts are faked.
+ */
+import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 import { SyncSettings } from "@/components/settings/sync-settings";
-import { disableSync, getSyncStatus } from "@/lib/sync/config";
-
-vi.mock("@/lib/sync/config", () => ({
-  getAutoSyncConfig: vi.fn().mockResolvedValue({ enabled: true, intervalMinutes: 2 }),
-  updateAutoSyncConfig: vi.fn().mockResolvedValue(undefined),
-  disableSync: vi.fn().mockResolvedValue(undefined),
-  getSyncStatus: vi.fn(),
-}));
-
-vi.mock("@/lib/sync/pb-account-deletion", () => ({
-  deleteRemoteAccountAndTasks: vi.fn(),
-}));
-
-vi.mock("@/lib/reset-everything", () => ({
-  resetEverything: vi.fn(),
-  reloadAfterReset: vi.fn(),
-}));
+import { useLogout } from "@/components/sync/use-logout";
+import { getDb } from "@/lib/db";
+import { getSyncQueue } from "@/lib/sync/queue";
+import { createMockSyncConfig } from "@/tests/fixtures";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-
-vi.mock("@/lib/logger", () => ({
-  createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
+vi.mock("@/lib/sync/pocketbase-client", () => ({
+  clearPocketBase: vi.fn(),
+  getPocketBase: () => ({ authStore: { token: "", isValid: false, onChange: () => () => {} } }),
 }));
+
+async function queueChanges(...taskIds: string[]): Promise<void> {
+  for (const taskId of taskIds) await getSyncQueue().enqueue("delete", taskId, null);
+}
+
+async function queued(): Promise<number> {
+  return (await getDb().syncQueue.toArray()).length;
+}
+
+async function isSignedIn(): Promise<boolean | undefined> {
+  return ((await getDb().syncMetadata.get("sync_config")) as { enabled?: boolean } | undefined)?.enabled;
+}
 
 function renderSettings() {
   return render(
@@ -36,73 +40,153 @@ function renderSettings() {
   );
 }
 
-describe("SyncSettings sign out", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(getSyncStatus).mockResolvedValue({
-      enabled: true,
-      email: "signed-in@example.com",
-      lastSyncAt: null,
-      pendingCount: 0,
-      deviceId: "test-device",
-    });
-  });
+async function clickSignOut(name = "Sign out"): Promise<void> {
+  await userEvent.click(await screen.findByRole("button", { name }));
+}
 
-  it("shows_the_signed_in_account_and_a_sign_out_button", async () => {
+beforeEach(async () => {
+  const db = getDb();
+  await Promise.all(db.tables.map((table) => table.clear()));
+  await db.syncMetadata.put(createMockSyncConfig({ userId: "user-1", email: "signed-in@example.com" }));
+  vi.mocked(toast.success).mockClear();
+  vi.mocked(toast.error).mockClear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("sign out in Settings", () => {
+  it("shows the signed-in account and a sign-out button", async () => {
     renderSettings();
 
     expect(await screen.findByText("signed-in@example.com")).toBeInTheDocument();
-    expect(
-      await screen.findByRole("button", { name: /sign out/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 
-  it("signs_out_immediately_when_nothing_is_pending", async () => {
-    const user = userEvent.setup();
+  it("signs out at once when nothing is waiting", async () => {
     renderSettings();
 
-    await user.click(await screen.findByRole("button", { name: /sign out/i }));
+    await clickSignOut();
 
-    expect(disableSync).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith("Signed out"));
+    expect(await isSignedIn()).toBe(false);
   });
 
-  it("confirms_before_discarding_pending_changes", async () => {
-    vi.mocked(getSyncStatus).mockResolvedValue({
-      enabled: true,
-      email: "signed-in@example.com",
-      lastSyncAt: null,
-      pendingCount: 3,
-      deviceId: "test-device",
-    });
-    const user = userEvent.setup();
+  it("asks before it discards, then discards what the user agreed to", async () => {
+    await queueChanges("a", "b", "c");
     renderSettings();
 
-    await user.click(await screen.findByRole("button", { name: /sign out/i }));
+    await clickSignOut();
+    expect(await screen.findByText(/3 unsynchronized changes/)).toBeInTheDocument();
+    expect(await queued()).toBe(3);
 
-    // disableSync clears the sync queue, so unsynced work must not vanish on
-    // a single click.
-    expect(disableSync).not.toHaveBeenCalled();
-    expect(screen.getByText(/3 unsynchronized changes/i)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /sign out anyway/i }));
-
-    expect(disableSync).toHaveBeenCalledOnce();
+    await clickSignOut("Sign out anyway");
+    await vi.waitFor(() => expect(toast.success).toHaveBeenCalledWith("Signed out"));
+    expect(await queued()).toBe(0);
   });
 
-  it("hides_sign_out_when_no_account_is_connected", async () => {
-    vi.mocked(getSyncStatus).mockResolvedValue({
-      enabled: false,
-      email: null,
-      lastSyncAt: null,
-      pendingCount: 0,
-      deviceId: null,
-    });
+  it("keeps the session and the queue when it can't count unsynced changes", async () => {
+    await queueChanges("a");
+    renderSettings();
+    await screen.findByRole("button", { name: "Sign out" });
+    vi.spyOn(getDb().syncQueue, "count").mockRejectedValue(new Error("IndexedDB is busy"));
+
+    await clickSignOut();
+
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalledWith("Sign out failed"));
+    expect(await queued()).toBe(1);
+    expect(await isSignedIn()).toBe(true);
+  });
+
+  it("asks when its first count fails and sign-out's own count works", async () => {
+    await queueChanges("a");
+    renderSettings();
+    await screen.findByRole("button", { name: "Sign out" });
+    vi.spyOn(getDb().syncQueue, "count").mockRejectedValueOnce(new Error("IndexedDB is busy"));
+
+    await clickSignOut();
+
+    expect(await screen.findByText(/1 unsynchronized change\./)).toBeInTheDocument();
+    expect(await queued()).toBe(1);
+  });
+
+  it("asks again when more changes arrive while it's asking", async () => {
+    await queueChanges("a");
+    renderSettings();
+    await clickSignOut();
+    await screen.findByText(/1 unsynchronized change\./);
+
+    await queueChanges("b");
+    await clickSignOut("Sign out anyway");
+
+    expect(await screen.findByText(/2 unsynchronized changes/)).toBeInTheDocument();
+    expect(await queued()).toBe(2);
+    expect(await isSignedIn()).toBe(true);
+  });
+
+  it("puts focus back on Cancel when it asks again", async () => {
+    await queueChanges("a");
+    renderSettings();
+    await clickSignOut();
+    await screen.findByText(/1 unsynchronized change\./);
+
+    await queueChanges("b");
+    await clickSignOut("Sign out anyway");
+    await screen.findByText(/2 unsynchronized changes/);
+
+    await vi.waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus());
+  });
+
+  it("renders a new confirmation when it asks again, so the new count is announced", async () => {
+    await queueChanges("a");
+    renderSettings();
+    await clickSignOut();
+    const first = await screen.findByRole("group", { name: "Confirm sign out" });
+
+    await queueChanges("b");
+    await clickSignOut("Sign out anyway");
+    await screen.findByText(/2 unsynchronized changes/);
+
+    expect(screen.getByRole("group", { name: "Confirm sign out" })).not.toBe(first);
+  });
+
+  it("hides sign-out when no account is connected", async () => {
+    await getDb().syncMetadata.clear();
     renderSettings();
 
-    // The auto-sync row still renders, so wait on it before asserting absence.
     expect(await screen.findByText("Auto-sync")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /sign out/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /sign out/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("sign out in the sync dialog", () => {
+  it("asks again when more changes arrive while it's asking", async () => {
+    await queueChanges("a");
+    const { result } = renderHook(() =>
+      useLogout({ onSignedOut: vi.fn(), setIsLoading: vi.fn(), setError: vi.fn() }),
+    );
+    await act(() => result.current.handleLogout());
+    expect(result.current.pendingChanges).toBe(1);
+
+    await queueChanges("b");
+    await act(() => result.current.performLogout());
+
+    expect(result.current.pendingChanges).toBe(2);
+    expect(await queued()).toBe(2);
+    expect(await isSignedIn()).toBe(true);
+  });
+
+  it("clears an older error when it asks again", async () => {
+    await queueChanges("a");
+    const setError = vi.fn();
+    const { result } = renderHook(() => useLogout({ onSignedOut: vi.fn(), setIsLoading: vi.fn(), setError }));
+    await act(() => result.current.handleLogout());
+    setError.mockClear();
+
+    await queueChanges("b");
+    await act(() => result.current.performLogout());
+
+    expect(setError).toHaveBeenCalledWith(null);
   });
 });

@@ -3,7 +3,6 @@
  * Modularized from analytics.ts (419 lines → ~100 lines per module)
  */
 
-// Type exports
 export type {
   QuadrantId,
   ProductivityMetrics,
@@ -14,17 +13,14 @@ export type {
 
 export type { StreakData } from './streaks.js';
 
-// Core metrics functions
 export {
   calculateMetrics,
   getQuadrantPerformance,
   getUpcomingDeadlines,
 } from './metrics.js';
 
-// Streak functions
 export { getStreakData } from './streaks.js';
 
-// Aggregation functions
 export { generateInsightsSummary } from './aggregator.js';
 
 // Date utilities (internal use but exported for testing)

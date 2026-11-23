@@ -7,9 +7,6 @@ import { containerOf, quadrantTitle, resolveDropQuadrant } from "@/lib/dnd-drop-
 import { DND_CONFIG } from "@/lib/constants";
 import { ErrorActions, ErrorMessages } from "@/lib/error-logger";
 
-/**
- * Error handler type for drag-and-drop operations
- */
 export type DragErrorHandler = (
   error: unknown,
   context: {
@@ -84,9 +81,6 @@ export function useDragAndDrop(onError: DragErrorHandler) {
     setStatusMessage("");
   };
 
-  /**
-   * Handle drag end event - moves task to new quadrant
-   */
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;

@@ -6,50 +6,35 @@ import { calculateTagStatistics } from "./tags";
 import type { TagStatistic } from "./types";
 export type { TagStatistic } from "./types";
 
-/**
- * Core metrics for productivity tracking
- */
 export interface ProductivityMetrics {
-  // Completion counts
   completedToday: number;
   completedThisWeek: number;
   completedThisMonth: number;
 
-  // Streaks
   activeStreak: number; // Consecutive days with completed tasks
   longestStreak: number;
 
-  // Rates and distributions
   completionRate: number; // Percentage of completed vs total tasks
   quadrantDistribution: Record<QuadrantId, number>;
 
-  // Tag statistics
   tagStats: TagStatistic[];
 
-  // Due date tracking
   overdueCount: number;
   dueTodayCount: number;
   dueThisWeekCount: number;
   noDueDateCount: number;
 
-  // Task counts
   activeTasks: number;
   completedTasks: number;
   totalTasks: number;
 }
 
-/**
- * Completion trend data point
- */
 export interface TrendDataPoint {
   date: string; // ISO date string (YYYY-MM-DD)
   completed: number;
   created: number;
 }
 
-/**
- * Calculate all productivity metrics for given tasks
- */
 export function calculateMetrics(tasks: TaskRecord[]): ProductivityMetrics {
   const now = new Date();
   const today = startOfDay(now);
@@ -78,9 +63,6 @@ export function calculateMetrics(tasks: TaskRecord[]): ProductivityMetrics {
   };
 }
 
-/**
- * Calculate completion counts for different time periods
- */
 function calculateCompletionCounts(completed: TaskRecord[], now: Date, today: Date) {
   return {
     completedToday: countCompletedInPeriod(completed, today),
@@ -103,9 +85,6 @@ function calculateCompletionRate(total: number, completed: number): number {
   return total > 0 ? Math.round((completed / total) * 100) : 0;
 }
 
-/**
- * Build quadrant distribution for active tasks
- */
 function buildQuadrantDistribution(active: TaskRecord[]): Record<QuadrantId, number> {
   const distribution: Record<QuadrantId, number> = {
     "urgent-important": 0,
@@ -121,9 +100,6 @@ function buildQuadrantDistribution(active: TaskRecord[]): Record<QuadrantId, num
   return distribution;
 }
 
-/**
- * Calculate due date-related metrics
- */
 function calculateDueDateMetrics(active: TaskRecord[], today: Date) {
   return {
     overdueCount: countOverdue(active, today),
@@ -133,39 +109,24 @@ function calculateDueDateMetrics(active: TaskRecord[], today: Date) {
   };
 }
 
-/**
- * Count overdue tasks
- */
 function countOverdue(tasks: TaskRecord[], today: Date): number {
   return tasks.filter(t => t.dueDate && isBefore(new Date(t.dueDate), today)).length;
 }
 
-/**
- * Count tasks due today
- */
 function countDueToday(tasks: TaskRecord[], today: Date): number {
   return tasks.filter(t => isDueToday(t, today)).length;
 }
 
-/**
- * Count tasks due this week
- */
 function countDueThisWeek(tasks: TaskRecord[], today: Date): number {
   return tasks.filter(t => isDueThisWeek(t, today)).length;
 }
 
-/**
- * Check if task is due today
- */
 function isDueToday(task: TaskRecord, today: Date): boolean {
   if (!task.dueDate) return false;
   const dueDate = startOfDay(new Date(task.dueDate));
   return dueDate.getTime() === today.getTime();
 }
 
-/**
- * Check if task is due this week
- */
 function isDueThisWeek(task: TaskRecord, today: Date): boolean {
   if (!task.dueDate) return false;
   const dueDate = new Date(task.dueDate);
@@ -195,9 +156,6 @@ export function getQuadrantPerformance(tasks: TaskRecord[]): Array<{
     .sort((a, b) => b.completionRate - a.completionRate);
 }
 
-/**
- * Calculate statistics for a single quadrant
- */
 function calculateQuadrantStats(tasks: TaskRecord[], quadrantId: QuadrantId) {
   const quadrantTasks = tasks.filter(t => t.quadrant === quadrantId);
   const completed = quadrantTasks.filter(t => t.completed).length;

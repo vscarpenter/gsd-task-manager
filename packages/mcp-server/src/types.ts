@@ -1,9 +1,8 @@
 import { z } from 'zod';
 
-// Configuration
 export interface GsdConfig {
   pocketBaseUrl: string;
-  authToken: string; // PocketBase auth token
+  authToken: string;
 }
 
 // PocketBase task record (snake_case, as stored in PB)
@@ -85,6 +84,12 @@ export interface Task {
   updatedAt: string;
 }
 
+/** A hand-written copy of T that must name every field, so a new one can't be left out. */
+type EveryField<T> = { [K in keyof Required<T>]: T[K] };
+
+/** Compiles only when a copy leaves nothing unnamed, and the error lists what it left. */
+type NoneUnnamed<Unnamed extends never> = Unnamed;
+
 // Task filters
 export interface TaskFilters {
   quadrant?: string;
@@ -104,7 +109,6 @@ export type SyncStatus = {
   lastSyncAt: string | null;
 };
 
-// Task stats
 export interface TaskStats {
   totalTasks: number | null;
   activeTasks: number | null;
@@ -120,11 +124,8 @@ function isValidRecurrence(value: string): value is Task['recurrence'] {
   return VALID_RECURRENCES.has(value as Task['recurrence']);
 }
 
-/**
- * Convert a PocketBase task record to frontend Task format
- */
 export function pbTaskToTask(pb: PBTask): Task {
-  return {
+  const task = {
     id: pb.task_id,
     title: pb.title,
     description: pb.description || '',
@@ -150,17 +151,16 @@ export function pbTaskToTask(pb: PBTask): Task {
     timeEntries: pb.time_entries ?? [],
     createdAt: pb.client_created_at || pb.created,
     updatedAt: pb.client_updated_at || pb.updated,
-  };
+  } satisfies Task;
+  type _Named = NoneUnnamed<Exclude<keyof Task, keyof typeof task>>;
+  return task;
 }
 
-/**
- * Convert a Task to PocketBase record fields for create/update
- */
 export function taskToPBFields(
   task: Task,
   ownerId: string,
   deviceId: string
-): Partial<PBTask> {
+): EveryField<Omit<PBTask, 'id' | 'created' | 'updated'>> {
   return {
     task_id: task.id,
     owner: ownerId,
@@ -224,7 +224,7 @@ function focusPick(pb: PBTask): { focusDate?: string; focusRank?: number } {
 }
 
 /** PocketBase never stores a null number, so an unset pair is "" and 0. */
-function focusToWire(task: Task): Pick<PBTask, 'focus_date' | 'focus_rank'> {
+function focusToWire(task: Task): EveryField<Pick<PBTask, 'focus_date' | 'focus_rank'>> {
   return { focus_date: task.focusDate ?? '', focus_rank: task.focusRank ?? 0 };
 }
 

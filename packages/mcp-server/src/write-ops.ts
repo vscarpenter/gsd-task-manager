@@ -1,10 +1,3 @@
-/**
- * Write operations module - main entry point
- *
- * Re-exports all write operation functions from modular submodules.
- */
-
-// Export type definitions
 export type {
   CreateTaskInput,
   UpdateTaskInput,
@@ -12,7 +5,6 @@ export type {
   WriteOptions,
 } from './write-ops/types.js';
 
-// Export helper functions
 export {
   generateTaskId,
   deriveQuadrant,
@@ -22,7 +14,6 @@ export {
   getAuthInfo,
 } from './write-ops/helpers.js';
 
-// Export task operations and result types
 export {
   createTask,
   updateTask,
@@ -33,5 +24,4 @@ export {
   type DeleteTaskResult,
 } from './write-ops/task-operations.js';
 
-// Export bulk operations
 export { bulkUpdateTasks } from './write-ops/bulk-operations.js';

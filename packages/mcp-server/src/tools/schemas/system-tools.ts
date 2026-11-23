@@ -1,9 +1,5 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
-/**
- * System tool schemas for configuration validation and help
- */
-
 export const validateConfigTool: Tool = {
   name: 'validate_config',
   description:

@@ -226,7 +226,7 @@ describe('pull contract: sign-in and sign-out (C4-1)', () => {
   it("sign-out on the current build doesn't trigger a backfill", async () => {
     await seed({ config: signedIn(SYNC_CONFIG.PULL_CURSOR_VERSION) });
 
-    await disableSync();
+    await disableSync('everything');
     await persistSyncConfig(AUTH);
 
     await expect(storedVersion()).resolves.toBe(SYNC_CONFIG.PULL_CURSOR_VERSION);
@@ -235,7 +235,7 @@ describe('pull contract: sign-in and sign-out (C4-1)', () => {
   it('sign-out while a backfill is owed keeps it owed', async () => {
     await seed({ config: signedIn(2), local: [localRow(SAVED)] });
 
-    await disableSync();
+    await disableSync('everything');
 
     await expect(storedVersion()).resolves.toBe(2);
   });

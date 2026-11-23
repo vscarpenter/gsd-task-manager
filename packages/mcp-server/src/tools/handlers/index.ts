@@ -1,8 +1,3 @@
-/**
- * Tool handler dispatcher
- * Routes tool calls to appropriate handler functions
- */
-
 import type { GsdConfig } from '../../tools.js';
 import {
   handleGetSyncStatus,
@@ -39,7 +34,6 @@ import {
   type ToolName,
 } from './input-schemas.js';
 
-// Re-export all handlers
 export * from './read-handlers.js';
 export * from './top-three-handler.js';
 export * from './analytics-handlers.js';
@@ -114,13 +108,6 @@ function isPocketBaseStatusError(error: unknown): boolean {
   return typeof (error as { status?: unknown } | null)?.status === 'number';
 }
 
-/**
- * Handle a tool call request
- * @param name - Tool name
- * @param args - Tool arguments
- * @param config - GSD configuration
- * @returns Tool response content
- */
 export async function handleToolCall(
   name: string,
   args: Record<string, unknown>,

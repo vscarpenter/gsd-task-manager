@@ -4,16 +4,13 @@ import { createLogger } from "@/lib/logger";
 import { readDefaultReminder } from "@/lib/notifications/default-reminder";
 import { resolveQuadrantId } from "@/lib/quadrants";
 import { taskDraftSchema } from "@/lib/schema";
-import type { TaskDraft, TaskRecord } from "@/lib/types";
+import type { EveryField, TaskDraft, TaskRecord } from "@/lib/types";
 import { isoNow, formatErrorMessage } from "@/lib/utils";
 import { runTaskSyncTransaction } from "./helpers";
 import { TaskValidationError } from "./validation-error";
 
 const logger = createLogger("TASK_CRUD");
 
-/**
- * Update an existing task with partial updates
- */
 export async function updateTask(
   id: string,
   updates: Partial<TaskDraft>
@@ -98,7 +95,7 @@ function mergeTaskUpdates(
   existing: TaskRecord,
   updates: Partial<TaskDraft>,
   defaultReminder: number
-): TaskDraft {
+): EveryField<TaskDraft> {
   return {
     title: updates.title ?? existing.title,
     description: updates.description ?? existing.description,
@@ -119,9 +116,6 @@ function mergeTaskUpdates(
   };
 }
 
-/**
- * Build the updated task record with notification state handling
- */
 function buildUpdatedRecord(
   existing: TaskRecord,
   validated: TaskDraft,

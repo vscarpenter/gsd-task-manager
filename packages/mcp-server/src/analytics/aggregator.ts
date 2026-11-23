@@ -1,14 +1,7 @@
-/**
- * Data aggregation utilities for analytics insights
- */
-
 import type { Task } from '../tools.js';
 import { calculateMetrics, getQuadrantPerformance, getUpcomingDeadlines } from './metrics.js';
 import type { ProductivityMetrics, QuadrantPerformance, UpcomingDeadlines } from './metrics.js';
 
-/**
- * Generate AI-friendly task insights summary
- */
 export function generateInsightsSummary(tasks: Task[]): string {
   const metrics = calculateMetrics(tasks);
   const quadrants = getQuadrantPerformance(tasks);
@@ -26,9 +19,6 @@ export function generateInsightsSummary(tasks: Task[]): string {
   return insights.join('\n');
 }
 
-/**
- * Add overall task overview insights
- */
 function addOverviewInsights(insights: string[], metrics: ProductivityMetrics): void {
   insights.push(
     `Task Overview: ${metrics.totalTasks} total tasks (${metrics.activeTasks} active, ${metrics.completedTasks} completed)`
@@ -36,9 +26,6 @@ function addOverviewInsights(insights: string[], metrics: ProductivityMetrics): 
   insights.push(`Completion Rate: ${metrics.completionRate}%`);
 }
 
-/**
- * Add streak insights
- */
 function addStreakInsights(insights: string[], metrics: ProductivityMetrics): void {
   if (metrics.activeStreak > 0) {
     const streakDays = metrics.activeStreak > 1 ? 's' : '';
@@ -48,9 +35,6 @@ function addStreakInsights(insights: string[], metrics: ProductivityMetrics): vo
   }
 }
 
-/**
- * Add recent activity insights
- */
 function addActivityInsights(insights: string[], metrics: ProductivityMetrics): void {
   if (metrics.completedToday > 0) {
     const taskPlural = metrics.completedToday > 1 ? 's' : '';
@@ -58,9 +42,6 @@ function addActivityInsights(insights: string[], metrics: ProductivityMetrics): 
   }
 }
 
-/**
- * Add deadline insights
- */
 function addDeadlineInsights(insights: string[], deadlines: UpcomingDeadlines): void {
   if (deadlines.overdue.length > 0) {
     const taskPlural = deadlines.overdue.length > 1 ? 's' : '';
@@ -73,9 +54,6 @@ function addDeadlineInsights(insights: string[], deadlines: UpcomingDeadlines): 
   }
 }
 
-/**
- * Add quadrant distribution insights
- */
 function addQuadrantInsights(insights: string[], quadrants: QuadrantPerformance[]): void {
   // getQuadrantPerformance sorts by completion rate, so pick by active count.
   const topQuadrant = quadrants.reduce<QuadrantPerformance | undefined>(
@@ -89,9 +67,6 @@ function addQuadrantInsights(insights: string[], quadrants: QuadrantPerformance[
   }
 }
 
-/**
- * Add tag usage insights
- */
 function addTagInsights(insights: string[], metrics: ProductivityMetrics): void {
   if (metrics.tagStats.length > 0) {
     const topTag = metrics.tagStats[0];

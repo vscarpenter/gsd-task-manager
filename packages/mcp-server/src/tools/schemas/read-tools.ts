@@ -1,10 +1,5 @@
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
-/**
- * Read-only tool schemas for accessing task data and metadata
- * These tools do not modify any data
- */
-
 export const getSyncStatusTool: Tool = {
   name: 'get_sync_status',
   description:

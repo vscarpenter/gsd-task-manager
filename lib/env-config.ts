@@ -6,13 +6,9 @@
 export type Environment = 'development' | 'production';
 
 export interface EnvironmentConfig {
-  /** PocketBase server URL */
   pocketBaseUrl: string;
-  /** Whether running in development mode */
   isDevelopment: boolean;
-  /** Whether running in production mode */
   isProduction: boolean;
-  /** Current environment */
   environment: Environment;
 }
 
@@ -20,9 +16,6 @@ const KNOWN_REMOTE_POCKETBASE_HOSTS = new Map<string, string>([
   ['gsd.vinny.dev', 'https://api.vinny.io'],
 ]);
 
-/**
- * Detect current environment from hostname
- */
 function detectEnvironment(): Environment {
   if (typeof window === 'undefined') {
     // SSR/SSG - default to production
@@ -78,9 +71,6 @@ function resolvePocketBaseUrl(environment: Environment): string {
     : window.location.origin;
 }
 
-/**
- * Get environment configuration based on current hostname
- */
 export function getEnvironmentConfig(): EnvironmentConfig {
   const environment = detectEnvironment();
 

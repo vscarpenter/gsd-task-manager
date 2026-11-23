@@ -25,9 +25,6 @@ export class BackgroundSyncManager {
     private onlineHandler: (() => void) | null = null;
     private config: BackgroundSyncConfig | null = null;
 
-    /**
-     * Start background sync scheduling.
-     */
     async start(config: BackgroundSyncConfig, _deviceId?: string): Promise<void> {
         if (this.isActive) {
             logger.warn('Background sync already running, stopping previous instance');
@@ -57,7 +54,6 @@ export class BackgroundSyncManager {
             this.setupOnlineListener();
         }
 
-        // Perform initial sync after a short delay
         setTimeout(() => {
             if (this.isActive) {
                 this.performSyncIfNeeded('initial');
@@ -65,9 +61,6 @@ export class BackgroundSyncManager {
         }, SYNC_CONFIG.INITIAL_SYNC_DELAY_MS);
     }
 
-    /**
-     * Stop all background sync scheduling activities.
-     */
     stop(): void {
         if (!this.isActive) return;
 
@@ -103,9 +96,6 @@ export class BackgroundSyncManager {
         return this.isActive;
     }
 
-    /**
-     * Schedule debounced sync after task changes
-     */
     scheduleDebouncedSync(): void {
         if (!this.isActive || !this.config) return;
 
@@ -190,7 +180,6 @@ export class BackgroundSyncManager {
     }
 }
 
-// Singleton instance
 let managerInstance: BackgroundSyncManager | null = null;
 
 export function getBackgroundSyncManager(): BackgroundSyncManager {
