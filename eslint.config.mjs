@@ -1,6 +1,7 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
+import instantOrder from "./config/eslint/instant-order.mjs";
 
 const config = [
     {
@@ -90,6 +91,12 @@ const config = [
         rules: {
             "react-hooks/incompatible-library": "off",
         },
+    },
+    {
+        files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "packages/mcp-server/src/**/*.ts"],
+        ignores: ["**/__tests__/**"],
+        plugins: { "gsd-time": instantOrder },
+        rules: { "gsd-time/instant-order": "error" },
     },
     {
         files: ["packages/mcp-server/src/tools/**/*.ts"],
