@@ -97,6 +97,8 @@ const config = [
         ignores: ["**/__tests__/**"],
         plugins: { "gsd-time": instantOrder },
         rules: { "gsd-time/instant-order": "error" },
+    },
+    {
         files: ["packages/mcp-server/src/tools/**/*.ts"],
         rules: {
             "no-restricted-properties": [
