@@ -9,9 +9,6 @@ import type { Route } from 'next';
  * @see https://nextjs.org/docs/app/api-reference/next-config-js/typedRoutes
  */
 
-/**
- * Primary routes (canonical paths)
- */
 export const ROUTES = {
   /** Home page - Eisenhower Matrix view */
   HOME: '/' as Route,
@@ -25,10 +22,8 @@ export const ROUTES = {
   /** The weekly sweep: one task at a time through what needs a decision */
   SWEEP: '/sweep' as Route,
 
-  /** Application settings */
   SETTINGS: '/settings' as Route,
 
-  /** Product about page */
   ABOUT: '/about' as Route,
 
 } as const;
@@ -73,7 +68,4 @@ export function isRouteActive(
   return variants.includes(pathname);
 }
 
-/**
- * Type-safe route keys
- */
 export type RouteKey = keyof typeof ROUTES;

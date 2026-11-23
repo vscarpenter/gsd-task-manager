@@ -142,7 +142,6 @@ export function useSyncAuthDialog({ isOpen, onSuccess, syncEnabled }: UseSyncAut
   };
 }
 
-/** Load sync config from IndexedDB and validate token */
 async function loadSyncStatus(
   cancellation: CancellationToken,
   setters: {
@@ -177,7 +176,6 @@ async function loadSyncStatus(
   });
 }
 
-/** Check if token is valid; attempt silent refresh if expired */
 async function validateTokenAndRefresh(
   cancellation: CancellationToken,
   setters: {
@@ -193,7 +191,6 @@ async function validateTokenAndRefresh(
     return;
   }
 
-  // Token expired — attempt silent refresh
   setters.setIsRefreshing(true);
   if (cancellation.cancelled) return;
   // react-doctor-disable-next-line react-doctor/async-defer-await -- awaited value/side-effect needed before the guard; cannot defer

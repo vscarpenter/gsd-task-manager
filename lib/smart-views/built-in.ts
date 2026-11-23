@@ -1,15 +1,5 @@
-/**
- * Built-in Smart Views
- *
- * Pre-configured filter combinations for common workflows.
- * Extracted from lib/filters.ts for better code organization.
- */
-
 import type { SmartView } from "@/lib/smart-views/types";
 
-/**
- * Built-in Smart Views that come with the app
- */
 export const BUILT_IN_SMART_VIEWS: Omit<SmartView, 'id' | 'createdAt' | 'updatedAt'>[] = [
   {
     name: "Today's Focus",

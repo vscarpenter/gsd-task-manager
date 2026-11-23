@@ -17,9 +17,6 @@ export function redactPocketBaseHost(url: string): string {
   }
 }
 
-/**
- * Make authenticated API request to PocketBase
- */
 export async function apiRequest<T>(
   config: GsdConfig,
   endpoint: string,
@@ -43,9 +40,6 @@ export async function apiRequest<T>(
   return schema.parse(data);
 }
 
-/**
- * Fetch URL with network error handling and automatic retry
- */
 async function fetchWithErrorHandling(
   url: string,
   config: GsdConfig,

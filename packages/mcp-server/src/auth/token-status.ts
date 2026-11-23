@@ -51,9 +51,6 @@ function reauthInstructions(): string[] {
   ];
 }
 
-/**
- * Inspect a PocketBase JWT and return a structured health report.
- */
 export function getTokenStatus(token: string | null | undefined, now: Date = new Date()): TokenStatusResult {
   if (!token) {
     return {

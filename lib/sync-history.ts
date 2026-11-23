@@ -1,8 +1,3 @@
-/**
- * Sync history management
- * Records and queries sync operation history
- */
-
 import { getDb } from '@/lib/db';
 import { generateId } from '@/lib/id-generator';
 import type { SyncHistoryRecord } from '@/lib/types';
@@ -11,11 +6,8 @@ import { SYNC_CONFIG } from '@/lib/constants/sync';
 
 const logger = createLogger('SYNC_HISTORY');
 
-const MAX_HISTORY_RECORDS = 100; // Keep last 100 sync operations
+const MAX_HISTORY_RECORDS = 100;
 
-/**
- * Record a successful sync operation
- */
 export async function recordSyncSuccess(
   pushedCount: number,
   pulledCount: number,
@@ -48,13 +40,9 @@ export async function recordSyncSuccess(
     triggeredBy,
   });
 
-  // Clean up old records if we exceed the limit
   await cleanupOldRecords();
 }
 
-/**
- * Record a failed sync operation
- */
 export async function recordSyncError(
   errorMessage: string,
   deviceId: string,
@@ -84,7 +72,6 @@ export async function recordSyncError(
     triggeredBy,
   });
 
-  // Clean up old records if we exceed the limit
   await cleanupOldRecords();
 }
 
@@ -143,9 +130,6 @@ export async function getRecentHistory(limit: number = SYNC_CONFIG.DEFAULT_HISTO
   return records;
 }
 
-/**
- * Get sync history for a specific device
- */
 export async function getHistoryForDevice(deviceId: string, limit: number = SYNC_CONFIG.DEFAULT_HISTORY_LIMIT): Promise<SyncHistoryRecord[]> {
   const db = getDb();
 
@@ -159,9 +143,6 @@ export async function getHistoryForDevice(deviceId: string, limit: number = SYNC
   return records;
 }
 
-/**
- * Get sync history statistics
- */
 export async function getHistoryStats(): Promise<{
   totalSyncs: number;
   successfulSyncs: number;
@@ -194,9 +175,6 @@ export async function getHistoryStats(): Promise<{
   return stats;
 }
 
-/**
- * Clear all sync history
- */
 export async function clearHistory(): Promise<void> {
   const db = getDb();
   await db.syncHistory.clear();

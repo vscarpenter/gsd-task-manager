@@ -1,25 +1,12 @@
-/**
- * Sync-related constants
- * Centralizes sync configuration values for consistency and maintenance
- */
-
-/**
- * Sync operation configuration
- */
 export const SYNC_CONFIG = {
-  /** Polling interval for pending operation count (2 seconds) */
   PENDING_COUNT_POLL_INTERVAL_MS: 2000,
 
-  /** Retry countdown update interval (1 second) */
   COUNTDOWN_UPDATE_INTERVAL_MS: 1000,
 
-  /** Cooldown between health issue notifications (5 minutes) */
   NOTIFICATION_COOLDOWN_MS: 5 * 60 * 1000,
 
-  /** Health check interval (5 minutes) */
   HEALTH_CHECK_INTERVAL_MS: 5 * 60 * 1000,
 
-  /** Initial health check delay (10 seconds) */
   INITIAL_HEALTH_CHECK_DELAY_MS: 10000,
 
   /** Initial sync delay after starting background sync (10 seconds) */
@@ -28,9 +15,7 @@ export const SYNC_CONFIG = {
   /** Default auto-sync interval in minutes for new sync configurations */
   DEFAULT_AUTO_SYNC_INTERVAL_MINUTES: 2,
 
-  /** Default limit for sync history queries */
   DEFAULT_HISTORY_LIMIT: 50,
-  /** Threshold for considering a queued operation stale (1 hour) */
   STALE_OPERATION_THRESHOLD_MS: 60 * 60 * 1000,
 
   /** Maximum number of consecutive sync retries before giving up */
@@ -80,9 +65,6 @@ export const SYNC_CONFIG = {
   REMOTE_TASK_PAGE_SIZE: 200,
 } as const;
 
-/**
- * Toast notification durations for sync operations
- */
 export const SYNC_TOAST_DURATION = {
   /** Short success messages (3 seconds) */
   SHORT: 3000,

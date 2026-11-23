@@ -5,16 +5,10 @@ import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("NOTIFICATIONS");
 
-/**
- * Check if the browser supports notifications
- */
 export function isNotificationSupported(): boolean {
   return typeof window !== "undefined" && "Notification" in window;
 }
 
-/**
- * Check current notification permission status
- */
 export function checkNotificationPermission(): NotificationPermission {
   if (!isNotificationSupported()) {
     return "denied";
@@ -60,16 +54,13 @@ export async function shouldAskForPermission(): Promise<boolean> {
 
   const permission = checkNotificationPermission();
   if (permission !== "default") {
-    return false; // Already granted or denied
+    return false;
   }
 
   const settings = await getNotificationSettings();
   return !settings.permissionAsked;
 }
 
-/**
- * Check if current time is within quiet hours
- */
 export function isInQuietHours(settings: { quietHoursStart?: string; quietHoursEnd?: string }): boolean {
   if (!settings.quietHoursStart || !settings.quietHoursEnd) {
     return false;

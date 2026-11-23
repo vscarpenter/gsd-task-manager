@@ -74,9 +74,6 @@ export function isSuperuserAuthToken(token: string): boolean {
   }
 }
 
-/**
- * Configuration schema for GSD MCP Server (PocketBase)
- */
 export const configSchema = z.object({
   pocketBaseUrl: z.url().refine(isSafePocketBaseUrl, {
     message: UNSAFE_POCKETBASE_URL_MESSAGE,
@@ -88,9 +85,6 @@ export const configSchema = z.object({
 
 export type ConfigSchema = z.infer<typeof configSchema>;
 
-/**
- * Load and validate configuration from environment variables
- */
 export function loadConfig(): GsdConfig {
   try {
     return configSchema.parse({

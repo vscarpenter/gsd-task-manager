@@ -23,12 +23,10 @@ function wouldCreateCircularDependency(
   dependencyId: string,
   allTasks: Task[]
 ): boolean {
-  // Can't depend on itself (trivial cycle)
   if (taskId === dependencyId) {
     return true;
   }
 
-  // Build a map of task dependencies for O(1) lookup during BFS
   const dependencyMap = new Map<string, string[]>();
   allTasks.forEach((task) => {
     dependencyMap.set(task.id, task.dependencies || []);
@@ -46,12 +44,10 @@ function wouldCreateCircularDependency(
     }
     visited.add(currentId);
 
-    // If we found a path back to the original task, it's circular
     if (currentId === taskId) {
       return true;
     }
 
-    // Add all dependencies of the current task to the queue
     const deps = dependencyMap.get(currentId) || [];
     queue.push(...deps);
   }
@@ -73,12 +69,10 @@ export function validateDependencies(
   dependencies: string[],
   allTasks: Task[]
 ): { valid: boolean; error?: string } {
-  // Check for self-reference (only for existing tasks)
   if (taskId && dependencies.includes(taskId)) {
     return { valid: false, error: 'A task cannot depend on itself' };
   }
 
-  // Check that all dependency tasks exist
   const taskIds = new Set(allTasks.map((t) => t.id));
   const missingTasks = dependencies.filter((depId) => !taskIds.has(depId));
   if (missingTasks.length > 0) {
@@ -88,7 +82,6 @@ export function validateDependencies(
     };
   }
 
-  // Check that dependency tasks are not completed
   const completedDeps = dependencies.filter((depId) => {
     const task = allTasks.find((t) => t.id === depId);
     return task?.completed;
@@ -103,7 +96,6 @@ export function validateDependencies(
     };
   }
 
-  // Check for circular dependencies (only for existing tasks)
   if (taskId) {
     const tasksById = new Map(allTasks.map((t) => [t.id, t]));
     for (const depId of dependencies) {
@@ -137,9 +129,6 @@ export function getAffectedByDeletion(
   );
 }
 
-/**
- * Format dependency validation error for user display
- */
 export function formatDependencyError(error: string): string {
   return `❌ Dependency validation failed\n\n${error}\n\nPlease check your task dependencies.`;
 }

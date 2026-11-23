@@ -1,8 +1,3 @@
-/**
- * Retry utilities with exponential backoff
- * Handles transient network failures and 5xx server errors
- */
-
 export interface RetryConfig {
   maxRetries: number;
   baseDelayMs: number;
@@ -17,9 +12,6 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   retryableStatuses: [500, 502, 503, 504, 429],
 };
 
-/**
- * Sleep for specified milliseconds
- */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -31,19 +23,14 @@ export function sleep(ms: number): Promise<void> {
  * @returns Delay in milliseconds
  */
 export function calculateBackoffDelay(attempt: number, config: RetryConfig): number {
-  // Exponential backoff: baseDelay * 2^attempt
   const exponentialDelay = config.baseDelayMs * Math.pow(2, attempt);
 
   // Add jitter (0-25% of delay) to prevent thundering herd
   const jitter = exponentialDelay * Math.random() * 0.25;
 
-  // Cap at maxDelay
   return Math.min(exponentialDelay + jitter, config.maxDelayMs);
 }
 
-/**
- * Check if an error is retryable (network error)
- */
 export function isRetryableNetworkError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
 
@@ -58,9 +45,6 @@ export function isRetryableNetworkError(error: unknown): boolean {
   );
 }
 
-/**
- * Check if HTTP status code is retryable
- */
 export function isRetryableStatus(status: number, config: RetryConfig): boolean {
   return config.retryableStatuses.includes(status);
 }
@@ -84,7 +68,6 @@ export async function fetchWithRetry(
       // react-doctor-disable-next-line react-doctor/async-await-in-loop -- intentionally sequential/throttled (rate-limit); parallelizing risks 429s
       const response = await fetchFn();
 
-      // Check if response status is retryable
       if (isRetryableStatus(response.status, config) && attempt < config.maxRetries) {
         lastResponse = response;
         const delay = calculateBackoffDelay(attempt, config);
@@ -96,7 +79,6 @@ export async function fetchWithRetry(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
-      // Only retry network errors
       if (!isRetryableNetworkError(lastError) || attempt >= config.maxRetries) {
         throw lastError;
       }
@@ -114,9 +96,6 @@ export async function fetchWithRetry(
   throw lastError || new Error('Retry failed with unknown error');
 }
 
-/**
- * Format retry information for error messages
- */
 export function formatRetryInfo(attempts: number, config: RetryConfig): string {
   // config is available for future use (e.g., including max retries in message)
   void config;

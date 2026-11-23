@@ -4,25 +4,17 @@ import { TIME_MS } from "@/lib/constants";
 import { getUncompletedBlockingTasks } from "@/lib/dependencies";
 import type { FilterCriteria } from "@/lib/smart-views/types";
 
-// Re-export types for convenience
 export type { QuadrantId, RecurrenceType };
 export type { FilterCriteria, SmartView } from "@/lib/smart-views/types";
 
 // Re-export BUILT_IN_SMART_VIEWS from extracted module for backward compatibility
 export { BUILT_IN_SMART_VIEWS } from "@/lib/smart-views/built-in";
 
-// ============================================================================
-// Individual Filter Functions
-// Each function handles one filter criterion, keeping functions under 30 lines
-// ============================================================================
-
-/** Filter tasks by quadrant membership */
 function filterByQuadrants(tasks: TaskRecord[], quadrants?: QuadrantId[]): TaskRecord[] {
   if (!quadrants || quadrants.length === 0) return tasks;
   return tasks.filter(task => quadrants.includes(task.quadrant));
 }
 
-/** Filter tasks by completion status */
 function filterByStatus(tasks: TaskRecord[], status?: 'all' | 'active' | 'completed'): TaskRecord[] {
   if (!status || status === 'all') return tasks;
   return tasks.filter(task => status === 'completed' ? task.completed : !task.completed);
@@ -34,7 +26,6 @@ function filterByTags(tasks: TaskRecord[], tags?: string[]): TaskRecord[] {
   return tasks.filter(task => tags.every(tag => task.tags.includes(tag)));
 }
 
-/** Filter tasks within a date range */
 function filterByDueDateRange(tasks: TaskRecord[], range?: { start?: string; end?: string }): TaskRecord[] {
   if (!range) return tasks;
   const { start, end } = range;
@@ -47,13 +38,11 @@ function filterByDueDateRange(tasks: TaskRecord[], range?: { start?: string; end
   });
 }
 
-/** Filter for overdue tasks only */
 function filterByOverdue(tasks: TaskRecord[], overdue?: boolean): TaskRecord[] {
   if (!overdue) return tasks;
   return tasks.filter(task => !task.completed && isOverdue(task.dueDate));
 }
 
-/** Filter for tasks due today */
 function filterByDueToday(tasks: TaskRecord[], dueToday?: boolean): TaskRecord[] {
   if (!dueToday) return tasks;
   return tasks.filter(task => !task.completed && isDueToday(task.dueDate));
@@ -65,13 +54,11 @@ function filterByDueThisWeek(tasks: TaskRecord[], dueThisWeek?: boolean): TaskRe
   return tasks.filter(task => !task.completed && isDueThisWeek(task.dueDate));
 }
 
-/** Filter for tasks without due dates */
 function filterByNoDueDate(tasks: TaskRecord[], noDueDate?: boolean): TaskRecord[] {
   if (!noDueDate) return tasks;
   return tasks.filter(task => !task.dueDate);
 }
 
-/** Filter tasks by recurrence type */
 function filterByRecurrence(tasks: TaskRecord[], recurrence?: RecurrenceType[]): TaskRecord[] {
   if (!recurrence || recurrence.length === 0) return tasks;
   return tasks.filter(task => recurrence.includes(task.recurrence));
@@ -119,11 +106,6 @@ function filterBySearchQuery(tasks: TaskRecord[], searchQuery?: string): TaskRec
     return searchableText.includes(query);
   });
 }
-
-// ============================================================================
-// Main Filter Function
-// Composes individual filters using a pipeline pattern
-// ============================================================================
 
 /**
  * Apply filter criteria to a list of tasks

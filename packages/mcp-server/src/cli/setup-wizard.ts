@@ -1,8 +1,3 @@
-/**
- * Interactive setup wizard for MCP server configuration
- * Guides users through PocketBase URL and auth token setup
- */
-
 import { writeFileSync, chmodSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { GsdConfig } from '../tools.js';
@@ -28,9 +23,6 @@ function resolveDefaultPocketBaseUrl(): string {
 /** Exact reviewed package entrypoint; normal startup never selects code from npm. */
 const MCP_ENTRYPOINT = fileURLToPath(new URL('../index.js', import.meta.url));
 
-/**
- * Test PocketBase connectivity via health endpoint
- */
 async function validateConnectivity(pbUrl: string): Promise<boolean> {
   process.stdout.write('Testing connectivity... ');
   try {
@@ -49,9 +41,6 @@ async function validateConnectivity(pbUrl: string): Promise<boolean> {
   }
 }
 
-/**
- * Configure and validate authentication token
- */
 async function configureAuthentication(pbUrl: string): Promise<string> {
   console.log('Step 2/4: Authentication Token');
   console.log('Visit the GSD app and sign in to Cloud Sync');
@@ -63,7 +52,6 @@ async function configureAuthentication(pbUrl: string): Promise<string> {
     process.exit(1);
   }
 
-  // Validate token by checking sync status
   process.stdout.write('Validating token... ');
   try {
     const config: GsdConfig = { pocketBaseUrl: pbUrl, authToken };
@@ -82,9 +70,6 @@ async function configureAuthentication(pbUrl: string): Promise<string> {
   }
 }
 
-/**
- * Test task access by listing tasks
- */
 async function testTaskAccess(pbUrl: string, authToken: string): Promise<void> {
   process.stdout.write('Testing task access... ');
   try {
@@ -165,9 +150,6 @@ function displayConfiguration(pbUrl: string, authToken: string): void {
   console.log();
 }
 
-/**
- * Display next steps for user
- */
 function displayNextSteps(): void {
   const artifactPath = getSetupArtifactPath();
   console.log('Step 4/4: Next Steps');
@@ -186,9 +168,6 @@ function displayNextSteps(): void {
   console.log(`✓ Setup complete! Need help? Run: ${process.execPath} ${MCP_ENTRYPOINT} --help`);
 }
 
-/**
- * Interactive setup wizard main orchestrator
- */
 export async function runSetupWizard(): Promise<void> {
   console.log(`
 🎯 GSD MCP Server Setup Wizard
@@ -201,7 +180,6 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
   removeSetupArtifact();
 
   try {
-    // Step 1: PocketBase URL
     console.log('Step 1/4: PocketBase URL');
     const pbUrl = await prompt('Enter your PocketBase URL', resolveDefaultPocketBaseUrl());
     // Gate the destination through the shared policy BEFORE any request — the
@@ -214,17 +192,13 @@ Welcome! This wizard will help you configure the MCP server for Claude Desktop.
     await validateConnectivity(pbUrl);
     console.log();
 
-    // Step 2: Auth Token
     const authToken = await configureAuthentication(pbUrl);
 
-    // Verify task access
     await testTaskAccess(pbUrl, authToken);
     console.log();
 
-    // Step 3: Display Config
     displayConfiguration(pbUrl, authToken);
 
-    // Step 4: Next Steps
     displayNextSteps();
   } catch {
     // Best-effort cleanup so a partial setup does not leave a token at rest.

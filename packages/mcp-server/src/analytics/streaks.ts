@@ -1,22 +1,12 @@
-/**
- * Streak calculation logic for task completion tracking
- */
-
 import type { Task } from '../tools.js';
 import { completionTime, daysBetweenKeys, localDayKey, startOfDay, subDays } from './date-utils.js';
 
-/**
- * Streak data
- */
 export interface StreakData {
   current: number;
   longest: number;
   lastCompletionDate: string | null;
 }
 
-/**
- * Calculate current and longest streak
- */
 export function getStreakData(tasks: Task[]): StreakData {
   const completedTasks = tasks.filter((t) => t.completed);
 
@@ -65,9 +55,6 @@ function calculateCurrentStreak(uniqueDates: string[]): number {
   return currentStreak;
 }
 
-/**
- * Calculate longest streak in history
- */
 function calculateLongestStreak(uniqueDates: string[], currentStreak: number): number {
   let longestStreak = 0;
   let tempStreak = 1;

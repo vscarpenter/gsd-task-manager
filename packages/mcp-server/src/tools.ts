@@ -8,7 +8,6 @@
  * - constants.ts - Shared constants
  */
 
-// Re-export types
 export type {
   GsdConfig,
   SyncStatus,
@@ -24,10 +23,8 @@ export {
   taskToPBFields,
 } from './types.js';
 
-// Re-export task tools
 export { listTasks } from './tools/list-tasks.js';
 export { getTask } from './tools/get-task.js';
 export { searchTasks } from './tools/search-tasks.js';
 
-// Re-export sync tools
 export { getSyncStatus, getTaskStats } from './tools/sync-status.js';

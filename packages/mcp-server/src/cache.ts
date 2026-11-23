@@ -1,8 +1,3 @@
-/**
- * In-memory task caching layer
- * Reduces redundant API calls
- */
-
 import { createHash } from 'node:crypto';
 import type { GsdConfig, Task } from './types.js';
 
@@ -23,9 +18,6 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-/**
- * Generic TTL cache implementation
- */
 class TTLCache<T> {
   private cache = new Map<string, CacheEntry<T>>();
   private config: CacheConfig;
@@ -34,14 +26,10 @@ class TTLCache<T> {
     this.config = config;
   }
 
-  /**
-   * Get value from cache if valid
-   */
   get(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
 
-    // Check if expired
     if (Date.now() > entry.expiresAt) {
       this.cache.delete(key);
       return null;
@@ -50,11 +38,7 @@ class TTLCache<T> {
     return entry.data;
   }
 
-  /**
-   * Set value in cache with TTL
-   */
   set(key: string, data: T): void {
-    // Evict oldest entries if at capacity
     if (this.cache.size >= this.config.maxEntries) {
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey) this.cache.delete(oldestKey);
@@ -66,23 +50,14 @@ class TTLCache<T> {
     });
   }
 
-  /**
-   * Remove specific key from cache
-   */
   delete(key: string): void {
     this.cache.delete(key);
   }
 
-  /**
-   * Clear all cache entries
-   */
   clear(): void {
     this.cache.clear();
   }
 
-  /**
-   * Get cache statistics
-   */
   getStats(): { size: number; maxEntries: number; ttlMs: number } {
     return {
       size: this.cache.size,
@@ -117,9 +92,6 @@ class TaskCacheManager {
     return `${namespace}|${taskId}`;
   }
 
-  /**
-   * Get cached task list
-   */
   getTaskList(cacheKey: string): Task[] | null {
     const result = this.taskListCache.get(cacheKey);
     if (result) {
@@ -130,21 +102,14 @@ class TaskCacheManager {
     return result;
   }
 
-  /**
-   * Cache task list
-   */
   setTaskList(cacheKey: string, tasks: Task[], namespace: string): void {
     this.taskListCache.set(cacheKey, tasks);
 
-    // Also cache individual tasks for single-task lookups
     tasks.forEach((task) => {
       this.singleTaskCache.set(this.singleTaskKey(namespace, task.id), task);
     });
   }
 
-  /**
-   * Get cached single task
-   */
   getTask(taskId: string, namespace: string): Task | null {
     const result = this.singleTaskCache.get(this.singleTaskKey(namespace, taskId));
     if (result) {
@@ -155,9 +120,6 @@ class TaskCacheManager {
     return result;
   }
 
-  /**
-   * Cache single task
-   */
   setTask(task: Task, namespace: string): void {
     this.singleTaskCache.set(this.singleTaskKey(namespace, task.id), task);
   }
@@ -171,9 +133,6 @@ class TaskCacheManager {
     this.singleTaskCache.clear();
   }
 
-  /**
-   * Invalidate specific task (for targeted invalidation)
-   */
   invalidateTask(taskId: string, namespace: string): void {
     this.cacheGeneration++;
     this.singleTaskCache.delete(this.singleTaskKey(namespace, taskId));
@@ -181,9 +140,6 @@ class TaskCacheManager {
     this.taskListCache.clear();
   }
 
-  /**
-   * Get cache statistics
-   */
   getStats(): {
     taskListCache: { size: number; maxEntries: number; ttlMs: number };
     singleTaskCache: { size: number; maxEntries: number; ttlMs: number };
@@ -201,21 +157,14 @@ class TaskCacheManager {
     };
   }
 
-  /**
-   * Reset statistics
-   */
   resetStats(): void {
     this.hitCount = 0;
     this.missCount = 0;
   }
 }
 
-// Singleton instance
 let cacheInstance: TaskCacheManager | null = null;
 
-/**
- * Get the task cache manager singleton
- */
 export function getTaskCache(config?: CacheConfig): TaskCacheManager {
   if (!cacheInstance) {
     cacheInstance = new TaskCacheManager(config);
@@ -234,9 +183,6 @@ export function resetTaskCache(): void {
   cacheInstance = null;
 }
 
-/**
- * Generate cache key for task list queries
- */
 export function generateTaskListCacheKey(filters?: {
   quadrant?: string;
   completed?: boolean;

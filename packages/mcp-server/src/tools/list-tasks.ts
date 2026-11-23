@@ -58,9 +58,6 @@ export function listTasksFresh(config: GsdConfig): Promise<Task[]> {
   return fetchTasks(config);
 }
 
-/**
- * Fetch all tasks from PocketBase collection
- */
 async function fetchTasks(config: GsdConfig): Promise<Task[]> {
   const records = await fetchTaskRecords(config);
   // A refused token reads as a guest, whose listing is empty too.
@@ -107,9 +104,6 @@ function matchesAnyTag(stored: string[], wanted: string[]): boolean {
   return wanted.some((tag) => normalized.has(tag));
 }
 
-/**
- * Apply filters to tasks
- */
 function applyTaskFilters(
   tasks: Task[],
   filters?: TaskFilters

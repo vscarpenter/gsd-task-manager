@@ -26,9 +26,6 @@ function chooseArchiveSnapshot(
   return { ...liveTask, archivedAt };
 }
 
-/**
- * Get archive settings from database
- */
 export async function getArchiveSettings(): Promise<ArchiveSettings> {
   const db = getDb();
   const settings = await db.archiveSettings.get("settings");
@@ -45,9 +42,6 @@ export async function getArchiveSettings(): Promise<ArchiveSettings> {
   return settings;
 }
 
-/**
- * Update archive settings
- */
 export async function updateArchiveSettings(
   updates: Partial<Omit<ArchiveSettings, "id">>
 ): Promise<void> {
@@ -90,7 +84,6 @@ export async function archiveOldTasks(
         return eligible;
       }
 
-      // Move tasks to archive table
       const existing = await db.archivedTasks.bulkGet(eligible.map((task) => task.id));
       const archivedTasks = eligible.map((task, index) =>
         chooseArchiveSnapshot(task, existing[index], now)
@@ -105,10 +98,8 @@ export async function archiveOldTasks(
       // copy from replacing a newer tombstone snapshot.
       await db.archivedTasks.bulkPut(archivedTasks);
 
-      // Remove from main tasks table
       await db.tasks.bulkDelete(eligible.map((task) => task.id));
 
-      // Enqueue delete operations for sync (only if sync is enabled)
       if ((await getSyncConfig())?.enabled) {
         await Promise.all(
           eligible.map((task) => queue.enqueue('delete', task.id, task))
@@ -122,17 +113,11 @@ export async function archiveOldTasks(
   return tasksToArchive.length;
 }
 
-/**
- * List all archived tasks
- */
 export async function listArchivedTasks(): Promise<TaskRecord[]> {
   const db = getDb();
   return db.archivedTasks.toArray();
 }
 
-/**
- * Restore a task from archive back to main tasks
- */
 export async function restoreTask(taskId: string): Promise<void> {
   const db = getDb();
 
@@ -156,7 +141,6 @@ export async function restoreTask(taskId: string): Promise<void> {
         throw new Error("Task not found in archive");
       }
 
-      // Remove archivedAt timestamp
       const { archivedAt: _archivedAt, ...taskWithoutArchive } = archivedTask;
 
       await db.tasks.add(taskWithoutArchive);
@@ -253,9 +237,6 @@ export async function reinstateArchivedTask(task: TaskRecord): Promise<void> {
   });
 }
 
-/**
- * Get count of archived tasks
- */
 export async function getArchivedCount(): Promise<number> {
   const db = getDb();
   return db.archivedTasks.count();

@@ -189,6 +189,7 @@ async function findResurrectedTaskIds(transaction: Transaction): Promise<string[
   const days = settings?.archiveAfterDays ?? ARCHIVE_CONFIG.DEFAULT_ARCHIVE_AFTER_DAYS;
   const cutoff = new Date(Date.now() - days * TIME_MS.DAY).toISOString();
   return await transaction.table("tasks").filter((task: TaskRecord) =>
+    // eslint-disable-next-line gsd-time/instant-order -- Version 15 has shipped, and a migration must do on every device what it did on the first.
     archivedIds.has(task.id) && task.completed && Boolean(task.completedAt) && task.completedAt! < cutoff
   ).primaryKeys() as string[];
 }

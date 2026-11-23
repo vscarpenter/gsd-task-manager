@@ -42,9 +42,6 @@ export async function duplicateTask(id: string): Promise<TaskRecord> {
   }
 }
 
-/**
- * Build a duplicate task record with fresh metadata
- */
 function buildDuplicateRecord(original: TaskRecord, defaultReminder: number): TaskRecord {
   const now = isoNow();
 

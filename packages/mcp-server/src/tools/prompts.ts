@@ -1,10 +1,5 @@
 import type { Prompt } from '@modelcontextprotocol/sdk/types.js';
 
-/**
- * Prompt definitions for common task management workflows
- * Prompts provide pre-built conversational templates for Claude
- */
-
 const dailyStandupPrompt: Prompt = {
   name: 'daily-standup',
   description: "Daily task review: today's tasks, overdue items, and productivity summary",
@@ -50,9 +45,6 @@ export const allPrompts: Prompt[] = [
   tagAnalysisPrompt,
 ];
 
-/**
- * Get prompt message for a given prompt name
- */
 export function getPromptMessage(name: string): { role: string; content: { type: string; text: string } } {
   const prompts: Record<string, string> = {
     'daily-standup': `Give me a daily standup report:

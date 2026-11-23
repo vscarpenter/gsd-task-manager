@@ -14,7 +14,6 @@ export function regenerateConflictingIds(
   const idMap = new Map<string, string>();
 
   const updatedTasks = tasks.map(task => {
-    // If ID already exists, regenerate it
     if (existingIds.has(task.id)) {
       const newId = generateId();
       idMap.set(task.id, newId);

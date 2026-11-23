@@ -1,17 +1,7 @@
-/**
- * Type definitions for write operations
- */
-
-/**
- * Common options for write operations
- */
 export interface WriteOptions {
   dryRun?: boolean;
 }
 
-/**
- * Task creation input
- */
 export interface CreateTaskInput {
   title: string;
   description?: string;
@@ -28,9 +18,6 @@ export interface CreateTaskInput {
   dryRun?: boolean;
 }
 
-/**
- * Task update input (partial)
- */
 export interface UpdateTaskInput {
   id: string;
   title?: string;
@@ -49,9 +36,6 @@ export interface UpdateTaskInput {
   dryRun?: boolean;
 }
 
-/**
- * Bulk update operation types
- */
 export type BulkOperation =
   | { type: 'complete'; completed: boolean }
   | { type: 'move_quadrant'; urgent: boolean; important: boolean }

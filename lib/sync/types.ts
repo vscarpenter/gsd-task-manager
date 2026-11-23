@@ -34,12 +34,10 @@ export interface PBSyncConfig {
   lastServerUpdatedAt?: string | null;
   /** ISO timestamp of the last successful sync operation (for UI display) */
   lastSuccessfulSyncAt: string | null;
-  // Retry tracking fields
   consecutiveFailures: number;
   lastFailureAt: number | null;
   lastFailureReason: string | null;
   nextRetryAt: number | null;
-  // Auto-sync configuration
   autoSyncEnabled?: boolean;
   autoSyncIntervalMinutes?: number;
   /**
@@ -50,10 +48,6 @@ export interface PBSyncConfig {
   localTaskOwnerUserId?: string | null;
 }
 
-// ============================================================================
-// Background sync configuration
-// ============================================================================
-
 export interface BackgroundSyncConfig {
   enabled: boolean;
   intervalMinutes: number;
@@ -61,10 +55,6 @@ export interface BackgroundSyncConfig {
   syncOnOnline: boolean;
   debounceAfterChangeMs: number;
 }
-
-// ============================================================================
-// Sync queue (offline operations pending push)
-// ============================================================================
 
 export type SyncQueueItemStatus = 'pending' | 'failed';
 
@@ -92,10 +82,6 @@ export interface RemoteTaskIndexEntry {
   clientUpdatedAt: string;
 }
 
-// ============================================================================
-// Device info
-// ============================================================================
-
 /**
  * Task ids whose delete never reached the server, kept for resurrect on sight
  * (tasks/spec-resurrect-on-sight.md). Device-local; never synced.
@@ -111,10 +97,6 @@ export interface DeviceInfo {
   deviceName: string;
   createdAt: string;
 }
-
-// ============================================================================
-// Sync results
-// ============================================================================
 
 export interface PBSyncResult {
   /**

@@ -19,19 +19,13 @@ import { setBackgroundResetPending, withNotificationLock } from "@/lib/notificat
 
 const logger = createLogger("DB");
 
-/**
- * Options for reset operation
- */
 export interface ResetOptions {
-	preserveTheme?: boolean; // Keep user's theme preference
+	preserveTheme?: boolean;
 }
 
 /** A reset step that can fail on its own. */
 export type ResetStep = "sync-sign-out" | "local-data" | "browser-storage";
 
-/**
- * Result of reset operation
- */
 export interface ResetResult {
 	success: boolean;
 	clearedTables: string[];
@@ -111,9 +105,6 @@ function clearLocalStorage(preserveTheme = false): { items: string[]; errors: st
 	return { items: cleared, errors };
 }
 
-/**
- * Logout from sync and clear session data
- */
 async function clearSessionData(): Promise<{ success: boolean; errors: string[] }> {
 	const errors: string[] = [];
 

@@ -137,8 +137,6 @@ export async function applyRemoteChange(
   });
 }
 
-// ─── Full sync orchestration ─────────────────────────────────────────
-
 /** Everything the outcome writers need to record a sync for its session owner. */
 interface SyncOutcomeContext {
   ownerId: string;
@@ -279,7 +277,6 @@ async function writeSyncOutcome(ownerId: string, write: () => Promise<void>): Pr
   });
 }
 
-/** Carry the skipped-record count into the result only when there is one to report. */
 function skippedField(pullResult: { skippedCount?: number }): { skippedCount?: number } {
   return pullResult.skippedCount ? { skippedCount: pullResult.skippedCount } : {};
 }

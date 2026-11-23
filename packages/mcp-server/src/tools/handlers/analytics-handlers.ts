@@ -7,10 +7,6 @@ import {
 } from '../../analytics.js';
 import type { McpToolResponse } from './types.js';
 
-/**
- * Analytics tool handlers for productivity metrics and insights
- */
-
 export async function handleGetProductivityMetrics(config: GsdConfig): Promise<McpToolResponse> {
   const tasks = await listTasks(config);
   const metrics = calculateMetrics(tasks);

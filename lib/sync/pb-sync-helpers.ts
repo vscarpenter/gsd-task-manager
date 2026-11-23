@@ -1,7 +1,3 @@
-/**
- * Shared helpers for PocketBase sync operations.
- */
-
 import { forgetRefusedToken, getPocketBase, getCurrentUserId } from './pocketbase-client';
 import { getDb } from '@/lib/db';
 import { createLogger } from '@/lib/logger';
@@ -42,20 +38,17 @@ export function assertSafeRecordId(value: string, label = 'id'): void {
   if (value.length === 0 || value.length > 50) {
     throw new Error(`Invalid ${label} format: unexpected length`);
   }
-  // Allow alphanumeric, hyphens, and underscores only
   if (!/^[a-z0-9_-]+$/i.test(value)) {
     throw new Error(`Invalid ${label} format: contains unsafe characters`);
   }
 }
 
-/** Get the current device ID from sync config in IndexedDB */
 export async function getDeviceId(): Promise<string> {
   const db = getDb();
   const config = await db.syncMetadata.get('sync_config');
   return (config as PBSyncConfig | undefined)?.deviceId ?? 'unknown';
 }
 
-/** Get the current authenticated user ID, or null */
 export { getCurrentUserId };
 
 interface BoundedTaskListOptions {

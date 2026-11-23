@@ -326,12 +326,10 @@ export async function loginWithProvider(
   }
 }
 
-/** Convenience wrapper for Google OAuth */
 export function loginWithGoogle(options?: OAuthLoginOptions): Promise<AuthState> {
   return loginWithProvider('google', options);
 }
 
-/** Convenience wrapper for GitHub OAuth */
 export function loginWithGithub(options?: OAuthLoginOptions): Promise<AuthState> {
   return loginWithProvider('github', options);
 }
@@ -392,7 +390,6 @@ export async function refreshAuthOutcome(): Promise<AuthRefreshOutcome> {
   const pb = getPocketBase();
   const sentToken = pb.authStore.token;
 
-  // Nothing to refresh if there's no token at all
   if (!sentToken) return 'no-session';
 
   try {

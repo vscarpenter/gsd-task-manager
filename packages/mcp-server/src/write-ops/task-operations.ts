@@ -1,8 +1,3 @@
-/**
- * Individual task CRUD operations
- * Handles create, update, complete, and delete for single tasks
- */
-
 import type { GsdConfig, Task } from '../types.js';
 import { pbTaskToTask } from '../types.js';
 import type { CreateTaskInput, UpdateTaskInput } from './types.js';
@@ -29,9 +24,6 @@ import { buildRecurringInstance, completesRecurringTask, createNextInstance } fr
 import { WriteRateLimiter } from './write-rate-limiter.js';
 import { cleanDependents, snapshotDependents, type CleanupOutcome } from './dependency-cleanup.js';
 
-/**
- * Create task result with dry-run information
- */
 export interface CreateTaskResult {
   task: Task;
   dryRun: boolean;
@@ -51,9 +43,6 @@ function mergeDescriptionWithinLimit(existing: string, urls: string[]): string {
   return description;
 }
 
-/**
- * Create a new task
- */
 export async function createTask(
   config: GsdConfig,
   input: CreateTaskInput
@@ -67,7 +56,6 @@ export async function createTask(
   const { cleanTitle, urls } = extractUrlsFromTitle(input.title);
   const mergedDescription = mergeDescriptionWithinLimit(input.description ?? '', urls);
 
-  // Validate dependencies if provided
   if (input.dependencies && input.dependencies.length > 0) {
     const validation = validateDependencies(null, input.dependencies, allTasks);
     if (!validation.valid) {
@@ -138,9 +126,6 @@ export async function createTask(
   };
 }
 
-/**
- * Update task result with dry-run information
- */
 export interface UpdateTaskResult {
   task: Task;
   /** The next instance of a recurring task that complete_task just completed. A preview when dryRun. */
@@ -339,9 +324,6 @@ export async function completeTask(
   return applyUpdate(config, { id: taskId, completed, dryRun: options?.dryRun }, true);
 }
 
-/**
- * Delete task result with dry-run information
- */
 export interface DeleteTaskResult {
   taskId: string;
   taskTitle: string;

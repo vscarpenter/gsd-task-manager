@@ -2,9 +2,6 @@ import type { TaskRecord } from "@/lib/types";
 import { differenceInCalendarDays, parseISO, startOfDay, subDays } from "date-fns";
 import { completionTime, localDayKey } from "./completion-day";
 
-/**
- * Streak data
- */
 export interface StreakData {
   current: number;
   longest: number;
@@ -64,9 +61,6 @@ function calculateCurrentStreak(uniqueDates: string[]): number {
   return currentStreak;
 }
 
-/**
- * Calculate longest streak from all completion dates
- */
 function calculateLongestStreak(uniqueDates: string[], currentStreak: number): number {
   let longestStreak = 0;
   let tempStreak = 1;

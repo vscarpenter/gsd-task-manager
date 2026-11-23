@@ -1,13 +1,6 @@
-/**
- * Sync configuration getters and setters
- */
-
 import { getDb } from "@/lib/db";
 import type { PBSyncConfig, BackgroundSyncConfig } from "../types";
 
-/**
- * Get sync configuration
- */
 export async function getSyncConfig(): Promise<PBSyncConfig | null> {
   const db = getDb();
   const config = await db.syncMetadata.get("sync_config");
@@ -59,14 +52,10 @@ export async function getAutoSyncConfig(): Promise<BackgroundSyncConfig> {
   };
 }
 
-/**
- * Update auto-sync preferences
- */
 export async function updateAutoSyncConfig(
   enabled: boolean,
   intervalMinutes: number
 ): Promise<void> {
-  // Clamp interval to valid range (1-30 minutes)
   const clampedInterval = Math.max(1, Math.min(30, intervalMinutes));
 
   await updateSyncConfig({
@@ -75,17 +64,11 @@ export async function updateAutoSyncConfig(
   });
 }
 
-/**
- * Check if sync is enabled
- */
 export async function isSyncEnabled(): Promise<boolean> {
   const config = await getSyncConfig();
   return config?.enabled || false;
 }
 
-/**
- * Get sync status summary
- */
 interface SyncStatus {
   enabled: boolean;
   email: string | null;
