@@ -10,14 +10,15 @@
 \* lib/tasks/import-export.ts, lib/sync/queue.ts, lib/sync/pb-push.ts,
 \* lib/sync/pb-pull.ts, lib/sync/pb-sync-engine.ts, lib/sync/pb-sync-helpers.ts,
 \* lib/sync/resurrect-on-sight.ts, lib/sync/resurrect-ids.ts,
-\* lib/sync/config/disable.ts, components/sync/use-sync-auth-dialog.ts.
+\* lib/sync/config/disable.ts, components/sync/use-sync-auth-dialog.ts,
+\* lib/task-tables.ts, lib/sync/queued-write.ts.
 EXTENDS Naturals, Sequences
 
 CONSTANTS
   MaxClock,  \* the last timestamp a step may take
   MaxQueue,  \* the most queue rows the model follows
   Variant,   \* "code", or one broken variant named in Broken below
-  Fixes      \* the proposed fixes in AllFixes the model applies; {} is the code as it is
+  Fixes      \* proposed fixes a config applies. Every one shipped, so no step reads it.
 
 VARIABLES
   live,        \* the tasks row: [has, ver]; at is always 0
@@ -46,24 +47,19 @@ vars == <<live, arc, trash, srv, queue, clock, signedIn, remembered, rt, phase,
           todo, seen, pend, undo, arcUndo, want, unsent, cameBack, owed, revived,
           imported>>
 
-\* Proposed fixes, one per finding. None of them is in the code.
-AllFixes == {
-  "importKeepsOneTable",       \* importTasks never writes an id into a second table
-  "undoClearsArchive",         \* restoreTask (Undo) also clears an archivedTasks row
-  "reinstateChecksAllTables",  \* reinstateArchivedTask writes only when no table has the id
-  "pushDropsTombstonedWrite",  \* pushSingleItem drops a create or update for an id in Trash or the archive here
-  "pushDropsDeleteOfLiveTask", \* pushSingleItem drops a delete for an id that is live here
-  "readConfigInTransaction"    \* the writers read sync_config inside their transaction
-}
-Fix(f) == f \in Fixes
-
 \* Broken variants. Each removes one guard from the code it names.
 Broken == {
   "restoreKeepsTrashRow",  \* restoreFromTrash without db.deletedTasks.delete
   "pullSkipsTrashGuard",   \* applyPreparedRecord and applyRemoteChange without the deletedTasks check
   "absoluteTombstone",     \* isRemoteNewerThanArchive always false (ADR 0013's rejected first version)
   "resurrectSkipsDelete",  \* waitsForThisDevice without the pending-delete check
-  "reconcileSkipsQueue"    \* reconcileDeletedTasks without classifyRemoteDeletion's protect
+  "reconcileSkipsQueue",   \* reconcileDeletedTasks without classifyRemoteDeletion's protect
+  "pushSendsStaleWrite",   \* claimQueuedWrite without the live check on a create or update
+  "pushSendsStaleDelete",  \* claimQueuedWrite without the live check on a delete
+  "importWritesSecondTable",    \* importTasks without its Trash and archive checks
+  "undoKeepsArchive",           \* bringBackInTransaction without db.archivedTasks.delete
+  "reinstateChecksOnlyArchive", \* reinstateArchivedTask looks only in archivedTasks
+  "configReadEarly"             \* the writers read sync_config before their transaction
 }
 
 NoRow == [has |-> FALSE, ver |-> 0, at |-> 0]
@@ -121,10 +117,9 @@ Enqueue(op, pay) ==
   /\ queue' = Append(queue, QRow(op, pay, clock))
   /\ clock' = clock + 1
 
-\* The gap between a writer's getSyncConfig() and its transaction is a few
-\* microtasks, so only a sign-in or sign-out (from another tab) lands in it. Any
-\* other step there has the same effect as one before the read, because the
-\* transaction re-reads every row except the config.
+\* The gap before a writer's transaction opens is a few microtasks, so only a
+\* sign-in or sign-out (from another tab) lands in it. The transaction reads every
+\* row, the config too, so only configReadEarly makes that gap matter.
 Quiet == pend.act = "none"
 
 ---------------------------------------------------------------------------
@@ -157,9 +152,9 @@ ApplyCopy(v) ==
 ---------------------------------------------------------------------------
 \* Your actions on this device.
 
-\* getSyncConfig() resolves before the Dexie transaction opens (runTaskSyncTransaction
-\* in lib/tasks/crud/helpers.ts, restoreFromTrash in lib/trash.ts, restoreTask in
-\* lib/archive.ts), so the transaction acts on the session it read here.
+\* You act, and the writer's transaction commits in a later step. runTaskSyncTransaction
+\* (lib/tasks/crud/helpers.ts), restoreFromTrash (lib/trash.ts), and restoreTask
+\* (lib/archive.ts) read getSyncConfig() in that transaction. cfg is for configReadEarly.
 CanStart(a) ==
   CASE a = "delete" -> live.has
     [] a = "undo" -> undo > 0
@@ -179,7 +174,7 @@ YouStart(a) ==
   /\ NoFlags
 
 \* The session the transaction acts on.
-Cfg == IF Fix("readConfigInTransaction") THEN signedIn ELSE pend.cfg
+Cfg == IF Variant = "configReadEarly" THEN pend.cfg ELSE signedIn
 
 \* deleteTask (lib/tasks/crud/delete.ts): one transaction over tasks, deletedTasks,
 \* syncQueue, and syncMetadata. Signed in, it queues the delete; signed out, it
@@ -197,15 +192,20 @@ YouDelete ==
   /\ UNCHANGED <<arc, srv, signedIn, rt, phase, todo, seen, arcUndo, imported>>
   /\ NoFlags
 
-\* restoreTask (lib/tasks/crud/restore.ts), the toast's Undo: puts the held record
-\* back with put, clears any Trash row, forgets the id, and queues a create when
-\* signed in. It doesn't look at archivedTasks.
+\* bringBackInTransaction (lib/task-tables.ts): the newest copy of the id.
+Newest(v) ==
+  LET S == {v, live.ver, arc.ver, trash.ver} IN CHOOSE x \in S : \A y \in S : x >= y
+
+\* restoreTask (lib/tasks/crud/restore.ts), the toast's Undo: puts the newest copy
+\* back in tasks alone, forgets the id, and queues a create when signed in.
 YouUndo ==
   /\ pend.act = "undo" /\ pend' = NoPend
-  /\ live' = Row(pend.ver, 0) /\ trash' = NoRow /\ remembered' = FALSE
-  /\ arc' = IF Fix("undoClearsArchive") THEN NoRow ELSE arc
+  /\ LET v == Newest(pend.ver) IN
+     /\ live' = Row(v, 0)
+     /\ IF Cfg THEN Enqueue("create", v) ELSE UNCHANGED <<queue, clock>>
+  /\ arc' = IF Variant = "undoKeepsArchive" THEN arc ELSE NoRow
+  /\ trash' = NoRow /\ remembered' = FALSE
   /\ undo' = IF undo = pend.ver THEN 0 ELSE undo
-  /\ IF Cfg THEN Enqueue("create", pend.ver) ELSE UNCHANGED <<queue, clock>>
   /\ want' = "keep"
   /\ UNCHANGED <<srv, signedIn, rt, phase, todo, seen, arcUndo, unsent, imported>>
   /\ NoFlags
@@ -287,11 +287,10 @@ YouDeleteArchived ==
   /\ NoFlags
 
 \* reinstateArchivedTask (lib/archive.ts), that toast's Undo: one transaction over
-\* archivedTasks that writes only when the archive lacks the id. It doesn't look
-\* at tasks or deletedTasks.
+\* the three tables that writes only when none of them has the id.
 YouUndoDeleteArchived ==
   /\ Quiet /\ arcUndo.has
-  /\ arc' = IF arc.has \/ (Fix("reinstateChecksAllTables") /\ (live.has \/ trash.has))
+  /\ arc' = IF arc.has \/ ((live.has \/ trash.has) /\ Variant # "reinstateChecksOnlyArchive")
             THEN arc ELSE arcUndo
   /\ arcUndo' = NoRow /\ undo' = 0
   /\ UNCHANGED <<live, trash, srv, queue, clock, signedIn, remembered, rt, phase,
@@ -302,38 +301,43 @@ YouUndoDeleteArchived ==
 \* (2.2.0) lists the task as live, archived, trashed, or not at all; a 1.0.0
 \* backup has no archive or Trash key, so it can only list the task as live or
 \* leave it out. applyTasks, then applyArchivedTasks, then applyTrashedTasks. A
-\* merge gives a backup task a fresh id only when the id is live here. Signed in,
-\* a replace queues a delete for a live task it drops, and either mode queues a
-\* create for a task it writes to tasks.
+\* merge gives a backup task a fresh id when any table has the id. A replace clears
+\* the queue, takes an imported id out of the archive and Trash, and stamps it now
+\* when signed in. It is a new local decision: a delete for each id it drops, live
+\* or still queued.
 YouImport(mode, env, pos) ==
   LET keys == env = "2.2.0"
-      fixed == Fix("importKeepsOneTable")
-      liveA == IF mode = "replace"
-               THEN (IF pos = "live" THEN BackupLive ELSE NoRow)
-               ELSE (IF pos = "live" /\ ~live.has /\ (~fixed \/ ~Tombstoned) THEN BackupLive ELSE live)
-      trashKept == IF mode = "replace" /\ keys THEN NoRow ELSE trash
-      arcBase == IF ~keys THEN (IF fixed /\ liveA.has THEN NoRow ELSE arc)
-                 ELSE IF mode = "replace" THEN NoRow ELSE arc
+      replaces == mode = "replace"
+      guarded == Variant # "importWritesSecondTable"
+      ver == IF replaces /\ signedIn THEN clock ELSE 1
+      liveA == IF replaces
+               THEN (IF pos = "live" THEN Row(ver, 0) ELSE NoRow)
+               ELSE (IF pos = "live" /\ ~live.has /\ (~guarded \/ ~Tombstoned) THEN BackupLive ELSE live)
+      cleared == replaces /\ (keys \/ (guarded /\ liveA.has))
+      arcBase == IF cleared THEN NoRow ELSE arc
+      trashBase == IF cleared THEN NoRow ELSE trash
       arcA == IF keys /\ pos = "archived" /\ ~liveA.has /\ ~arcBase.has
-                 /\ ~(fixed /\ trashKept.has)
+                 /\ ~(guarded /\ trashBase.has)
               THEN BackupRow ELSE arcBase
-      trashBase == IF ~keys THEN (IF fixed /\ liveA.has THEN NoRow ELSE trash) ELSE trashKept
       trashA == IF keys /\ pos = "trashed" /\ ~liveA.has /\ ~arcA.has /\ ~trashBase.has
                 THEN BackupRow ELSE trashBase
-      creates == pos = "live" /\ (mode = "replace" \/ (~live.has /\ liveA.has))
-      drops == mode = "replace" /\ live.has /\ pos # "live"
+      creates == pos = "live" /\ (replaces \/ (~live.has /\ liveA.has))
+      drops == replaces /\ pos # "live" /\ (live.has \/ queue # <<>>)
+      kept == IF replaces THEN <<>> ELSE queue
       removed == (live.has /\ ~liveA.has) \/ (arc.has /\ ~arcA.has) \/ (trash.has /\ ~trashA.has)
   IN
   /\ Quiet /\ ~imported
   /\ live' = liveA /\ arc' = arcA /\ trash' = trashA
-  /\ IF signedIn /\ creates THEN Enqueue("create", 1)
-     ELSE IF signedIn /\ drops THEN Enqueue("delete", 0)
-     ELSE UNCHANGED <<queue, clock>>
+  /\ queue' = IF signedIn /\ creates THEN Append(kept, QRow("create", ver, clock))
+              ELSE IF signedIn /\ drops THEN Append(kept, QRow("delete", 0, clock))
+              ELSE kept
+  /\ clock' = IF signedIn /\ (creates \/ drops) THEN clock + 1 ELSE clock
+  /\ remembered' = IF replaces /\ pos = "live" THEN FALSE ELSE remembered
   /\ want' = IF creates THEN "keep"
-             ELSE IF removed \/ arcA # arc \/ trashA # trash THEN "dropped"
+             ELSE IF drops \/ removed \/ arcA # arc \/ trashA # trash THEN "dropped"
              ELSE want
   /\ imported' = TRUE /\ undo' = 0 /\ arcUndo' = NoRow
-  /\ UNCHANGED <<srv, signedIn, remembered, rt, phase, todo, seen, pend, unsent>>
+  /\ UNCHANGED <<srv, signedIn, rt, phase, todo, seen, pend, unsent>>
   /\ NoFlags
 
 ImportChoices ==
@@ -420,9 +424,17 @@ SyncStarts ==
 \* is newer than the archived version an archive's delete carries.
 StaleDelete(r) == srv.ver > r.at \/ (r.pay > 0 /\ srv.ver > r.pay)
 
+\* claimQueuedWrite (queued-write.ts), in one transaction just before the request:
+\* the row is still pending, and it agrees with where the task lives now.
+Claimed(r) ==
+  /\ \E i \in 1..Len(queue) : queue[i].at = r.at /\ Pending(queue[i])
+  /\ IF r.op = "delete"
+     THEN ~live.has \/ Variant = "pushSendsStaleDelete"
+     ELSE live.has \/ Variant = "pushSendsStaleWrite"
+
 \* pushSingleItem (pb-push.ts) for the next row this run read. The row's server
-\* read, its write, and its dequeue are one step here. The row may have left the
-\* queue since the run read it; the push still sends it.
+\* read, its claim, its write, and its dequeue are one step here. A row that
+\* can't be claimed leaves the queue unsent.
 PushSends ==
   /\ Quiet /\ phase = "push" /\ todo # <<>> /\ signedIn
   /\ LET r == Head(todo)
@@ -430,11 +442,11 @@ PushSends ==
      IN
      /\ todo' = Tail(todo) /\ queue' = q
      /\ IF r.op = "delete"
-        THEN /\ srv' = IF srv.has /\ ~StaleDelete(r) /\ ~(Fix("pushDropsDeleteOfLiveTask") /\ live.has)
+        THEN /\ srv' = IF srv.has /\ ~StaleDelete(r) /\ Claimed(r)
                        THEN NoCopy ELSE srv
              /\ NoFlags
         ELSE IF (srv.has /\ srv.ver > r.pay)   \* isRemoteNewer: a stale write is dropped
-                \/ (Fix("pushDropsTombstonedWrite") /\ Tombstoned)
+                \/ ~Claimed(r)
         THEN UNCHANGED srv /\ NoFlags
         ELSE /\ srv' = Copy(r.pay)
              /\ Flags(FALSE, FALSE, InOneTable /\ ~srv.has /\ Tombstoned /\ ~PendingDelete(q))

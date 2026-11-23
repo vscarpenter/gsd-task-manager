@@ -85,7 +85,7 @@ Helpers, wire mapping, queue, resurrection, and coordinator (`pb-sync-helpers.ts
 - `pb-sync-helpers.ts:fetchBoundedRemoteTasks(options): Promise<RecordModel[]>`. Fetches a complete, capped task listing page by page.
 - `pb-sync-helpers.ts:fetchRemoteTaskIndex(ownerId)`. Returns a map of task id to `RemoteTaskIndexEntry`, plus `fetchSucceeded`.
 - `pb-sync-helpers.ts:fetchRemoteTaskEntry(ownerId, taskId)`. Looks up one remote task. Returns `entry` and `fetchSucceeded`. It needs a valid `id` and `task_id` but takes `client_updated_at` raw, as `""` when absent or not a string, so a delete can send it as `expected_version`. The index and identity readers stay strict.
-- `pb-sync-helpers.ts:confirmSessionIdentity(ownerId): Promise<void>`. Asks the server whether this session is the owner's.
+- `pb-sync-helpers.ts:confirmSessionIdentity(ownerId): Promise<OwnerConfirmed>`. Asks the server whether this session is the owner's. Creating, dropping a delete on a 404, reconcile, and resurrect each require what it returns.
 - `pb-sync-helpers.ts:SessionIdentityMismatchError`, `pb-sync-helpers.ts:SessionRejectedError`. Errors for another account's record and for a refused token.
 - `pb-sync-helpers.ts:readClientUpdatedAt(record): string | undefined`. Reads the raw `client_updated_at`.
 - `pb-sync-helpers.ts:isBeyondClockSkew(iso, nowMs?): boolean`. True for a stamp past the skew ceiling.
@@ -206,6 +206,7 @@ Push, pull, engine, and realtime:
 - `pb-push.ts:pushLocalChanges` stops on a session check failure without charging queue rows. `isSessionCheckFailure` counts `StaleSyncSessionError` as one. Only a manual Retry in Settings re-arms a retired row.
 - `pb-push.ts:pushLocalChanges` runs sequentially with `THROTTLE_MS` between items, and aborts the loop when an item throws a 429. A 429 on the per-item lookup (`pb-sync-helpers.ts:fetchRemoteTaskEntry`) charges that row one attempt, and the loop continues.
 - `pb-push.ts:recordItemFailure` persists a stable error code only, never the raw message.
+- `queued-write.ts:claimQueuedWrite` guards every push write. It sends an upsert only for a live task and a delete only for a task that isn't live. Otherwise it removes the row and returns null. The three `send*` functions need its claim.
 - `pb-push.ts:upsertRemoteTask` takes `saved_at`, `focus_date`, and `focus_rank` from the current row (`placementToWire`), not the queued payload.
 - `pb-push.ts:resolveNotifyBefore` never sends a null offset (D-10). It sends the payload's value, else the stored row's, else this device's default.
 - `pb-push.ts:settleRowOffset` writes the resolved offset only when the row's `updatedAt` still matches. It bumps no stamp and queues nothing.
@@ -228,7 +229,7 @@ Helpers, wire mapping, queue, resurrection, and coordinator:
 - `task-mapper.ts:localReminderState` keeps `notificationSent`, `lastNotificationAt`, and `snoozedUntil` from the local copy. A pull that moves the due date resets them.
 - `task-mapper.ts:pocketBaseToTaskRecord` always takes `parentTaskId` from the local record. It has no wire field (WEB-PULL-PARENT).
 - `task-mapper.ts:taskRecordToPocketBase` always sends a numeric `notify_before` (D-10). Empty optional strings go out as `''`.
-- `task-mapper.ts:placementToWire` reads placement from the current row. A row no longer in `tasks` sends none of the keys, so the server keeps its values (C4-6).
+- `task-mapper.ts:placementToWire` reads placement from the current row. A row no longer in `tasks` sends none of the keys, so the server keeps its values (C4-6). `claimQueuedWrite` sends nothing at all for such a row.
 - `task-mapper.ts:pbTaskRecordSchema` never rejects a record for a bad `focus_date` or `focus_rank`. `focusFromWire` turns an invalid pair into neither field.
 - `queue.ts:recordAttemptFailure` moves a row to `'failed'` at `SYNC_CONFIG.MAX_RETRIES` instead of deleting it. It truncates `lastError` to 500 characters.
 - `queue.ts:getPending` never returns a failed row. Only `failed-recovery.ts:recoverFailedSyncItem`, on a manual Retry, re-arms one.
