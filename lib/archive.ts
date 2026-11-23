@@ -6,6 +6,7 @@
  */
 
 import { getDb } from "@/lib/db";
+import { modifyRow } from "@/lib/db-row";
 import type { TaskRecord, ArchiveSettings } from "@/lib/types";
 import { getSyncQueue } from "@/lib/sync/queue";
 import { isStoredInTransaction } from "@/lib/task-tables";
@@ -36,10 +37,7 @@ export async function getArchiveSettings(): Promise<ArchiveSettings> {
       enabled: false,
       archiveAfterDays: ARCHIVE_CONFIG.DEFAULT_ARCHIVE_AFTER_DAYS
     };
-    // React development effects can request defaults concurrently on a fresh
-    // database. put() makes both initializers converge on the same singleton.
-    await db.archiveSettings.put(defaults);
-    return defaults;
+    return modifyRow(db.archiveSettings, "settings", (current) => current ?? defaults);
   }
 
   return settings;

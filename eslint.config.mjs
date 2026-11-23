@@ -2,6 +2,7 @@ import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import remoteTaskWrites from "./config/eslint/remote-task-writes.mjs";
+import transactionScope from "./config/eslint/transaction-scope.mjs";
 import instantOrder from "./config/eslint/instant-order.mjs";
 
 const config = [
@@ -99,6 +100,13 @@ const config = [
         ignores: ["lib/sync/queued-write.ts", "lib/sync/pb-account-deletion.ts"],
         plugins: { "gsd-sync": remoteTaskWrites },
         rules: { "gsd-sync/claimed-task-writes": "error" },
+    },
+    {
+        files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+        // Dexie runs every migration inside the one version-change transaction.
+        ignores: ["lib/db-migrations.ts"],
+        plugins: { "gsd-db": transactionScope },
+        rules: { "gsd-db/atomic-writes": "error" },
     },
     {
         files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "packages/mcp-server/src/**/*.ts"],

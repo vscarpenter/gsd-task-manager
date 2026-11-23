@@ -4,8 +4,6 @@ import {
 	checkNotificationPermission,
 	requestNotificationPermission,
 	shouldAskForPermission,
-	getNotificationSettings,
-	updateNotificationSettings,
 	showTaskNotification,
 	isInQuietHours,
 	showTestNotification,
@@ -35,6 +33,8 @@ describe("Notifications module", () => {
 			notificationSettings: {
 				get: vi.fn(),
 				put: vi.fn(),
+				// modifyRow reads and writes inside the table's own transaction.
+				db: { transaction: (_mode: string, _table: unknown, scope: () => unknown) => scope() },
 			},
 		};
 		vi.mocked(getDb).mockReturnValue(mockDb);
@@ -272,104 +272,6 @@ describe("Notifications module", () => {
 			const result = await shouldAskForPermission();
 
 			expect(result).toBe(true);
-		});
-	});
-
-	describe("getNotificationSettings", () => {
-		it("should return existing settings from database", async () => {
-			const existingSettings: NotificationSettings = {
-				id: "settings",
-				enabled: true,
-				defaultReminder: 30,
-				soundEnabled: false,
-				permissionAsked: true,
-				updatedAt: "2025-01-15T12:00:00Z",
-			};
-			mockDb.notificationSettings.get.mockResolvedValue(existingSettings);
-
-			const settings = await getNotificationSettings();
-
-			expect(settings).toEqual(existingSettings);
-			expect(mockDb.notificationSettings.get).toHaveBeenCalledWith("settings");
-		});
-
-		it("should create default settings when none exist", async () => {
-			mockDb.notificationSettings.get.mockResolvedValue(null);
-			mockDb.notificationSettings.put.mockResolvedValue(undefined);
-
-			const settings = await getNotificationSettings();
-
-			expect(settings.id).toBe("settings");
-			expect(settings.enabled).toBe(true);
-			expect(settings.defaultReminder).toBe(15);
-			expect(settings.soundEnabled).toBe(true);
-			expect(settings.permissionAsked).toBe(false);
-			expect(mockDb.notificationSettings.put).toHaveBeenCalled();
-		});
-	});
-
-	describe("updateNotificationSettings", () => {
-		it("should merge updates with existing settings", async () => {
-			const existingSettings: NotificationSettings = {
-				id: "settings",
-				enabled: true,
-				defaultReminder: 15,
-				soundEnabled: true,
-				permissionAsked: false,
-				updatedAt: "2025-01-15T12:00:00Z",
-			};
-			mockDb.notificationSettings.get.mockResolvedValue(existingSettings);
-
-			await updateNotificationSettings({
-				enabled: false,
-				defaultReminder: 30,
-			});
-
-			expect(mockDb.notificationSettings.put).toHaveBeenCalledWith(
-				expect.objectContaining({
-					id: "settings",
-					enabled: false,
-					defaultReminder: 30,
-					soundEnabled: true, // Unchanged
-					permissionAsked: false, // Unchanged
-				}),
-			);
-		});
-
-		it("should always use 'settings' as ID", async () => {
-			mockDb.notificationSettings.get.mockResolvedValue({
-				id: "settings",
-				enabled: true,
-				defaultReminder: 15,
-				soundEnabled: true,
-				permissionAsked: false,
-				updatedAt: "2025-01-15T12:00:00Z",
-			});
-
-			await updateNotificationSettings({
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				id: "different-id" as any,
-			});
-
-			const savedSettings = mockDb.notificationSettings.put.mock.calls[0][0];
-			expect(savedSettings.id).toBe("settings");
-		});
-
-		it("should update timestamp", async () => {
-			const oldTimestamp = "2025-01-10T12:00:00Z";
-			mockDb.notificationSettings.get.mockResolvedValue({
-				id: "settings",
-				enabled: true,
-				defaultReminder: 15,
-				soundEnabled: true,
-				permissionAsked: false,
-				updatedAt: oldTimestamp,
-			});
-
-			await updateNotificationSettings({ enabled: false });
-
-			const savedSettings = mockDb.notificationSettings.put.mock.calls[0][0];
-			expect(savedSettings.updatedAt).not.toBe(oldTimestamp);
 		});
 	});
 

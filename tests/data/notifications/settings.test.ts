@@ -1,171 +1,98 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getNotificationSettings, updateNotificationSettings } from '@/lib/notifications';
+/** Runs on fake-indexeddb with nothing mocked, and reads back what was stored. */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/lib/db';
+import {
+  getNotificationSettings,
+  requestNotificationPermission,
+  updateNotificationSettings,
+} from '@/lib/notifications';
+import type { NotificationSettings } from '@/lib/types';
 
-// Mock dependencies
-vi.mock('@/lib/db');
+const STORED: NotificationSettings = {
+  id: 'settings',
+  enabled: true,
+  defaultReminder: 30,
+  soundEnabled: true,
+  permissionAsked: false,
+  updatedAt: '2025-01-15T10:00:00.000Z',
+};
 
-describe('Notification Settings', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockDb: any;
+const stored = () => getDb().notificationSettings.get('settings');
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+beforeEach(async () => {
+  await getDb().notificationSettings.clear();
+});
 
-    // Create mock database
-    mockDb = {
-      notificationSettings: {
-        get: vi.fn(),
-        put: vi.fn(),
-      },
-    };
+describe('getNotificationSettings', () => {
+  it('returns the stored settings', async () => {
+    await getDb().notificationSettings.put(STORED);
 
-    (getDb as ReturnType<typeof vi.fn>).mockReturnValue(mockDb);
+    expect(await getNotificationSettings()).toEqual(STORED);
   });
 
-  describe('getNotificationSettings', () => {
-    it('should return existing settings from database', async () => {
-      const existingSettings = {
-        id: 'settings',
-        enabled: true,
-        defaultReminder: 15,
-        soundEnabled: true,
-        permissionAsked: true,
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
+  it('creates and returns defaults when none exist', async () => {
+    const settings = await getNotificationSettings();
 
-      mockDb.notificationSettings.get.mockResolvedValue(existingSettings);
-
-      const result = await getNotificationSettings();
-
-      expect(mockDb.notificationSettings.get).toHaveBeenCalledWith('settings');
-      expect(result).toEqual(existingSettings);
+    expect(settings).toMatchObject({
+      id: 'settings', enabled: true, defaultReminder: 15, soundEnabled: true, permissionAsked: false,
     });
-
-    it('should create and return default settings when none exist', async () => {
-      mockDb.notificationSettings.get.mockResolvedValue(null);
-      mockDb.notificationSettings.put.mockResolvedValue(undefined);
-
-      const result = await getNotificationSettings();
-
-      expect(mockDb.notificationSettings.put).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'settings',
-          enabled: true,
-          defaultReminder: 15,
-          soundEnabled: true,
-          permissionAsked: false,
-        })
-      );
-      expect(result.enabled).toBe(true);
-      expect(result.defaultReminder).toBe(15);
-    });
-
-    // Migrated from the former tests/data/functions-branches-boost.test.ts
-    // (finding F2.1): the only test of the corrupt-data self-heal path.
-    it('should self-heal to defaults when stored settings are corrupt', async () => {
-      mockDb.notificationSettings.get.mockResolvedValue({
-        id: 'settings',
-        enabled: 'not-a-boolean',
-        updatedAt: 12345,
-      });
-      mockDb.notificationSettings.put.mockResolvedValue(undefined);
-
-      const result = await getNotificationSettings();
-
-      expect(result.enabled).toBe(true);
-      expect(result.soundEnabled).toBe(true);
-      expect(result.id).toBe('settings');
-      // The healed defaults are re-persisted.
-      expect(mockDb.notificationSettings.put).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'settings', enabled: true })
-      );
-    });
+    expect(await stored()).toEqual(settings);
   });
 
-  describe('updateNotificationSettings', () => {
-    it('should merge updates with current settings', async () => {
-      const currentSettings = {
-        id: 'settings',
-        enabled: true,
-        defaultReminder: 15,
-        soundEnabled: true,
-        permissionAsked: false,
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
+  it('replaces corrupt settings with defaults, and stores them', async () => {
+    await getDb().notificationSettings.put({ id: 'settings', enabled: 'nope', updatedAt: 12345 } as never);
 
-      mockDb.notificationSettings.get.mockResolvedValue(currentSettings);
-      mockDb.notificationSettings.put.mockResolvedValue(undefined);
+    const settings = await getNotificationSettings();
 
-      await updateNotificationSettings({ enabled: false, soundEnabled: false });
+    expect(settings).toMatchObject({ enabled: true, soundEnabled: true });
+    expect(await stored()).toEqual(settings);
+  });
+});
 
-      expect(mockDb.notificationSettings.put).toHaveBeenCalledWith(
-        expect.objectContaining({
-          enabled: false,
-          soundEnabled: false,
-          defaultReminder: 15, // Unchanged
-          permissionAsked: false, // Unchanged
-        })
-      );
-    });
+describe('updateNotificationSettings', () => {
+  beforeEach(async () => {
+    await getDb().notificationSettings.put(STORED);
+  });
 
-    it('should always set id to "settings"', async () => {
-      const currentSettings = {
-        id: 'settings',
-        enabled: true,
-        defaultReminder: 15,
-        soundEnabled: true,
-        permissionAsked: false,
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
+  it('changes only the fields given', async () => {
+    await updateNotificationSettings({ enabled: false, soundEnabled: false });
 
-      mockDb.notificationSettings.get.mockResolvedValue(currentSettings);
-      mockDb.notificationSettings.put.mockResolvedValue(undefined);
+    expect(await stored()).toMatchObject({ enabled: false, soundEnabled: false, defaultReminder: 30, permissionAsked: false });
+  });
 
-      await updateNotificationSettings({ enabled: false });
+  it('keeps the one settings row, whatever id it is given', async () => {
+    await updateNotificationSettings({ id: 'other' } as never);
 
-      expect(mockDb.notificationSettings.put).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'settings',
-        })
-      );
-    });
+    expect(await getDb().notificationSettings.toCollection().primaryKeys()).toEqual(['settings']);
+  });
 
-    it('should update updatedAt timestamp', async () => {
-      const currentSettings = {
-        id: 'settings',
-        enabled: true,
-        defaultReminder: 15,
-        soundEnabled: true,
-        permissionAsked: false,
-        updatedAt: '2025-01-15T10:00:00Z',
-      };
+  it('stamps the change', async () => {
+    await updateNotificationSettings({ enabled: false });
 
-      mockDb.notificationSettings.get.mockResolvedValue(currentSettings);
-      mockDb.notificationSettings.put.mockResolvedValue(undefined);
+    expect(Date.parse((await stored())!.updatedAt)).toBeGreaterThan(Date.parse(STORED.updatedAt));
+  });
 
-      await updateNotificationSettings({ enabled: false });
+  it('rejects an invalid value and stores nothing', async () => {
+    await expect(updateNotificationSettings({ defaultReminder: -5 })).rejects.toThrow(
+      /Notification settings validation failed/,
+    );
 
-      const call = mockDb.notificationSettings.put.mock.calls[0][0];
-      expect(call.updatedAt).toBeDefined();
-      expect(call.updatedAt).not.toBe(currentSettings.updatedAt);
-    });
+    expect(await stored()).toEqual(STORED);
+  });
+});
 
-    // Migrated from the former tests/data/functions-branches-boost.test.ts
-    // (finding F2.1): the only test of the validation-failure throw path.
-    it('should throw a descriptive error when the merged settings are invalid', async () => {
-      mockDb.notificationSettings.get.mockResolvedValue({
-        id: 'settings',
-        enabled: true,
-        defaultReminder: 15,
-        soundEnabled: true,
-        permissionAsked: false,
-        updatedAt: '2025-01-15T10:00:00Z',
-      });
+describe('requestNotificationPermission', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-      await expect(
-        updateNotificationSettings({ defaultReminder: -5 })
-      ).rejects.toThrow(/Notification settings validation failed/);
-    });
+  it.each([
+    ['granted', true],
+    ['denied', false],
+  ] as const)('records that it asked when the answer is %s', async (answer, allowed) => {
+    vi.stubGlobal('Notification', { permission: 'default', requestPermission: async () => answer });
+
+    expect(await requestNotificationPermission()).toBe(allowed);
+    expect((await stored())?.permissionAsked).toBe(true);
   });
 });

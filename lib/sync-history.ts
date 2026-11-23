@@ -187,25 +187,24 @@ export async function clearHistory(): Promise<void> {
  */
 async function cleanupOldRecords(): Promise<void> {
   const db = getDb();
+  await db.transaction('rw', db.syncHistory, async () => {
+    const count = await db.syncHistory.count();
 
-  const count = await db.syncHistory.count();
+    if (count > MAX_HISTORY_RECORDS) {
+      const recordsToDelete = count - MAX_HISTORY_RECORDS;
 
-  if (count > MAX_HISTORY_RECORDS) {
-    const recordsToDelete = count - MAX_HISTORY_RECORDS;
+      const oldestRecords = await db.syncHistory
+        .orderBy('timestamp')
+        .limit(recordsToDelete)
+        .toArray();
 
-    // Get oldest records
-    const oldestRecords = await db.syncHistory
-      .orderBy('timestamp')
-      .limit(recordsToDelete)
-      .toArray();
+      const idsToDelete = oldestRecords.map(r => r.id);
+      await db.syncHistory.bulkDelete(idsToDelete);
 
-    // Delete them
-    const idsToDelete = oldestRecords.map(r => r.id);
-    await db.syncHistory.bulkDelete(idsToDelete);
-
-    logger.debug('Cleaned up old sync history records', {
-      deleted: recordsToDelete,
-      remaining: MAX_HISTORY_RECORDS,
-    });
-  }
+      logger.debug('Cleaned up old sync history records', {
+        deleted: recordsToDelete,
+        remaining: MAX_HISTORY_RECORDS,
+      });
+    }
+  });
 }

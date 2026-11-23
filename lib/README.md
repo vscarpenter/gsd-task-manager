@@ -73,8 +73,8 @@ Reset, sync history, notification checker, caches, and environment (`reset-every
 - `sync-history.ts:recordSyncSuccess`, `sync-history.ts:recordSyncError`, `sync-history.ts:recordSyncPartial`. Add one row to `syncHistory`.
 - `sync-history.ts:getRecentHistory(limit?)`, `sync-history.ts:getHistoryForDevice(deviceId, limit?)`, `sync-history.ts:getHistoryStats()`. Read sync history and totals.
 - `sync-history.ts:clearHistory(): Promise<void>`. Clears `syncHistory`.
+- `db-row.ts:modifyRow(table, key, change)`. Reads, changes, and writes one row in one transaction. `change` can't be async.
 - `notification-checker.ts:notificationChecker`. Singleton with `checkAndNotify`, `start`, `stop`, `isRunning`, and `getLastCheckTime`.
-- `notification-checker.ts:resetTaskNotification(taskId)`, `notification-checker.ts:snoozeTaskNotification(taskId, minutes)`. Reset or snooze one task's reminder state.
 - `notification-checker.ts:getDueSoonCount(): Promise<number>`. Counts tasks inside their reminder window, for the badge.
 - `backup-download.ts:downloadBackup(): Promise<BackupDownloadResult>`. Writes the backup to a downloaded file.
 - `backup-download.ts:runBackupExport(): Promise<boolean>`. Downloads the backup and shows a toast for the outcome.
@@ -370,7 +370,6 @@ Reset, sync history, notification checker, caches, and environment:
 - `reset-lock.ts` reads and writes the `gsd-reset-pending` key and listens to `storage` events on `window`.
 - `sync-history.ts` reads and writes the `syncHistory` table.
 - `notification-checker.ts:notificationChecker` runs a `setInterval` (1 minute by default), reads `tasks` and `notificationSettings`, updates reminder fields on `tasks`, shows notifications, and sets the app badge. `checkSweepReminder` reads the `localStorage` keys `gsd:weekly-sweep-reminder` and `gsd:weekly-sweep-reminder-fired`. It writes the second key through `markSweepFired`.
-- `notification-checker.ts:resetTaskNotification` and `snoozeTaskNotification` write `tasks` directly, with no sync queue entry.
 - `backup-download.ts:downloadBackup` creates a Blob URL, clicks a temporary anchor to download `gsd-tasks-{timestamp}.json`, and revokes the URL. `runBackupExport` shows `sonner` toasts.
 - `browser-cache.ts:clearAppCaches` deletes Cache Storage caches.
 - `env-config.ts` reads `window.location` and `process.env.NEXT_PUBLIC_POCKETBASE_URL` on module load.
