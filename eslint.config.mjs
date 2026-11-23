@@ -98,6 +98,8 @@ const config = [
         ignores: ["lib/db-migrations.ts"],
         plugins: { "gsd-db": transactionScope },
         rules: { "gsd-db/atomic-writes": "error" },
+    },
+    {
         files: ["packages/mcp-server/src/tools/**/*.ts"],
         rules: {
             "no-restricted-properties": [
