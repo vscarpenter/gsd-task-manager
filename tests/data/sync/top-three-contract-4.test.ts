@@ -197,9 +197,7 @@ describe('C4-5 and C4-6: push takes the pair from the row', () => {
 
     await fullSync('auto');
 
-    expect(fake.state.writes).toHaveLength(1);
-    expect(fake.state.writes[0].body).not.toHaveProperty('focus_date');
-    expect(fake.state.writes[0].body).not.toHaveProperty('focus_rank');
+    expect(fake.state.writes).toEqual([]);
     expect(serverPick()).toEqual(PICK);
   });
 });

@@ -15,7 +15,7 @@ This package holds the write paths for live tasks: create, update, complete, mov
 - `toggle.ts:toggleCompleted(id: string, completed: boolean): Promise<ToggleCompletedResult>`. Sets completion. Completing a recurring task also adds its next instance.
 - `toggle.ts:ToggleCompletedResult`. Interface with `task` and `recurringInstance` (the spawned task, or `null`).
 - `delete.ts:deleteTask(id: string): Promise<void>`. Moves a task from `tasks` to `deletedTasks`.
-- `restore.ts:restoreTask(task: TaskRecord): Promise<void>`. Puts the exact record back in `tasks`. This is the undo path for delete.
+- `restore.ts:restoreTask(task: TaskRecord): Promise<void>`. Puts the deleted record, or a newer stored copy, back in `tasks`. This is the undo path for delete.
 - `move.ts:moveTaskToQuadrant(id: string, targetQuadrant: QuadrantId): Promise<TaskRecord>`. Sets `urgent`, `important`, and `quadrant` for a drag and drop move.
 - `duplicate.ts:duplicateTask(id: string): Promise<TaskRecord>`. Adds a copy with a new id and a `" (Copy)"` title suffix.
 - `snooze.ts:snoozeTask(id: string, minutes: number): Promise<TaskRecord>`. Sets `snoozedUntil`. Zero minutes clears it.
@@ -49,7 +49,7 @@ This package holds the write paths for live tasks: create, update, complete, mov
 - `delete.ts:deleteTask` writes `deletedTasks` with `put`, never `add`. Deleting a restored task again must not raise a `ConstraintError`.
 - `delete.ts:deleteTask` enqueues a `delete` when sync is on. When sync is off it calls `rememberForResurrect([id])` in the same transaction.
 - `delete.ts:deleteTask` is idempotent. A missing id succeeds without an error.
-- `restore.ts:restoreTask` uses `put`, deletes the `deletedTasks` row for the same id, and calls `forgetForResurrect`. Leaving the trash row would put one id in two lifecycle tables (ADR 0013).
+- `restore.ts:restoreTask` uses `bringBackInTransaction` from `lib/task-tables.ts`, which leaves the id in `tasks` alone, and calls `forgetForResurrect`.
 - `restore.ts:restoreTask` does not restore inbound dependency edges that the delete removed.
 - `create.ts:createTask` extracts URLs from the title on every call, so every creation path gets the same link handling. The step is idempotent.
 - `create.ts:createTask` and `update.ts:mergeTaskUpdates` always store a numeric `notifyBefore` (D-10). A missing value resolves to the device default. Off is `notificationEnabled`.
@@ -75,7 +75,7 @@ This package holds the write paths for live tasks: create, update, complete, mov
 
 - Every mutation reads and writes the Dexie `tasks` table and, when sync is on, adds a `syncQueue` entry through `getSyncQueue().enqueue`.
 - `delete.ts:deleteTask` writes `deletedTasks`, rewrites tasks that depended on the deleted id (`removeDependencyReferencesInTransaction`), and may write the remembered-ids row in `syncMetadata`.
-- `restore.ts:restoreTask` deletes from `deletedTasks` and updates the remembered-ids row in `syncMetadata`.
+- `restore.ts:restoreTask` deletes from `archivedTasks` and `deletedTasks`, and updates the remembered-ids row in `syncMetadata`.
 - `list.ts:clearTasks` clears `tasks` with no sync queue entry and no transaction wrapper.
 - `helpers.ts:runTaskSyncTransaction` reads `syncMetadata` through `getSyncConfig`.
 - `helpers.ts:scheduleSyncAfterChange` calls `getBackgroundSyncManager().scheduleDebouncedSync()`, which starts a debounce timer.

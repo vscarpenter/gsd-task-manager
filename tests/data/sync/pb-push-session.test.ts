@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
-import type { PBSyncConfig } from '@/lib/sync/types';
+import type { PBSyncConfig, SyncQueueItem } from '@/lib/sync/types';
 import type { TaskRecord } from '@/lib/types';
 import { createMockSyncConfig, createMockTask } from '@/tests/fixtures';
 
@@ -41,6 +41,15 @@ function syncConfig(overrides: Partial<PBSyncConfig> = {}): PBSyncConfig {
 function makeTask(id: string): TaskRecord {
   const at = '2026-05-18T12:00:00.000Z';
   return createMockTask({ id, title: 'T', description: '', createdAt: at, updatedAt: at });
+}
+
+/** Queues as the writers do: a delete's task has left `tasks`, and any other row's task is live. */
+async function queueWrite(
+  operation: SyncQueueItem['operation'], taskId: string, payload: TaskRecord | null,
+): Promise<void> {
+  if (operation === 'delete') await getDb().tasks.delete(taskId);
+  else if (payload) await getDb().tasks.put(payload);
+  await getSyncQueue().enqueue(operation, taskId, payload);
 }
 
 interface FakeServer {
@@ -101,7 +110,7 @@ describe('pushLocalChanges session fence', () => {
 
   it('should_push_and_dequeue_when_sync_config_names_the_session_owner', async () => {
     await getDb().syncMetadata.put(syncConfig());
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
+    await queueWrite('create', 't1', makeTask('t1'));
     const server = serveAsUserOne();
 
     const result = await pushLocalChanges('user-1');
@@ -115,7 +124,7 @@ describe('pushLocalChanges session fence', () => {
     // user-2 signed in on this device and queued an edit. user-1's token is
     // back in shared auth storage, so the SDK principal check alone passes.
     await getDb().syncMetadata.put(syncConfig({ userId: 'user-2' }));
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
+    await queueWrite('create', 't1', makeTask('t1'));
     const server = serveAsUserOne();
 
     await expect(pushLocalChanges('user-1')).rejects.toBeInstanceOf(StaleSyncSessionError);
@@ -124,9 +133,34 @@ describe('pushLocalChanges session fence', () => {
     expect(await queuedTaskIds()).toEqual(['t1']);
   });
 
+  it('should_not_coalesce_rows_queued_under_another_account', async () => {
+    await getDb().syncMetadata.put(syncConfig({ userId: 'user-2' }));
+    await queueWrite('update', 't1', makeTask('t1'));
+    await queueWrite('update', 't1', makeTask('t1'));
+    serveAsUserOne();
+
+    await expect(pushLocalChanges('user-1')).rejects.toBeInstanceOf(StaleSyncSessionError);
+
+    expect(await queuedTaskIds()).toEqual(['t1', 't1']);
+  });
+
+  it('should_send_nothing_when_the_session_ends_during_the_lookup', async () => {
+    await getDb().syncMetadata.put(syncConfig());
+    await queueWrite('update', 't1', makeTask('t1'));
+    fetchRemoteTaskEntryMock.mockImplementationOnce(async () => {
+      await signInAsUserTwo();
+      return { entry: { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T11:00:00.000Z' }, fetchSucceeded: true };
+    });
+    const server = serveAsUserOne();
+
+    await expect(pushLocalChanges('user-1')).rejects.toBeInstanceOf(StaleSyncSessionError);
+
+    expect(server.update).not.toHaveBeenCalled();
+  });
+
   it('should_not_read_the_queue_when_sync_is_off', async () => {
     await getDb().syncMetadata.put(syncConfig({ enabled: false, userId: null }));
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
+    await queueWrite('create', 't1', makeTask('t1'));
     const server = serveAsUserOne();
 
     await expect(pushLocalChanges('user-1')).rejects.toBeInstanceOf(StaleSyncSessionError);
@@ -137,8 +171,8 @@ describe('pushLocalChanges session fence', () => {
 
   it('should_stop_before_the_next_item_when_the_session_ends_mid_push', async () => {
     await getDb().syncMetadata.put(syncConfig());
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
-    await getSyncQueue().enqueue('create', 't2', makeTask('t2'));
+    await queueWrite('create', 't1', makeTask('t1'));
+    await queueWrite('create', 't2', makeTask('t2'));
     // Another account signs in while the first request is in flight.
     const server = serveAsUserOne(signInAsUserTwo);
 
@@ -149,8 +183,9 @@ describe('pushLocalChanges session fence', () => {
 
   it('should_leave_the_queue_untouched_once_the_session_has_ended', async () => {
     await getDb().syncMetadata.put(syncConfig());
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
-    await getSyncQueue().enqueue('create', 't2', makeTask('t2'));
+    // A stored offset skips settleRowOffset, whose own fence would hide the dequeue's.
+    await queueWrite('create', 't1', { ...makeTask('t1'), notifyBefore: 15 });
+    await queueWrite('create', 't2', makeTask('t2'));
     serveAsUserOne(signInAsUserTwo);
 
     await expect(pushLocalChanges('user-1')).rejects.toBeInstanceOf(StaleSyncSessionError);
@@ -164,7 +199,7 @@ describe('pushLocalChanges session fence', () => {
 
   it('should_not_charge_a_row_when_the_session_ends_before_a_failed_lookup_is_recorded', async () => {
     await getDb().syncMetadata.put(syncConfig());
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
+    await queueWrite('create', 't1', makeTask('t1'));
     serveAsUserOne();
     // The lookup fails, and the other account signs in while it is in flight.
     fetchRemoteTaskEntryMock.mockImplementation(async () => {
@@ -179,8 +214,8 @@ describe('pushLocalChanges session fence', () => {
   });
   it('should_send_nothing_for_the_next_row_when_the_session_ends_between_rows', async () => {
     await getDb().syncMetadata.put(syncConfig());
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
-    await getSyncQueue().enqueue('create', 't2', makeTask('t2'));
+    await queueWrite('create', 't1', makeTask('t1'));
+    await queueWrite('create', 't2', makeTask('t2'));
     const server = serveAsUserOne();
     // Row one is pushed and dequeued. The other account signs in during the throttle.
     delayMock.mockImplementationOnce(signInAsUserTwo);
@@ -199,7 +234,7 @@ describe('pushLocalChanges session fence', () => {
 
   it('should_keep_a_delete_queued_when_the_session_ends_during_the_request', async () => {
     await getDb().syncMetadata.put(syncConfig());
-    await getSyncQueue().enqueue('delete', 't1', null);
+    await queueWrite('delete', 't1', null);
     fetchRemoteTaskEntryMock.mockResolvedValue({
       entry: { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T10:00:00.000Z' },
       fetchSucceeded: true,
@@ -214,7 +249,7 @@ describe('pushLocalChanges session fence', () => {
 
   it('should_not_charge_a_row_when_the_request_fails_after_the_session_ended', async () => {
     await getDb().syncMetadata.put(syncConfig());
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
+    await queueWrite('create', 't1', makeTask('t1'));
     serveAsUserOne(async () => {
       await signInAsUserTwo();
       throw new Error('500 Internal Server Error');
@@ -233,7 +268,7 @@ describe('pushLocalChanges session fence', () => {
     const task = { ...makeTask('t1'), notifyBefore: undefined };
     await getDb().syncMetadata.put(syncConfig());
     await getDb().tasks.put(task);
-    await getSyncQueue().enqueue('create', 't1', task);
+    await queueWrite('create', 't1', task);
     serveAsUserOne(signInAsUserTwo);
 
     await expect(pushLocalChanges('user-1')).rejects.toBeInstanceOf(StaleSyncSessionError);
@@ -243,8 +278,8 @@ describe('pushLocalChanges session fence', () => {
 
   it('should_keep_pushing_when_sync_config_is_rewritten_for_the_same_account', async () => {
     await getDb().syncMetadata.put(syncConfig());
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1'));
-    await getSyncQueue().enqueue('create', 't2', makeTask('t2'));
+    await queueWrite('create', 't1', makeTask('t1'));
+    await queueWrite('create', 't2', makeTask('t2'));
     // A settings change rewrites the row mid-push. The account is unchanged.
     const server = serveAsUserOne(async () => {
       await getDb().syncMetadata.put(syncConfig({ autoSyncEnabled: false }));

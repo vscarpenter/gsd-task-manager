@@ -72,7 +72,7 @@ export async function runTaskSyncTransaction<T>(
     // record into it and restore moves one out (ADR 0015); a narrower scope
     // would make those two operations non-atomic. `syncMetadata` is in scope so
     // a delete made while signed out remembers its id in the same commit.
-    [db.tasks, db.deletedTasks, db.syncQueue, db.syncMetadata],
+    [db.tasks, db.archivedTasks, db.deletedTasks, db.syncQueue, db.syncMetadata],
     // The scope must be an async function. Dexie keeps the transaction across
     // native awaits only for a scope tagged AsyncFunction; with a plain arrow, a
     // write after an await that made no request runs in a transaction of its own,

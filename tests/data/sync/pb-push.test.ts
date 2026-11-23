@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getDb } from '@/lib/db';
 import { getSyncQueue } from '@/lib/sync/queue';
+import type { SyncQueueItem } from '@/lib/sync/types';
 import type { TaskRecord } from '@/lib/types';
 import { createMockSyncConfig, createMockTask } from '@/tests/fixtures';
 
@@ -65,6 +66,15 @@ function makeTask(id: string, updatedAt: string): TaskRecord {
   });
 }
 
+/** Queues as the writers do: a delete's task has left `tasks`, and any other row's task is live. */
+async function queueWrite(
+  operation: SyncQueueItem['operation'], taskId: string, payload: TaskRecord | null,
+): Promise<void> {
+  if (operation === 'delete') await getDb().tasks.delete(taskId);
+  else if (payload) await getDb().tasks.put(payload);
+  await getSyncQueue().enqueue(operation, taskId, payload);
+}
+
 describe('conditional mutation contract', () => {
   const stamp = '2026-11-10T10:00:00.000Z';
   beforeEach(async () => {
@@ -80,7 +90,7 @@ describe('conditional mutation contract', () => {
     const send = vi.fn(async () => undefined);
     const legacyUpdate = vi.fn();
     vi.mocked(getPocketBase).mockReturnValue({ send, collection: () => ({ update: legacyUpdate }) } as unknown as ReturnType<typeof getPocketBase>);
-    await getSyncQueue().enqueue('update', 'task-one', makeTask('task-one', stamp));
+    await queueWrite('update', 'task-one', makeTask('task-one', stamp));
     await pushLocalChanges('user-1');
     expect(send).toHaveBeenCalledWith('/api/gsd/tasks/remote-task', expect.objectContaining({
       method: 'PATCH', body: expect.objectContaining({ expected_version: stamp,
@@ -94,7 +104,7 @@ describe('conditional mutation contract', () => {
     const send = vi.fn(async () => { throw { status }; });
     const legacyUpdate = vi.fn();
     vi.mocked(getPocketBase).mockReturnValue({ send, collection: () => ({ update: legacyUpdate }) } as unknown as ReturnType<typeof getPocketBase>);
-    await getSyncQueue().enqueue('update', 'task-one', makeTask('task-one', stamp));
+    await queueWrite('update', 'task-one', makeTask('task-one', stamp));
     await pushLocalChanges('user-1');
     expect(await getSyncQueue().getPendingCount()).toBe(1);
     expect(legacyUpdate).not.toHaveBeenCalled();
@@ -105,7 +115,7 @@ describe('conditional mutation contract', () => {
     const send = vi.fn();
     const update = vi.fn();
     vi.mocked(getPocketBase).mockReturnValue({ send, collection: () => ({ update }) } as unknown as ReturnType<typeof getPocketBase>);
-    await getSyncQueue().enqueue('update', 'task-one', makeTask('task-one', stamp));
+    await queueWrite('update', 'task-one', makeTask('task-one', stamp));
     fetchRemoteTaskEntryMock.mockImplementationOnce(async () => {
       await getDb().syncQueue.clear();
       return { entry: { pbRecordId: 'remote-task', clientUpdatedAt: stamp }, fetchSucceeded: true };
@@ -138,7 +148,7 @@ describe('pushLocalChanges LWW guard', () => {
 
   it('rechecks the individual record immediately before mutation', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
         ['t1', { pbRecordId: 'rec-1', clientUpdatedAt: '2026-05-18T10:00:00.000Z' }],
@@ -164,7 +174,7 @@ describe('pushLocalChanges LWW guard', () => {
 
   it('skips a queued update whose payload is older than the remote record', async () => {
     const stalePayload = makeTask('t1', '2026-05-18T08:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', stalePayload);
+    await queueWrite('update', 't1', stalePayload);
 
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
@@ -192,7 +202,7 @@ describe('pushLocalChanges LWW guard', () => {
   });
 
   it('skips a queued delete when the remote record is newer than the queued op', async () => {
-    await getSyncQueue().enqueue('delete', 't1', null);
+    await queueWrite('delete', 't1', null);
 
     // Override the auto-stamped timestamp to a known past instant.
     const queue = await getDb().syncQueue.toArray();
@@ -230,7 +240,7 @@ describe('pushLocalChanges LWW guard', () => {
     const queuedAt = new Date('2026-05-18T12:00:00.000Z').getTime();
 
     async function queueArchiveDelete(): Promise<void> {
-      await getSyncQueue().enqueue('delete', 't1', makeTask('t1', archivedVersion));
+      await queueWrite('delete', 't1', makeTask('t1', archivedVersion));
       const [item] = await getDb().syncQueue.toArray();
       await getDb().syncQueue.update(item.id, { timestamp: queuedAt });
     }
@@ -277,7 +287,7 @@ describe('pushLocalChanges LWW guard', () => {
 
   it('proceeds with the write when the payload is newer than the remote record', async () => {
     const freshPayload = makeTask('t1', '2026-05-18T12:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', freshPayload);
+    await queueWrite('update', 't1', freshPayload);
 
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
@@ -305,7 +315,7 @@ describe('pushLocalChanges LWW guard', () => {
     // is a plausible "just now"; the remote is years ahead and untrustworthy.
     const localUpdatedAt = new Date(Date.now() - 60_000).toISOString();
     const freshPayload = makeTask('t1', localUpdatedAt);
-    await getSyncQueue().enqueue('update', 't1', freshPayload);
+    await queueWrite('update', 't1', freshPayload);
 
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
@@ -329,7 +339,7 @@ describe('pushLocalChanges LWW guard', () => {
 
   it('does not push an upsert when the remote index fetch failed (LWW unverifiable)', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
 
     // Index fetch failed — we have no remote timestamp to compare against,
     // so we cannot verify whether the queued write would clobber newer data.
@@ -358,7 +368,7 @@ describe('pushLocalChanges LWW guard', () => {
 
   it('preserves the queue entry when the remote record has no usable version', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
 
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
@@ -385,7 +395,7 @@ describe('pushLocalChanges LWW guard', () => {
   });
 
   it('a delete over an unusable remote version is sent with the raw value', async () => {
-    await getSyncQueue().enqueue('delete', 't1', null);
+    await queueWrite('delete', 't1', null);
     fetchRemoteTaskEntryMock.mockResolvedValue({
       entry: { pbRecordId: 'rec-1', clientUpdatedAt: 'not-a-date' },
       fetchSucceeded: true,
@@ -409,7 +419,7 @@ describe('pushLocalChanges LWW guard', () => {
   });
 
   it('a delete over an absent remote version is sent with an empty expected_version', async () => {
-    await getSyncQueue().enqueue('delete', 't1', null);
+    await queueWrite('delete', 't1', null);
     fetchRemoteTaskEntryMock.mockResolvedValue({
       entry: { pbRecordId: 'rec-1', clientUpdatedAt: '' },
       fetchSucceeded: true,
@@ -431,7 +441,7 @@ describe('pushLocalChanges LWW guard', () => {
   });
 
   it('an upsert over an unusable remote version is still charged', async () => {
-    await getSyncQueue().enqueue('update', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
+    await queueWrite('update', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
     fetchRemoteTaskEntryMock.mockResolvedValue({
       entry: { pbRecordId: 'rec-1', clientUpdatedAt: 'not-a-date' },
       fetchSucceeded: true,
@@ -456,7 +466,7 @@ describe('pushLocalChanges LWW guard', () => {
     '2026-11-20T10:00Z',
     '2026-02-30T10:00:00Z',
   ])('an upsert over the Date-readable but non-wire version %s is charged, not sent', async (version) => {
-    await getSyncQueue().enqueue('update', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
+    await queueWrite('update', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
     fetchRemoteTaskEntryMock.mockResolvedValue({
       entry: { pbRecordId: 'rec-1', clientUpdatedAt: version },
       fetchSucceeded: true,
@@ -475,7 +485,7 @@ describe('pushLocalChanges LWW guard', () => {
   });
 
   it('does not run the stale check on a version the wire schema rejects', async () => {
-    await getSyncQueue().enqueue('delete', 't1', null);
+    await queueWrite('delete', 't1', null);
     const [item] = await getDb().syncQueue.toArray();
     await getDb().syncQueue.update(item.id, { timestamp: 1 });
     fetchRemoteTaskEntryMock.mockResolvedValue({
@@ -498,7 +508,7 @@ describe('pushLocalChanges LWW guard', () => {
   });
 
   it('an archive delete over a garbled version is sent with the raw value', async () => {
-    await getSyncQueue().enqueue('delete', 't1', makeTask('t1', '2026-05-18T08:00:00.000Z'));
+    await queueWrite('delete', 't1', makeTask('t1', '2026-05-18T08:00:00.000Z'));
     fetchRemoteTaskEntryMock.mockResolvedValue({
       entry: { pbRecordId: 'rec-1', clientUpdatedAt: 'garbled' },
       fetchSucceeded: true,
@@ -519,8 +529,8 @@ describe('pushLocalChanges LWW guard', () => {
   });
 
   it('charges a delete the server refuses with a 400 and still pushes the next item', async () => {
-    await getSyncQueue().enqueue('delete', 't1', null);
-    await getSyncQueue().enqueue('delete', 't2', null);
+    await queueWrite('delete', 't1', null);
+    await queueWrite('delete', 't2', null);
     const pending = await getDb().syncQueue.toArray();
     await getDb().syncQueue.update(pending.find((i) => i.taskId === 't1')!.id, { timestamp: Date.parse('2026-05-18T12:00:00.000Z') });
     await getDb().syncQueue.update(pending.find((i) => i.taskId === 't2')!.id, { timestamp: Date.parse('2026-05-18T12:01:00.000Z') });
@@ -556,7 +566,7 @@ describe('pushLocalChanges LWW guard', () => {
     const T2 = '2026-05-18T10:00:00.000Z';
 
     const payload = makeTask('t1', T2);
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
     await getSyncQueue().enqueue('delete', 't1', null);
 
     // Pin both queue items' timestamps so the loop processes update -> delete,
@@ -583,7 +593,11 @@ describe('pushLocalChanges LWW guard', () => {
         fetchSucceeded: true,
       });
 
-    const updateSpy = vi.fn(async () => ({ id: 'rec-1' }));
+    // The delete commits while the update is in flight, so only its stale check can stop it.
+    const updateSpy = vi.fn(async () => {
+      await getDb().tasks.delete('t1');
+      return { id: 'rec-1' };
+    });
     const deleteSpy = vi.fn();
     (getPocketBase as ReturnType<typeof vi.fn>).mockReturnValue({
       ...confirmedSession(),
@@ -604,7 +618,7 @@ describe('pushLocalChanges LWW guard', () => {
     // sanitized error code, and continues. This exercises the WARN branch
     // of the catch handler.
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
 
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
@@ -638,8 +652,8 @@ describe('pushLocalChanges LWW guard', () => {
   it('throttles before the next request after a non-rate-limit failure', async () => {
     const firstPayload = makeTask('t1', '2026-05-18T12:00:00.000Z');
     const secondPayload = makeTask('t2', '2026-05-18T12:05:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', firstPayload);
-    await getSyncQueue().enqueue('update', 't2', secondPayload);
+    await queueWrite('update', 't1', firstPayload);
+    await queueWrite('update', 't2', secondPayload);
     const pending = await getDb().syncQueue.toArray();
     await getDb().syncQueue.update(pending.find((item) => item.taskId === 't1')!.id, { timestamp: 1 });
     await getDb().syncQueue.update(pending.find((item) => item.taskId === 't2')!.id, { timestamp: 2 });
@@ -670,7 +684,7 @@ describe('pushLocalChanges LWW guard', () => {
       ...makeTask('t1', '2026-05-18T12:00:00.000Z'),
       title: leakedTaskTitle,
     };
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
@@ -716,7 +730,7 @@ describe('pushLocalChanges LWW guard', () => {
 
   it('preserves the queue entry when remote clientUpdatedAt is unparseable', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
 
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
@@ -742,7 +756,7 @@ describe('pushLocalChanges LWW guard', () => {
 
   it('surfaces the server Retry-After (ms) from a 429 so the caller can back off', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
 
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
@@ -777,8 +791,8 @@ describe('pushLocalChanges LWW guard', () => {
   it('aborts the push loop after a 429 without hammering remaining queued items', async () => {
     const firstPayload = makeTask('t1', '2026-05-18T12:00:00.000Z');
     const secondPayload = makeTask('t2', '2026-05-18T12:05:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', firstPayload);
-    await getSyncQueue().enqueue('update', 't2', secondPayload);
+    await queueWrite('update', 't1', firstPayload);
+    await queueWrite('update', 't2', secondPayload);
 
     const pending = await getDb().syncQueue.toArray();
     const firstItem = pending.find((item) => item.taskId === 't1')!;
@@ -826,7 +840,7 @@ describe('pushLocalChanges LWW guard', () => {
 
   it('reports a null Retry-After when a 429 carries no header', async () => {
     const payload = makeTask('t1', '2026-05-18T12:00:00.000Z');
-    await getSyncQueue().enqueue('update', 't1', payload);
+    await queueWrite('update', 't1', payload);
 
     fetchRemoteTaskIndexMock.mockResolvedValue({
       index: new Map([
@@ -869,7 +883,7 @@ describe('pushLocalChanges session binding', () => {
       ...confirmedSession(),
       collection: () => ({ create, update: vi.fn() }),
     } as never);
-    await getSyncQueue().enqueue('create', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
+    await queueWrite('create', 't1', makeTask('t1', '2026-05-18T12:00:00.000Z'));
     fetchRemoteTaskIndexMock.mockResolvedValue({ index: new Map(), fetchSucceeded: true });
 
     await expect(pushLocalChanges('user-2')).rejects.toBeInstanceOf(StaleSyncSessionError);
