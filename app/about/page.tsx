@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <AppShell title="About">
+    <AppShell title="About" titleAsLabel>
       <HeroSection />
       <MatrixSection />
       <FeaturesSection />

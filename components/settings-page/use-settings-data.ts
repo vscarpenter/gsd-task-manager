@@ -13,6 +13,7 @@ import {
 import { isNotificationSupported } from "@/lib/notifications/permissions";
 import type { AppPreferences, NotificationSettings } from "@/lib/types";
 import { getSyncStatus } from "@/lib/sync/config";
+import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import { createLogger } from "@/lib/logger";
 import {
   APP_PREFERENCES_EVENT,
@@ -27,9 +28,11 @@ import {
 } from "@/lib/preferences/show-completed";
 
 const logger = createLogger("UI");
+const SYNC_DISABLED = { enabled: false, pendingCount: 0 };
 
 export interface SettingsData {
-  dataLoaded: boolean;
+  loadState: "loading" | "ready" | "error";
+  retryLoad: () => void;
   showCompleted: boolean;
   appPreferences: AppPreferences | null;
   notificationSettings: NotificationSettings | null;
@@ -56,9 +59,9 @@ export function useSettingsData(): SettingsData {
   const [appPreferences, setAppPreferences] = useState<AppPreferences | null>(null);
   const [notificationSettings, setNotificationSettings] =
     useState<NotificationSettings | null>(null);
-  const [syncEnabled, setSyncEnabled] = useState(false);
-  const [pendingSync, setPendingSync] = useState(0);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(SYNC_DISABLED);
+  const [loadState, setLoadState] = useState<SettingsData["loadState"]>("loading");
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,11 +75,12 @@ export function useSettingsData(): SettingsData {
         if (cancelled) return;
         setNotificationSettings(notif);
         setAppPreferences(prefs);
-        setSyncEnabled(sync.enabled);
-        setPendingSync(sync.pendingCount);
+        setSyncStatus({ enabled: sync.enabled, pendingCount: sync.pendingCount });
         setShowCompleted(readShowCompleted());
-        setDataLoaded(true);
+        setLoadState("ready");
       } catch (error) {
+        if (cancelled) return;
+        setLoadState("error");
         logger.error(
           "Failed to load settings data",
           error instanceof Error ? error : undefined,
@@ -86,19 +90,19 @@ export function useSettingsData(): SettingsData {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAttempt]);
+
+  const retryLoad = () => {
+    restoreFocusOrMainContent(null);
+    setLoadState("loading");
+    setLoadAttempt((attempt) => attempt + 1);
+  };
 
   const toggleCompleted = () => {
-    setShowCompleted((prev) => {
-      const next = !prev;
-      if (typeof window !== "undefined") {
-        localStorage.setItem(SHOW_COMPLETED_KEY, String(next));
-        window.dispatchEvent(
-          new CustomEvent(SHOW_COMPLETED_EVENT, { detail: { show: next } }),
-        );
-      }
-      return next;
-    });
+    const next = !showCompleted;
+    localStorage.setItem(SHOW_COMPLETED_KEY, String(next));
+    setShowCompleted(next);
+    window.dispatchEvent(new CustomEvent(SHOW_COMPLETED_EVENT, { detail: { show: next } }));
   };
 
   const toggleSmartViews = async () => {
@@ -118,18 +122,16 @@ export function useSettingsData(): SettingsData {
     getNotificationSettings().then(setNotificationSettings),
   );
 
-  const markAccountDeleted = () => {
-    setSyncEnabled(false);
-    setPendingSync(0);
-  };
+  const markAccountDeleted = () => setSyncStatus(SYNC_DISABLED);
 
   return {
-    dataLoaded,
+    loadState,
+    retryLoad,
     showCompleted,
     appPreferences,
     notificationSettings,
-    syncEnabled,
-    pendingSync,
+    syncEnabled: syncStatus.enabled,
+    pendingSync: syncStatus.pendingCount,
     toggleCompleted,
     toggleSmartViews,
     ...notificationHandlers,

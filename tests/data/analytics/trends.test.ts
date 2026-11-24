@@ -85,6 +85,26 @@ describe('Analytics Trends', () => {
       expect(trend[2].date).toBe('2025-01-15'); // Today
     });
 
+    it('reads each creation timestamp once regardless of the requested period', () => {
+      let reads = 0;
+      const task: TaskRecord = {
+        ...baseTask,
+        get createdAt() {
+          reads++;
+          return '2025-01-14T10:00:00Z';
+        },
+      };
+      const trend = getCompletionTrend([task], 90);
+
+      expect(trend.at(-2)?.created).toBe(1);
+      expect(reads).toBe(1);
+    });
+
+    it('ignores unreadable timestamps when grouping a trend', () => {
+      const task = { ...baseTask, createdAt: 'invalid', updatedAt: 'invalid', completed: true };
+      expect(getCompletionTrend([task], 1)).toEqual([{ date: '2025-01-15', created: 0, completed: 0 }]);
+    });
+
     it('should handle 30-day trend', () => {
       const trend = getCompletionTrend([], 30);
 

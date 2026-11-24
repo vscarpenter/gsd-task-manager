@@ -1,19 +1,19 @@
 # Sync History Page
 
 ## Overview
-`page.tsx` is the client page for the sync history route. It shows the 50 most recent sync records in a virtualized list inside `AppShell`. A four-tile stats header sits above the list, and a Clear History button sits in the top bar.
+`page.tsx` is the client page for the sync history route. It shows the 50 most recent sync records in a list inside `AppShell`. A compact summary and Clear history button sit above recent operations.
 
 ## Interface
 - `SyncHistoryPage` (`page.tsx`, default export): the only export. It renders `AppShell` from `@/components/matrix-simplified/app-shell` with the title "Sync history".
 - Data calls, all from `@/lib/sync-history`: `getRecentHistory`, `getHistoryStats`, `clearHistory`.
-- Private components `SyncHistoryStats` and `SyncHistoryRow` render the stat tiles and one `SyncHistoryRecord` (type from `@/lib/types`).
+- Private components `SyncHistoryStats` and `SyncHistoryRow` render the summary and one `SyncHistoryRecord` (type from `@/lib/types`).
 - `getStatusIcon` and `getStatusColor` handle four record statuses: `success`, `error`, `conflict`, `partial`.
 - Query state uses `@tanstack/react-query` under `HISTORY_KEY` (`["syncHistory"]`) and `STATS_KEY` (`["syncHistoryStats"]`).
 
 ## Invariants
 - `clearHistory` runs only from the "Clear" action of a confirmation toast (`handleClearHistory`). A comment says the toast replaces `window.confirm` to stay non-blocking.
 - The page fetches at most 50 records (`getRecentHistory(50)` in `SyncHistoryPage`).
-- The Clear History button renders only when `history.length > 0` (`topbarRightSlot`).
+- The Clear history button renders when at least one operation exists.
 - The stats block renders only when `stats` exists and `history.length > 0`.
 - `SyncHistoryRow` labels a record "Manual" when `triggeredBy === "user"`, and "Auto" otherwise.
 

@@ -57,8 +57,6 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
     children: React.ReactNode;
     onSelect?: () => void;
   }) => <button onClick={onSelect}>{children}</button>,
-  DropdownMenuSeparator: () => <hr />,
-  DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
 // --- Imports ---

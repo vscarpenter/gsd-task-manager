@@ -18,8 +18,9 @@ test.describe("Settings Navigation", () => {
     await expect(page.url()).toContain("/settings");
     
     await expect(
-      page.locator("#main-content").getByRole("heading", { name: "Settings", exact: true })
+      page.getByRole("heading", { level: 1, name: "Settings", exact: true })
     ).toBeVisible();
+    await expect(page.locator("#main-content").getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
   });
 
   test("should display settings navigation", async ({ page }) => {

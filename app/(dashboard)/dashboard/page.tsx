@@ -169,9 +169,6 @@ function HeroSlot({
 function StatRail({ data }: { data: ReturnType<typeof useDashboardData> }): React.ReactElement {
   const {
     metrics,
-    completedSeries,
-    createdSeries,
-    completionRateSeries,
     completedTrend,
     previousSixAverage,
     completedInsight,
@@ -181,7 +178,7 @@ function StatRail({ data }: { data: ReturnType<typeof useDashboardData> }): Reac
   } = data;
 
   const paceNote =
-    previousSixAverage > 0
+    previousSixAverage > 0 && metrics.completedToday > 0 && completedTrend !== 0
       ? `${Math.abs(completedTrend)}% ${completedTrend >= 0 ? "above" : "below"} your recent pace`
       : completedInsight;
 
@@ -193,8 +190,6 @@ function StatRail({ data }: { data: ReturnType<typeof useDashboardData> }): Reac
         value={metrics.completedToday}
         icon={CheckCircle2Icon}
         note={paceNote}
-        meta={`${metrics.completedThisWeek} completed in 7 days`}
-        series={completedSeries}
       />
       <StatsCard
         className="sm:px-6"
@@ -203,7 +198,6 @@ function StatRail({ data }: { data: ReturnType<typeof useDashboardData> }): Reac
         icon={ListTodoIcon}
         note={activeInsight}
         meta={`${plannedActiveShare}% have a due date`}
-        series={createdSeries}
       />
       <StatsCard
         className="sm:pl-6"
@@ -212,7 +206,6 @@ function StatRail({ data }: { data: ReturnType<typeof useDashboardData> }): Reac
         icon={TrendingUpIcon}
         note={completionInsight}
         meta={`${metrics.completedTasks} completed overall`}
-        series={completionRateSeries}
       />
     </div>
   );

@@ -137,7 +137,7 @@ describe("SettingsPage", () => {
 
     expect(container.querySelector("main")).toBeNull();
     expect(container.querySelector("h1")).toBeNull();
-    expect(screen.getByRole("heading", { level: 2, name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Appearance" })).toBeInTheDocument();
   });
 
   it("defaults to the appearance section", async () => {

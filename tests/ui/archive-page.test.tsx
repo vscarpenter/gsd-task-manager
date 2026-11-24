@@ -5,20 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { TaskRecord } from "@/lib/types";
 import { toast } from "sonner";
 
-// Mock @tanstack/react-virtual since jsdom has no layout engine
-vi.mock("@tanstack/react-virtual", () => ({
-  useVirtualizer: ({ count }: { count: number }) => ({
-    getTotalSize: () => count * 200,
-    getVirtualItems: () =>
-      Array.from({ length: count }, (_, i) => ({
-        index: i,
-        key: i,
-        start: i * 200,
-        size: 200,
-      })),
-  }),
-}));
-
 // Mock AppShell — render caption and children so page-level assertions still work
 vi.mock("@/components/matrix-simplified/app-shell", () => ({
   AppShell: ({
@@ -67,15 +53,6 @@ vi.mock("sonner", () => ({
     success: vi.fn(),
     error: vi.fn(),
   },
-}));
-
-// Mock TaskCard to simplify rendering
-vi.mock("@/components/task-card", () => ({
-  TaskCard: ({ task }: { task: TaskRecord }) => (
-    <div data-testid={`task-${task.id}`}>
-      <span>{task.title}</span>
-    </div>
-  ),
 }));
 
 function createQueryWrapper() {
@@ -130,7 +107,7 @@ beforeEach(async () => {
   ArchivePage = mod.default;
 });
 
-describe("ArchivePage with TanStack Query + Virtual", () => {
+describe("ArchivePage", () => {
   it("puts the newest archive first, whatever offset it was written in", async () => {
     mockListArchivedTasks.mockResolvedValue([
       createMockArchivedTask({ id: "earlier", title: "Archived earlier", archivedAt: "2026-10-19T22:00:00.000Z" }),
@@ -188,12 +165,28 @@ describe("ArchivePage with TanStack Query + Virtual", () => {
     });
   });
 
+  it("renders a bounded archive page and lets the reader jump to the rest", async () => {
+    const user = userEvent.setup();
+    mockListArchivedTasks.mockResolvedValue(
+      Array.from({ length: 101 }, (_, index) => createMockArchivedTask({
+        id: `archived-${index + 1}`,
+        title: `Archived item ${index + 1}`,
+        archivedAt: "2026-11-21T12:00:00.000Z",
+      })),
+    );
+    render(<ArchivePage />, { wrapper: createQueryWrapper() });
+
+    expect(await screen.findByRole("heading", { name: /^Archived item 1$/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(100);
+    await user.selectOptions(screen.getByLabelText("Archive page"), "1");
+    expect(screen.getByRole("heading", { name: /^Archived item 101$/ })).toBeInTheDocument();
+  });
+
   it("heads the list with a level-2 heading so card titles do not skip a level", async () => {
     mockListArchivedTasks.mockResolvedValue([createMockArchivedTask({ id: "task-1", title: "First Task" })]);
 
     render(<ArchivePage />, { wrapper: createQueryWrapper() });
 
-    // Each TaskCard titles itself with an <h3>, as it does under a matrix pane's <h2>.
     expect(await screen.findByRole("heading", { level: 2, name: "Archived tasks" })).toBeInTheDocument();
   });
 

@@ -109,13 +109,6 @@ vi.mock("@/lib/hooks/use-sync-status", () => ({
   useSyncStatus: () => ({ status: "idle", lastSyncedAt: null }),
 }));
 
-// useToast requires ToastProvider — mock the entire module to avoid context error
-vi.mock("@/components/ui/toast", () => ({
-  useToast: () => ({ showToast: vi.fn(), hideToast: vi.fn() }),
-  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
-// useErrorHandlerWithUndo uses useToast internally
 vi.mock("@/lib/use-error-handler", () => ({
   useErrorHandlerWithUndo: () => ({ handleError: vi.fn(), handleSuccess: handleSuccessSpy }),
 }));

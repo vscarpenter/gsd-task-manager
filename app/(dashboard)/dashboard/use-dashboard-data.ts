@@ -13,9 +13,6 @@ export interface DashboardData {
   streakData: ReturnType<typeof getStreakData>;
   timeTrackingSummary: ReturnType<typeof calculateTimeTrackingSummary>;
   timeByQuadrant: ReturnType<typeof getTimeByQuadrant>;
-  completedSeries: number[];
-  createdSeries: number[];
-  completionRateSeries: number[];
   completedTrend: number;
   previousSixAverage: number;
   completedInsight: string;
@@ -29,23 +26,18 @@ export interface DashboardData {
 function completionInsightFor(rate: number): string {
   if (rate === 0) return "None completed yet";
   if (rate >= 80) return "Most are done";
-  if (rate >= 50) return "Over half are done";
+  if (rate > 50) return "Over half are done";
+  if (rate === 50) return "Half are done";
   return "Under half are done";
 }
 
 export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90): DashboardData {
   const metrics = calculateMetrics(tasks);
-  const last7TrendData = getCompletionTrend(tasks, 7);
   const trendData = getCompletionTrend(tasks, trendPeriod);
+  const last7TrendData = trendData.slice(-7);
   const streakData = getStreakData(tasks);
   const timeTrackingSummary = calculateTimeTrackingSummary(tasks);
   const timeByQuadrant = getTimeByQuadrant(tasks);
-
-  const completedSeries = last7TrendData.map((p) => p.completed);
-  const createdSeries = last7TrendData.map((p) => p.created);
-  const completionRateSeries = last7TrendData.map((p) =>
-    Math.round((p.completed / (p.created || 1)) * 100)
-  );
 
   const { completedTrend, previousSixAverage } = (() => {
     const todayTrend = last7TrendData.at(-1)?.completed ?? 0;
@@ -80,7 +72,6 @@ export function useDashboardData(tasks: TaskRecord[], trendPeriod: 7 | 30 | 90):
 
   return {
     metrics, trendData, streakData, timeTrackingSummary, timeByQuadrant,
-    completedSeries, createdSeries, completionRateSeries,
     completedTrend, previousSixAverage,
     completedInsight, activeInsight, completionInsight, plannedActiveShare,
   };

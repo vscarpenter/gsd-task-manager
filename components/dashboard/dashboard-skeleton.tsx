@@ -20,15 +20,14 @@ export function VerdictSkeleton() {
 export function StatRailSkeleton() {
   return (
     <div
-      className="mt-8 grid gap-6 border-t border-border/70 pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/70"
+      className="mt-8 grid grid-cols-1 gap-6 border-t border-border/70 pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border/70"
       aria-hidden="true"
     >
       {["completed", "active", "completion-rate"].map((key, i) => (
         <div key={key} className={i === 0 ? "sm:pr-6" : i === 1 ? "sm:px-6" : "sm:pl-6"}>
           <Skeleton className="h-3 w-24" />
           <Skeleton className="mt-3 h-10 w-16" />
-          <Skeleton className="mt-2 h-3 w-40" />
-          <Skeleton className="mt-3 h-7 w-full" />
+          <Skeleton className="mt-2 h-3 w-40 max-w-full" />
         </div>
       ))}
     </div>
@@ -41,14 +40,14 @@ function ChartSkeleton() {
       className="space-y-4 rounded-lg border border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-4 w-56" />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="w-56 max-w-full space-y-2">
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-4 w-full" />
         </div>
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-8 w-40 rounded-full" />
-          <Skeleton className="h-8 w-44 rounded-full" />
+        <div className="flex max-w-full flex-wrap items-center gap-3">
+          <Skeleton className="h-8 w-32 max-w-full rounded-full" />
+          <Skeleton className="h-8 w-36 max-w-full rounded-full" />
         </div>
       </div>
       <Skeleton className="h-[280px] w-full rounded-lg" />
@@ -63,10 +62,10 @@ function DistributionSkeleton() {
       className="space-y-5 rounded-lg border border-border bg-card p-6"
       style={{ boxShadow: "var(--shadow-column)" }}
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-44" />
-          <Skeleton className="h-4 w-48" />
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="w-48 max-w-full space-y-2">
+          <Skeleton className="h-5 w-5/6" />
+          <Skeleton className="h-4 w-full" />
         </div>
         <Skeleton className="h-4 w-16" />
       </div>
@@ -88,7 +87,7 @@ function StreakSkeleton() {
     >
       <Skeleton className="h-3 w-16" />
       <Skeleton className="mt-3 h-10 w-20" />
-      <div className="mt-4 flex items-center gap-1.5">
+      <div className="mt-4 flex flex-wrap items-center gap-1.5">
         {Array.from({ length: 7 }, (_, i) => (
           <Skeleton key={i} className="h-6 w-6 rounded-full" />
         ))}
@@ -104,14 +103,14 @@ function PromptsSkeleton() {
     <div className="space-y-5 border-y border-border/70 py-6">
       <div className="space-y-2">
         <Skeleton className="h-3 w-32" />
-        <Skeleton className="h-6 w-72" />
+        <Skeleton className="h-6 w-72 max-w-full" />
       </div>
-      <div className="grid gap-5 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
           <div key={i} className="space-y-2">
             <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-5 w-48 max-w-full" />
+            <Skeleton className="h-4 w-40 max-w-full" />
           </div>
         ))}
       </div>
@@ -134,7 +133,7 @@ export function DashboardSkeleton() {
   return (
     <div className="space-y-8">
       {/* Evidence row: trend chart beside the distribution and streak stack */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <ChartSkeleton />
         </div>
@@ -144,7 +143,7 @@ export function DashboardSkeleton() {
         </div>
       </div>
       <PromptsSkeleton />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ListSkeleton />
         <ListSkeleton />
       </div>

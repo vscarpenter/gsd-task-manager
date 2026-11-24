@@ -7,7 +7,7 @@ This is the Next.js App Router root. `layout.tsx` defines the page metadata, the
 - `RootLayout` (`layout.tsx`, default export): renders `<html>` and `<body>`, and wraps `children` in the private `AppProviders`.
 - `metadata` (`layout.tsx`, named export): title, description, manifest, icons, `openGraph`, and `twitter`. `metadataBase` uses `NEXT_PUBLIC_BASE_URL` or `https://gsd.vinny.dev`.
 - `viewport` (`layout.tsx`, named export): device width, `maximumScale: 5`, `userScalable: true`, and light and dark theme colors.
-- `AppProviders` (`layout.tsx`, private) nests `ErrorBoundary`, `ThemeProvider`, `ToastProvider`, then `TooltipProvider`.
+- `AppProviders` (`layout.tsx`, private) nests `ErrorBoundary`, `ThemeProvider`, then `TooltipProvider`.
 - Inside `TooltipProvider`, `ResetLockGate` holds `ClientLayout`, `FirstTimeRedirect`, `OnboardingGate`, and `WebMcpRegister`.
 - `PwaRegister`, `PwaUpdateToast`, `GlobalErrorListener`, and `ThemedToaster` render beside the gate.
 - `GlobalError({ error, reset })` (`global-error.tsx`, default export): client fallback that renders its own `<html>` with inline styles.
@@ -40,7 +40,7 @@ Routes:
 
 ## Side Effects
 - `layout.tsx` reads `NODE_ENV`, `NEXT_PUBLIC_POCKETBASE_URL`, and `NEXT_PUBLIC_BASE_URL` when the module loads.
-- `RootLayout` always emits `<link rel="preconnect" href="https://api.vinny.io" />`. It emits a `Content-Security-Policy` meta tag outside production.
+- `RootLayout` emits a `Content-Security-Policy` meta tag outside production.
 - `layout.tsx` imports `./globals.css` and registers three Newsreader font files through `localFont`.
 - `useGlobalErrorFallback` reads `localStorage` key `gsd-theme`, may set `document.documentElement.dataset.theme`, and focuses the fallback.
 - `GlobalError` sets `window.location.href = "/"` on "Go home" and calls `reset` on "Try again".

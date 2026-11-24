@@ -1,6 +1,5 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import path from "node:path";
 
 // Date tests assume CI's zone (UTC) and failed for anyone east of it. Workers
 // inherit this; a test that needs another zone sets process.env.TZ itself.
@@ -71,7 +70,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, ".")
+      "@": import.meta.dirname
     }
   }
 });

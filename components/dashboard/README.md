@@ -39,7 +39,7 @@ All data arrives through props, with one exception: `FeedbackNudge` reads the fe
 - `review-prompts.tsx:ReviewPrompts`: a comment states that counts describe active tasks only. `PROMPTS` covers three quadrants and omits `urgent-not-important`.
 - `review-verdict.tsx:observe`: precedence is zero active, then `overdue > 0`, then `undated > 0`. The last case is that all open tasks have due dates.
 - `review-verdict.tsx:buildReviewVerdict`: the lead is "Nothing completed this week." when `completedThisWeek === 0`. A comment says the verdict never characterizes the quadrant of completed work.
-- `stats-card.tsx:StatsCard`: the sparkline renders only when `series.length > 1`. The note and meta paragraph renders only when one of them is set.
+- `stats-card.tsx:StatsCard`: renders a note and context when provided. The completion trend chart carries the historical series.
 - `stats-card.tsx:Sparkline`: `max` has a floor of 1, and `range` falls back to 1 when max equals min. This avoids division by zero.
 - `stats-card.tsx:Sparkline`: a comment requires stroke `--ink-hint` over `--ink-3` for the 3:1 graphic contrast floor (WCAG 1.4.11).
 - `streak-indicator.tsx:StreakIndicator`: labels `last7Days` entries by index from `DAY_LABELS` (seven entries, "6d" to "Today"). A comment forbids `h-full` on the card.

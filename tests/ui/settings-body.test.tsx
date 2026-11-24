@@ -71,7 +71,7 @@ function makeTask(overrides: Partial<TaskRecord>): TaskRecord {
 
 function makeSettings(overrides: Partial<SettingsData> = {}): SettingsData {
   return {
-    dataLoaded: true,
+    loadState: "ready", retryLoad: vi.fn(),
     showCompleted: false,
     appPreferences: { id: "preferences", smartViewsEnabled: false } as never,
     notificationSettings: null,

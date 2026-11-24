@@ -70,7 +70,7 @@ describe("useDashboardData", () => {
       useDashboardData([...previousCompletions, ...todaysCompletions, ...activeTasks], 7)
     );
 
-    expect(result.current.completedSeries).toEqual([1, 1, 1, 1, 1, 1, 3]);
+    expect(result.current.trendData.slice(-7).map((day) => day.completed)).toEqual([1, 1, 1, 1, 1, 1, 3]);
     expect(result.current.trendData).toHaveLength(7);
     expect(result.current.completedTrend).toBe(200);
     expect(result.current.previousSixAverage).toBe(1);

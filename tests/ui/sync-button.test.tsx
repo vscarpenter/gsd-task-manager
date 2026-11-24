@@ -32,10 +32,6 @@ vi.mock('@/lib/hooks/use-sync', () => ({
   useSync: () => mockUseSync(),
 }));
 
-vi.mock('@/components/ui/toast', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
-}));
-
 vi.mock('@/components/sync/use-sync-health', () => ({
   useSyncHealth: (...args: unknown[]) => mockUseSyncHealth(...args),
 }));

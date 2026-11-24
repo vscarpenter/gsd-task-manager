@@ -87,14 +87,11 @@ describe("SettingsSidebar", () => {
   });
 
   describe("mobile overflow", () => {
-    it("signals that more sections exist past the right edge", () => {
+    it("keeps a native horizontal scroller without masking section controls", () => {
       const { container } = renderSidebar();
-      // Eight sections in a scroller with the scrollbar deliberately hidden.
-      // Without a cue at the trailing edge, the sections past the fold are
-      // discoverable only by guessing that the row scrolls at all.
       const scroller = container.querySelector("[data-testid='settings-nav-scroller']");
-      expect(scroller).not.toBeNull();
-      expect(scroller?.className).toMatch(/mask-/);
+      expect(scroller).toHaveClass("overflow-x-auto");
+      expect(scroller?.className).not.toMatch(/mask-|scrollbar-width:none/);
     });
   });
 });
