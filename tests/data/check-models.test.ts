@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -80,27 +81,52 @@ describe("check-models.sh", () => {
 });
 
 describe("tlc.sh", () => {
-  it("gives each concurrent checker its own download file, so neither hashes a partial jar", async () => {
-    useScript("scripts/tlc.sh");
+  it("isolates downloads and Java temporary files for concurrent checkers", async () => {
+    const script = readFileSync(join(REPO, "scripts/tlc.sh"), "utf8");
+    const jarHash = createHash("sha256").update("jar\n").digest("hex");
+    write("scripts/tlc.sh", script.replace(/readonly TLA_SHA256="[a-f0-9]{64}"/, `readonly TLA_SHA256="${jarHash}"`));
     write("M.tla", "");
     write("M.cfg", "");
     write("bin/curl", `#!/usr/bin/env bash
 while [ "$#" -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done
 echo "$out" >> "${join(root, "downloads")}"
 echo jar > "$out"
-sleep 0.2
+for attempt in {1..100}; do
+  [ "$(wc -l < "${join(root, "downloads")}")" -eq 2 ] && exit 0
+  sleep 0.02
+done
+exit 1
+`);
+    write("bin/java", `#!/usr/bin/env bash
+for argument in "$@"; do
+  if [[ "$argument" == -Djava.io.tmpdir=* ]]; then
+    directory="\${argument#*=}"
+    [ -d "$directory" ] || exit 1
+    echo "$directory" >> "$GSD_TEST_JAVA_DIRS"
+    exit 0
+  fi
+done
+exit 1
 `);
     chmodSync(join(root, "bin/curl"), 0o755);
-    const env = { ...process.env, PATH: `${join(root, "bin")}:${process.env.PATH}`, GSD_TLC_CACHE: join(root, "cache") };
-    const run = () => new Promise<void>((done) => {
+    chmodSync(join(root, "bin/java"), 0o755);
+    const env = {
+      ...process.env,
+      PATH: `${join(root, "bin")}:${process.env.PATH}`,
+      GSD_TLC_CACHE: join(root, "cache"),
+      GSD_TEST_JAVA_DIRS: join(root, "java-dirs"),
+      JAVA: join(root, "bin/java"),
+    };
+    const run = () => new Promise<number | null>((done) => {
       const child = spawn("bash", [join(root, "scripts/tlc.sh"), join(root, "M.tla"), join(root, "M.cfg")], { env, stdio: "ignore" });
-      child.on("close", () => done());
+      child.on("close", done);
     });
 
-    await Promise.all([run(), run()]);
-
+    expect(await Promise.all([run(), run()])).toEqual([0, 0]);
     const targets = readFileSync(join(root, "downloads"), "utf8").trim().split("\n");
     expect(new Set(targets).size).toBe(2);
+    const javaDirs = readFileSync(env.GSD_TEST_JAVA_DIRS, "utf8").trim().split("\n");
+    expect(new Set(javaDirs).size).toBe(2);
   });
 });
 

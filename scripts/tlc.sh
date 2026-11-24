@@ -69,14 +69,15 @@ java_bin="$(find_java)"
 spec_dir="$(cd "$(dirname "$spec")" && pwd)"
 config_abs="$(cd "$(dirname "$config")" && pwd)/$(basename "$config")"
 
-# TLC writes its state files to -metadir; keep them out of the repo.
+# Give each run its own state files and extracted standard modules.
+# Parallel JVMs can delete each other's modules from a shared temp directory.
 metadir="$(mktemp -d "${TMPDIR:-/tmp}/gsd-tlc.XXXXXX")"
 trap 'rm -rf "$metadir"' EXIT
 
 # Run from the spec's folder so modules it EXTENDS from that folder resolve.
 cd "$spec_dir"
 set +e
-"$java_bin" -XX:+UseParallelGC -cp "$jar" tlc2.TLC \
+"$java_bin" "-Djava.io.tmpdir=$metadir" -XX:+UseParallelGC -cp "$jar" tlc2.TLC \
   -workers 1 -metadir "$metadir" -config "$config_abs" "$(basename "$spec")"
 status=$?
 set -e
