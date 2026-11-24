@@ -32,7 +32,6 @@ Direct files:
 - `TaskDescription` (`task-description.tsx`): `{ description: string; className?: string }`. It renders segments from `getDescriptionSegments` as text spans or external links.
 - `TaskTimer` (`task-timer.tsx`): `{ task: TaskRecord; onStartTimer(taskId); onStopTimer(taskId); compact?; className? }`. It renders a start and stop button with live elapsed time, total tracked, and the estimate.
 - `CommandPalette` (`command-palette.tsx`): pure re-export. The statement is `export { CommandPalette } from "./command-palette/index";`.
-- `TaskCard` (`task-card.tsx`): pure re-export. The statement is `export { TaskCard } from "@/components/task-card/index";`.
 
 Subdirectories:
 

@@ -53,9 +53,7 @@ describe("useDashboardData", () => {
     const { result } = renderHook(() => useDashboardData(tasks, 30));
 
     expect(result.current.trendData).toHaveLength(30);
-    expect(result.current.completedSeries).toEqual([1, 1, 1, 1, 1, 1, 3]);
-    expect(result.current.createdSeries).toEqual([1, 1, 1, 1, 1, 1, 3]);
-    expect(result.current.completionRateSeries).toEqual([100, 100, 100, 100, 100, 100, 100]);
+    expect(result.current.trendData.slice(-7).map((day) => day.completed)).toEqual([1, 1, 1, 1, 1, 1, 3]);
     expect(result.current.previousSixAverage).toBe(1);
     expect(result.current.completedTrend).toBe(200);
     expect(result.current.completedInsight).toBe("Above your recent pace");
@@ -72,8 +70,7 @@ describe("useDashboardData", () => {
 
     const { result } = renderHook(() => useDashboardData(tasks, 7));
 
-    expect(result.current.completedSeries).toEqual([0, 0, 0, 0, 0, 0, 0]);
-    expect(result.current.completionRateSeries).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(result.current.trendData.slice(-7).map((day) => day.completed)).toEqual([0, 0, 0, 0, 0, 0, 0]);
     expect(result.current.previousSixAverage).toBe(0);
     expect(result.current.completedTrend).toBe(0);
     expect(result.current.completedInsight).toBe("None completed yet today");

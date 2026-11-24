@@ -4,20 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { SyncHistoryRecord } from "@/lib/types";
 
-// Mock @tanstack/react-virtual since jsdom has no layout engine
-vi.mock("@tanstack/react-virtual", () => ({
-  useVirtualizer: ({ count }: { count: number }) => ({
-    getTotalSize: () => count * 136,
-    getVirtualItems: () =>
-      Array.from({ length: count }, (_, i) => ({
-        index: i,
-        key: i,
-        start: i * 136,
-        size: 136,
-      })),
-  }),
-}));
-
 // Mock AppShell — render caption and topbarRightSlot so page-level assertions still work
 vi.mock("@/components/matrix-simplified/app-shell", () => ({
   AppShell: ({
@@ -128,7 +114,7 @@ beforeEach(async () => {
   SyncHistoryPage = mod.default;
 });
 
-describe("SyncHistoryPage with TanStack Query + Virtual", () => {
+describe("SyncHistoryPage", () => {
   it("shows loading state initially", async () => {
     mockGetRecentHistory.mockImplementation(
       () => new Promise(() => {}) // Never resolves
@@ -178,7 +164,7 @@ describe("SyncHistoryPage with TanStack Query + Virtual", () => {
     render(<SyncHistoryPage />, { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByText("success Sync")).toBeInTheDocument();
+      expect(screen.getByText("Sync complete")).toBeInTheDocument();
     });
   });
 
@@ -190,13 +176,13 @@ describe("SyncHistoryPage with TanStack Query + Virtual", () => {
     render(<SyncHistoryPage />, { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByText("Total Syncs")).toBeInTheDocument();
+      expect(screen.getByText("Total syncs")).toBeInTheDocument();
       expect(screen.getByText("5")).toBeInTheDocument();
       expect(screen.getByText("Successful")).toBeInTheDocument();
     });
   });
 
-  it("shows correct operation count", async () => {
+  it("distinguishes the displayed records from the total count", async () => {
     const records = [
       createMockHistoryRecord({ id: "sync-1" }),
       createMockHistoryRecord({ id: "sync-2" }),
@@ -206,7 +192,7 @@ describe("SyncHistoryPage with TanStack Query + Virtual", () => {
     render(<SyncHistoryPage />, { wrapper: createQueryWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByText("2 sync operations")).toBeInTheDocument();
+      expect(screen.getByText("Showing 2 of 5 operations")).toBeInTheDocument();
     });
   });
 

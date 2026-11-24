@@ -98,26 +98,6 @@ describe('Dashboard Components', () => {
       expect(root.className).not.toContain('bg-card');
       expect(root.className).not.toContain('border-hair');
     });
-
-    it('should render an inline sparkline when series has 2+ points', () => {
-      const { container } = render(
-        <StatsCard value={5} title="Trend" series={[1, 2, 3, 4, 5]} />
-      );
-
-      // Sparkline is an SVG polyline; presence is enough to verify the wiring.
-      expect(container.querySelector('svg polyline')).toBeInTheDocument();
-    });
-
-    it('should draw every sparkline in the same neutral ink', () => {
-      const { container } = render(
-        <StatsCard value={5} title="Trend" series={[5, 4, 3, 2, 1]} />
-      );
-
-      // A seven-point series is not a judgement, so it never borrows the accent
-      // or the overdue pigment (brief: tide means interaction, not decoration).
-      const line = container.querySelector('svg polyline');
-      expect(line?.getAttribute('class')).toContain('stroke-ink-hint');
-    });
   });
 
   describe('StreakIndicator', () => {

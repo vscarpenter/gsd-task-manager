@@ -7,7 +7,7 @@
 - `DashboardPage` (`page.tsx`, default export): renders `AppShell` from `@/components/matrix-simplified/app-shell`, then an `ErrorBoundary` around the private `ReviewBody`. The boundary's `fallback` is `DashboardError` from `@/components/dashboard/dashboard-error`.
 - `ReviewBody` (`page.tsx`, private): reads tasks with `useTasks()` from `@/lib/use-tasks` and calls `useDashboardData`.
 - `useDashboardData(tasks, trendPeriod)` (`use-dashboard-data.ts`, exported): returns `DashboardData`. It calls `calculateMetrics`, `getCompletionTrend`, `getStreakData`, `calculateTimeTrackingSummary`, and `getTimeByQuadrant` from `@/lib/analytics`. It calls no React hooks.
-- `DashboardData` (`use-dashboard-data.ts`, exported interface): metrics, trend and streak data, time summaries, three 7-day series, and the insight strings.
+- `DashboardData` (`use-dashboard-data.ts`, exported interface): metrics, trend and streak data, time summaries, and the insight strings.
 - `page.tsx` renders these components from `@/components/dashboard/`: `ReviewVerdict`, `StatsCard`, `CompletionChart`, `QuadrantDistribution`, `StreakIndicator`, `ReviewPrompts`, `UpcomingDeadlines`, `TagAnalytics`, `TimeAnalytics`, `FeedbackNudge`, and the skeletons.
 - `page.tsx` also renders `SweepLink` from `@/components/weekly-sweep/sweep-link`.
 

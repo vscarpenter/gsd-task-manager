@@ -63,10 +63,6 @@ export function SettingsSidebar({ activeId, onSelect, visibleSections }: Setting
 
 /**
  * Phone/tablet navigation: one horizontal row of pills.
- *
- * The scrollbar is hidden by design, so a short fade on the trailing edge is
- * the only thing telling the reader the row continues past the fold — eight
- * sections never fit on a phone.
  */
 function MobilePillNav({
   sections,
@@ -81,7 +77,7 @@ function MobilePillNav({
     <nav
       data-testid="settings-nav-scroller"
       aria-label="Settings sections"
-      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%_-_1.5rem),transparent)]"
+      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 lg:hidden"
     >
       {sections.map((section) => {
         const Icon = section.icon;
@@ -92,7 +88,7 @@ function MobilePillNav({
             type="button"
             onClick={() => onSelect(section.id)}
             className={cn(
-              "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all",
+              "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors",
               "min-h-11",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
               isActive
@@ -123,7 +119,7 @@ function SidebarItem({ section, isActive, onSelect }: SidebarItemProps) {
       type="button"
       onClick={onSelect}
       className={cn(
-        "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all",
+        "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
         isActive
           ? "bg-accent/10 text-foreground"

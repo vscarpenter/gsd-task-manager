@@ -1,14 +1,13 @@
 # Archive Page
 
 ## Overview
-`page.tsx` is the client page for the archive route. It lists archived tasks, newest first, in a virtualized grid inside `AppShell`. Each card has Restore and Delete buttons, and each action shows a toast with Undo.
+`page.tsx` is the client page for the archive route. It lists archived tasks, newest first, in a responsive grid inside `AppShell`. Archive cards show task details with visible Restore and Delete buttons. Each action shows a toast with Undo. The page selector appears when more than 100 items are archived.
 
 ## Interface
 - `ArchivePage` (`page.tsx`, default export): the only export. It renders `AppShell` from `@/components/matrix-simplified/app-shell` with the title "Archive".
 - Data calls, all from `@/lib/archive`: `listArchivedTasks`, `restoreTask`, `deleteArchivedTask`, `archiveTaskNow`, `reinstateArchivedTask`.
 - Cards render `TaskCard` from `@/components/task-card` through the private `ArchivedTaskCard` component.
 - Query state uses `useQuery` and `useMutation` from `@tanstack/react-query` under the key `ARCHIVED_TASKS_KEY` (`["archivedTasks"]`).
-- Rows are virtualized by `useVirtualizer` from `@tanstack/react-virtual`.
 
 ## Invariants
 - Archived cards are read-only. `ArchivedTaskCard` passes no-op `onEdit`, `onDelete`, and `onToggleComplete` handlers to `TaskCard`.

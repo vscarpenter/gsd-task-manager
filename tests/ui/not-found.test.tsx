@@ -24,5 +24,6 @@ describe("NotFound", () => {
     const link = screen.getByRole("link", { name: /return to task manager/i });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute("href", "/");
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

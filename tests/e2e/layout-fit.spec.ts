@@ -154,6 +154,12 @@ test.describe("Layout fit", () => {
 
         const drift = Math.abs((await centerY(options.first())) - (await centerY(options.last())));
         expect(drift, `at ${width}px`).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+
+        const selectedRadio = options.nth(1).getByRole("radio");
+        const segment = (await options.nth(1).boundingBox())!;
+        const nativeControl = (await selectedRadio.boundingBox())!;
+        // Focus scrolling should use the same box the reader sees.
+        expect(nativeControl.height).toBeGreaterThanOrEqual(segment.height - 2);
       }
     });
 

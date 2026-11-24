@@ -2,7 +2,7 @@ import type { QuadrantId, TaskRecord } from "@/lib/types";
 
 /**
  * Props interface for TaskCard component
- * This is the canonical definition, imported by components/task-card.tsx
+ * This is the canonical definition, imported by components/task-card/index.tsx
  */
 export interface TaskCardProps {
   task: TaskRecord;

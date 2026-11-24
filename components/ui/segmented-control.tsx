@@ -22,21 +22,17 @@ export function SegmentedControl<T extends string>({
   const name = useId();
 
   return (
-    <fieldset
-      className={cn(
-        // Wraps only when large browser text makes the options wider than their container.
-        "inline-flex max-w-full flex-wrap items-center gap-1 rounded-full bg-background-muted p-1",
-        className
-      )}
-    >
+    <fieldset className={cn("inline-flex max-w-full flex-wrap items-center gap-1 rounded-full bg-background-muted p-1", className)}>
       <legend className="sr-only">{label}</legend>
       {options.map((option) => {
         const isSelected = value === option.value;
+        const controlId = `${name}-${option.value}`;
         return (
           <label
             key={option.value}
+            htmlFor={controlId}
             className={cn(
-              "touch-target inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-small font-medium transition-colors duration-200",
+              "touch-target relative inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-small font-medium transition-colors duration-200",
               "focus-within:outline-none focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-1",
               isSelected
                 ? "border-control-border bg-card text-foreground shadow-sm"
@@ -44,12 +40,14 @@ export function SegmentedControl<T extends string>({
             )}
           >
             <input
+              id={controlId}
               type="radio"
               name={name}
               value={option.value}
               checked={isSelected}
               onChange={() => onChange(option.value)}
-              className="sr-only"
+              // Give the browser the segment geometry when it scrolls to the focused radio.
+              className="absolute inset-0 m-0 size-full cursor-pointer opacity-0"
             />
             <span className="flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
               {isSelected ? (

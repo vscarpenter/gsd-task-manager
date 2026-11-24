@@ -1,73 +1,111 @@
 "use client";
 
-import { useRef } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { RefreshCcwIcon, Trash2Icon } from "lucide-react";
 import { AppShell } from "@/components/matrix-simplified/app-shell";
 import { Button } from "@/components/ui/button";
-import { TaskCard } from "@/components/task-card";
+import { TaskDescription } from "@/components/task-description";
+import { QUADRANT_ACCENT_BY_ID } from "@/lib/quadrants";
 import { listArchivedTasks, restoreTask, deleteArchivedTask, archiveTaskNow, reinstateArchivedTask } from "@/lib/archive";
 import { compareInstants } from "@/lib/instant";
+import { restoreFocusOrMainContent } from "@/lib/focus-restoration";
 import type { TaskRecord } from "@/lib/types";
 import { toast } from "sonner";
 
 const ARCHIVED_TASKS_KEY = ["archivedTasks"] as const;
-const ESTIMATED_CARD_HEIGHT = 180;
-const CARD_GAP = 16;
-const COLUMNS_BY_BREAKPOINT = { sm: 1, md: 2, lg: 3 } as const;
-
-function useColumnCount(): number {
-  if (typeof window === "undefined") return COLUMNS_BY_BREAKPOINT.sm;
-  if (window.innerWidth >= 1024) return COLUMNS_BY_BREAKPOINT.lg;
-  if (window.innerWidth >= 768) return COLUMNS_BY_BREAKPOINT.md;
-  return COLUMNS_BY_BREAKPOINT.sm;
-}
+const PAGE_SIZE = 100;
+const ARCHIVE_DATE_FORMAT = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
 function sortByArchivedDate(tasks: TaskRecord[]): TaskRecord[] {
   return [...tasks].sort((a, b) => compareInstants(b.archivedAt, a.archivedAt));
 }
 
+function moveFocusBeforeRemoval(id: string): void {
+  const card = document.activeElement?.closest("[data-archived-task-id]");
+  if (card?.getAttribute("data-archived-task-id") === id) restoreFocusOrMainContent(null);
+}
+
 interface ArchivedTaskCardProps {
   task: TaskRecord;
-  allTasks: TaskRecord[];
   onRestore: (task: TaskRecord) => void;
   onDelete: (task: TaskRecord) => void;
 }
 
-/** Renders a single archived task card with dimmed opacity and restore/delete hover actions. */
-function ArchivedTaskCard({ task, allTasks, onRestore, onDelete }: ArchivedTaskCardProps): React.ReactElement {
+function ArchivedTaskCard({ task, onRestore, onDelete }: ArchivedTaskCardProps): React.ReactElement {
+  const titleId = useId();
+  const archivedAt = Date.parse(task.archivedAt ?? "");
+  const completedSubtasks = task.subtasks.filter((subtask) => subtask.completed).length;
+
   return (
-    <div className="relative group">
-      {/* Archived items read dimmed and read-only (reference §07);
-          handlers are no-ops and the card sits at 0.72 opacity. */}
-      <div className="opacity-[0.72]">
-        <TaskCard task={task} allTasks={allTasks} onEdit={() => {}} onDelete={() => {}} onToggleComplete={() => {}} />
+    <li data-archived-task-id={task.id} className="flex min-w-0 flex-col gap-2 rounded-md border border-border bg-card p-4">
+      <h3 id={titleId} className="text-small font-semibold text-foreground [overflow-wrap:anywhere]">{task.title}</h3>
+      {Number.isFinite(archivedAt) && (
+        <p className="flex items-center gap-2 text-caption text-foreground-muted">
+          <span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ backgroundColor: QUADRANT_ACCENT_BY_ID[task.quadrant] }} />
+          <span>Archived <time dateTime={task.archivedAt}>{ARCHIVE_DATE_FORMAT.format(archivedAt)}</time></span>
+        </p>
+      )}
+      {task.description && (
+        <p className="whitespace-pre-wrap text-caption text-foreground-muted [overflow-wrap:anywhere]">
+          <TaskDescription description={task.description} />
+        </p>
+      )}
+      {task.tags.length > 0 && <p className="text-caption text-foreground-muted [overflow-wrap:anywhere]">{task.tags.map((tag) => `#${tag}`).join(" ")}</p>}
+      {task.subtasks.length > 0 && <p className="text-caption text-foreground-muted">{completedSubtasks}/{task.subtasks.length} subtasks complete</p>}
+      <div className="mt-auto flex flex-wrap gap-2 pt-1">
+        <Button variant="subtle" aria-describedby={titleId} onClick={() => onRestore(task)} className="touch-target text-small">
+          <RefreshCcwIcon className="size-3.5" aria-hidden="true" />
+          Restore
+        </Button>
+        <Button variant="ghost" aria-describedby={titleId} onClick={() => onDelete(task)} className="touch-target text-small text-status-overdue-ink">
+          <Trash2Icon className="size-3.5" aria-hidden="true" />
+          Delete
+        </Button>
       </div>
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-card via-card to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="subtle" onClick={() => onRestore(task)} className="gap-2 text-sm h-auto py-1 px-2">
-            <RefreshCcwIcon className="h-3 w-3" />
-            Restore
-          </Button>
-          <Button variant="destructive" onClick={() => onDelete(task)} className="gap-2 text-sm h-auto py-1 px-2">
-            <Trash2Icon className="h-3 w-3" />
-            Delete
-          </Button>
-        </div>
-      </div>
-    </div>
+    </li>
+  );
+}
+
+interface ArchivedTaskGridProps extends Omit<ArchivedTaskCardProps, "task"> {
+  tasks: TaskRecord[];
+}
+
+function ArchivedTaskGrid({ tasks, onRestore, onDelete }: ArchivedTaskGridProps): React.ReactElement {
+  const [requestedPage, setRequestedPage] = useState(0);
+  const pageCount = Math.ceil(tasks.length / PAGE_SIZE);
+  const page = Math.min(requestedPage, pageCount - 1);
+  const first = page * PAGE_SIZE;
+  const pageTasks = tasks.slice(first, first + PAGE_SIZE);
+
+  return (
+    <section aria-labelledby="archived-tasks">
+      <h2 id="archived-tasks" className="sr-only">Archived tasks</h2>
+      {pageCount > 1 && (
+        <label className="mb-4 inline-flex flex-wrap items-center gap-2 text-small text-foreground-muted">
+          Archive page
+          <select className="input touch-target" value={page} onChange={(event) => setRequestedPage(Number(event.target.value))}>
+            {Array.from({ length: pageCount }, (_, index) => (
+              <option key={index} value={index}>{index + 1} of {pageCount}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      <ul role="list" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-3">
+        {pageTasks.map((task) => (
+          <ArchivedTaskCard key={task.id} task={task} onRestore={onRestore} onDelete={onDelete} />
+        ))}
+      </ul>
+    </section>
   );
 }
 
 export default function ArchivePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const columnCount = useColumnCount();
 
-  const { data: archivedTasks = [], isLoading } = useQuery({
+  const { data: archivedTasks = [], isLoading, isError, refetch } = useQuery({
     queryKey: ARCHIVED_TASKS_KEY,
     queryFn: async () => {
       const tasks = await listArchivedTasks();
@@ -78,6 +116,7 @@ export default function ArchivePage() {
   const restoreMutation = useMutation({
     mutationFn: (task: TaskRecord) => restoreTask(task.id),
     onSuccess: (_data, task) => {
+      moveFocusBeforeRemoval(task.id);
       queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
       toast.success(`Restored "${task.title}"`, {
         action: {
@@ -110,6 +149,7 @@ export default function ArchivePage() {
       return task; // Return full task data for undo
     },
     onSuccess: (_data, task) => {
+      moveFocusBeforeRemoval(task.id);
       queryClient.invalidateQueries({ queryKey: ARCHIVED_TASKS_KEY });
       toast.success(`Deleted "${task.title}"`, {
         action: {
@@ -144,25 +184,20 @@ export default function ArchivePage() {
     deleteMutation.mutate(task);
   };
 
-  const rowCount = Math.ceil(archivedTasks.length / columnCount);
-
-  // react-doctor-disable-next-line react-hooks-js/incompatible-library -- @tanstack/react-virtual; React Compiler skips by design
-  const virtualizer = useVirtualizer({
-    count: rowCount,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => ESTIMATED_CARD_HEIGHT + CARD_GAP,
-    overscan: 3,
-  });
-
   return (
     <AppShell
       title="Archive"
-      caption={`${archivedTasks.length} archived task${archivedTasks.length !== 1 ? "s" : ""}`}
+      caption={isLoading || isError ? undefined : `${archivedTasks.length} archived task${archivedTasks.length !== 1 ? "s" : ""}`}
     >
       <div className="pb-8">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <p className="text-foreground-muted">Loading archived tasks...</p>
+          </div>
+        ) : isError && archivedTasks.length === 0 ? (
+          <div className="py-12 text-center">
+            <p role="alert" className="text-foreground-muted">Could not load archived tasks.</p>
+            <Button variant="subtle" onClick={() => void refetch()} className="touch-target mt-4">Try again</Button>
           </div>
         ) : archivedTasks.length === 0 ? (
           <div className="mx-auto max-w-xl rounded-3xl border border-border bg-background-muted p-8 text-center">
@@ -182,48 +217,7 @@ export default function ArchivePage() {
             </Button>
           </div>
         ) : (
-          <div
-            ref={scrollContainerRef}
-            className="overflow-auto"
-            style={{ height: "70vh" }}
-          >
-            {/* TaskCard titles are <h3>, so the list needs an <h2> above them. */}
-            <h2 className="sr-only">Archived tasks</h2>
-            <div
-              style={{
-                height: `${virtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
-            >
-              {virtualizer.getVirtualItems().map((virtualRow) => {
-                const startIndex = virtualRow.index * columnCount;
-                const rowTasks = archivedTasks.slice(startIndex, startIndex + columnCount);
-                return (
-                  <div
-                    key={virtualRow.key}
-                    style={{
-                      position: "absolute", top: 0, left: 0, width: "100%",
-                      height: `${virtualRow.size}px`,
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {rowTasks.map((task) => (
-                        <ArchivedTaskCard
-                          key={task.id}
-                          task={task}
-                          allTasks={archivedTasks}
-                          onRestore={handleRestore}
-                          onDelete={handleDelete}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <ArchivedTaskGrid tasks={archivedTasks} onRestore={handleRestore} onDelete={handleDelete} />
         )}
       </div>
     </AppShell>

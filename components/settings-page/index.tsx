@@ -1,6 +1,7 @@
 "use client";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 
 import { useTasks } from "@/lib/use-tasks";
@@ -20,24 +21,21 @@ export function SettingsPage() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="mx-auto max-w-6xl pb-20">
-        <div className="mb-8 sm:mb-12">
-          <p className="text-eyebrow uppercase text-foreground-muted">
-            Preferences & Data
-          </p>
-          <h2 className="mt-2 text-h1 font-semibold tracking-tight text-foreground sm:text-display">
-            Settings
-          </h2>
-          <p className="mt-3 max-w-[55ch] text-base leading-relaxed text-foreground-muted">
-            Change how GSD looks and when it reminds you. Back up your tasks or bring back ones you deleted. To sync across devices, use the cloud icon at the top.
-          </p>
-        </div>
+        <p className="mb-5 text-small text-foreground-muted">
+          To sync across devices, open Sync from the top bar.
+        </p>
 
-        {!settings.dataLoaded ? (
+        {settings.loadState === "loading" ? (
           <div className="flex items-center justify-center py-20">
             <Spinner />
           </div>
+        ) : settings.loadState === "error" ? (
+          <div className="py-12 text-center">
+            <p role="alert" className="text-foreground-muted">Could not load settings.</p>
+            <Button variant="subtle" className="touch-target mt-4" onClick={settings.retryLoad}>Try again</Button>
+          </div>
         ) : (
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+          <div className="flex flex-col gap-5 lg:gap-8 lg:flex-row lg:items-start">
             <SettingsSidebar
               activeId={activeSection}
               onSelect={selectSection}

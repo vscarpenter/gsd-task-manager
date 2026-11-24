@@ -61,7 +61,7 @@ beforeEach(() => {
 
 async function renderLoaded() {
   const hook = renderHook(() => useSettingsData());
-  await waitFor(() => expect(hook.result.current.dataLoaded).toBe(true));
+  await waitFor(() => expect(hook.result.current.loadState).toBe("ready"));
   return hook;
 }
 
@@ -75,11 +75,11 @@ describe("useSettingsData", () => {
     expect(result.current.showCompleted).toBe(true);
   });
 
-  it("logs and stays unloaded when the initial load fails", async () => {
+  it("logs and exposes an error when the initial load fails", async () => {
     mockGetSyncStatus.mockRejectedValue(new Error("boom"));
     const { result } = renderHook(() => useSettingsData());
     await waitFor(() => expect(mockErrorLog).toHaveBeenCalled());
-    expect(result.current.dataLoaded).toBe(false);
+    expect(result.current.loadState).toBe("error");
   });
 
   it("toggles show-completed, persisting and broadcasting the change", async () => {

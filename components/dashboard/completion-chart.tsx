@@ -25,7 +25,7 @@ interface CompletionChartProps {
   /**
    * Period selector. It lives in this header rather than the page header on
    * purpose: it governs this chart alone, and a control's placement is how a
-   * reader learns its scope. The verdict above is always a seven-day read.
+   * reader learns its scope. The verdict above covers the current calendar week.
    */
   control?: React.ReactNode;
 }

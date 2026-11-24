@@ -13,7 +13,7 @@ vi.mock("@/lib/use-tasks", () => ({
   }),
 }));
 vi.mock("@/components/settings-page/use-settings-data", () => ({
-  useSettingsData: () => ({ dataLoaded: true, syncEnabled: true, pendingSync: 0 }),
+  useSettingsData: () => ({ loadState: "ready", retryLoad: vi.fn(), syncEnabled: true, pendingSync: 0 }),
 }));
 vi.mock("@/components/settings-page/use-active-section", () => ({
   useActiveSection: () => ({ activeSection: "data", visibleSectionIds: ["data"], selectSection: vi.fn() }),

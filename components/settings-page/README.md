@@ -8,7 +8,7 @@ Section metadata is a static table in `settings-sidebar-data.ts`. The section co
 
 ## Interface
 
-- `SettingsPage` (`index.tsx`): takes no props. It wraps in `TooltipProvider delayDuration={300}`, shows `Spinner` until `settings.dataLoaded`, then renders `SettingsSidebar` and `SettingsBody`.
+- `SettingsPage` (`index.tsx`): takes no props. It wraps in `TooltipProvider delayDuration={300}`, shows a spinner while loading, an error with a retry action on failure, and the sidebar and active section when ready.
 - `SettingsBody` (`settings-body.tsx`): props `{ activeSection, tasks: TaskRecord[], tasksLoading, settings: SettingsData }`. It renders the active section in a `SectionCard` and owns export, the import file picker, and the lazy `ImportDialog`.
 - `SectionCard` (`section-card.tsx`): props `{ title, description, children }`. It renders a `<section>` with an `aria-labelledby` id derived from the title.
 - `SettingsSidebar` (`settings-sidebar.tsx`): props `{ activeId, onSelect(id), visibleSections: SettingsSectionId[] }`. It renders a mobile pill nav (`data-testid="settings-nav-scroller"`) and a desktop grouped nav.
@@ -20,7 +20,7 @@ Section metadata is a static table in `settings-sidebar-data.ts`. The section co
 - `useActiveSection` (`use-active-section.ts`): `(syncEnabled: boolean) => ActiveSection`. It reads the section from `window.location.hash` through `useSyncExternalStore`.
 - `ActiveSection` (`use-active-section.ts`): interface `{ activeSection, visibleSectionIds, selectSection(id) }`.
 - `useSettingsData` (`use-settings-data.ts`): `() => SettingsData`. It loads notification settings, sync status, and app preferences on mount.
-- `SettingsData` (`use-settings-data.ts`): interface with `dataLoaded`, `showCompleted`, `appPreferences`, `notificationSettings`, `syncEnabled`, and `pendingSync`. Its handlers are `toggleCompleted`, `toggleSmartViews`, `notificationToggle`, `defaultReminderChange`, `soundToggle`, `quietHoursToggle`, `quietHoursChange`, and `markAccountDeleted`.
+- `SettingsData` (`use-settings-data.ts`): interface with `loadState`, `showCompleted`, `appPreferences`, `notificationSettings`, `syncEnabled`, and `pendingSync`. Its handlers are `toggleCompleted`, `toggleSmartViews`, `notificationToggle`, `defaultReminderChange`, `soundToggle`, `quietHoursToggle`, `quietHoursChange`, and `markAccountDeleted`.
 - `useStorageSummary` (`use-storage-summary.ts`): `(tasks: TaskRecord[]) => StorageSummary`. It combines task counts with live archive and trash stats.
 - `StorageSummary` (`use-storage-summary.ts`): interface `{ activeTasks, savedTasks, completedTasks, archivedTasks, trashedTasks, totalTasks, estimatedKb: string }`.
 
@@ -39,7 +39,7 @@ Section metadata is a static table in `settings-sidebar-data.ts`. The section co
 - `use-active-section.ts:useActiveSection`: if the hash section is not visible, render derives `activeSection` as `DEFAULT_SECTION`.
 - `settings-sidebar.tsx:SettingsSidebar`, `groupByGroup`: renders only sections in `visibleSections`, grouped in the order `Preferences`, `Data`, `Info`. It omits empty groups.
 - `settings-sidebar.tsx:SettingsSidebar`: a comment requires full-strength muted color on group labels. The `/80` composite measured 3.72:1, which is under AA.
-- `use-settings-data.ts:useSettingsData`: sets `dataLoaded` only after all three loads resolve. A load failure is logged and `dataLoaded` stays false.
+- `use-settings-data.ts:useSettingsData`: becomes ready after all three reads resolve. A failed read is logged and the retry action repeats the reads.
 - `use-settings-data.ts:useSettingsData`: the mount effect ignores results once cleanup sets its `cancelled` flag.
 - `use-settings-data.ts:toggleSmartViews`: returns early when `appPreferences` is `null`.
 - `use-settings-data.ts:buildNotificationHandlers`: `notificationToggle` returns early when settings are `null`. Enabling requires the Notification API and granted permission.

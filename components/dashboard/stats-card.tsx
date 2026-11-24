@@ -10,8 +10,6 @@ interface StatsCardProps {
   /** Volume context, e.g. "20 completed in 7 days". Rendered after the note. */
   meta?: string;
   icon?: LucideIcon;
-  /** 7–12 numeric points rendered as the inline sparkline. */
-  series?: number[];
   className?: string;
 }
 
@@ -29,7 +27,6 @@ export function StatsCard({
   note,
   meta,
   icon: Icon,
-  series,
   className,
 }: StatsCardProps) {
   const animatedValue = useCountUp(value);
@@ -56,50 +53,6 @@ export function StatsCard({
           {meta}
         </p>
       ) : null}
-
-      {series && series.length > 1 ? <Sparkline values={series} /> : null}
     </div>
-  );
-}
-
-/**
- * Inline SVG sparkline in a single neutral ink.
- *
- * Direction is deliberately uncoloured: a seven-point series is context, not a
- * verdict, and colour on this page is reserved for quadrant identity and status.
- * --ink-hint, not --ink-3: the handoff's #9AA5AE measures 2.48:1 on the card,
- * under the 3:1 floor for a graphic that carries meaning (WCAG 1.4.11).
- */
-function Sparkline({ values }: { values: number[] }) {
-  const width = 120;
-  const height = 28;
-  const max = Math.max(...values, 1);
-  const min = Math.min(...values);
-  const range = max - min || 1;
-  const step = values.length > 1 ? width / (values.length - 1) : width;
-  const points = values
-    .map((value, i) => {
-      const x = i * step;
-      const y = height - ((value - min) / range) * height;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className="mt-3 h-7 w-full"
-      preserveAspectRatio="none"
-      aria-hidden
-    >
-      <polyline
-        points={points}
-        fill="none"
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="stroke-ink-hint"
-      />
-    </svg>
   );
 }
