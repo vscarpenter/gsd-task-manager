@@ -1,49 +1,31 @@
 import type { TaskRecord, RecurrenceType } from "@/lib/types";
-import { startOfDay, subDays, isBefore } from "date-fns";
+import { subDays } from "date-fns";
 import { completionTime, localDayKey } from "./completion-day";
 import type { TrendDataPoint } from "./metrics";
 
 export function getCompletionTrend(tasks: TaskRecord[], days: number): TrendDataPoint[] {
   const now = new Date();
-  const dataPoints: TrendDataPoint[] = [];
-
-  for (let i = days - 1; i >= 0; i--) {
-    const dataPoint = calculateDayDataPoint(tasks, now, i);
-    dataPoints.push(dataPoint);
+  const points = new Map<string, TrendDataPoint>();
+  for (let daysAgo = days - 1; daysAgo >= 0; daysAgo--) {
+    const date = localDayKey(subDays(now, daysAgo));
+    points.set(date, { date, completed: 0, created: 0 });
   }
 
-  return dataPoints;
+  if (points.size === 0) return [];
+  for (const task of tasks) {
+    const created = pointFor(new Date(task.createdAt), points);
+    if (created) created.created++;
+    if (task.completed) {
+      const completed = pointFor(completionTime(task), points);
+      if (completed) completed.completed++;
+    }
+  }
+
+  return [...points.values()];
 }
 
-function calculateDayDataPoint(tasks: TaskRecord[], now: Date, daysAgo: number): TrendDataPoint {
-  const date = startOfDay(subDays(now, daysAgo));
-  const nextDate = startOfDay(subDays(now, daysAgo - 1));
-  const dateStr = localDayKey(date);
-
-  const completed = countCompletedInRange(tasks, date, nextDate);
-  const created = countCreatedInRange(tasks, date, nextDate);
-
-  return {
-    date: dateStr,
-    completed,
-    created
-  };
-}
-
-/**
- * Whether a moment falls in the half-open day [startDate, endDate), so a moment
- * at exactly local midnight belongs to the day that starts there
- */
-function isInDay(moment: Date, startDate: Date, endDate: Date): boolean {
-  return !isBefore(moment, startDate) && isBefore(moment, endDate);
-}
-
-function countCompletedInRange(tasks: TaskRecord[], startDate: Date, endDate: Date): number {
-  return tasks.filter(t => t.completed && isInDay(completionTime(t), startDate, endDate)).length;
-}
-
-function countCreatedInRange(tasks: TaskRecord[], startDate: Date, endDate: Date): number {
-  return tasks.filter(t => isInDay(new Date(t.createdAt), startDate, endDate)).length;
+function pointFor(date: Date, points: Map<string, TrendDataPoint>): TrendDataPoint | undefined {
+  return Number.isFinite(date.getTime()) ? points.get(localDayKey(date)) : undefined;
 }
 
 export function getRecurrenceBreakdown(tasks: TaskRecord[]): Record<RecurrenceType, number> {
