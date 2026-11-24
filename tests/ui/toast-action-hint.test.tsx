@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { toast } from "sonner";
 import { ThemedToaster } from "@/components/ui/themed-toaster";
 
@@ -9,20 +9,40 @@ function showUndoToast(): string | number {
   return toast.success("Task completed", { duration: Infinity, action: { label: "Undo", onClick: () => {} } });
 }
 
+async function settleToasts(): Promise<void> {
+  await act(async () => { await vi.runAllTimersAsync(); });
+}
+
 describe("toast action keyboard hint", () => {
-  afterEach(() => act(() => { toast.dismiss(); }));
+  beforeEach(() => { vi.useFakeTimers(); });
+
+  afterEach(async () => {
+    try {
+      act(() => { toast.dismiss(); });
+      // Sonner's removal callbacks must finish before JSDOM closes.
+      await settleToasts();
+      cleanup();
+      await settleToasts();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      cleanup();
+      vi.useRealTimers();
+    }
+  });
 
   it("tells a screen reader how to reach the action when a toast carries one", async () => {
     render(<ThemedToaster />);
     act(() => { showUndoToast(); });
+    await settleToasts();
 
-    const hint = await screen.findByText(HINT);
+    const hint = screen.getByText(HINT);
     expect(hint.closest("[role='status']")).toHaveAttribute("aria-live", "polite");
   });
 
-  it("stays silent for a toast with no action", () => {
+  it("stays silent for a toast with no action", async () => {
     render(<ThemedToaster />);
     act(() => { toast.success("Task duplicated", { duration: Infinity }); });
+    await settleToasts();
 
     expect(screen.queryByText(/Alt\+T/)).not.toBeInTheDocument();
   });
@@ -31,17 +51,20 @@ describe("toast action keyboard hint", () => {
     render(<ThemedToaster />);
     let id: string | number = "";
     act(() => { id = showUndoToast(); });
-    await screen.findByText(HINT);
+    await settleToasts();
+    expect(screen.getByText(HINT)).toBeInTheDocument();
 
     act(() => { toast.dismiss(id); });
-    await waitFor(() => expect(screen.queryByText(HINT)).not.toBeInTheDocument());
+    await settleToasts();
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument();
   });
 
   it("is invisible: a sighted user sees no extra text", async () => {
     render(<ThemedToaster />);
     act(() => { showUndoToast(); });
+    await settleToasts();
 
-    const hint = await screen.findByText(HINT);
+    const hint = screen.getByText(HINT);
     expect(hint).toHaveClass("sr-only");
   });
 });

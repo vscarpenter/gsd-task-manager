@@ -2044,3 +2044,32 @@ and Claude code reviews found no issues. No client or release artifact changed.
 The final documentation update records the deployed state. Next: complete PR
 review and merge separately; review questions are in the specification. SMS
 remains deferred pending sender registration and destination verification.
+
+# Release 15.1.0 CI cleanup (2026-11-24)
+
+Standard test-isolation fix, authorized by the owner's request to resolve CI
+failures before releasing and deploying 15.1.0. Work uses a clean checkout of
+merged release commit `ce87403c`; the original checkout's conflicted lockfile
+and staged task notes are outside this change.
+
+- [x] Diagnose main CI: all 5,330 assertions pass, but Sonner's removal timer
+  updates React after the toast-action-hint test's JSDOM environment closes.
+- [x] Reproduce pending teardown timers with a deterministic timer assertion:
+  all four existing cases fail with one or two timers still scheduled.
+- [x] Drain test-owned toast timers before and after component cleanup; all four
+  hint behaviors pass, with zero timers left before restoring real timers.
+- [ ] Run required checks, publish the fix PR, and monitor its CI/reviews.
+- [ ] Merge the verified fix, tag 15.1.0, deploy its attested artifact and verify live.
+
+Local verification: 388 files and 5,330 tests pass with coverage and no
+unhandled errors. Coverage is 91.49% statements, 86.50% branches, 91.16%
+functions and 92.77% lines. App/test TypeScript, lint, code shape, knip and
+whitespace checks pass. The deterministic teardown guard failed all four
+original cases before timer draining; all four pass afterward.
+
+## Resuming From Here — 15.1.0 CI cleanup
+
+The bounded test-isolation fix is ready for its PR. Next: verify CI/reviews,
+merge, and run the protected release/deployment workflow for 15.1.0. The owner
+authorized those stages in this chat; the existing production environment
+approval and artifact-verification gates remain enabled.
