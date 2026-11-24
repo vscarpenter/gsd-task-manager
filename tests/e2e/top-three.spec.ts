@@ -11,6 +11,7 @@ test.describe("Today strip", () => {
     await matrix.goto();
     await matrix.createTask("Plan the launch !!");
     await matrix.createTask("Book the venue !!");
+    await matrix.openToday();
     const strip = page.getByTestId("today-strip");
     await expect(strip.getByRole("button", { name: "Pick up to three for today" })).toBeVisible();
 
@@ -23,6 +24,7 @@ test.describe("Today strip", () => {
     await expect(page.getByRole("region", { name: "Today, 2 of 3" })).toBeVisible();
 
     await page.reload();
+    await matrix.openToday();
     const rows = page.getByTestId("today-strip").getByRole("listitem");
     await expect(rows.first()).toContainText("Plan the launch");
     await expect(rows.first()).toContainText("first");
@@ -55,10 +57,14 @@ test.describe("Today strip", () => {
     await card.hover();
     await card.getByRole("button", { name: "More actions" }).click();
     await page.getByRole("menuitem", { name: "Add to today" }).click();
+    await matrix.openToday();
     await expect(page.getByRole("region", { name: "Today, 1 of 3" })).toBeVisible();
+    const date = page.getByTestId("today-strip").locator("time");
+    await expect(date).toHaveAttribute("datetime", "2026-11-08");
 
     await page.clock.fastForward("15:00:00");
 
+    await expect(date).toHaveAttribute("datetime", "2026-11-09");
     await expect(page.getByRole("region", { name: "Today, 0 of 3" })).toBeVisible();
     await expect(page.getByText("From yesterday")).toBeVisible();
     await expect(page.getByTestId("today-strip").getByRole("button", { name: "Add to today: Plan the launch" })).toBeVisible();
@@ -81,6 +87,7 @@ test.describe("Today strip at phone width", () => {
       await page.getByRole("menuitem", { name: "Add to today" }).click();
     }
 
+    await matrix.openToday();
     const strip = page.getByTestId("today-strip");
     await expect(page.getByRole("region", { name: "Today, 3 of 3" })).toBeVisible();
     const overflows = await strip.evaluate((el) => el.scrollWidth > el.clientWidth);

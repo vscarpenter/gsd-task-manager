@@ -499,34 +499,19 @@ describe("<MatrixSimplified>", () => {
     );
   });
 
-  it("renders 'GSD Matrix' title", () => {
+  it("heads the page with GSD Matrix and shows the date inside Today", () => {
     render(<MatrixSimplified />);
-    expect(screen.getByTestId("topbar-title")).toHaveTextContent("GSD Matrix");
-    expect(screen.getByRole("heading", { level: 1, name: /today.s matrix/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "GSD Matrix" })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(within(screen.getByTestId("today-strip")).getByText(introDateLabel(new Date()))).toBeInTheDocument();
   });
 
-  it("shows today's date as the page heading once hydrated", () => {
-    render(<MatrixSimplified />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      introDateLabel(new Date())
-    );
-  });
-
-  it("keeps the static-export server snapshot hydration-safe", () => {
+  it("keeps the static export free of dates and the local Schedule count", () => {
     const html = renderToString(<MatrixSimplified />);
-    const snapshot = document.createElement("div");
-    snapshot.innerHTML = html;
-    const showSchedule = Array.from(snapshot.querySelectorAll("button")).find((button) =>
-      button.textContent?.startsWith("Schedule")
-    );
-
     expect(html).toContain("GSD Matrix");
-    expect(html).toContain("Today’s matrix —");
-    expect(html).not.toContain(introDateLabel(new Date()));
     expect(html).toContain("Add a task");
-    expect(showSchedule).toBeDisabled();
-    expect(showSchedule).toHaveAttribute("autocomplete", "off");
+    expect(html).not.toContain(introDateLabel(new Date()));
+    expect(html).not.toContain('data-testid="today-strip"');
   });
 
   it("reads the board state in the intro briefing", () => {
@@ -557,9 +542,8 @@ describe("<MatrixSimplified>", () => {
 
     render(<MatrixSimplified />);
 
-    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent(
-      "Schedule · 2 tasks"
-    );
+    const schedule = within(screen.getByTestId("today-strip")).getByRole("button", { name: "Schedule · 2 tasks" });
+    expect(schedule).toHaveTextContent("Schedule · 2");
   });
 
   it("offers the weekly sweep for a Saved item, which the hook keeps out of all", async () => {
@@ -575,10 +559,7 @@ describe("<MatrixSimplified>", () => {
     tasksFixture.loading = true;
     render(<MatrixSimplified />);
 
-    const scheduleButton = screen.getByRole("button", { name: /^schedule/i });
-    expect(scheduleButton).toHaveTextContent("Schedule");
-    expect(scheduleButton).not.toHaveTextContent(/\d+ tasks?|empty/);
-    expect(scheduleButton).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^schedule/i })).not.toBeInTheDocument();
   });
 
   it("keeps the Q2 planning count stable when search filters the matrix", async () => {
@@ -590,9 +571,7 @@ describe("<MatrixSimplified>", () => {
 
     await userEvent.type(screen.getByLabelText("Shell search"), "production");
 
-    expect(screen.getByRole("button", { name: /^schedule/i })).toHaveTextContent(
-      "Schedule · 1 task"
-    );
+    expect(screen.getByRole("button", { name: "Schedule · 1 task" })).toBeInTheDocument();
     expect(screen.queryByText("Write the strategy")).not.toBeInTheDocument();
   });
 
@@ -612,6 +591,19 @@ describe("<MatrixSimplified>", () => {
     );
     expect(screen.getByTestId("quadrant-q2").style.boxShadow).toBe("");
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest", behavior: "auto" });
+  });
+
+  it("clears an empty search when jumping to Schedule", async () => {
+    tasksFixture.current = [makeTask({ id: "scheduled", title: "Write the schedule", important: true, urgent: false })];
+    render(<MatrixSimplified />);
+    const search = screen.getByLabelText("Shell search");
+    await userEvent.type(search, "no results");
+
+    expect(screen.queryByTestId("quadrant-q2")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Schedule · 1 task" }));
+
+    expect(search).toHaveValue("");
+    expect(screen.getByTestId("quadrant-q2")).toHaveFocus();
   });
 
   it("docks Quick Capture above mobile navigation and keeps it in the page flow on desktop", () => {

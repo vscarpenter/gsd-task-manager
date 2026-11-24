@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { ChevronDownIcon } from "lucide-react";
+import { localDayOf } from "@/lib/due-date-presets";
+import { deriveIntroStats, introDateLabel, introMessage } from "@/components/matrix-simplified/intro-copy";
 import type { TaskRecord } from "@/lib/types";
 import { MAX_PICKS } from "@/lib/top-three";
 import { movePick, removeFromToday, reorderPicks, tidyPicks } from "@/lib/tasks/top-three-actions";
@@ -14,9 +17,9 @@ import { useToday } from "./use-today";
 
 export interface TodayStripProps {
   tasks: TaskRecord[];
-  /** Shares the header row, right-aligned, so a quiet link costs no extra height above the matrix. */
-  aside?: React.ReactNode;
-  onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<void> | void;
+  aside?: ReactNode;
+  onFocusSchedule: () => void;
+  onToggleComplete: (task: TaskRecord, completed: boolean) => Promise<boolean>;
   onInspect: (task: TaskRecord) => void;
 }
 
@@ -31,6 +34,38 @@ async function attempt(run: () => Promise<unknown>, action: string, message: str
 }
 
 const PICK_TODAY_PARAM = "pickToday";
+// On narrower or shorter viewports the picks would push the Matrix out of view.
+const COMPACT_VIEWPORT = "(width < 64rem), (height < 56rem)";
+const DISCLOSURE_CONTROL =
+  "touch-target inline-flex min-h-9 items-center gap-1.5 rounded-sm px-1 font-medium sm:px-2 hover:bg-background-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
+function subscribeToViewport(onChange: () => void): () => void {
+  const media = window.matchMedia(COMPACT_VIEWPORT);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+function isRoomyViewport(): boolean {
+  return !window.matchMedia(COMPACT_VIEWPORT).matches;
+}
+
+function ScheduleShortcut({ tasks, onFocus }: { tasks: TaskRecord[]; onFocus: () => void }) {
+  const count = tasks.reduce((total, task) => total + Number(!task.completed && !task.urgent && task.important), 0);
+  const label = count === 0 ? "Schedule is empty" : `Schedule · ${count} ${count === 1 ? "task" : "tasks"}`;
+  return (
+    <button
+      type="button"
+      onClick={onFocus}
+      aria-label={label}
+      aria-keyshortcuts="Alt+2"
+      title="Move focus to the Schedule quadrant (keyboard shortcut: Option 2)"
+      className={`${DISCLOSURE_CONTROL} text-small text-accent`}
+    >
+      <span>{count === 0 ? "Schedule" : `Schedule · ${count}`}</span>
+      <kbd aria-hidden="true" className="hidden rounded-xs border border-border px-1.5 py-px lg:inline pointer-coarse:hidden">⌥2</kbd>
+    </button>
+  );
+}
 
 /** True when the weekly sweep's end screen sent the person here to pick for today. */
 function wantsPickToday(): boolean {
@@ -91,53 +126,114 @@ function useTodayHandlers(tasks: TaskRecord[], now: Date, zone: string) {
 /** The status-region message, and a way to land focus on the heading after a row unmounts. */
 function useAnnouncer() {
   const [status, setStatus] = useState("");
-  const headingRef = useRef<HTMLHeadingElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const announce = (message: string, refocus = false) => {
     setStatus(message);
-    if (refocus) headingRef.current?.focus();
+    if (refocus) triggerRef.current?.focus();
   };
-  const done = (ok: Promise<boolean>, message: string, refocus = false) =>
-    ok.then((worked) => worked && announce(message, refocus));
-  return { status, headingRef, announce, done };
+  return { status, triggerRef, announce };
 }
 
-/**
- * Today: up to three picks above the matrix (spec: tasks/spec-top-three.md section 4).
- * Quiet by design: it offers and never nags, and it never writes unless the person acts.
- */
-export function TodayStrip({ tasks, aside, onToggleComplete, onInspect }: TodayStripProps) {
-  const today = useToday(tasks);
+interface TodayHeaderProps {
+  now: Date;
+  open: boolean;
+  panelId: string;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+  onToggle: () => void;
+  children: ReactNode;
+}
+
+function TodayHeader({ now, open, panelId, triggerRef, onToggle, children }: TodayHeaderProps) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-1 sm:gap-x-2">
+      <div className="flex flex-wrap items-center gap-x-1 sm:gap-x-2">
+        <h2>
+          <button
+            ref={triggerRef}
+            type="button"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={(event) => {
+              // Safari does not focus a button on pointer activation.
+              event.currentTarget.focus({ preventScroll: true });
+              onToggle();
+            }}
+            className={`group ${DISCLOSURE_CONTROL} text-body font-semibold text-foreground`}
+          >
+            Today
+            <ChevronDownIcon className="size-4 shrink-0 text-foreground-muted group-aria-expanded:rotate-180" aria-hidden />
+          </button>
+        </h2>
+        <time dateTime={localDayOf(now.toISOString())} className="text-small text-foreground-muted">{introDateLabel(now)}</time>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+type TodayPicksProps = Omit<TodayStripProps, "onFocusSchedule"> & {
+  today: ReturnType<typeof useToday>;
+  startOpen: boolean;
+  announce: (message: string, refocus?: boolean) => void;
+};
+
+function TodayPicks({ tasks, today, aside, startOpen, announce, onToggleComplete, onInspect }: TodayPicksProps) {
   const tidyDismissed = useSyncExternalStore(tidyDismissal.subscribe, tidyDismissal.isDismissed, () => false);
-  const { status, headingRef, announce, done } = useAnnouncer();
-  const pickRequested = usePickTodayRequest();
   const act = useTodayHandlers(tasks, today.now, today.zone);
+  const done = (ok: Promise<boolean>, message: string, refocus = false) =>
+    ok.then((worked) => worked && announce(message, refocus));
 
   return (
-    <div data-testid="today-strip" className="mb-4 space-y-2 rounded-lg border border-border bg-card p-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 ref={headingRef} tabIndex={-1} className="font-display text-base font-semibold text-foreground">Today</h2>
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-x-4">
+        <p className="text-small text-foreground-muted">{introMessage(deriveIntroStats(tasks))}</p>
         {aside}
       </div>
+      {today.picks.length > 0 ? (
+        <PickList
+          picks={today.picks}
+          locked={today.needsTidy}
+          onToggleComplete={async (task, completed) => {
+            if (await onToggleComplete(task, completed)) announce(`Completed ${task.title}`, true);
+          }}
+          onInspect={onInspect}
+          onMove={(task, direction) => done(act.move(task, direction), `Moved ${task.title} ${direction}`)}
+          onRemove={(task) => done(act.remove(task), `Removed ${task.title} from today`, true)}
+          onReorder={(ids) => done(act.reorder(ids), "Reordered today")}
+        />
+      ) : null}
+      {today.needsTidy && !tidyDismissed ? (
+        <TidyOffer onTidy={() => done(act.tidy(), "Tidied today")} onDismiss={tidyDismissal.dismiss} />
+      ) : null}
+      {today.hasFreeSlot ? <FreeSlotOffers today={today} startOpen={startOpen} onAdd={(task) => done(act.add(task), `Added ${task.title} to today`)} /> : null}
+    </>
+  );
+}
+
+/** The date and Schedule jump stay visible while the picks are folded away. */
+export function TodayStrip({ tasks, onFocusSchedule, ...pickActions }: TodayStripProps) {
+  const today = useToday(tasks);
+  const { status, triggerRef, announce } = useAnnouncer();
+  const pickRequested = usePickTodayRequest();
+  const roomy = useSyncExternalStore(subscribeToViewport, isRoomyViewport, () => false);
+  const [openOverride, setOpenOverride] = useState<boolean>();
+  const open = openOverride ?? (pickRequested || roomy);
+  const panelId = useId();
+
+  return (
+    <div data-testid="today-strip" className="mb-3 rounded-lg border border-border bg-card px-2 py-1">
+      <TodayHeader now={today.now} open={open} panelId={panelId} triggerRef={triggerRef} onToggle={() => setOpenOverride(!open)}>
+        <ScheduleShortcut tasks={tasks} onFocus={onFocusSchedule} />
+      </TodayHeader>
       <p role="status" data-testid="today-status" className="sr-only">{status}</p>
-      <section aria-label={`Today, ${today.picks.length} of ${MAX_PICKS}`} className="space-y-2">
-        {today.picks.length > 0 ? (
-          <PickList
-            picks={today.picks}
-            locked={today.needsTidy}
-            onToggleComplete={async (task, completed) => {
-              await onToggleComplete(task, completed);
-              announce(`Completed ${task.title}`, true);
-            }}
-            onInspect={onInspect}
-            onMove={(task, direction) => done(act.move(task, direction), `Moved ${task.title} ${direction}`)}
-            onRemove={(task) => done(act.remove(task), `Removed ${task.title} from today`, true)}
-            onReorder={(ids) => done(act.reorder(ids), "Reordered today")}
-          />
-        ) : null}
-        {today.needsTidy && !tidyDismissed ? (
-          <TidyOffer onTidy={() => done(act.tidy(), "Tidied today")} onDismiss={tidyDismissal.dismiss} />
-        ) : null}
-        {today.hasFreeSlot ? <FreeSlotOffers today={today} startOpen={pickRequested} onAdd={(task) => done(act.add(task), `Added ${task.title} to today`)} /> : null}
+      <section
+        id={panelId}
+        hidden={!open}
+        aria-label={`Today, ${today.picks.length} of ${MAX_PICKS}`}
+        onFocus={() => setOpenOverride(true)}
+        className="mt-1 space-y-2 border-t border-border px-1 pb-2 pt-2"
+      >
+        {open ? <TodayPicks tasks={tasks} today={today} startOpen={pickRequested} announce={announce} {...pickActions} /> : null}
       </section>
     </div>
   );

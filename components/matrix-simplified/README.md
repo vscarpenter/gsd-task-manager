@@ -25,8 +25,7 @@ Page, shell, and grid:
 - `ACTIVE_RENDER_CAP` (`quadrant-pane.tsx`): constant `50`. A pane renders this many active cards before a disclosure button.
 - `DragLayer` (`drag-layer.tsx`): renders the dnd-kit `DragOverlay` with the task title and a hidden `role="status"` live region. Props are `task: TaskRecord | null` and `statusMessage: string`.
 - `FilteredEmpty` (`filtered-empty.tsx`): empty state for a filter with no matches. Props are `query`, `viewName?`, and `onClear`.
-- `MatrixBriefing` (`matrix-briefing.tsx`): props `tasks`, `mounted`, `isLoading`, and `onFocusSchedule`. It renders `MatrixIntro` and the lazy `WhatsNewCue` in `Suspense`.
-- `MatrixIntro` (`matrix-intro.tsx`): presentational intro row. Props are `dateLabel`, `message`, `scheduleCount`, and `onFocusSchedule`.
+- `TodayStrip` (`../today-strip/today-strip.tsx`): compact date and Schedule shortcut with an expandable panel for picks, suggestions, the board summary, and the sweep link.
 - `MatrixCaption` (`matrix-caption.tsx`): props `active`, `completed`, `overdue`, and `mounted`. It renders active, done, and overdue pills.
 - `SmartViewStrip` (`smart-view-strip.tsx`): pill row of "All tasks" and the smart views, with an overflow menu. Props are `views`, `activeViewId?`, `onSelectView(viewId)`, and `onClearView`.
 - `SmartViewOverflowMenu` (`smart-view-strip.tsx`): "More" dropdown that lists the overflow smart views.
@@ -144,9 +143,9 @@ Page and view:
 - `intro-copy.ts:introMessage`: message priority is zero active, then overdue, then all in Eliminate, then a Do First majority. The last case is "Nothing is overdue."
 - `intro-copy.ts:introMessage`: the Do First majority message requires `activeTotal >= 3 && doFirstCount * 2 > activeTotal`.
 - `intro-copy.ts` (file header comment): the subtext never repeats the raw counts in the header pills. It names Schedule only as a capture marker, in the empty-board and all-in-Eliminate messages.
-- `matrix-briefing.tsx:MatrixBriefing`: the date label is `null` until `mounted`. The message and `scheduleCount` are `null` until `mounted && !isLoading`.
-- `matrix-briefing.tsx:countActiveSchedule`: the Schedule count is tasks with `!completed && !urgent && important`.
-- `matrix-intro.tsx:MatrixIntro`: the Schedule button is disabled when `scheduleCount === null`. It spreads `autoComplete: "off"` so Firefox does not restore a disabled state.
+- `index.tsx:MatrixSimplified`: Today mounts after hydration and the task read. The Schedule shortcut clears the current filter if it has hidden the entire grid, then focuses Q2.
+- `today-strip.tsx:TodayStrip`: the panel starts closed below 64rem width or 56rem height. The weekly sweep request starts it open. A manual toggle or focus inside the panel takes precedence over the viewport default.
+- `today-strip.tsx:ScheduleShortcut`: the count is tasks with `!completed && !urgent && important`.
 - `matrix-caption.tsx:MatrixCaption`: pills show a non-breaking space until `mounted`. The overdue pill renders only when `mounted && overdue > 0`.
 
 Shell:
@@ -273,7 +272,7 @@ Task actions and shared hooks:
 - `topbar.tsx:SimplifiedTopbar`: calls `useSyncStatus` from `@/lib/hooks/use-sync-status` and `useScrollChrome(quietOnScroll)` from `@/lib/use-scroll-chrome`.
 - `icon-rail.tsx:DesktopIconRail`: reads `readRailCollapsed` as initial state and calls `writeRailCollapsed(collapsed)` in an effect. Both come from `@/lib/preferences/icon-rail`.
 - `icon-rail.tsx:DesktopIconRail`, `MobileIconRail`: call `navigateWithTransition(ROUTES[item.routeKey])` from `useViewTransition` for HOME, SAVED, DASHBOARD, SETTINGS, and ABOUT.
-- `matrix-briefing.tsx:WhatsNewCue`: loads `./whats-new-cue` through React `lazy`. `MatrixBriefing` reads the clock with `new Date()` once mounted.
+- `index.tsx:WhatsNewCue`: loads `./whats-new-cue` through React `lazy` after the local task read.
 - `capture-bar.tsx:CaptureBar`: adds and removes a `window` `"keydown"` listener. Key `n` focuses the capture input. Shift+`N` calls `onMoreOptions`, then clears the text and the quadrant override when the text has visible characters. The Details button (`more-options`) calls `onMoreOptions` and always clears both.
 - `capture-bar.tsx:revealCaptureInput`: calls `input.scrollIntoView({ block: "nearest", behavior: "instant" })` when the input's computed `scroll-margin-top` is above zero. The input's `onFocus` and `onChange` call it. The margin comes from `md:scroll-mt-44`, so the phone's fixed dock never scrolls.
 - `capture-bar.tsx:captureFocusRestorer`: after a save, calls `inputRef.current?.focus({ preventScroll: true })` with `quietFocusRef` set, so `onFocus` skips `revealCaptureInput` while the page scrolls to the new card.

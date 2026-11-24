@@ -18,18 +18,14 @@ const UNPINNED_HEIGHT_PX = 600;
 const PARKED_INSET_PX = 8;
 // How far under the topbar the capture bar sits when it's in view but inside its scroll margin.
 const VISIBLE_GAP_PX = 6;
-// The narrowest the intro sentence may get before it moves to its own line.
-const SENTENCE_FLOOR_REM = 12;
 // The least height a pinned matrix stage may have.
 const STAGE_FLOOR_REM = 10;
-// The longest English weekday and a long month, in the date heading.
 const LONG_DATE = new Date("2026-09-30T10:00:00");
 
 const remPx = (page: Page, rem: number) =>
   page.evaluate((n) => n * Number.parseFloat(getComputedStyle(document.documentElement).fontSize), rem);
 
-/** The intro with its widest parts: a long date and the plural Schedule label. */
-async function loadLongIntro(page: Page): Promise<void> {
+async function loadScheduleTasks(page: Page): Promise<void> {
   await page.clock.setFixedTime(LONG_DATE);
   await page.reload();
   await waitForAppLoad(page);
@@ -37,7 +33,6 @@ async function loadLongIntro(page: Page): Promise<void> {
   await createTaskViaCaptureBar(page, "Read the RFC *");
 }
 
-const introSentence = (page: Page) => page.locator("section:has(h1) > p");
 const scheduleButton = (page: Page) => page.getByRole("button", { name: /^Schedule( is empty| · )/ });
 
 /** Turns on the smart-view strip, which adds a row above the stage. */
@@ -194,46 +189,25 @@ test.describe("Layout fit", () => {
     }
   });
 
-  // The sentence sat between a date and a button that never shrink. At 768px on
-  // a Wednesday it had 0px left, so it broke one word per line.
-  test("the intro sentence keeps 12rem beside a long date at 768px", async ({ page }) => {
-    await page.setViewportSize({ width: 768, height: 640 });
-    await loadLongIntro(page);
+  test("Today, its date, and Schedule fit one row at 320px", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await loadScheduleTasks(page);
 
-    const sentence = (await introSentence(page).boundingBox())!;
-    const button = (await scheduleButton(page).boundingBox())!;
-    expect(sentence.width).toBeGreaterThanOrEqual(await remPx(page, SENTENCE_FLOOR_REM));
-    const overlaps = sentence.x < button.x + button.width && button.x < sentence.x + sentence.width
-      && sentence.y < button.y + button.height && button.y < sentence.y + sentence.height;
-    expect(overlaps, "the sentence runs into the Schedule button").toBe(false);
-  });
-
-  test("the intro row stays on one line at 1280px", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await loadLongIntro(page);
-
-    const date = await centerY(page.locator("section:has(h1) > div"));
-    for (const [name, part] of [["sentence", introSentence(page)], ["button", scheduleButton(page)]] as const) {
-      expect(Math.abs((await centerY(part)) - date), name).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
-    }
-  });
-
-  // Below sm the row is a column, and there a flex-basis sets the height, so a
-  // 12rem basis left about 150px of blank space under the sentence on a phone.
-  test("the intro sentence takes only its own lines on a phone", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await loadLongIntro(page);
-
-    const sentence = await introSentence(page).evaluate((p) => {
-      const text = document.createRange();
-      text.selectNodeContents(p);
+    const today = page.getByTestId("today-strip");
+    await expect(scheduleButton(page)).toHaveAccessibleName("Schedule · 2 tasks");
+    const layout = await today.evaluate((section) => {
+      const y = (el: Element) => {
+        const { top, height } = el.getBoundingClientRect();
+        return top + height / 2;
+      };
+      const date = y(section.querySelector("time")!);
       return {
-        blank: p.getBoundingClientRect().height - text.getBoundingClientRect().height,
-        fontSize: Number.parseFloat(getComputedStyle(p).fontSize),
+        offsets: Array.from(section.querySelectorAll("button"), (button) => Math.abs(y(button) - date)),
+        overflow: section.scrollWidth - section.clientWidth,
       };
     });
-    // A line's leading is the only space the box may hold beyond its text.
-    expect(sentence.blank).toBeLessThan(sentence.fontSize);
+    for (const offset of layout.offsets) expect(offset).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+    expect(layout.overflow).toBeLessThanOrEqual(0);
   });
 
   // Wide enough to pin but short, the shell left the matrix a 98px scroller at
@@ -251,7 +225,6 @@ test.describe("Layout fit", () => {
   });
 
   test("the shell pins only where the stage gets at least 10rem", async ({ page }) => {
-    // The longest date, so the intro above the stage is at its tallest.
     await page.clock.setFixedTime(LONG_DATE);
     await page.reload();
     const floor = await remPx(page, STAGE_FLOOR_REM);
@@ -264,9 +237,7 @@ test.describe("Layout fit", () => {
       expect((await readShell(page)).stageHeight, `stage at ${size}`).toBeGreaterThanOrEqual(floor);
     }
 
-    // Whether 1024x640 pins depends on the font: Linux's wider sans wraps the
-    // intro's button onto its own line. Pinned or not, the stage never drops
-    // under the floor while the page is held still.
+    // The stage keeps its floor when the shell pins at the minimum height.
     await resizeTo(page, { width: 1024, height: 640 });
     await waitForAppLoad(page);
     const pinnedTooShort = async () => {
@@ -276,14 +247,18 @@ test.describe("Layout fit", () => {
     await expect.poll(pinnedTooShort, { message: "a pinned stage under 10rem at 1024x640" }).toBe(false);
   });
 
-  // The smart-view strip adds a row above the stage. Pinned at 1024x640 it left
-  // the stage 112px on macOS fonts, and CI's Linux fonts got 120px without the
-  // strip. No size rule fits every font, so the shell measures the stage.
+  // A sweep can open suggestions even on a short window. Together with the
+  // smart-view strip they can grow the content above the stage past its floor.
   test("a stage too short to pin lets the page scroll, and pins once there's room", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 640 });
     await page.clock.setFixedTime(LONG_DATE);
     await waitForAppLoad(page);
     await turnOnSmartViewStrip(page);
+    await createTaskViaCaptureBar(page, "Plan the roadmap !!");
+    await createTaskViaCaptureBar(page, "Read the RFC !!");
+    await createTaskViaCaptureBar(page, "Renew the lease !!");
+    await page.goto("/?pickToday=1");
+    await expect(page.getByRole("button", { name: "Add to today: Plan the roadmap" })).toBeVisible();
 
     // The strip renders after its preference loads, so the shell decides after
     // the page settles. CI's WebKit read the state two frames before it landed.

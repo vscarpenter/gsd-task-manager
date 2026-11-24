@@ -42,20 +42,20 @@ export function SimplifiedTopbar({
       data-chrome-hidden={hidden ? "true" : undefined}
       className={topbarClassName(hidden)}
     >
-      <div className="min-w-0 flex-shrink-0">
+      <div className="min-w-0 flex-1 sm:flex-none">
         {titleAsLabel ? (
           <p className="text-h3 font-semibold text-foreground">{title}</p>
         ) : (
           <h1 className="text-h3 font-semibold text-foreground">{title}</h1>
         )}
         {caption ? (
-          <div className="mt-0.5 flex items-center gap-2 text-xs text-foreground-muted">
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground-muted sm:flex-nowrap">
             {caption}
           </div>
         ) : null}
       </div>
 
-      <div className="flex-1" />
+      <div className="hidden flex-1 sm:block" />
 
       {hasSearch ? (
         <TopbarSearch value={searchQuery ?? ""} onChange={onSearchChange} inputRef={searchInputRef} />

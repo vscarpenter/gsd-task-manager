@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { MatrixPage } from "./pages/matrix-page";
 import { test, expect } from "./fixtures/test-fixtures";
 import { waitForAppLoad } from "./helpers/test-helpers";
 
@@ -65,6 +66,7 @@ test.describe("Weekly sweep", () => {
     await page.reload();
     await waitForAppLoad(page);
 
+    await new MatrixPage(page).openToday();
     await page.getByRole("link", { name: "Weekly sweep" }).click();
     await expect(page).toHaveURL(/\/sweep\/?$/);
     await expect(page.getByRole("article", { name: "Send the invoice" })).toBeVisible();
@@ -107,10 +109,12 @@ test.describe("Weekly sweep", () => {
     await page.reload();
     await waitForAppLoad(page);
 
+    await new MatrixPage(page).openToday();
     await page.getByRole("link", { name: "Weekly sweep" }).click();
     await page.getByRole("button", { name: "Done" }).click();
     await expect(page).toHaveURL(/\/$/);
 
+    await new MatrixPage(page).openToday();
     await expect(page.getByRole("link", { name: "Weekly sweep" })).toHaveCount(0);
   });
 

@@ -1,8 +1,8 @@
 /**
- * Pure copy derivation for the matrix intro briefing.
+ * Pure copy derivation for the Today section above the matrix.
  *
- * The h1 date label and the one-sentence state reading live here so the copy
- * rules stay unit-testable and MatrixIntro stays presentational. Rules are
+ * The date label and the one-sentence state reading live here so their copy
+ * rules stay unit-testable. Rules are
  * priority-ordered. The subtext never mentions Q2 (the Schedule button owns
  * that topic; the empty-board hint names Schedule only as a capture marker).
  * It never repeats the header pills' raw counts. It interprets state the
@@ -24,8 +24,8 @@ export interface IntroStats {
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
-  weekday: "long",
-  month: "long",
+  weekday: "short",
+  month: "short",
   day: "numeric",
 });
 
@@ -59,7 +59,7 @@ export function deriveIntroStats(all: TaskRecord[]): IntroStats {
 
 export function introMessage(stats: IntroStats): string {
   if (stats.activeTotal === 0) {
-    return "Type a task below. Add !! for Do First or * for Schedule. A plain task goes to Eliminate.";
+    return "Type a task. Add !! for Do First or * for Schedule. A plain task goes to Eliminate.";
   }
   if (stats.overdueTotal > 0) {
     if (stats.overdueQuadrants.length === 1) {

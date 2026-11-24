@@ -29,16 +29,28 @@ interface RowProps extends TodayRowHandlers {
   locked: boolean;
 }
 
-function MoveButtons({ task, index, count, onMove }: Pick<RowProps, "task" | "index" | "count" | "onMove">) {
+function PickActions({ task, index, count, locked, onMove, onRemove }: Omit<RowProps, "onToggleComplete" | "onInspect">) {
   return (
-    <>
-      <button type="button" className={iconButton} aria-label={`Move ${task.title} up`} aria-disabled={index === 0} onClick={() => index > 0 && onMove(task, "up")}>
-        <ChevronUpIcon className="h-4 w-4" aria-hidden />
-      </button>
-      <button type="button" className={iconButton} aria-label={`Move ${task.title} down`} aria-disabled={index === count - 1} onClick={() => index < count - 1 && onMove(task, "down")}>
-        <ChevronDownIcon className="h-4 w-4" aria-hidden />
-      </button>
-    </>
+    <div className="flex flex-wrap items-center justify-between gap-x-1">
+      <span className="flex items-center text-xs text-foreground-muted">
+        <DueChip task={task} {...dueChipProps(task)} />
+      </span>
+      <div className="ms-auto flex items-center gap-1">
+        {locked ? null : (
+          <>
+            <button type="button" className={iconButton} aria-label={`Move ${task.title} up`} aria-disabled={index === 0} onClick={() => index > 0 && onMove(task, "up")}>
+              <ChevronUpIcon className="h-4 w-4" aria-hidden />
+            </button>
+            <button type="button" className={iconButton} aria-label={`Move ${task.title} down`} aria-disabled={index === count - 1} onClick={() => index < count - 1 && onMove(task, "down")}>
+              <ChevronDownIcon className="h-4 w-4" aria-hidden />
+            </button>
+          </>
+        )}
+        <button type="button" className={iconButton} aria-label={`Remove ${task.title} from today`} onClick={() => onRemove(task)}>
+          <XIcon className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -48,32 +60,28 @@ function PickRow({ task, index, count, locked, onToggleComplete, onInspect, onMo
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : undefined }}
-      className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5"
+      className="flex flex-col rounded-md border border-border bg-card px-2 py-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-1.5 sm:py-1.5"
     >
-      {locked ? null : (
-        <button type="button" className={cn(iconButton, "cursor-grab touch-none")} aria-label={`Reorder ${task.title}`} {...attributes} {...listeners}>
-          <GripVerticalIcon className="h-4 w-4" aria-hidden />
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:basis-48">
+        {locked ? null : (
+          <button type="button" className={cn(iconButton, "cursor-grab touch-none")} aria-label={`Reorder ${task.title}`} {...attributes} {...listeners}>
+            <GripVerticalIcon className="h-4 w-4" aria-hidden />
+          </button>
+        )}
+        <button
+          type="button"
+          className={iconButton}
+          aria-label={`Mark ${task.title} as complete`}
+          onClick={() => void onToggleComplete(task, true)}
+        >
+          <CircleIcon className="h-4 w-4" aria-hidden />
         </button>
-      )}
-      <button
-        type="button"
-        className={iconButton}
-        aria-label={`Mark ${task.title} as complete`}
-        onClick={() => void onToggleComplete(task, true)}
-      >
-        <CircleIcon className="h-4 w-4" aria-hidden />
-      </button>
-      <button type="button" className="touch-target min-w-[8rem] flex-1 truncate text-left text-small font-medium text-foreground" onClick={() => onInspect(task)}>
-        {task.title}
-        <span className="sr-only">, {ORDINALS[index]}</span>
-      </button>
-      <span className="flex items-center text-xs text-foreground-muted">
-        <DueChip task={task} {...dueChipProps(task)} />
-      </span>
-      {locked ? null : <MoveButtons task={task} index={index} count={count} onMove={onMove} />}
-      <button type="button" className={iconButton} aria-label={`Remove ${task.title} from today`} onClick={() => onRemove(task)}>
-        <XIcon className="h-4 w-4" aria-hidden />
-      </button>
+        <button type="button" className="touch-target min-w-0 flex-1 wrap-anywhere text-left text-small font-medium text-foreground" onClick={() => onInspect(task)}>
+          {task.title}
+          <span className="sr-only">, {ORDINALS[index]}</span>
+        </button>
+      </div>
+      <PickActions task={task} index={index} count={count} locked={locked} onMove={onMove} onRemove={onRemove} />
     </li>
   );
 }
@@ -121,7 +129,7 @@ export function PickList({ picks, onReorder, locked, ...handlers }: PickListProp
       accessibility={{ announcements: reorderAnnouncements(picks), screenReaderInstructions: { draggable: REORDER_INSTRUCTIONS } }}
     >
       <SortableContext items={picks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-        <ol className="space-y-1">
+        <ol role="list" className="space-y-1">
           {picks.map((task, index) => (
             <PickRow key={task.id} task={task} index={index} count={picks.length} locked={locked} {...handlers} />
           ))}

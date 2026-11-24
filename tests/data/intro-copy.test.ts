@@ -45,11 +45,11 @@ const originalTimezone = process.env.TZ;
 
 describe("introDateLabel", () => {
   it("formats a weekday, month, and day without the year", () => {
-    expect(introDateLabel(new Date(2026, 7, 1))).toBe("Saturday, August 1");
+    expect(introDateLabel(new Date(2026, 7, 1))).toBe("Sat, Aug 1");
   });
 
   it("formats single-digit days without padding", () => {
-    expect(introDateLabel(new Date(2026, 0, 1))).toBe("Thursday, January 1");
+    expect(introDateLabel(new Date(2026, 0, 1))).toBe("Thu, Jan 1");
   });
 });
 
@@ -130,7 +130,7 @@ describe("deriveIntroStats", () => {
 describe("introMessage", () => {
   it("teaches the capture markers when the board has no active tasks", () => {
     expect(introMessage(makeStats())).toBe(
-      "Type a task below. Add !! for Do First or * for Schedule. A plain task goes to Eliminate."
+      "Type a task. Add !! for Do First or * for Schedule. A plain task goes to Eliminate."
     );
   });
 

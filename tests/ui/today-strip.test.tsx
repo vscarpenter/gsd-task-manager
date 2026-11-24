@@ -21,10 +21,11 @@ const q1 = (id: string, extra = {}) =>
   createMockTask({ id, title: `Task ${id}`, urgent: true, important: true, ...extra });
 
 function setup(tasks = [q1("a")]) {
-  const onToggleComplete = vi.fn();
+  const onToggleComplete = vi.fn(async () => true);
   const onInspect = vi.fn();
-  render(<TodayStrip tasks={tasks} onToggleComplete={onToggleComplete} onInspect={onInspect} />);
-  return { onToggleComplete, onInspect, user: userEvent.setup() };
+  const onFocusSchedule = vi.fn();
+  render(<TodayStrip tasks={tasks} onToggleComplete={onToggleComplete} onInspect={onInspect} onFocusSchedule={onFocusSchedule} />);
+  return { onToggleComplete, onInspect, onFocusSchedule, user: userEvent.setup() };
 }
 
 describe("TodayStrip", () => {
@@ -127,14 +128,14 @@ describe("TodayStrip", () => {
     });
   });
 
-  it("shows an aside in its header row, so another entry doesn't cost a line of height", () => {
-    render(<TodayStrip tasks={[q1("a")]} onToggleComplete={vi.fn()} onInspect={vi.fn()} aside={<a href="/sweep">Weekly sweep</a>} />);
-
-    const heading = screen.getByRole("heading", { name: "Today" });
+  it("keeps the weekly sweep inside the expanded section", async () => {
+    render(<TodayStrip tasks={[q1("a")]} onToggleComplete={vi.fn(async () => true)} onInspect={vi.fn()} onFocusSchedule={vi.fn()} aside={<a href="/sweep">Weekly sweep</a>} />);
+    const toggle = screen.getByRole("button", { name: "Today" });
     const link = screen.getByRole("link", { name: "Weekly sweep" });
-    expect(heading.parentElement).toContainElement(link);
-    // A sibling of the labelled region, so "Today, 1 of 3" doesn't swallow an unrelated link.
-    expect(screen.getByRole("region", { name: "Today, 0 of 3" })).not.toContainElement(link);
+    expect(screen.getByRole("region", { name: "Today, 0 of 3" })).toContainElement(link);
+    await userEvent.click(toggle);
+    expect(screen.queryByRole("link", { name: "Weekly sweep" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schedule is empty" })).toBeVisible();
   });
 
   it("names the section and reads each row as first, second, or third", () => {
@@ -269,12 +270,12 @@ describe("TodayStrip", () => {
     expect(await screen.findByTestId("today-status")).toHaveTextContent("Moved Task a down");
   });
 
-  it("moves focus to the Today heading after a row is removed", async () => {
+  it("returns focus to the Today toggle after a row is removed", async () => {
     const { user } = setup([q1("a", { focusDate: TODAY, focusRank: 1 })]);
 
     await user.click(screen.getByRole("button", { name: "Remove Task a from today" }));
 
-    expect(screen.getByRole("heading", { name: "Today" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Today" })).toHaveFocus();
     expect(screen.getByTestId("today-status")).toHaveTextContent("Removed Task a from today");
   });
 
@@ -288,6 +289,16 @@ describe("TodayStrip", () => {
 
     expect(spy).toHaveBeenCalledWith("Couldn't remove that from today. Try again.", expect.anything());
     expect(String(spy.mock.calls[0][0])).not.toMatch(/failed/i);
+  });
+
+  it("keeps focus on a pick when completion fails", async () => {
+    const { user, onToggleComplete } = setup([q1("a", { focusDate: TODAY, focusRank: 1 })]);
+    onToggleComplete.mockResolvedValueOnce(false);
+    const complete = screen.getByRole("button", { name: "Mark Task a as complete" });
+    await user.click(complete);
+
+    expect(complete).toHaveFocus();
+    expect(screen.getByTestId("today-status")).toBeEmptyDOMElement();
   });
 
   it("completes a pick with the row's control", async () => {

@@ -26,8 +26,8 @@ function stageFloorPx(): number {
 
 /**
  * Keeps a fill-viewport shell from pinning when the stage would get under
- * 10rem. The `pinned` media query can't know: the intro wraps differently with
- * each font and date, and the smart-view strip adds a row. Under the floor the
+ * 10rem. The `pinned` media query can't know how tall Today and the smart-view
+ * strip will get. Under the floor the
  * column gets data-unpinned and the page scrolls instead.
  */
 export function usePinnedStageFit(columnRef: RefObject<HTMLElement | null>, enabled: boolean): void {
