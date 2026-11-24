@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  generateTaskListCacheKey,
   getTaskCache,
   resetTaskCache,
   taskCacheNamespace,
@@ -51,9 +50,9 @@ describe('task cache', () => {
     const cache = getTaskCache({ ttlMs: 1000, maxEntries: 5 });
     const tasks = [task('one'), task('two')];
 
-    expect(cache.getTaskList('all')).toBeNull();
-    cache.setTaskList('all', tasks, namespace);
-    expect(cache.getTaskList('all')).toEqual(tasks);
+    expect(cache.getTaskList(namespace)).toBeNull();
+    cache.setTaskList(namespace, tasks);
+    expect(cache.getTaskList(namespace)).toEqual(tasks);
     expect(cache.getTask('one', namespace)).toEqual(tasks[0]);
     expect(cache.getTask('missing', namespace)).toBeNull();
     expect(cache.getStats()).toMatchObject({ hits: 2, misses: 2, hitRate: 0.5 });
@@ -79,18 +78,18 @@ describe('task cache', () => {
 
   it('invalidates one task and every cached list', () => {
     const cache = getTaskCache({ ttlMs: 1000, maxEntries: 5 });
-    cache.setTaskList('all', [task('one'), task('two')], namespace);
+    cache.setTaskList(namespace, [task('one'), task('two')]);
     cache.invalidateTask('one', namespace);
 
     expect(cache.getTask('one', namespace)).toBeNull();
     expect(cache.getTask('two', namespace)?.id).toBe('two');
-    expect(cache.getTaskList('all')).toBeNull();
+    expect(cache.getTaskList(namespace)).toBeNull();
   });
 
   it('clears entries and resets statistics', () => {
     const cache = getTaskCache({ ttlMs: 1000, maxEntries: 5 });
-    cache.setTaskList('all', [task('one')], namespace);
-    cache.getTaskList('all');
+    cache.setTaskList(namespace, [task('one')]);
+    cache.getTaskList(namespace);
     cache.invalidate();
     cache.resetStats();
 
@@ -101,40 +100,18 @@ describe('task cache', () => {
 
   it('isolates individual task entries by principal namespace', () => {
     const cache = getTaskCache({ ttlMs: 1000, maxEntries: 5 });
-    cache.setTaskList('principal-one|all', [task('shared-id')], 'principal-one');
+    cache.setTaskList('principal-one', [task('shared-id')]);
 
     expect(cache.getTask('shared-id', 'principal-one')?.id).toBe('shared-id');
     expect(cache.getTask('shared-id', 'principal-two')).toBeNull();
+    expect(cache.getTaskList('principal-two')).toBeNull();
   });
 });
 
-describe('generateTaskListCacheKey', () => {
-  it("leaves the caller's tag order alone", () => {
-    const tags = ['zeta', 'alpha'];
+it('derives different namespaces for different tokens without exposing the token', () => {
+  const first = taskCacheNamespace({ pocketBaseUrl: 'https://pb.test', authToken: 'token-one' });
+  const second = taskCacheNamespace({ pocketBaseUrl: 'https://pb.test', authToken: 'token-two' });
 
-    expect(generateTaskListCacheKey({ tags })).toBe('t:alpha,zeta');
-    expect(tags).toEqual(['zeta', 'alpha']);
-  });
-
-  it('uses all for absent or empty filters', () => {
-    expect(generateTaskListCacheKey()).toBe('all');
-    expect(generateTaskListCacheKey({})).toBe('all');
-  });
-
-  it('includes false completion and stable sorted tags', () => {
-    expect(generateTaskListCacheKey({
-      quadrant: 'urgent-important',
-      completed: false,
-      tags: ['work', 'alpha'],
-    })).toBe('q:urgent-important|c:false|t:alpha,work');
-  });
-
-  it('isolates keys by backend and bearer token without exposing either token', () => {
-    const first = taskCacheNamespace({ pocketBaseUrl: 'https://pb.test', authToken: 'token-one' });
-    const second = taskCacheNamespace({ pocketBaseUrl: 'https://pb.test', authToken: 'token-two' });
-
-    expect(first).not.toBe(second);
-    expect(first).not.toContain('token-one');
-    expect(generateTaskListCacheKey(undefined, first)).toBe(`${first}|all`);
-  });
+  expect(first).not.toBe(second);
+  expect(first).not.toContain('token-one');
 });

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory is the TypeScript source of the `gsd-mcp-server` package. Its direct files hold the stdio entry point, the in-memory task cache, the PocketBase client, the dependency rules, the top-three rules, the task type mappers, the payload limits, and the typed errors. Four direct files (`analytics.ts`, `cli.ts`, `tools.ts`, `write-ops.ts`) only re-export from subdirectories.
+This directory is the TypeScript source of the `gsd-mcp-server` package. Its direct files hold the stdio entry point, the in-memory task cache, the PocketBase client, the dependency rules, the top-three rules, the task type mappers, the payload limits, and the typed errors. Three direct files (`cli.ts`, `tools.ts`, `write-ops.ts`) only re-export from subdirectories.
 
 ## Interface
 
@@ -17,7 +17,7 @@ Cache (`cache.ts`):
 - `getTaskCache(config?)`: returns the cache singleton. It uses `config` only on the first call.
 - The singleton has `getTaskList`, `setTaskList`, `getTask`, `setTask`, `invalidate`, `invalidateTask`, `getStats`, and `resetStats`.
 - `resetTaskCache()`: clears the singleton and its statistics.
-- `generateTaskListCacheKey(filters?, namespace?)`: builds a list cache key from the filters.
+- `getTaskList(namespace)` reads the full cached snapshot for the principal, and `setTaskList(namespace, tasks)` stores it. Filters run on that snapshot.
 - `taskCacheNamespace(config)`: returns a SHA-256 hex digest of the PocketBase URL and the auth token.
 - `CacheConfig`, `DEFAULT_CACHE_CONFIG`: the config shape and its default, `{ ttlMs: 30000, maxEntries: 1000 }`.
 
@@ -65,7 +65,6 @@ Constants, errors, version:
 
 Re-export files:
 
-- `analytics.ts`: re-exports the types and functions of [analytics](./analytics/README.md). The file is marked `@deprecated`.
 - `cli.ts`: re-exports `parseCLIArgs`, `showHelp`, `getClaudeConfigPath`, `prompt`, `promptPassword`, `runSetupWizard`, `runValidation`, `CLIOptions`, and `ValidationCheck`.
 - `tools.ts`: re-exports `listTasks`, `getTask`, `searchTasks`, `getSyncStatus`, and `getTaskStats`. From `types.ts` it re-exports only `GsdConfig`, `SyncStatus`, `TaskStats`, `Task`, `TaskFilters`, `PBTask`, `syncStatusSchema`, `pbTaskToTask`, and `taskToPBFields`.
 - `write-ops.ts`: re-exports `createTask`, `updateTask`, `completeTask`, `deleteTask`, `bulkUpdateTasks`, their result and input types, and six helpers.
@@ -73,7 +72,7 @@ Re-export files:
 Subdirectories:
 
 - [analytics](./analytics/README.md): productivity metrics, streaks, deadline groups, and the insights summary.
-- [api](./api/README.md): host redaction, and a GET and retry helper that no tool uses.
+- [api](./api/README.md): host redaction for diagnostics.
 - [auth](./auth/README.md): offline grading of the auth token's expiry.
 - [cli](./cli/README.md): flag parsing, the setup wizard, and the configuration validator.
 - [server](./server/README.md): configuration loading, MCP request handlers, and stdio startup.

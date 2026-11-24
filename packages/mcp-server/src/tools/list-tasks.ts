@@ -1,7 +1,6 @@
 import { confirmUsersPrincipal, getPocketBase } from '../pocketbase-client.js';
 import {
   getTaskCache,
-  generateTaskListCacheKey,
   taskCacheNamespace,
 } from '../cache.js';
 import { createMcpLogger } from '../utils/logger.js';
@@ -26,28 +25,15 @@ export async function listTasks(
 ): Promise<Task[]> {
   const cache = getTaskCache();
   const namespace = taskCacheNamespace(config);
-  const cacheKey = generateTaskListCacheKey(filters, namespace);
-  const allCacheKey = generateTaskListCacheKey(undefined, namespace);
-
-  // Check cache: for filtered requests, try the 'all' cache first and filter locally
-  if (filters) {
-    const cachedAll = cache.getTaskList(allCacheKey);
-    if (cachedAll) {
-      return applyTaskFilters(cachedAll, filters);
-    }
-  } else {
-    const cachedTasks = cache.getTaskList(cacheKey);
-    if (cachedTasks) {
-      return applyTaskFilters(cachedTasks, filters);
-    }
-  }
+  const cached = cache.getTaskList(namespace);
+  if (cached) return applyTaskFilters(cached, filters);
 
   const generation = cache.generation;
   const tasks = await fetchTasks(config);
 
   // A write may have invalidated this snapshot while the read was in flight.
-  if (!filters && cache.generation === generation) {
-    cache.setTaskList(cacheKey, tasks, namespace);
+  if (cache.generation === generation) {
+    cache.setTaskList(namespace, tasks);
   }
 
   return applyTaskFilters(tasks, filters);

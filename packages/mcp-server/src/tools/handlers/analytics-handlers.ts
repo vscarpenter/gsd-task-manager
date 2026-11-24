@@ -4,7 +4,7 @@ import {
   getQuadrantPerformance,
   getUpcomingDeadlines,
   generateInsightsSummary,
-} from '../../analytics.js';
+} from '../../analytics/index.js';
 import type { McpToolResponse } from './types.js';
 
 export async function handleGetProductivityMetrics(config: GsdConfig): Promise<McpToolResponse> {
