@@ -145,27 +145,25 @@ interface TodayHeaderProps {
 
 function TodayHeader({ now, open, panelId, triggerRef, onToggle, children }: TodayHeaderProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-1 sm:gap-x-2">
-      <div className="flex flex-wrap items-center gap-x-1 sm:gap-x-2">
-        <h2>
-          <button
-            ref={triggerRef}
-            type="button"
-            aria-expanded={open}
-            aria-controls={panelId}
-            onClick={(event) => {
-              // Safari does not focus a button on pointer activation.
-              event.currentTarget.focus({ preventScroll: true });
-              onToggle();
-            }}
-            className={`group ${DISCLOSURE_CONTROL} text-body font-semibold text-foreground`}
-          >
-            Today
-            <ChevronDownIcon className="size-4 shrink-0 text-foreground-muted group-aria-expanded:rotate-180" aria-hidden />
-          </button>
-        </h2>
-        <time dateTime={localDayOf(now.toISOString())} className="text-small text-foreground-muted">{introDateLabel(now)}</time>
-      </div>
+    <div className="flex flex-wrap items-center gap-x-1 sm:gap-x-2">
+      <h2>
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={(event) => {
+            // Safari does not focus a button on pointer activation.
+            event.currentTarget.focus({ preventScroll: true });
+            onToggle();
+          }}
+          className={`group ${DISCLOSURE_CONTROL} text-body font-semibold text-foreground`}
+        >
+          Today
+          <ChevronDownIcon className="size-4 shrink-0 text-foreground-muted group-aria-expanded:rotate-180" aria-hidden />
+        </button>
+      </h2>
+      <time dateTime={localDayOf(now.toISOString())} className="min-w-0 flex-[1_1_2rem] wrap-anywhere text-small text-foreground-muted">{introDateLabel(now)}</time>
       {children}
     </div>
   );

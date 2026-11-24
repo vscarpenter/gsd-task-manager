@@ -200,14 +200,22 @@ test.describe("Layout fit", () => {
         const { top, height } = el.getBoundingClientRect();
         return top + height / 2;
       };
-      const date = y(section.querySelector("time")!);
-      return {
-        offsets: Array.from(section.querySelectorAll("button"), (button) => Math.abs(y(button) - date)),
-        overflow: section.scrollWidth - section.clientWidth,
+      const measure = () => {
+        const date = y(section.querySelector("time")!);
+        return {
+          offsets: Array.from(section.querySelectorAll("button"), (button) => Math.abs(y(button) - date)),
+          overflow: section.scrollWidth - section.clientWidth,
+        };
       };
+      const normal = measure();
+      // Wider glyphs can otherwise move Schedule to its own line across operating systems.
+      section.style.letterSpacing = "0.12em";
+      return { normal, wide: measure() };
     });
-    for (const offset of layout.offsets) expect(offset).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
-    expect(layout.overflow).toBeLessThanOrEqual(0);
+    for (const [spacing, state] of Object.entries(layout)) {
+      for (const offset of state.offsets) expect(offset, spacing).toBeLessThanOrEqual(ROW_TOLERANCE_PX);
+      expect(state.overflow, spacing).toBeLessThanOrEqual(0);
+    }
   });
 
   // Wide enough to pin but short, the shell left the matrix a 98px scroller at
