@@ -25,3 +25,16 @@ it('does not cache a pre-cleanup snapshot that arrives after invalidation', asyn
   expect((await listTasks(config))[0].dependencies).toEqual([]);
   expect(mocks.fetch).toHaveBeenCalledTimes(2);
 });
+
+it('serves different filters from one full snapshot during the cache TTL', async () => {
+  mocks.fetch.mockClear().mockResolvedValue([
+    { task_id: 'home', title: 'Home task', tags: ['home'] },
+    { task_id: 'work', title: 'Work task', tags: ['work'] },
+  ]);
+  const config = { pocketBaseUrl: 'https://example.invalid', authToken: 'test-token' };
+
+  expect((await listTasks(config, { tags: ['home'] })).map((task) => task.id)).toEqual(['home']);
+  expect((await listTasks(config, { tags: ['work'] })).map((task) => task.id)).toEqual(['work']);
+  expect(await listTasks(config)).toHaveLength(2);
+  expect(mocks.fetch).toHaveBeenCalledTimes(1);
+});

@@ -27,7 +27,7 @@ paths:
 
 ## Conventions
 
-- PocketBase calls go through the SDK client in `src/pocketbase-client.ts`. The `fetchWithRetry()` helpers in `src/api/` are legacy, and no tool uses them.
+- PocketBase calls go through the SDK client in `src/pocketbase-client.ts`.
 - PocketBase reads a refused token as a guest: an empty `tasks` listing and a 404 for every record. Call `confirmUsersPrincipal` before an empty listing or a 404 counts, so a revoked token gets the sign-in error instead of `[]` or "Task not found".
 - Validate circular dependencies before adding task relationships.
 - TTL cache for read tools; dry-run mode for all writes.

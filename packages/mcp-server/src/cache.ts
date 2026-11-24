@@ -92,8 +92,8 @@ class TaskCacheManager {
     return `${namespace}|${taskId}`;
   }
 
-  getTaskList(cacheKey: string): Task[] | null {
-    const result = this.taskListCache.get(cacheKey);
+  getTaskList(namespace: string): Task[] | null {
+    const result = this.taskListCache.get(namespace);
     if (result) {
       this.hitCount++;
     } else {
@@ -102,8 +102,8 @@ class TaskCacheManager {
     return result;
   }
 
-  setTaskList(cacheKey: string, tasks: Task[], namespace: string): void {
-    this.taskListCache.set(cacheKey, tasks);
+  setTaskList(namespace: string, tasks: Task[]): void {
+    this.taskListCache.set(namespace, tasks);
 
     tasks.forEach((task) => {
       this.singleTaskCache.set(this.singleTaskKey(namespace, task.id), task);
@@ -181,22 +181,6 @@ export function resetTaskCache(): void {
     cacheInstance.resetStats();
   }
   cacheInstance = null;
-}
-
-export function generateTaskListCacheKey(filters?: {
-  quadrant?: string;
-  completed?: boolean;
-  tags?: string[];
-}, namespace?: string): string {
-  if (!filters) return namespace ? `${namespace}|all` : 'all';
-
-  const parts: string[] = [];
-  if (filters.quadrant) parts.push(`q:${filters.quadrant}`);
-  if (filters.completed !== undefined) parts.push(`c:${filters.completed}`);
-  if (filters.tags?.length) parts.push(`t:${[...filters.tags].sort().join(',')}`);
-
-  const filterKey = parts.length > 0 ? parts.join('|') : 'all';
-  return namespace ? `${namespace}|${filterKey}` : filterKey;
 }
 
 /**
