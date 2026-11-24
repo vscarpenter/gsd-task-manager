@@ -4,6 +4,28 @@
   "releases": [
     {
       "platform": "web",
+      "version": "15.1.0",
+      "date": "2026-11-24",
+      "notable": true,
+      "headline": "More room for the Matrix, with Today a tap away.",
+      "new": [],
+      "improved": [
+        "On phones and short laptops, Today folds into one row with the date and a shortcut to Schedule. Open Today to see your picks.",
+        "Archive puts Restore and Delete next to each task and divides large archives into pages.",
+        "Sync history gives long errors room to wrap and shows how many tasks failed after a partial sync.",
+        "Review shows a single completion trend and calculates it faster on large task lists.",
+        "Settings puts controls near the top and offers Retry if the page fails to load."
+      ],
+      "fixed": [
+        "Review fits narrow screens while your tasks load.",
+        "Schedule opens from Today even when your current search has no results.",
+        "Sync skips older queued changes that would delete a task you restored or bring back a task you deleted.",
+        "Sign-out asks again if new unsynced changes arrive while you review the warning.",
+        "Changes to separate settings can save at the same time and keep both choices."
+      ]
+    },
+    {
+      "platform": "web",
       "version": "14.9.4",
       "date": "2026-11-18",
       "notable": false,
