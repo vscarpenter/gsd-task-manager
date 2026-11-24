@@ -2,7 +2,7 @@
 
 import { handleSaveForLater, handleStartTimer, handleStopTimer, taskContext } from "./task-actions";
 
-import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { lazy, Suspense, useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { DndContext, closestCorners } from "@dnd-kit/core";
 import { createTask, deleteTask, restoreTask } from "@/lib/tasks";
 import { extractUrlsFromTitle, buildDescription } from "@/lib/capture-parser";
@@ -31,11 +31,22 @@ import { deriveMatrixView } from "./matrix-view";
 import { useSmartViews } from "./use-smart-views";
 import { useTaskHighlight } from "./use-task-highlight";
 import { useMatrixWindowEvents } from "./use-matrix-window-events";
-import { MatrixBriefing } from "./matrix-briefing";
 import { TaskDetailSheet } from "./task-detail-sheet";
-import { TodayStrip } from "@/components/today-strip/today-strip";
+import { TodayStrip, type TodayStripProps } from "@/components/today-strip/today-strip";
 import { TodayMenuProvider } from "@/components/today-strip/today-menu-context";
 import { SweepEntry } from "@/components/weekly-sweep/sweep-entry";
+
+// The release cue is loaded after hydration and the local task read.
+const WhatsNewCue = lazy(() => import("./whats-new-cue").then((module) => ({ default: module.WhatsNewCue })));
+
+function MatrixToday({ sweepTasks, ...today }: Omit<TodayStripProps, "aside"> & { sweepTasks: TaskRecord[] }) {
+  return (
+    <>
+      <TodayStrip {...today} aside={<SweepEntry tasks={sweepTasks} />} />
+      <Suspense fallback={null}><WhatsNewCue existingUser={today.tasks.length > 0} /></Suspense>
+    </>
+  );
+}
 
 /**
  * Client-only hydration gate. Returns `false` during the server render / first
@@ -274,8 +285,6 @@ export function MatrixSimplified() {
     focusQuadrant,
   });
 
-  const handleCreateClose = () => dispatchOverlay({ type: "closeCreate" });
-
   const handleEditSubmit = async (draft: EditDraft, taskId?: string, changed?: Partial<EditDraft>) => {
     try {
       if (taskId) {
@@ -324,7 +333,6 @@ export function MatrixSimplified() {
     >
       <AppShell
         title="GSD Matrix"
-        titleAsLabel
         quietChromeOnScroll
         fillViewport
         mainClassName="max-w-[1540px] pb-48 md:pb-6"
@@ -333,7 +341,6 @@ export function MatrixSimplified() {
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
       >
-        <MatrixBriefing tasks={all} mounted={mounted} isLoading={isLoading} onFocusSchedule={() => focusQuadrant("q2")} />
         <div
           data-testid="mobile-capture-dock"
           // z-20 keeps the phone's fixed dock above the page. From md up the dock
@@ -353,15 +360,19 @@ export function MatrixSimplified() {
             />
           </div>
         ) : null}
-        <TodayMenuProvider tasks={all}>
         {mounted && !isLoading ? (
-          <TodayStrip
+          <MatrixToday
             tasks={all}
-            onToggleComplete={(task, completedNext) => handleToggle(task, completedNext, handleSuccess).then(() => {})}
+            sweepTasks={stored}
+            onFocusSchedule={() => {
+              if (isFiltered && matchCount === 0) handleClearFilter();
+              focusQuadrant("q2");
+            }}
+            onToggleComplete={(task, completedNext) => handleToggle(task, completedNext, handleSuccess)}
             onInspect={handleInspectOpen}
-            aside={<SweepEntry tasks={stored} />}
           />
         ) : null}
+        <TodayMenuProvider tasks={all}>
         <div data-testid="matrix-stage" className={MATRIX_STAGE_CLASS}>
         {isLoading ? (
           <MatrixGridSkeleton />
@@ -424,7 +435,7 @@ export function MatrixSimplified() {
         task={null}
         initialDraft={createInitial}
         allTasks={taskContext(stored, all)}
-        onClose={handleCreateClose}
+        onClose={() => dispatchOverlay({ type: "closeCreate" })}
         onSubmit={handleEditSubmit}
       />
 

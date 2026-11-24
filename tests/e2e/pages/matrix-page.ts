@@ -39,6 +39,12 @@ export class MatrixPage {
     await expect(this.page.getByRole("button", { name: /^Schedule( is empty| · )/ })).toBeEnabled();
   }
 
+  async openToday(): Promise<void> {
+    const toggle = this.page.getByRole("button", { name: "Today", exact: true });
+    await expect(toggle).toBeVisible();
+    if (await toggle.getAttribute("aria-expanded") === "false") await toggle.click();
+  }
+
   async createTask(title: string): Promise<void> {
     const taskCount = await this.page.locator("[data-testid='task-card']").count();
     await this.captureBar.locator("[data-testid='capture-input']").fill(title);
