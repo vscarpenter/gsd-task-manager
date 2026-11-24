@@ -5,7 +5,7 @@
 This directory has the presentational primitives that the other component directories share.
 It has `Badge`, `Button`, `Input`, `Label`, `Skeleton`, `Spinner`, `SegmentedControl`, and `DrawerHint`.
 It wraps Radix for `Dialog`, `DropdownMenu`, `Switch`, and `Tooltip`.
-It also has two toast systems: a Sonner `ThemedToaster` with a hotkey hint and focus return, and a context-based `ToastProvider` with `useToast`.
+The Sonner `ThemedToaster` adds a hotkey hint and focus return for toast actions.
 
 ## Interface
 
@@ -19,18 +19,15 @@ It also has two toast systems: a Sonner `ThemedToaster` with a hotkey hint and f
 - `DialogHeader` (`dialog.tsx`): `<div>` wrapper with `mb-4 space-y-1`.
 - `DialogTitle`, `DialogDescription` (`dialog.tsx`): styled Radix `Title` and `Description`.
 - `DrawerHint` (`drawer-hint.tsx`): props `{ shortcut = "Esc", action = "to cancel", className }`. It renders a `<kbd>` and action text, hidden on coarse pointers.
-- `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuGroup`, `DropdownMenuPortal`, `DropdownMenuSub`, `DropdownMenuRadioGroup` (`dropdown-menu.tsx`): aliases of Radix `Root`, `Trigger`, `Group`, `Portal`, `Sub`, and `RadioGroup`.
+- `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuSub` (`dropdown-menu.tsx`): aliases of Radix `Root`, `Trigger`, and `Sub`.
 - `DropdownMenuContent` (`dropdown-menu.tsx`): Radix `Content` in a portal. `sideOffset` defaults to 4. A caller's `onCloseAutoFocus` runs first; when it doesn't `preventDefault` and focus was lost with the menu, focus returns to the trigger through `restoreFocusOrMainContent`, without scrolling.
-- `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSubTrigger` (`dropdown-menu.tsx`): styled Radix `Item`, `Label`, and `SubTrigger`, each with optional `inset`.
-- `DropdownMenuSubContent`, `DropdownMenuSeparator` (`dropdown-menu.tsx`): styled Radix `SubContent` and `Separator`.
-- `DropdownMenuCheckboxItem` (`dropdown-menu.tsx`): Radix `CheckboxItem` with a checkmark `ItemIndicator`. It takes `checked`.
-- `DropdownMenuRadioItem` (`dropdown-menu.tsx`): Radix `RadioItem` with a dot `ItemIndicator`.
-- `DropdownMenuShortcut` (`dropdown-menu.tsx`): `<span>` for shortcut text.
+- `DropdownMenuItem` and `DropdownMenuSubTrigger` (`dropdown-menu.tsx`): styled Radix `Item` and `SubTrigger`, each with optional `inset`.
+- `DropdownMenuSubContent` (`dropdown-menu.tsx`): styled Radix `SubContent`.
 - `Input` (`input.tsx`): `<input>` with class `input w-full`. `type` defaults to `"text"`, and it accepts `ref`.
 - `InputProps` (`input.tsx`): alias of `React.InputHTMLAttributes<HTMLInputElement>`.
 - `Label` (`label.tsx`): styled `<label>` that accepts `ref`.
 - `LabelProps` (`label.tsx`): alias of `React.LabelHTMLAttributes<HTMLLabelElement>`.
-- `SegmentedControl` (`segmented-control.tsx`): generic over `T extends string`. Props are `{ options: readonly { value, label }[], value, onChange(value), label, className }`. It renders a fieldset of visually hidden radio inputs.
+- `SegmentedControl` (`segmented-control.tsx`): generic over `T extends string`. Props are `{ options: readonly { value, label }[], value, onChange(value), label, className }`. It renders a fieldset of transparent native radio inputs sized to their visible segments.
 - `Skeleton` (`skeleton.tsx`): props `{ className }`. It renders an `animate-pulse` placeholder `<div>`.
 - `Spinner` (`spinner.tsx`): props `{ className, size?: "sm" | "md" | "lg" }` (default `"md"`). It renders `<output aria-label="Loading">`.
 - `Switch` (`switch.tsx`): styled Radix `SwitchPrimitives.Root` with a `Thumb`. It accepts Root props and `ref`.
@@ -38,8 +35,6 @@ It also has two toast systems: a Sonner `ThemedToaster` with a hotkey hint and f
 - `TOAST_HOTKEY` (`toast-action-hint.tsx`): constant `["altKey", "KeyT"]`, passed to the Sonner `Toaster` `hotkey`.
 - `ToastActionHint` (`toast-action-hint.tsx`): takes no props. It renders a hidden `role="status"` region that announces the hotkey when a Sonner toast has a string action label.
 - `useToastFocusReturn` (`toast-focus-return.ts`): `() => void`. It restores focus after the toast hotkey when the previously focused element is gone.
-- `useToast` (`toast.tsx`): returns `{ showToast(message, action?, duration?), hideToast(id) }` from `ToastContext`.
-- `ToastProvider` (`toast.tsx`): props `{ children }`. It holds toast state, provides the context, and renders an announcement region and a bottom-right toast stack.
 - `Tooltip`, `TooltipTrigger`, `TooltipProvider` (`tooltip.tsx`): aliases of Radix `Root`, `Trigger`, and `Provider`.
 - `TooltipContent` (`tooltip.tsx`): Radix `Content` in a portal. `sideOffset` defaults to 4.
 
@@ -48,9 +43,6 @@ It also has two toast systems: a Sonner `ThemedToaster` with a hotkey hint and f
 - `button.tsx:ButtonVariant`, `variantClasses`: `ButtonVariant` is exactly `"primary" | "subtle" | "ghost" | "destructive"`. `variantClasses` is `Record<ButtonVariant, string>`.
 - `button.tsx:Button`: `type` defaults to `"button"` and `variant` defaults to `"primary"`.
 - `badge.tsx:BadgeVariant`: is exactly `"default" | "outline" | "ghost" | "accent"`.
-- `toast.tsx:useToast`: throws `Error("useToast must be used within ToastProvider")` when no provider is present.
-- `toast.tsx:showToast`: the duration defaults to `TOAST_DURATION.LONG` from `@/lib/constants`. It schedules the auto-hide only when `duration > 0`.
-- `toast.tsx:ToastItem.runAction`: a toast action click runs `action.onClick()`, then hides the toast.
 - `themed-toaster.tsx:TOAST_TOP_OFFSET`, `TOAST_MOBILE_TOP_OFFSET`: the values are 80 and 130. A comment states that the toast sits below the measured top bars.
 - `themed-toaster.tsx:ThemedToaster`: the Toaster theme is `resolvedTheme` only when hydrated and equal to `"dark"` or `"light"`. Otherwise it is `"system"`.
 - `toast-action-hint.tsx:TOAST_HOTKEY`: a comment states that the hotkey and its spoken label (`TOAST_HOTKEY_LABEL = "Alt+T"`) live together, so the hint cannot name a key the Toaster ignores.
@@ -68,7 +60,6 @@ It also has two toast systems: a Sonner `ThemedToaster` with a hotkey hint and f
 
 ## Side Effects
 
-- `toast.tsx:showToast`: calls `setTimeout(() => hideToast(id), duration)` when `duration > 0`. Nothing clears the timer.
 - `toast-focus-return.ts:useToastFocusReturn`: adds a window `keydown` listener (capture phase) and a document `focusin` listener. Unmount removes both.
 - `toast-focus-return.ts:createFocusReturn.remember`: creates a `MutationObserver` on `document.body` with `{ childList: true, subtree: true }` on the hotkey. `stop` disconnects it.
 - `toast-focus-return.ts:createFocusReturn.restore`: calls `target?.focus()` on the remembered element or on `document.getElementById("main-content")`.

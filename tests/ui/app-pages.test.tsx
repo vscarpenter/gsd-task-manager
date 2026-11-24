@@ -21,10 +21,6 @@ vi.mock('@/components/error-boundary', () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@/components/ui/toast', () => ({
-  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
 vi.mock('@/components/ui/tooltip', () => ({
   TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -133,6 +129,16 @@ describe('RootLayout', () => {
     );
 
     expect(screen.getByTestId('toaster')).toBeInTheDocument();
+  });
+
+  it('keeps cloud sync connections opt-in', () => {
+    render(
+      <RootLayout>
+        <p>content</p>
+      </RootLayout>
+    );
+
+    expect(document.querySelector('link[rel="preconnect"][href="https://api.vinny.io"]')).toBeNull();
   });
 
   it('renders a CSP that restricts form submissions', () => {

@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemedToaster } from "@/components/ui/themed-toaster";
 import "./globals.css";
@@ -213,21 +212,19 @@ function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <ToastProvider>
-          <TooltipProvider>
-            {/* Anything that reads or writes task data stays inside the gate, so a pending reset keeps it unmounted. */}
-            <ResetLockGate>
-              <ClientLayout>{children}</ClientLayout>
-              <FirstTimeRedirect />
-              <OnboardingGate />
-              <WebMcpRegister />
-            </ResetLockGate>
-            <PwaRegister />
-            <PwaUpdateToast />
-            <GlobalErrorListener />
-            <ThemedToaster />
-          </TooltipProvider>
-        </ToastProvider>
+        <TooltipProvider>
+          {/* Anything that reads or writes task data stays inside the gate, so a pending reset keeps it unmounted. */}
+          <ResetLockGate>
+            <ClientLayout>{children}</ClientLayout>
+            <FirstTimeRedirect />
+            <OnboardingGate />
+            <WebMcpRegister />
+          </ResetLockGate>
+          <PwaRegister />
+          <PwaUpdateToast />
+          <GlobalErrorListener />
+          <ThemedToaster />
+        </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
@@ -247,7 +244,6 @@ export default function RootLayout({
     >
       <head>
         <DevelopmentCspMeta />
-        <link rel="preconnect" href="https://api.vinny.io" />
       </head>
       <body className="font-sans bg-background text-foreground antialiased">
         <AppProviders>{children}</AppProviders>

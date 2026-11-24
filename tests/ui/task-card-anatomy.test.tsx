@@ -54,8 +54,6 @@ vi.mock("@/components/ui/dropdown-menu", () => ({
     <button onClick={onClick}>{children}</button>
   ),
   // SnoozeDropdown renders these; it mounts whenever a task has a dueDate.
-  DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuSeparator: () => <hr />,
 }));
 
 function renderCard(taskOverrides?: Partial<TaskRecord>, allTasks?: TaskRecord[]) {
