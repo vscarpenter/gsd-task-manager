@@ -1,3 +1,20 @@
+# Dependency update (2026-11-25)
+
+Branch `chore/deps-update-2026-11-25`, commit `39938bfd`. Standard tier: manifest pins, the lockfile, and one guard-test pin.
+
+- [x] `bun audit` (clean) and `bun outdated` for the root and the MCP workspace.
+- [x] Bump 12 exact pins plus the `typescript-eslint` override. `bun update` refreshed 5 transitive packages.
+- [x] Raise the guard test's root `vitest` pin first (red), then bump (green).
+- [x] Gates on Node 22.23.5: 5,330 tests, MCP 544, both typechecks, lint, shape, knip, build, bundle budget, and Chromium export e2e (219).
+
+## Resuming From Here
+
+- **Done:** committed locally as `39938bfd`. Not pushed.
+- **Next:** push and open a PR once the owner says so.
+- **Blocked:** the push and PR wait for the owner's go-ahead.
+- **Assumptions:** the `tinyexec` 1.4.0 lock change already on main at session start rides this commit, because `bun update` resolves the same version. Holds kept: typescript 6.0.3, jsdom 30.0.1, recharts 3.10.1, and Vitest 4 in the MCP workspace.
+- **Watch:** `/saved` and `/settings` sit 0.2 KB and 1.7 KB over their bundle baselines, inside the 5 KB tolerance.
+
 # Main-commit guard sees global Git options (2026-11-22, merged in #789)
 
 Branch `fix/main-commit-guard`. Standard tier: one bounded bug in the two identical copies of the hook, with no new contract.
