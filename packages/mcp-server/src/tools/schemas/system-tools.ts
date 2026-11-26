@@ -1,7 +1,10 @@
 import type { Tool } from '@modelcontextprotocol/server';
+import { READ_ONLY, NON_DESTRUCTIVE_WRITE } from './annotations.js';
 
 export const validateConfigTool: Tool = {
   name: 'validate_config',
+  title: 'Validate config',
+  annotations: READ_ONLY,
   description:
     'Diagnose MCP server configuration. Checks PocketBase connectivity, authentication (the configured token is accepted by the server), and task access. Returns one result per check.',
   inputSchema: {
@@ -13,6 +16,8 @@ export const validateConfigTool: Tool = {
 
 export const getHelpTool: Tool = {
   name: 'get_help',
+  title: 'Get help',
+  annotations: READ_ONLY,
   description:
     'Get help documentation for this server: the tool list, analytics capabilities, setup, example queries, and troubleshooting. Pass topic to return one section; omit it for all sections.',
   inputSchema: {
@@ -30,6 +35,8 @@ export const getHelpTool: Tool = {
 
 export const getCacheStatsTool: Tool = {
   name: 'get_cache_stats',
+  title: 'Get cache stats',
+  annotations: NON_DESTRUCTIVE_WRITE,
   description:
     'Get task cache statistics including hit rate, cache size, and TTL configuration. Useful for monitoring MCP server performance and debugging caching behavior.',
   inputSchema: {

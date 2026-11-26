@@ -32,7 +32,7 @@ paths:
 - PocketBase reads a refused token as a guest: an empty `tasks` listing and a 404 for every record. Call `confirmUsersPrincipal` before an empty listing or a 404 counts, so a revoked token gets the sign-in error instead of `[]` or "Task not found".
 - Validate circular dependencies before adding task relationships.
 - TTL cache for read tools; dry-run mode for all writes.
-- Test both protocol revisions through `connectClient()` in `src/__tests__/helpers/protocol-clients.ts`. `src/__tests__/server/wire-contract.test.ts` pins the v1.5.0 tool and prompt lists, so a deliberate change to them updates its fixture in the same PR.
+- Test both protocol revisions through `connectClient()` in `src/__tests__/helpers/protocol-clients.ts`. `src/__tests__/server/wire-contract.test.ts` pins the v1.5.0 tool and prompt lists, less the `title` and `annotations` fields added since, so a deliberate change to them updates its fixture in the same PR. `src/__tests__/server/metadata.test.ts` checks those fields, the server instructions, and the cache hints.
 - Field changes that touch the synced schema follow the `pb-collection` skill. It sets `disable-model-invocation: true`, so ask the user to run `/pb-collection`.
 
 ## Configuration

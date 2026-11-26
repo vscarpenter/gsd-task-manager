@@ -1,8 +1,11 @@
 import type { Tool } from '@modelcontextprotocol/server';
 import { SCHEMA_LIMITS } from '../../constants.js';
+import { NON_DESTRUCTIVE_WRITE, DESTRUCTIVE_WRITE } from './annotations.js';
 
 export const createTaskTool: Tool = {
   name: 'create_task',
+  title: 'Create task',
+  annotations: NON_DESTRUCTIVE_WRITE,
   description:
     'Create a new task from structured fields. Requires title, urgent, and important; the quadrant is derived from the two booleans. Optional fields: description, dueDate, tags, subtasks, recurrence, dependencies, notifyBefore, notificationEnabled, estimatedMinutes. Any http(s) URLs in the title are moved into the description. Dependencies are validated for cycles. Use dryRun=true to preview without saving.',
   inputSchema: {
@@ -93,6 +96,8 @@ export const createTaskTool: Tool = {
 
 export const updateTaskTool: Tool = {
   name: 'update_task',
+  title: 'Update task',
+  annotations: DESTRUCTIVE_WRITE,
   description:
     'Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Setting completed=true on a recurring task also creates its next instance, as complete_task does. Use dryRun=true to preview changes.',
   inputSchema: {
@@ -193,6 +198,8 @@ export const updateTaskTool: Tool = {
 
 export const completeTaskTool: Tool = {
   name: 'complete_task',
+  title: 'Complete task',
+  annotations: DESTRUCTIVE_WRITE,
   description:
     'Mark a task as complete or incomplete. Quick shortcut for updating completion status. Completing a recurring task also creates its next instance, as the web app does. Use dryRun=true to preview changes.',
   inputSchema: {
@@ -219,6 +226,8 @@ export const completeTaskTool: Tool = {
 
 export const deleteTaskTool: Tool = {
   name: 'delete_task',
+  title: 'Delete task',
+  annotations: DESTRUCTIVE_WRITE,
   description:
     'Permanently delete a task. The delete is immediate and cannot be undone: it skips the 30-day Trash on every client, so the task cannot be restored from the web, iOS, or Android app. Deletes default to dryRun=true, so pass dryRun=false explicitly to apply.',
   inputSchema: {
@@ -242,6 +251,8 @@ export const deleteTaskTool: Tool = {
 
 export const bulkUpdateTasksTool: Tool = {
   name: 'bulk_update_tasks',
+  title: 'Bulk update tasks',
+  annotations: DESTRUCTIVE_WRITE,
   description:
     'Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation (10 for deletes) for safety. Bulk complete also creates the next instance of each recurring task it completes. Deletes are permanent and skip the 30-day Trash on every client. Destructive deletes default to dryRun=true — pass dryRun=false explicitly to apply.',
   inputSchema: {

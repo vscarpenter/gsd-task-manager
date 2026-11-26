@@ -2,36 +2,42 @@ import type { Prompt, PromptMessage } from '@modelcontextprotocol/server';
 
 const dailyStandupPrompt: Prompt = {
   name: 'daily-standup',
+  title: 'Daily standup',
   description: "Daily task review: today's tasks, overdue items, and productivity summary",
   arguments: [],
 };
 
 const weeklyReviewPrompt: Prompt = {
   name: 'weekly-review',
+  title: 'Weekly review',
   description: 'Weekly productivity analysis: completion stats, trends, and top quadrants',
   arguments: [],
 };
 
 const focusModePrompt: Prompt = {
   name: 'focus-mode',
+  title: 'Focus mode',
   description: 'Get urgent and important tasks (Q1: Do First) to focus on right now',
   arguments: [],
 };
 
 const upcomingDeadlinesPrompt: Prompt = {
   name: 'upcoming-deadlines',
+  title: 'Upcoming deadlines',
   description: 'Show all overdue tasks, tasks due today, and tasks due this week',
   arguments: [],
 };
 
 const productivityReportPrompt: Prompt = {
   name: 'productivity-report',
+  title: 'Productivity report',
   description: 'Comprehensive productivity report with metrics, streaks, and insights',
   arguments: [],
 };
 
 const tagAnalysisPrompt: Prompt = {
   name: 'tag-analysis',
+  title: 'Tag analysis',
   description: 'Analyze task distribution and completion rates by tags/projects',
   arguments: [],
 };
