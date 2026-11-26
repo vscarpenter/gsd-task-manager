@@ -42,3 +42,10 @@ export function registerHandlers(server: Server, config: GsdConfig): void {
     return handleToolCall(name, args || {}, config);
   });
 }
+
+/** The server each connection gets: GSD's capabilities with every handler registered. */
+export function createGsdServer(config: GsdConfig): Server {
+  const server = createServer();
+  registerHandlers(server, config);
+  return server;
+}

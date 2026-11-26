@@ -25,7 +25,7 @@
     },
     "packages/mcp-server": {
       "entry": ["decode-jwt.cjs"],
-      "project": ["src/**/*.ts!"]
+      "project": ["src/**/*.ts!", "!src/__tests__/**"]
     }
   }
 }

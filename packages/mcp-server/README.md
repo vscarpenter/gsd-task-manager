@@ -1005,6 +1005,7 @@ This section states the package's contract for developers and AI assistants who 
 - Coverage minimums are 80% statements, 75% branches, 80% functions, and 80% lines (`vitest.config.ts` `coverage.thresholds`).
 - `src/write-ops/**` needs 98% statements, 95% branches, 100% functions, and 98% lines (`vitest.config.ts` `coverage.thresholds`).
 - The package needs Node 22 or later (`package.json` `engines`).
+- The server speaks MCP 2026-07-28, and 2025-11-25 to a client that opens with a 2025 `initialize` (`src/server/startup.ts:startMcpServer`, `serveStdio`).
 
 ### Side Effects
 
