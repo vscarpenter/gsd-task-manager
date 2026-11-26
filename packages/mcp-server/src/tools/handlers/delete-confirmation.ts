@@ -106,11 +106,13 @@ export function deleteConfirmationFor(
 ): DeleteConfirmation {
   const envelope = (ctx.mcpReq.envelope ?? {}) as Record<string, unknown>;
   const declared = envelope[CLIENT_CAPABILITIES_META_KEY] as ClientCapabilities | undefined;
-  if (!supportsForm(declared ?? initializeCapabilities())) return NO_CONFIRMATION;
+  const canAsk = supportsForm(declared ?? initializeCapabilities());
+  const answer = answerOf(ctx.mcpReq.inputResponses);
+  const state = ctx.mcpReq.requestState<ConfirmationState>();
   return {
-    mintState: (state) => stateCodec.mint(state, ctx),
-    answer: answerOf(ctx.mcpReq.inputResponses),
-    state: ctx.mcpReq.requestState<ConfirmationState>(),
+    ...(canAsk && { mintState: (next: ConfirmationState) => stateCodec.mint(next, ctx) }),
+    ...(answer && { answer }),
+    ...(state && { state }),
   };
 }
 
@@ -170,9 +172,12 @@ async function deleteIfConfirmed(
 /**
  * Runs a `dryRun: false` delete behind the person's answer. The first round
  * asks and signs the stamps it showed them; the retried round deletes only
- * what still matches. When the client can't ask, `run` is the v1.5.0 delete.
- * When the preview finds nothing, it runs as a confirmed delete of nothing, so
- * a task that syncs in before the delete's own read is kept.
+ * what still matches. A retried round's answer counts even when the retry
+ * declares less than the call that asked, since each 2026-07-28 request
+ * declares its own capabilities. When the client can't ask on a first call,
+ * `run` is the v1.5.0 delete. When the preview finds nothing, it runs as a
+ * confirmed delete of nothing, so a task that syncs in before the delete's
+ * own read is kept.
  */
 async function confirmBeforeDelete(
   confirmation: DeleteConfirmation,
@@ -180,9 +185,10 @@ async function confirmBeforeDelete(
   preview: () => Promise<DeletionPreview | undefined>,
   run: DeleteRun
 ): Promise<ToolCallResult> {
-  const { mintState } = confirmation;
-  if (call.dryRun !== false || !mintState) return run();
+  if (call.dryRun !== false) return run();
   if (confirmation.answer) return deleteIfConfirmed(confirmation, call.tool, run);
+  const { mintState } = confirmation;
+  if (!mintState) return confirmation.state ? NOT_CHECKED : run();
   const deletion = await preview();
   if (!deletion) return run({});
   return askToConfirm(deletion, await mintState({ v: 1, tool: call.tool, stamps: deletion.stamps }));

@@ -361,6 +361,43 @@ describe('request state on 2026-07-28', () => {
       .toEqual({ outcome: true, deleted: [] });
   });
 
+  it.each([['no elicitation', {}], ['URL elicitation only', URL_ONLY]] as const)(
+    'should_not_delete_when_a_declining_retry_drops_form_elicitation (%s)',
+    async (_declared, capabilities) => {
+      // Each 2026-07-28 request declares its own capabilities, so a retry can
+      // declare less than the call that asked.
+      const dropForm = (message: JsonRpc) => {
+        const meta = message.params?._meta as Record<string, unknown> | undefined;
+        if (message.method !== 'tools/call' || message.params?.requestState === undefined || !meta) return message;
+        const declared = { ...meta, 'io.modelcontextprotocol/clientCapabilities': capabilities };
+        return { ...message, params: { ...message.params, _meta: declared } };
+      };
+
+      const run = await confirmWith({ onElicit: async () => DECLINE, rewriteRequest: dropForm });
+
+      expect({ notDeleted: /^Not deleted:/.test(String(run.outcome)), deleted: run.deleted }).toEqual({
+        notDeleted: true,
+        deleted: [],
+      });
+    }
+  );
+
+  it('should_not_delete_when_a_retry_drops_both_its_answer_and_form_elicitation', async () => {
+    const dropAnswerAndForm = (message: JsonRpc) => {
+      const meta = message.params?._meta as Record<string, unknown> | undefined;
+      if (message.method !== 'tools/call' || message.params?.requestState === undefined || !meta) return message;
+      const { inputResponses: _dropped, ...params } = message.params;
+      return { ...message, params: { ...params, _meta: { ...meta, 'io.modelcontextprotocol/clientCapabilities': {} } } };
+    };
+
+    const run = await confirmWith({ rewriteRequest: dropAnswerAndForm });
+
+    expect({ outcome: /^Not deleted: .*couldn't be checked/.test(String(run.outcome)), deleted: run.deleted }).toEqual({
+      outcome: true,
+      deleted: [],
+    });
+  });
+
   it('should_not_delete_when_a_confirmed_retry_has_no_request_state', async () => {
     const run = await confirmWith({ rewriteRequest: retryWithState(() => undefined) });
 
