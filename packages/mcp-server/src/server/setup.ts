@@ -1,10 +1,4 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import {
-  ListToolsRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-  CallToolRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { Server } from '@modelcontextprotocol/server';
 import { allTools } from '../tools/schemas/index.js';
 import { allPrompts, getPromptMessage } from '../tools/prompts.js';
 import { handleToolCall } from '../tools/handlers/index.js';
@@ -27,15 +21,15 @@ export function createServer(): Server {
 }
 
 export function registerHandlers(server: Server, config: GsdConfig): void {
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
+  server.setRequestHandler('tools/list', async () => {
     return { tools: allTools };
   });
 
-  server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  server.setRequestHandler('prompts/list', async () => {
     return { prompts: allPrompts };
   });
 
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  server.setRequestHandler('prompts/get', async (request) => {
     const { name } = request.params;
     const message = getPromptMessage(name);
     return {
@@ -43,7 +37,7 @@ export function registerHandlers(server: Server, config: GsdConfig): void {
     };
   });
 
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler('tools/call', async (request) => {
     const { name, arguments: args } = request.params;
     return handleToolCall(name, args || {}, config);
   });

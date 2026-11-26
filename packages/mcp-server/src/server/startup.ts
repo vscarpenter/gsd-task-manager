@@ -16,7 +16,7 @@
  * account-scoped call.
  */
 
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { removeSetupArtifact } from '../cli/setup-artifact.js';
 import { SuperuserPrincipalError } from '../errors.js';
 import { assertNonSuperuserPrincipal } from '../pocketbase-client.js';
