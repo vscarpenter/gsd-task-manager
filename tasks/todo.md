@@ -4,15 +4,16 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
 
 - [x] Spec (#801), PR 1 wire contract (#802), PR 2 v2 SDK on the 2025 protocol (#803), PR 3 serve 2026-07-28 over stdio (#804), all merged.
 - [x] PR 4 on `feat/mcp-describe-server`: three red/green cycles, each red approved (AC7 server identity and instructions, AC8 tool and prompt titles and annotations, AC9 public cache hints), plus the approved test refactor.
-- [x] PR 4 gates (root suite 5,342 tests, MCP suite 561, both typechecks, lint, shape, knip, coverage), SonarJS check (no finding on a changed line), commit `8584075`, draft PR #805.
-- [ ] PR 5 delete confirmation (comprehension quiz applies), PR 6 skills and the `McpServer` switch, PR 7 `chore(release)` 2.0.0.
+- [x] PR 4 gates (root suite 5,342 tests, MCP suite 561, both typechecks, lint, shape, knip, coverage), SonarJS check (no finding on a changed line), merged as #805 (`f59395f`).
+- [x] PR 5 on `feat/mcp-confirm-deletes`: three red/green cycles, each red approved (ask before a delete and write nothing without a yes; delete only what was confirmed, with signed stamps; the instructions' delete sentence, option A), plus the pb-sync-reviewer's empty-preview fix. Gates: root suite 5,342, MCP suite 593, both typechecks, lint, shape, knip, coverage. SonarJS: one new finding, the deprecated 2025 capability accessor.
+- [ ] PR 5: CI, the comprehension quiz, and the manual Claude Code check (a `dryRun: false` delete opens the dialog) before merge.
+- [ ] PR 6 skills and the `McpServer` switch, PR 7 `chore(release)` 2.0.0.
 
 ## Resuming From Here
 
-- **Done:** PR 4 is open as draft #805, with every local gate green.
-- **Next:** CI on #805, then the owner's review and merge. After that, PR 5 starts from a fresh branch off main.
-- **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts:47` needs the SonarCloud UI; this cloud session can't save a credential for `sonarcloud.io`.
-- **Carry into PR 5:** word the delete sentence in `src/server/instructions.ts` so it holds for clients with and without form elicitation (implementation notes, PR 4).
+- **Done:** PR 5 is committed and pushed, with every local gate green.
+- **Next:** the owner answers the comprehension quiz and runs the manual dialog check, then merges. PR 6 starts from a fresh branch off main.
+- **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI; this cloud session can't save a credential for `sonarcloud.io`.
 
 # Correct the OAuth discovery claims (2026-11-25)
 

@@ -36,6 +36,15 @@ export interface UpdateTaskInput {
   dryRun?: boolean;
 }
 
+/** What a delete would remove, for the person asked to confirm it. */
+export interface DeletionPreview {
+  titles: string[];
+  /** Tasks outside the delete that depend on a task in it. */
+  dependentCount: number;
+  /** Each task's updatedAt as previewed. A confirmed delete keeps any task that has moved since. */
+  stamps: Record<string, string>;
+}
+
 export type BulkOperation =
   | { type: 'complete'; completed: boolean }
   | { type: 'move_quadrant'; urgent: boolean; important: boolean }

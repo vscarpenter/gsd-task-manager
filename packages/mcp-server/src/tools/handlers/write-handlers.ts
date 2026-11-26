@@ -7,6 +7,7 @@ import {
   type CreateTaskInput,
   type UpdateTaskInput,
   type BulkOperation,
+  type DeleteTaskResult,
 } from '../../write-ops.js';
 import type { GsdConfig } from '../../tools.js';
 import type { Task } from '../../types.js';
@@ -103,47 +104,55 @@ export async function handleCompleteTask(
   };
 }
 
-export async function handleDeleteTask(config: GsdConfig, args: { id: string; dryRun?: boolean }): Promise<McpToolResponse> {
-  const result = await deleteTask(config, args.id, { dryRun: args.dryRun });
+function formatDeletePreview(result: DeleteTaskResult): string {
+  let message = `🔍 DRY RUN - Task would be deleted (not deleted):\n\n`;
+  message += `Task: "${result.taskTitle}" (${result.taskId})\n`;
 
-  let message: string;
-  if (result.dryRun) {
-    message = `🔍 DRY RUN - Task would be deleted (not deleted):\n\n`;
-    message += `Task: "${result.taskTitle}" (${result.taskId})\n`;
-
-    if (result.affectedTasks.length > 0) {
-      message += `\n⚠️ The following tasks depend on this task and would be affected:\n`;
-      result.affectedTasks.forEach((title) => {
-        message += `  - ${title}\n`;
-      });
-    }
-    message += `\nTo delete this task, pass dryRun=false explicitly.`;
-  } else {
-    message = result.partial
-      ? `⚠️ Task deleted; dependency cleanup is incomplete.\n\n`
-      : `✅ Task deleted successfully!\n\n`;
-    message += `Deleted: "${result.taskTitle}" (${result.taskId})`;
-
-    if (result.affectedTasks.length > 0) {
-      message += `\n\nCleaned dangling dependency references on ${result.dependenciesCleaned} of ${result.affectedTasks.length} dependent task(s):\n`;
-      result.affectedTasks.forEach((title) => {
-        message += `  - ${title}\n`;
-      });
-    }
-    if (result.conflicts.length > 0) {
-      message += `\n\nConflicts: ${result.conflicts.join(', ')} (changed during cleanup)`;
-    }
-    if (result.errors.length > 0) {
-      message += `\n\nCleanup errors:\n${result.errors.join('\n')}`;
-    }
+  if (result.affectedTasks.length > 0) {
+    message += `\n⚠️ The following tasks depend on this task and would be affected:\n`;
+    result.affectedTasks.forEach((title) => {
+      message += `  - ${title}\n`;
+    });
   }
+  return message + `\nTo delete this task, pass dryRun=false explicitly.`;
+}
+
+function formatDeleteOutcome(result: DeleteTaskResult): string {
+  let message = result.partial
+    ? `⚠️ Task deleted; dependency cleanup is incomplete.\n\n`
+    : `✅ Task deleted successfully!\n\n`;
+  message += `Deleted: "${result.taskTitle}" (${result.taskId})`;
+
+  if (result.affectedTasks.length > 0) {
+    message += `\n\nCleaned dangling dependency references on ${result.dependenciesCleaned} of ${result.affectedTasks.length} dependent task(s):\n`;
+    result.affectedTasks.forEach((title) => {
+      message += `  - ${title}\n`;
+    });
+  }
+  if (result.conflicts.length > 0) {
+    message += `\n\nConflicts: ${result.conflicts.join(', ')} (changed during cleanup)`;
+  }
+  if (result.errors.length > 0) {
+    message += `\n\nCleanup errors:\n${result.errors.join('\n')}`;
+  }
+  return message;
+}
+
+/** `expectedStamps` is what a person confirmed deleting (see delete-confirmation.ts). */
+export async function handleDeleteTask(
+  config: GsdConfig,
+  args: { id: string; dryRun?: boolean },
+  expectedStamps?: Record<string, string>
+): Promise<McpToolResponse> {
+  const result = await deleteTask(config, args.id, { dryRun: args.dryRun, expectedStamps });
+  const text = result.dryRun ? formatDeletePreview(result) : formatDeleteOutcome(result);
 
   return {
     ...(result.partial ? { isError: true } : {}),
     content: [
       {
         type: 'text' as const,
-        text: message,
+        text,
       },
     ],
   };
@@ -187,10 +196,12 @@ function formatBulkMessage(result: BulkResult, isPartial: boolean): string {
 
 export async function handleBulkUpdateTasks(
   config: GsdConfig,
-  args: { taskIds: string[]; operation: BulkOperation; dryRun?: boolean }
+  args: { taskIds: string[]; operation: BulkOperation; dryRun?: boolean },
+  expectedStamps?: Record<string, string>
 ): Promise<McpToolResponse> {
   const result = await bulkUpdateTasks(config, args.taskIds, args.operation, {
     dryRun: args.dryRun,
+    expectedStamps,
   });
   const isPartial = result.errors.length > 0 || result.conflicts.length > 0;
 

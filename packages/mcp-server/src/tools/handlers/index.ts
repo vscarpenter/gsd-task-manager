@@ -19,9 +19,13 @@ import {
   handleCreateTask,
   handleUpdateTask,
   handleCompleteTask,
-  handleDeleteTask,
-  handleBulkUpdateTasks,
 } from './write-handlers.js';
+import {
+  NO_CONFIRMATION,
+  bulkUpdateWithConfirmation,
+  deleteTaskWithConfirmation,
+  type DeleteConfirmation,
+} from './delete-confirmation.js';
 import {
   handleValidateConfig,
   handleGetHelp,
@@ -41,19 +45,20 @@ export * from './write-handlers.js';
 export * from './system-handlers.js';
 export type { McpToolResponse } from './types.js';
 
-import type { McpToolResponse } from './types.js';
+import type { McpToolResponse, ToolCallResult } from './types.js';
 import { sanitizePocketBaseWriteError } from '../../write-ops/write-rate-limiter.js';
 
 type ToolRunner = (
   config: GsdConfig,
-  args: Record<string, unknown>
-) => Promise<McpToolResponse>;
+  args: Record<string, unknown>,
+  confirmation: DeleteConfirmation
+) => Promise<ToolCallResult>;
 
 function createToolRunner<Name extends ToolName>(
   name: Name,
-  handler: (config: GsdConfig, args: ToolArgs<Name>) => Promise<McpToolResponse>
+  handler: (config: GsdConfig, args: ToolArgs<Name>, confirmation: DeleteConfirmation) => Promise<ToolCallResult>
 ): ToolRunner {
-  return async (config, args) => handler(config, validateToolArgs(name, args));
+  return async (config, args, confirmation) => handler(config, validateToolArgs(name, args), confirmation);
 }
 
 const toolRegistry = {
@@ -81,8 +86,8 @@ const toolRegistry = {
   create_task: createToolRunner('create_task', handleCreateTask),
   update_task: createToolRunner('update_task', handleUpdateTask),
   complete_task: createToolRunner('complete_task', handleCompleteTask),
-  delete_task: createToolRunner('delete_task', handleDeleteTask),
-  bulk_update_tasks: createToolRunner('bulk_update_tasks', handleBulkUpdateTasks),
+  delete_task: createToolRunner('delete_task', deleteTaskWithConfirmation),
+  bulk_update_tasks: createToolRunner('bulk_update_tasks', bulkUpdateWithConfirmation),
   validate_config: createToolRunner('validate_config', (config) => handleValidateConfig(config)),
   get_help: createToolRunner('get_help', (_config, args) => handleGetHelp(args)),
   get_cache_stats: createToolRunner('get_cache_stats', (_config, args) => handleGetCacheStats(args)),
@@ -108,16 +113,25 @@ function isPocketBaseStatusError(error: unknown): boolean {
   return typeof (error as { status?: unknown } | null)?.status === 'number';
 }
 
+/** Without a confirmation to carry, no call can come back asking the user. */
+export function handleToolCall(name: string, args: Record<string, unknown>, config: GsdConfig): Promise<McpToolResponse>;
+export function handleToolCall(
+  name: string,
+  args: Record<string, unknown>,
+  config: GsdConfig,
+  confirmation: DeleteConfirmation
+): Promise<ToolCallResult>;
 export async function handleToolCall(
   name: string,
   args: Record<string, unknown>,
-  config: GsdConfig
-): Promise<McpToolResponse> {
+  config: GsdConfig,
+  confirmation: DeleteConfirmation = NO_CONFIRMATION
+): Promise<ToolCallResult> {
   try {
     if (!isToolName(name)) {
       throw new Error(`Unknown tool: ${name}`);
     }
-    return await toolRegistry[name](config, args);
+    return await toolRegistry[name](config, args, confirmation);
   } catch (error) {
     const errorMessage = isToolName(name) && WRITE_TOOL_NAMES.has(name) &&
       isPocketBaseStatusError(error)

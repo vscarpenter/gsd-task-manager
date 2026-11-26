@@ -720,6 +720,16 @@ Delete task def456
 (web, iOS, Android), so it can't be restored. Calls preview by default; pass
 `dryRun: false` to apply.
 
+**Confirmation**: In a client that supports MCP form elicitation, such as Claude
+Code, a `dryRun: false` delete first asks you to confirm in a dialog that names the
+tasks, says how many other tasks depend on them, and says the delete can't be
+undone. It deletes only tasks that haven't changed since you confirmed; a task
+edited on another device in the meantime is kept. Declining replies `Not deleted:`
+and changes nothing. A client with no one to answer, such as `claude -p` or an
+Agent SDK app without an elicitation handler, declines, so nothing is deleted. A
+client without elicitation deletes right away, as before. `bulk_update_tasks`
+deletes work the same way.
+
 **Dry-Run Response** (plain text):
 ```
 🔍 DRY RUN - Task would be deleted (not deleted):

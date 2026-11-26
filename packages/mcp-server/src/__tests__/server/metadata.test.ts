@@ -31,7 +31,13 @@ const REQUIRED_RULES: Record<string, RegExp[]> = {
   deletePermanence: [/permanent/i, /trash/i],
   bulkLimits: [/\b50 tasks\b/, /\b10 deletes\b/],
   conflicts: [/conflict/i],
+  // A confirmed delete answers "Not deleted:" when the user declines or the task changed.
+  deleteReplies: [/Not deleted:/],
 };
+
+// No client is sure to ask: one without form elicitation deletes at once (D4),
+// so the model must not be told to leave the confirmation to the client.
+const PROMISES_A_CLIENT_DIALOG = /expect the client|client will ask|always ask/i;
 
 const READ_ONLY: ToolAnnotations = { readOnlyHint: true, openWorldHint: false };
 const NON_DESTRUCTIVE_WRITE: ToolAnnotations = { readOnlyHint: false, destructiveHint: false, openWorldHint: false };
@@ -116,10 +122,11 @@ describe.each(PROTOCOLS)('server metadata on %s', (protocol) => {
       (rule) => !REQUIRED_RULES[rule].every((pattern) => pattern.test(instructions))
     );
 
-    expect({ withinLimit: instructions.length <= INSTRUCTIONS_LIMIT, uncovered }).toEqual({
-      withinLimit: true,
-      uncovered: [],
-    });
+    expect({
+      withinLimit: instructions.length <= INSTRUCTIONS_LIMIT,
+      uncovered,
+      promisesClientDialog: PROMISES_A_CLIENT_DIALOG.test(instructions),
+    }).toEqual({ withinLimit: true, uncovered: [], promisesClientDialog: false });
   });
 
   it('should_annotate_every_tool_per_the_spec_table', async () => {
