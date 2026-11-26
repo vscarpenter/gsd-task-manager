@@ -118,6 +118,25 @@ describe('cloudfront-function-response-headers (viewer-response)', () => {
 		expect(link).toContain('rel="oauth-protected-resource"');
 		expect(link).toContain('rel="mcp-server"');
 		expect(link).toContain('rel="agent-skills"');
+		expect(link).toContain('</.well-known/ard.json>; rel="ard"');
+	});
+
+	it('lets any origin read /.well-known/ documents', () => {
+		const event: CFEvent = {
+			request: makeRequest('/.well-known/ard.json'),
+			response: makeResponse({ 'content-type': 'application/json' }),
+		};
+		const out = responseHeaders(event) as CFResponse;
+		expect(out.headers['access-control-allow-origin']?.value).toBe('*');
+	});
+
+	it('adds no CORS header outside /.well-known/', () => {
+		const event: CFEvent = {
+			request: makeRequest('/index.html'),
+			response: makeResponse({ 'content-type': 'text/html' }),
+		};
+		const out = responseHeaders(event) as CFResponse;
+		expect(out.headers['access-control-allow-origin']).toBeUndefined();
 	});
 
 	it('forces text/markdown content type on .md responses', () => {

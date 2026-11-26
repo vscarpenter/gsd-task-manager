@@ -52,6 +52,10 @@ fix_type ".well-known/openapi/pocketbase.json" "application/openapi+json"
 fix_type ".well-known/mcp/server-card.json" "application/json"
 fix_type ".well-known/agent-skills/index.json" "application/json"
 
+# ARD manifest at its current path and the predecessor path scanners still read.
+fix_type ".well-known/ard.json" "application/json"
+fix_type ".well-known/ai-catalog.json" "application/json"
+
 # SKILL.md files served as markdown for agent consumption.
 for skill in quick-capture triage-inbox; do
   fix_type ".well-known/agent-skills/$skill/SKILL.md" "text/markdown; charset=utf-8"

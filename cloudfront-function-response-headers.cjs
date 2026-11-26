@@ -7,13 +7,15 @@
  * Responsibilities:
  *  1. Emit RFC 8288 `Link` response headers on every HTML response so agents
  *     can discover the API catalog, MCP server card, agent skills index,
- *     OAuth protected resource metadata, and OpenAPI document with a single
- *     `HEAD /` request.
+ *     ARD manifest, OAuth protected resource metadata, and OpenAPI document
+ *     with a single `HEAD /` request.
  *  2. Emit `Vary: Accept` on routes that participate in markdown content
  *     negotiation so shared caches do not collapse the HTML and markdown
  *     representations.
  *  3. Force `Content-Type: text/markdown; charset=utf-8` on `.md` documents
  *     because S3 may return a generic `binary/octet-stream` for them.
+ *  4. Emit `Access-Control-Allow-Origin: *` on `/.well-known/` documents so
+ *     agents running in a browser can read them.
  *
  * Security headers (CSP, HSTS, frame options, etc.) are still emitted by the
  * `gsd-security-headers` Response Headers Policy attached to the same
@@ -43,9 +45,16 @@ function handler(event) {
       '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"; type="application/json"',
       '</.well-known/mcp/server-card.json>; rel="mcp-server"; type="application/json"',
       '</.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json"',
+      '</.well-known/ard.json>; rel="ard"; type="application/json"',
       '<https://github.com/vscarpenter/gsd-task-manager>; rel="describedby"; type="text/html"'
     ];
     headers['link'] = { value: links.join(', ') };
+  }
+
+  // Discovery documents are public and carry no credentials, so any origin
+  // may read them. Browser-based agents and validators fetch them cross-origin.
+  if (uri.startsWith('/.well-known/')) {
+    headers['access-control-allow-origin'] = { value: '*' };
   }
 
   // Mark routes that participate in `Accept` content negotiation. We append

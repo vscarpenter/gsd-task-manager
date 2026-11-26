@@ -24,18 +24,20 @@ client sends `Accept: text/markdown`.
 Agents can discover the full set of programmatic interfaces from the
 following well-known resources:
 
-- **API catalog** — <https://gsd.vinny.dev/.well-known/api-catalog>
+- **API catalog:** <https://gsd.vinny.dev/.well-known/api-catalog>
   (`application/linkset+json`, RFC 9727)
-- **OpenAPI for the sync backend** —
+- **OpenAPI for the sync backend:**
   <https://gsd.vinny.dev/.well-known/openapi/pocketbase.json>
-- **OAuth Protected Resource Metadata** —
+- **OAuth Protected Resource Metadata:**
   <https://gsd.vinny.dev/.well-known/oauth-protected-resource>
   (RFC 9728; the authorization server is `https://api.vinny.io`)
-- **MCP Server Card** —
+- **MCP Server Card:**
   <https://gsd.vinny.dev/.well-known/mcp/server-card.json>
-- **Agent Skills index** —
+- **Agent Skills index:**
   <https://gsd.vinny.dev/.well-known/agent-skills/index.json>
-- **WebMCP** — the browser app calls
+- **ARD manifest:** <https://gsd.vinny.dev/.well-known/ard.json>
+  (Agentic Resource Discovery v0.91; also at `/.well-known/ai-catalog.json`)
+- **WebMCP:** the browser app calls
   `navigator.modelContext.provideContext()` on load to expose a
   `create_task` tool to in-page agents.
 

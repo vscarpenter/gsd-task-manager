@@ -40,6 +40,7 @@ when a client sends `Accept: text/markdown`.
 | OAuth Protected Resource | <https://gsd.vinny.dev/.well-known/oauth-protected-resource> |
 | MCP Server Card | <https://gsd.vinny.dev/.well-known/mcp/server-card.json> |
 | Agent Skills index | <https://gsd.vinny.dev/.well-known/agent-skills/index.json> |
+| ARD manifest | <https://gsd.vinny.dev/.well-known/ard.json> |
 | WebMCP | Loaded at runtime via `navigator.modelContext.provideContext()` |
 
 ## Project links

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -131,6 +131,81 @@ describe('/.well-known/agent-skills/index.json', () => {
 	});
 });
 
+describe('/.well-known/ard.json (Agentic Resource Discovery)', () => {
+	type ArdEntry = {
+		identifier: string;
+		displayName: string;
+		type: string;
+		url?: string;
+		data?: unknown;
+		representativeQueries?: string[];
+	};
+	type ArdManifest = {
+		specVersion: string;
+		host: { displayName: string; identifier: string };
+		entries: ArdEntry[];
+	};
+	const ORIGIN = 'https://gsd.vinny.dev/';
+	const manifest = readJson<ArdManifest>('.well-known/ard.json');
+
+	// ARD v0.91 moved the manifest to ard.json. Scanners and older consumers
+	// still read the predecessor path, so the two files must never drift.
+	it('serves the same bytes at the legacy ai-catalog.json path', () => {
+		const legacy = readFileSync(resolve(root, '.well-known/ai-catalog.json'));
+		const current = readFileSync(resolve(root, '.well-known/ard.json'));
+		expect(legacy.equals(current)).toBe(true);
+	});
+
+	// A did:web identifier would promise a /.well-known/did.json this site
+	// does not publish, so the host is named by its domain instead.
+	it('declares the AI Catalog 0.9 data model and names its host by domain', () => {
+		expect(manifest.specVersion).toBe('0.9');
+		expect(manifest.host.displayName).toBe('GSD Task Manager');
+		expect(manifest.host.identifier).toBe('gsd.vinny.dev');
+	});
+
+	it('gives every entry a unique urn:air identifier under gsd.vinny.dev', () => {
+		const ids = manifest.entries.map((entry) => entry.identifier);
+		for (const id of ids) {
+			expect(id).toMatch(/^urn:air:gsd\.vinny\.dev:[^:]+(:[^:]+)?$/);
+		}
+		expect(new Set(ids).size).toBe(ids.length);
+	});
+
+	it('gives every entry a display name, a media type, and exactly one of url or data', () => {
+		for (const entry of manifest.entries) {
+			expect(entry.displayName.length).toBeGreaterThan(0);
+			expect(entry.type).toMatch(/^application\/[a-z0-9.+-]+$/);
+			expect(['url', 'data'].filter((key) => key in entry)).toHaveLength(1);
+		}
+	});
+
+	it('gives every entry 2 to 5 representative queries for registry search', () => {
+		for (const entry of manifest.entries) {
+			const count = entry.representativeQueries?.length ?? 0;
+			expect(count).toBeGreaterThanOrEqual(2);
+			expect(count).toBeLessThanOrEqual(5);
+		}
+	});
+
+	it('lists the MCP server card and every published agent skill', () => {
+		const skills = readJson<{ skills: Array<{ url: string }> }>('.well-known/agent-skills/index.json').skills;
+		const expected = [
+			['application/mcp-server-card+json', `${ORIGIN}.well-known/mcp/server-card.json`],
+			...skills.map((skill) => ['application/agent-skills+md', skill.url]),
+		];
+		expect(manifest.entries.map((entry) => [entry.type, entry.url])).toEqual(expected);
+	});
+
+	it('points every url at a file this site publishes', () => {
+		for (const entry of manifest.entries) {
+			const url = entry.url ?? '';
+			expect(url.startsWith(ORIGIN)).toBe(true);
+			expect(existsSync(resolve(root, url.slice(ORIGIN.length)))).toBe(true);
+		}
+	});
+});
+
 describe('/.well-known/openapi/pocketbase.json', () => {
 	type OpenApi = {
 		openapi: string;
@@ -208,6 +283,12 @@ describe('scripts/fix-discovery-content-types.sh', () => {
 		expect(script).toMatch(
 			/fix_type "\.well-known\/security\.txt" "text\/plain; charset=utf-8"/,
 		);
+	});
+
+	it('stamps both ARD manifest paths as application/json', () => {
+		for (const key of ['ard.json', 'ai-catalog.json']) {
+			expect(script).toContain(`fix_type ".well-known/${key}" "application/json"`);
+		}
 	});
 });
 
