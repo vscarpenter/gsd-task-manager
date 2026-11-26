@@ -1,0 +1,592 @@
+{
+  "protocolVersion": "2025-11-25",
+  "tools": [
+    {
+      "name": "get_sync_status",
+      "description": "Check PocketBase sync backend health. Returns healthy (boolean), taskCount, authenticated, and the redacted pocketBaseUrl. lastSyncAt is always null: PocketBase is live, so there is no last-sync timestamp. Use validate_config for a full diagnostic and get_task_stats for task counts by status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_task_stats",
+      "description": "Get task counts: totalTasks, activeTasks (not completed), completedTasks, plus lastUpdated, oldestTask, and newestTask timestamps. Counts cover every task in the account regardless of quadrant; Saved items are left out. Use list_tasks when you need the tasks themselves rather than counts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "list_tasks",
+      "description": "List tasks with optional filters. Returns full task objects (title, description, quadrant, urgent/important, tags, subtasks, dependencies, dueDate, completed, timestamps) sorted by most recently updated first. Saved items (Move to Saved in the apps) are excluded. Without filters it returns every other task, completed ones included; pass completed=false for the active list. Multiple filters combine with AND; the tags filter matches a task that has any of the given tags. Results come from a short-lived cache that is invalidated on every write.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "quadrant": {
+            "type": "string",
+            "description": "Filter by quadrant ID (urgent-important, not-urgent-important, urgent-not-important, not-urgent-not-important)",
+            "enum": [
+              "urgent-important",
+              "not-urgent-important",
+              "urgent-not-important",
+              "not-urgent-not-important"
+            ]
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Filter by completion status (true for completed, false for active)"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by tags (tasks matching any of these tags will be returned). Exact match: use lowercase tags without a leading #, as the apps store them."
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "get_task",
+      "description": "Get a single task by its ID. Returns the full task object. Fails with \"Task not found\" when no task has that ID, and also for a Saved item, because Saved items are excluded; use search_tasks or list_tasks to find an ID first.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "description": "The unique ID of the task to retrieve"
+          }
+        },
+        "required": [
+          "taskId"
+        ]
+      }
+    },
+    {
+      "name": "search_tasks",
+      "description": "Search tasks by a case-insensitive substring match against titles, descriptions, tags, and subtask titles. Returns full task objects for every match, completed tasks included and Saved items excluded, most recently updated first; there is no relevance ranking. Use list_tasks with filters when you need a quadrant, tag, or completion filter rather than free text.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query to match against task content"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "get_token_status",
+      "description": "Check authentication token status including expiration date, days remaining, and warnings. Use this to proactively check if re-authentication is needed. Returns status (healthy/warning/critical/expired/invalid; invalid means no token or not a PocketBase JWT), expiration details, and re-authentication instructions if needed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_top_three",
+      "description": "Read-only. Report the user's top three for today: picks (up to three tasks the user chose for today, in rank order), needsTidy (true when two picks share a rank or there are more than three), and suggestions (the first three tasks GSD would offer: overdue Do First, then Schedule or Eliminate tasks due within two days, then Do First tasks with a due date, then the rest of Do First). Each task is a full task object. Today is the local date in timeZone, an optional IANA name that defaults to this machine's zone. An agent cannot pick for the user: there is no write tool, and the choice is the user's own. Picks only appear once the user has made them in an app.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "timeZone": {
+            "type": "string",
+            "description": "IANA time zone that decides which day is today, for example America/Chicago. Defaults to the system zone.",
+            "maxLength": 64
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "get_productivity_metrics",
+      "description": "Get comprehensive productivity metrics including completion counts, streaks, rates, quadrant distribution, tag statistics, and due date tracking.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_quadrant_analysis",
+      "description": "Analyze task distribution and performance across all four Eisenhower matrix quadrants. Shows completion rates, task counts, and identifies top-performing quadrants.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_tag_analytics",
+      "description": "Get per-tag statistics: usage counts and completion rates for every tag. This is the tagStats section of get_productivity_metrics on its own; call this when only tag data is needed, and get_productivity_metrics when you also need completion counts, streaks, or quadrant distribution.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of tags to return (default: all)"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "get_upcoming_deadlines",
+      "description": "Get tasks grouped by deadline urgency: overdue, due today, and due this week. Useful for prioritizing time-sensitive work.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_task_insights",
+      "description": "Get a prose summary of key metrics, streaks, upcoming deadlines, quadrant distribution, and top tags, computed from the same data as get_productivity_metrics. Returns text rather than JSON; use get_productivity_metrics when you need numbers to compute with.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "create_task",
+      "description": "Create a new task from structured fields. Requires title, urgent, and important; the quadrant is derived from the two booleans. Optional fields: description, dueDate, tags, subtasks, recurrence, dependencies, notifyBefore, notificationEnabled, estimatedMinutes. Any http(s) URLs in the title are moved into the description. Dependencies are validated for cycles. Use dryRun=true to preview without saving.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "Task title (required)"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 600,
+            "description": "Task description"
+          },
+          "urgent": {
+            "type": "boolean",
+            "description": "Is this task urgent? (time-sensitive)"
+          },
+          "important": {
+            "type": "boolean",
+            "description": "Is this task important? (high-value, strategic)"
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "Due date as ISO 8601 datetime string (e.g., \"2025-10-27T12:00:00.000Z\")"
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30
+            },
+            "description": "Tags, lowercase, without a leading # (for example [\"work\", \"project-alpha\"]). The apps store tags this way, so the server lowercases, trims, and strips a leading # for you, and drops repeats."
+          },
+          "subtasks": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "completed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "title",
+                "completed"
+              ]
+            },
+            "description": "Subtasks/checklist items"
+          },
+          "recurrence": {
+            "type": "string",
+            "enum": [
+              "none",
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "description": "Recurrence pattern"
+          },
+          "dependencies": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "description": "Task IDs that must be completed before this task"
+          },
+          "notifyBefore": {
+            "type": "integer",
+            "description": "Minutes before due date to send a reminder notification (default 15). 0 reminds at the due time; to turn reminders off, set notificationEnabled: false",
+            "minimum": 0
+          },
+          "notificationEnabled": {
+            "type": "boolean",
+            "description": "Whether notifications are enabled for this task (default: true)"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "description": "Estimated time to complete in minutes (1-10080, i.e. up to 7 days)",
+            "minimum": 1,
+            "maximum": 10080
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "If true, validate and show what would be created without actually saving"
+          }
+        },
+        "required": [
+          "title",
+          "urgent",
+          "important"
+        ]
+      }
+    },
+    {
+      "name": "update_task",
+      "description": "Update an existing task. All fields except ID are optional - only provide fields you want to change. Supports moving between quadrants, updating content, changing due dates, and more. Setting completed=true on a recurring task also creates its next instance, as complete_task does. Use dryRun=true to preview changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Task ID (required)"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "New task title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 600,
+            "description": "New task description"
+          },
+          "urgent": {
+            "type": "boolean",
+            "description": "Change urgency (moves between quadrants)"
+          },
+          "important": {
+            "type": "boolean",
+            "description": "Change importance (moves between quadrants)"
+          },
+          "dueDate": {
+            "type": "string",
+            "description": "New due date as ISO 8601 datetime string (empty string to clear)"
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30
+            },
+            "description": "Replace tags entirely. Use lowercase tags without a leading #, as the apps store them."
+          },
+          "subtasks": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 4,
+                  "maxLength": 255
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "completed": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "completed"
+              ]
+            },
+            "description": "Replace subtasks entirely"
+          },
+          "recurrence": {
+            "type": "string",
+            "enum": [
+              "none",
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "description": "Change recurrence pattern"
+          },
+          "dependencies": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "description": "Replace dependencies entirely"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Mark as complete/incomplete. Completing a recurring task also creates its next instance."
+          },
+          "notifyBefore": {
+            "type": "integer",
+            "description": "Minutes before due date to send a reminder. 0 reminds at the due time; to turn reminders off, set notificationEnabled: false",
+            "minimum": 0
+          },
+          "notificationEnabled": {
+            "type": "boolean",
+            "description": "Whether notifications are enabled for this task"
+          },
+          "estimatedMinutes": {
+            "type": "integer",
+            "description": "Estimated time to complete in minutes (1-10080)",
+            "minimum": 1,
+            "maximum": 10080
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "If true, validate and show what would change without actually saving"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    {
+      "name": "complete_task",
+      "description": "Mark a task as complete or incomplete. Quick shortcut for updating completion status. Completing a recurring task also creates its next instance, as the web app does. Use dryRun=true to preview changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Task ID"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "True to mark complete, false to mark incomplete"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "If true, validate and show what would change without actually saving"
+          }
+        },
+        "required": [
+          "id",
+          "completed"
+        ]
+      }
+    },
+    {
+      "name": "delete_task",
+      "description": "Permanently delete a task. The delete is immediate and cannot be undone: it skips the 30-day Trash on every client, so the task cannot be restored from the web, iOS, or Android app. Deletes default to dryRun=true, so pass dryRun=false explicitly to apply.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Task ID to delete"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "If true, show what would be deleted without actually deleting. Defaults to true; pass false explicitly to delete."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
+    {
+      "name": "bulk_update_tasks",
+      "description": "Update multiple tasks at once. Supports completing, moving quadrants, adding/removing tags, setting due dates, and deleting. Limited to 50 tasks per operation (10 for deletes) for safety. Bulk complete also creates the next instance of each recurring task it completes. Deletes are permanent and skip the 30-day Trash on every client. Destructive deletes default to dryRun=true — pass dryRun=false explicitly to apply.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "description": "Array of task IDs to update (max 50, or 10 for type=delete)"
+          },
+          "operation": {
+            "type": "object",
+            "description": "Operation to perform on all tasks",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "complete",
+                  "move_quadrant",
+                  "add_tags",
+                  "remove_tags",
+                  "set_due_date",
+                  "delete"
+                ],
+                "description": "Type of bulk operation"
+              },
+              "completed": {
+                "type": "boolean",
+                "description": "For type=complete: true/false"
+              },
+              "urgent": {
+                "type": "boolean",
+                "description": "For type=move_quadrant: urgency"
+              },
+              "important": {
+                "type": "boolean",
+                "description": "For type=move_quadrant: importance"
+              },
+              "tags": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 30
+                },
+                "description": "For type=add_tags or remove_tags: array of tags, lowercase, without a leading #"
+              },
+              "dueDate": {
+                "type": "string",
+                "description": "For type=set_due_date: ISO 8601 datetime string (empty string to clear)"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "If true, preview changes without saving. Defaults to true for delete operations — pass dryRun=false to actually delete."
+          }
+        },
+        "required": [
+          "taskIds",
+          "operation"
+        ]
+      }
+    },
+    {
+      "name": "validate_config",
+      "description": "Diagnose MCP server configuration. Checks PocketBase connectivity, authentication (the configured token is accepted by the server), and task access. Returns one result per check.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "get_help",
+      "description": "Get help documentation for this server: the tool list, analytics capabilities, setup, example queries, and troubleshooting. Pass topic to return one section; omit it for all sections.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Optional help topic: \"tools\", \"analytics\", \"setup\", \"examples\", or \"troubleshooting\"",
+            "enum": [
+              "tools",
+              "analytics",
+              "setup",
+              "examples",
+              "troubleshooting"
+            ]
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "get_cache_stats",
+      "description": "Get task cache statistics including hit rate, cache size, and TTL configuration. Useful for monitoring MCP server performance and debugging caching behavior.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "reset": {
+            "type": "boolean",
+            "description": "If true, reset cache statistics after retrieving them"
+          }
+        },
+        "required": []
+      }
+    }
+  ],
+  "prompts": [
+    {
+      "name": "daily-standup",
+      "description": "Daily task review: today's tasks, overdue items, and productivity summary",
+      "arguments": []
+    },
+    {
+      "name": "weekly-review",
+      "description": "Weekly productivity analysis: completion stats, trends, and top quadrants",
+      "arguments": []
+    },
+    {
+      "name": "focus-mode",
+      "description": "Get urgent and important tasks (Q1: Do First) to focus on right now",
+      "arguments": []
+    },
+    {
+      "name": "upcoming-deadlines",
+      "description": "Show all overdue tasks, tasks due today, and tasks due this week",
+      "arguments": []
+    },
+    {
+      "name": "productivity-report",
+      "description": "Comprehensive productivity report with metrics, streaks, and insights",
+      "arguments": []
+    },
+    {
+      "name": "tag-analysis",
+      "description": "Analyze task distribution and completion rates by tags/projects",
+      "arguments": []
+    }
+  ]
+}
