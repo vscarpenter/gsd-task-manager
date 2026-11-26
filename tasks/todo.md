@@ -5,15 +5,15 @@ Branch `feat/ard-manifest`. Standard tier: static discovery files plus one edge-
 - [x] Red: manifest shape, path parity, skill coverage, content-type script, CORS, and the `rel="ard"` Link entry.
 - [x] Green: `public/.well-known/ard.json` plus a byte-identical `ai-catalog.json`, the response-headers function, and the content-type script.
 - [x] ADR 0010 amendment, plus the ARD entry in `public/index.md` and `public/about/index.md`.
-- [ ] Gates: test with coverage, both typechecks, lint, shape, knip, build, bundle budget.
-- [ ] Commit, push, open the PR.
+- [x] Gates: test with coverage (5,340), both typechecks, lint, shape, knip, check-models, build, bundle budget.
+- [x] Commit `8ce338f5`, pushed, PR #799.
 
 Separately, `deploy-cloudfront-infra` run 45756492871 (`deploy=policy`) redeploys the CSP without the Sentry host. The #566 run timed out after 30 days at the `cloudfront-infra` approval gate, so production still carries the old policy.
 
 ## Resuming From Here
 
-- **Done:** tests and implementation, green on the two discovery suites.
-- **Next:** full gates, then commit and PR.
+- **Done:** PR #799 open with every local gate green.
+- **Next:** CI on #799, then the owner's merge. After the next production deploy and the infra approval, confirm `ard.json` and `ai-catalog.json` return `application/json` with `access-control-allow-origin: *`, and that `/` carries `rel="ard"`. Then rerun the isitagentready.com scan.
 - **Blocked:** run 45756492871 waits on the owner's environment approval. Merging this PR starts another infra run (the response-headers function is on its path filter) that waits at the same gate.
 - **Assumptions:** `specVersion` "0.9" follows the AI Catalog README; the scanner only needs a non-empty string. Both manifest paths serve `application/json`, which the scanner requires.
 
