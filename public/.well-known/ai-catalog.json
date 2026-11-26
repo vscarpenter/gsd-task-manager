@@ -1,0 +1,48 @@
+{
+  "specVersion": "0.9",
+  "host": {
+    "displayName": "GSD Task Manager",
+    "identifier": "gsd.vinny.dev",
+    "documentationUrl": "https://github.com/vscarpenter/gsd-task-manager"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:gsd.vinny.dev:gsd-mcp-server:mcp",
+      "displayName": "GSD Task Manager MCP Server",
+      "type": "application/mcp-server-card+json",
+      "description": "Read, create, update, and analyze tasks in GSD Task Manager from any MCP-aware assistant.",
+      "url": "https://gsd.vinny.dev/.well-known/mcp/server-card.json",
+      "representativeQueries": [
+        "add a task to my Eisenhower matrix",
+        "what are my urgent and important tasks",
+        "which tasks are due this week",
+        "mark my top task as done",
+        "how is my work spread across the four quadrants"
+      ]
+    },
+    {
+      "identifier": "urn:air:gsd.vinny.dev:quick-capture:skill",
+      "displayName": "Quick Capture",
+      "type": "application/agent-skills+md",
+      "description": "Drop a single new task into GSD Task Manager and place it in the right Eisenhower quadrant.",
+      "url": "https://gsd.vinny.dev/.well-known/agent-skills/quick-capture/SKILL.md",
+      "representativeQueries": [
+        "remind me to renew my passport",
+        "add a task to call the dentist tomorrow",
+        "capture this as an urgent task"
+      ]
+    },
+    {
+      "identifier": "urn:air:gsd.vinny.dev:triage-inbox:skill",
+      "displayName": "Triage Inbox",
+      "type": "application/agent-skills+md",
+      "description": "Walk the user through their open tasks and move them into the correct quadrant.",
+      "url": "https://gsd.vinny.dev/.well-known/agent-skills/triage-inbox/SKILL.md",
+      "representativeQueries": [
+        "triage my task inbox",
+        "what should I work on next",
+        "review my open tasks and sort them into quadrants"
+      ]
+    }
+  ]
+}

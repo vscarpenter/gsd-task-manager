@@ -4,6 +4,7 @@
 **Status:** Accepted
 **Deciders:** Vinny Carpenter
 **Amended:** 2026-08-23, added `/.well-known/security.txt` (RFC 9116).
+2026-11-25, added the ARD manifest and opened `/.well-known/` to cross-origin reads.
 
 ## Context
 
@@ -45,6 +46,8 @@ Expose the following surface, all of it cacheable, all of it static:
 | `/.well-known/mcp/server-card.json` | `application/json` | SEP-1649-style server card for `gsd-mcp-server` |
 | `/.well-known/agent-skills/index.json` | `application/json` | Agent Skills Discovery v0.2.0 index |
 | `/.well-known/agent-skills/{slug}/SKILL.md` | `text/markdown` | Individual skill documents (`quick-capture`, `triage-inbox`) with SHA-256 digests in the index |
+| `/.well-known/ard.json` | `application/json` | Agentic Resource Discovery (ARD v0.91) manifest with one entry for the MCP server card and one per skill, each carrying sample queries for registry search |
+| `/.well-known/ai-catalog.json` | `application/json` | Byte-identical copy at the predecessor ARD path, which scanners still read |
 | `/index.md`, `/about/index.md` | `text/markdown` | Markdown renditions of the homepage and About page for `Accept: text/markdown` clients |
 | `/robots.txt` | `text/plain` | Adds `Content-Signal: search=yes, ai-input=yes, ai-train=no` per the AI Preferences draft |
 
@@ -57,6 +60,9 @@ Expose the following surface, all of it cacheable, all of it static:
   RFC 8288 `Link` header on every HTML and markdown response, advertises
   `Vary: Accept`, and forces `Content-Type: text/markdown; charset=utf-8` on
   `.md` documents (S3 sometimes serves them as `binary/octet-stream`).
+  It also sends `Access-Control-Allow-Origin: *` on every `/.well-known/`
+  document. They're public and carry no credentials, and agents running in a
+  browser can't read them cross-origin without it.
 
 Both source files use the `.cjs` extension and end with a guarded
 `module.exports = { handler }` so the Node test runner can `require()` them
@@ -102,6 +108,8 @@ global. Extension does not affect the AWS upload (`fileb://` reads bytes).
 - `security.txt` carries a mandatory `Expires` date, and a static export has no
   runtime to refresh it. A test in `tests/data/agent-discovery-files.test.ts`
   fails once fewer than 30 days remain, so CI is the refresh alarm.
+- The ARD manifest lives at two paths. A test fails if the copies differ by a
+  byte, and another fails if a published skill is missing from the manifest.
 
 ### Out of scope
 - A site-wide markdown rendition for every authenticated route (the matrix,
@@ -112,6 +120,14 @@ global. Extension does not affect the AWS upload (`fileb://` reads bytes).
   resource server.
 - Server-side WebMCP fallback for browsers without `navigator.modelContext`.
   The MCP server (`gsd-mcp-server`) covers that case via stdio.
+- DNS for AI Discovery (DNS-AID) records under `_agents.vinny.dev`. They
+  advertise a network endpoint that speaks an agent protocol, and GSD has
+  none: the MCP server runs locally over stdio. They also require DNSSEC on
+  all of `vinny.dev`, which puts the blog's resolution at risk for one
+  scanner check.
+- A `did:web` host identifier in the ARD manifest. It promises a
+  `/.well-known/did.json` this site doesn't publish, so the host is named by
+  its domain.
 
 ## Alternatives Considered
 
@@ -125,3 +141,7 @@ global. Extension does not affect the AWS upload (`fileb://` reads bytes).
 - **Embedding the `Link` header source list in JS at runtime** — would not
   be visible to crawlers that only inspect HTTP headers, defeating the
   purpose of RFC 8288.
+- **One ARD file, with an edge rewrite from the legacy path.** It avoids the
+  second copy but adds a routing rule to the viewer-request function, which
+  can take the whole site down if it breaks. Two static files and an
+  equality test are easier to reason about.
