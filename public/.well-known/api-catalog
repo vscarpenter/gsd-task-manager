@@ -23,12 +23,6 @@
           "title": "PocketBase health endpoint"
         }
       ],
-      "oauth-authorization-server": [
-        {
-          "href": "https://api.vinny.io",
-          "title": "PocketBase OAuth2 issuer"
-        }
-      ],
       "related": [
         {
           "href": "https://github.com/vscarpenter/gsd-task-manager",

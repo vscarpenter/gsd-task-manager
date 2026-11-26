@@ -30,7 +30,7 @@ following well-known resources:
   <https://gsd.vinny.dev/.well-known/openapi/pocketbase.json>
 - **OAuth Protected Resource Metadata:**
   <https://gsd.vinny.dev/.well-known/oauth-protected-resource>
-  (RFC 9728; the authorization server is `https://api.vinny.io`)
+  (RFC 9728; it names no authorization server, since PocketBase issues its own tokens)
 - **MCP Server Card:**
   <https://gsd.vinny.dev/.well-known/mcp/server-card.json>
 - **Agent Skills index:**

@@ -5,6 +5,7 @@
 **Deciders:** Vinny Carpenter
 **Amended:** 2026-08-23, added `/.well-known/security.txt` (RFC 9116).
 2026-11-25, added the ARD manifest and opened `/.well-known/` to cross-origin reads.
+2026-11-25, removed the OAuth authorization server claims PocketBase can't back.
 
 ## Context
 
@@ -42,7 +43,7 @@ Expose the following surface, all of it cacheable, all of it static:
 | `/.well-known/security.txt` | `text/plain; charset=utf-8` | RFC 9116 vulnerability-reporting contact, pointing at GitHub private advisories |
 | `/.well-known/api-catalog` | `application/linkset+json` | RFC 9727 linkset that anchors the PocketBase API and the MCP server |
 | `/.well-known/openapi/pocketbase.json` | `application/openapi+json` | OpenAPI 3.1 description of the GSD-specific PocketBase endpoints |
-| `/.well-known/oauth-protected-resource` | `application/json` | RFC 9728 metadata pointing to PocketBase as the authorization server |
+| `/.well-known/oauth-protected-resource` | `application/json` | RFC 9728 metadata naming the GSD origin. It lists no authorization server, scope, or bearer method, because PocketBase publishes no RFC 8414 metadata and the static site takes no tokens |
 | `/.well-known/mcp/server-card.json` | `application/json` | SEP-1649-style server card for `gsd-mcp-server` |
 | `/.well-known/agent-skills/index.json` | `application/json` | Agent Skills Discovery v0.2.0 index |
 | `/.well-known/agent-skills/{slug}/SKILL.md` | `text/markdown` | Individual skill documents (`quick-capture`, `triage-inbox`) with SHA-256 digests in the index |
@@ -115,9 +116,11 @@ global. Extension does not affect the AWS upload (`fileb://` reads bytes).
 - A site-wide markdown rendition for every authenticated route (the matrix,
   dashboard, and settings pages are interactive React state and have no
   meaningful static markdown).
-- Publishing `/.well-known/openid-configuration` here. PocketBase owns the
-  authorization server; that document belongs on `api.vinny.io`, not on the
-  resource server.
+- OpenID or OAuth authorization server metadata, here or on `api.vinny.io`.
+  PocketBase signs users in through Google, Apple, and GitHub, then issues
+  its own tokens. It has no authorization or token endpoint an agent could
+  use, and `api.vinny.io` serves neither discovery document. The MCP server
+  takes a token the user pastes into `GSD_AUTH_TOKEN` instead.
 - Server-side WebMCP fallback for browsers without `navigator.modelContext`.
   The MCP server (`gsd-mcp-server`) covers that case via stdio.
 - DNS for AI Discovery (DNS-AID) records under `_agents.vinny.dev`. They

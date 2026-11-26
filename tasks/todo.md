@@ -1,3 +1,22 @@
+# Correct the OAuth discovery claims (2026-11-25)
+
+Branch `fix/oauth-discovery-claims`, off main and separate from the ARD work in #799. Standard tier: three static discovery files and their docs, with no code or infra change.
+
+The discovery files named `api.vinny.io` as an OAuth authorization server, but it serves neither RFC 8414 nor OpenID metadata, and PocketBase issues its own tokens. The server card said `oauth2`, while the MCP server takes a pasted `GSD_AUTH_TOKEN`.
+
+- [x] Red: tests that the protected-resource file, the API catalog, and the server card make none of those claims.
+- [x] Green: trim the protected-resource file to its true fields, and drop the catalog link and the server card's `authentication` block.
+- [x] ADR 0010 and `public/index.md` updated.
+- [x] Gates: full suite with coverage (5,332), both typechecks, lint, shape, knip, build.
+- [x] Commit `a5d9718c`, pushed, PR #800.
+
+## Resuming From Here
+
+- **Done:** PR #800 open with every local gate green.
+- **Next:** CI on #800, then the owner's merge. Whichever of #799 and this PR merges second needs a rebase: both edit ADR 0010, `public/index.md`, the discovery test file, and this file.
+- **Blocked:** nothing on this branch. No infra deploy is needed, because the edge function is unchanged.
+- **Assumptions:** trimming beats deleting the protected-resource file. Deleting would also change the edge function's `Link` header, which means another gated infra deploy and overlap with #799.
+
 # ARD agent-discovery manifest (2026-11-25)
 
 Branch `feat/ard-manifest`. Standard tier: static discovery files plus one edge-function header, following ADR 0010. The isitagentready.com scan flagged the missing manifest; DNS-AID was reviewed and rejected (see the ADR's out-of-scope list).
@@ -12,8 +31,8 @@ Separately, `deploy-cloudfront-infra` run 45756492871 (`deploy=policy`) redeploy
 
 ## Resuming From Here
 
-- **Done:** PR #799 open with every local gate green.
-- **Next:** CI on #799, then the owner's merge. After the next production deploy and the infra approval, confirm `ard.json` and `ai-catalog.json` return `application/json` with `access-control-allow-origin: *`, and that `/` carries `rel="ard"`. Then rerun the isitagentready.com scan.
+- **Done:** merged in #799 as `310e0048` on 2026-11-25, with CI green (14 checks).
+- **Next:** the owner approves infra run 45758475207 (the edge function), which queues behind 45756492871 (the CSP). After that and the next production deploy, confirm `ard.json` and `ai-catalog.json` return `application/json` with `access-control-allow-origin: *`, and that `/` carries `rel="ard"`. Then rerun the isitagentready.com scan.
 - **Blocked:** run 45756492871 waits on the owner's environment approval. Merging this PR starts another infra run (the response-headers function is on its path filter) that waits at the same gate.
 - **Assumptions:** `specVersion` "0.9" follows the AI Catalog README; the scanner only needs a non-empty string. Both manifest paths serve `application/json`, which the scanner requires.
 

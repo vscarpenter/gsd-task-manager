@@ -65,9 +65,5 @@
     { "name": "validate_config", "category": "system" },
     { "name": "get_help", "category": "system" },
     { "name": "get_cache_stats", "category": "system" }
-  ],
-  "authentication": {
-    "type": "oauth2",
-    "discovery": "https://gsd.vinny.dev/.well-known/oauth-protected-resource"
-  }
+  ]
 }
