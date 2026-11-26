@@ -2029,7 +2029,7 @@ Each flake gets its own PR: `sync-auth-token.spec.ts` in WebKit, `review-remedia
 
 # Spec: Move the MCP server to SDK v2 and protocol 2026-07-28 (2026-11-26)
 
-**Date:** 2026-11-26 · **Status:** Draft, awaiting approval · **Tier:** Non-trivial
+**Date:** 2026-11-26 · **Status:** Approved 2026-11-26 · **Tier:** Non-trivial
 
 The change swaps the SDK under a published npm package, raises its Node floor, changes the protocol it speaks, and adds a confirmation step to the permanent-delete path, which is in the comprehension-quiz scope (`packages/mcp-server/src/tools/handlers/write-handlers.ts`, `packages/mcp-server/src/write-ops/**`). ADR 0024 records D1, D2, D4, and D5. Paths are relative to `packages/mcp-server/` unless they start at the repo root.
 
@@ -2053,8 +2053,8 @@ Move `gsd-mcp-server` onto the v2 SDK so one codebase serves MCP 2026-07-28 to c
 
 - **D1. Server shape.** Through PR 5 the factory builds a low-level `Server` that keeps today's handlers in method-string form, so advertised schemas stay byte-identical. PR 6 switches the factory to an `McpServer` (required by `attach()`), declares `tools` and `prompts` with `mcp.server.registerCapabilities()`, and keeps GSD's handlers on `mcp.server`. If the PR 3 spike finds that this shape can't return `inputRequired(...)` from `tools/call` or conflicts with `attach()`, the fallback is `registerTool` with `fromJsonSchema(<existing JSON Schema>)`, which is contract drift and needs re-approval.
 - **D2. Transport.** `serveStdio(() => createGsdServer(config), { legacy: 'serve' })` from `@modelcontextprotocol/server/stdio` replaces `server.connect(new StdioServerTransport())`.
-- **D3. Node floor.** `engines.node` becomes `>=22`, the version CI tests, instead of the SDK minimum `>=20`, which reached end of life on 2026-04-30 and isn't tested. See open question 1.
-- **D4. Delete confirmation.** `delete_task`, and `bulk_update_tasks` with `type: 'delete'`, ask a person through form elicitation before any write when `dryRun` is `false` and the client declares form elicitation. A client that doesn't declare it keeps today's behavior. See open question 2.
+- **D3. Node floor.** `engines.node` becomes `>=22`, the version CI tests, instead of the SDK minimum `>=20`, which reached end of life on 2026-04-30 and isn't tested. The owner confirmed `>=22` at approval.
+- **D4. Delete confirmation.** `delete_task`, and `bulk_update_tasks` with `type: 'delete'`, ask a person through form elicitation before any write when `dryRun` is `false` and the client declares form elicitation. A client that doesn't declare it keeps today's behavior, as the owner confirmed at approval.
 - **D5. Delete only what was confirmed.** The confirmation round mints a signed `requestState` holding each task's `updatedAt` at preview time, and the retried call deletes only tasks whose stamp still matches.
 - **D6. Skills.** Four static skills ship in the package and load once at startup. The six prompts stay as they are for clients without skills.
 - **D7. Release.** No version change here. A separate `chore(release)` PR ships gsd-mcp-server 2.0.0, as CLAUDE.md requires.
@@ -2143,7 +2143,7 @@ Each prompt gains a `title`: Daily standup, Weekly review, Focus mode, Upcoming 
 
 ## Out of scope
 
-- The Tasks extension (`io.modelcontextprotocol/tasks`). GSD has no long-running work, a stdio task ends with its process, and servers from `claude_desktop_config.json` get no tasks. See open question 3.
+- The Tasks extension (`io.modelcontextprotocol/tasks`). GSD has no long-running work, a stdio task ends with its process, and servers from `claude_desktop_config.json` get no tasks. The owner confirmed this scope at approval.
 - MCP Apps (an inline matrix view) and File Uploads, which is experimental. Each needs its own spec.
 - Serving over Streamable HTTP, MCP OAuth, and Enterprise Managed Auth.
 - `outputSchema` and `structuredContent` for tool results, and icons.
@@ -2257,8 +2257,10 @@ Each PR passes `bun run test`, `bun typecheck`, `bun run typecheck:tests`, `bun 
 
 **Manual check before PRs 3, 5, and 6 merge.** In Claude Code, `/mcp` shows a Protocol row of 2026-07-28 for GSD, a `dryRun: false` delete opens the confirmation dialog, and from PR 6 `/<server>:triage` appears. In Claude Desktop, tools list, and a delete follows the fallback (edge case 1) or opens the dialog, whichever the client supports.
 
-## Open questions for the approval
+## Decisions at approval (2026-11-26)
 
-1. **Node floor.** `>=22`, which CI tests, or `>=20`, the SDK minimum, which reached end of life on 2026-04-30?
-2. **Clients without elicitation.** Keep today's delete flow for them (proposed), or refuse `dryRun: false` deletes unless a person confirms?
-3. **Scope.** Confirm that Tasks, MCP Apps, and File Uploads stay out of this spec.
+The owner approved the spec with these answers to its open questions:
+
+1. **Node floor:** `>=22` (D3).
+2. **Clients without elicitation:** keep today's delete flow (D4, edge case 1).
+3. **Scope:** Tasks, MCP Apps, and File Uploads stay out (Out of scope).
