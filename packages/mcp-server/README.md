@@ -933,7 +933,7 @@ packages/mcp-server/
 ```
 
 **Tech Stack**:
-- `@modelcontextprotocol/sdk` - MCP protocol implementation
+- `@modelcontextprotocol/server` - MCP protocol implementation (TypeScript SDK v2)
 - `zod` - Runtime schema validation
 - `typescript` - Type safety
 - `pocketbase` - PocketBase JS SDK
@@ -985,7 +985,7 @@ This section states the package's contract for developers and AI assistants who 
 - Prompts (`src/tools/prompts.ts:allPrompts`): `daily-standup`, `weekly-review`, `focus-mode`, `upcoming-deadlines`, `productivity-report`, `tag-analysis`.
 - Module exports: `package.json` `exports` maps `.` to `dist/index.js` and `./types` to `dist/types.js`.
 - `src/index.ts` exports no symbols. It runs `main()` when loaded.
-- Runtime dependencies (`package.json`): `@modelcontextprotocol/sdk` 1.32.2, `pocketbase` 0.29.0, `zod` 4.6.7.
+- Runtime dependencies (`package.json`): `@modelcontextprotocol/server` 2.4.0, `pocketbase` 0.29.0, `zod` 4.6.7.
 - Local scripts in this directory: `decode-jwt.cjs`, `test-env-vars.js`, and `test-in-claude.sh`. `package.json` `files` leaves them out of the published package.
 
 ### Invariants
@@ -1004,7 +1004,7 @@ This section states the package's contract for developers and AI assistants who 
 - The build is strict TypeScript (`tsconfig.json` `strict: true`), and it leaves test files out of `dist`.
 - Coverage minimums are 80% statements, 75% branches, 80% functions, and 80% lines (`vitest.config.ts` `coverage.thresholds`).
 - `src/write-ops/**` needs 98% statements, 95% branches, 100% functions, and 98% lines (`vitest.config.ts` `coverage.thresholds`).
-- The package needs Node 18 or later (`package.json` `engines`).
+- The package needs Node 22 or later (`package.json` `engines`).
 
 ### Side Effects
 

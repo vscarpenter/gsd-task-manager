@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
+import { InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server';
 import { describe, expect, it } from 'vitest';
 import { createServer, registerHandlers } from '../../server/setup.js';
 

@@ -1,4 +1,4 @@
-import type { Prompt } from '@modelcontextprotocol/sdk/types.js';
+import type { Prompt, PromptMessage } from '@modelcontextprotocol/server';
 
 const dailyStandupPrompt: Prompt = {
   name: 'daily-standup',
@@ -45,7 +45,7 @@ export const allPrompts: Prompt[] = [
   tagAnalysisPrompt,
 ];
 
-export function getPromptMessage(name: string): { role: string; content: { type: string; text: string } } {
+export function getPromptMessage(name: string): PromptMessage {
   const prompts: Record<string, string> = {
     'daily-standup': `Give me a daily standup report:
 

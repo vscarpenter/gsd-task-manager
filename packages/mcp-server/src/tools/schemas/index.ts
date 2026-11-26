@@ -1,4 +1,4 @@
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { Tool } from '@modelcontextprotocol/server';
 import { readTools } from './read-tools.js';
 import { writeTools } from './write-tools.js';
 import { analyticsTools } from './analytics-tools.js';
