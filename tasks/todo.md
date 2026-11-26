@@ -1,3 +1,21 @@
+# Correct the OAuth discovery claims (2026-11-25)
+
+Branch `fix/oauth-discovery-claims`, off main and separate from the ARD work in #799. Standard tier: three static discovery files and their docs, with no code or infra change.
+
+The discovery files named `api.vinny.io` as an OAuth authorization server, but it serves neither RFC 8414 nor OpenID metadata, and PocketBase issues its own tokens. The server card said `oauth2`, while the MCP server takes a pasted `GSD_AUTH_TOKEN`.
+
+- [x] Red: tests that the protected-resource file, the API catalog, and the server card make none of those claims.
+- [x] Green: trim the protected-resource file to its true fields, and drop the catalog link and the server card's `authentication` block.
+- [x] ADR 0010 and `public/index.md` updated.
+- [ ] Gates, then commit, push, and open the PR.
+
+## Resuming From Here
+
+- **Done:** red and green on the discovery suite.
+- **Next:** gates, then the PR. Whichever of #799 and this PR merges second needs a rebase: both edit ADR 0010, `public/index.md`, the discovery test file, and this file.
+- **Blocked:** nothing on this branch. No infra deploy is needed, because the edge function is unchanged.
+- **Assumptions:** trimming beats deleting the protected-resource file. Deleting would also change the edge function's `Link` header, which means another gated infra deploy and overlap with #799.
+
 # ARD agent-discovery manifest (2026-11-25)
 
 Branch `feat/ard-manifest`. Standard tier: static discovery files plus one edge-function header, following ADR 0010. The isitagentready.com scan flagged the missing manifest; DNS-AID was reviewed and rejected (see the ADR's out-of-scope list).

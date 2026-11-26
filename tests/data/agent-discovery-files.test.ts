@@ -44,36 +44,46 @@ describe('/.well-known/api-catalog (RFC 9727)', () => {
 		expect(first['service-desc']).toBeDefined();
 		expect(first['status']).toBeDefined();
 	});
+
+	// PocketBase issues its own tokens and serves no RFC 8414 metadata, so
+	// there is no authorization server for the catalog to point at.
+	it('names no OAuth authorization server', () => {
+		for (const entry of catalog.linkset) {
+			expect(entry).not.toHaveProperty('oauth-authorization-server');
+		}
+	});
 });
 
 describe('/.well-known/oauth-protected-resource (RFC 9728)', () => {
-	type Resource = {
-		resource: string;
-		authorization_servers: string[];
-		bearer_methods_supported: string[];
-		scopes_supported: string[];
-	};
-	const meta = readJson<Resource>('.well-known/oauth-protected-resource');
+	const meta = readJson<Record<string, unknown>>('.well-known/oauth-protected-resource');
 
 	it('points to the GSD origin as the resource', () => {
 		expect(meta.resource).toBe('https://gsd.vinny.dev');
 	});
 
-	it('lists at least one authorization server', () => {
-		expect(meta.authorization_servers.length).toBeGreaterThan(0);
-		expect(meta.authorization_servers[0]).toMatch(/^https:\/\//);
-	});
-
-	it('declares header-based bearer tokens and at least one scope', () => {
-		expect(meta.bearer_methods_supported).toContain('header');
-		expect(meta.scopes_supported.length).toBeGreaterThan(0);
+	// api.vinny.io answers 404 for RFC 8414 and OpenID discovery, and the
+	// static site takes no tokens and signs nothing. Each of these fields
+	// would send an agent looking for something that isn't there.
+	it('claims no authorization server, scope, bearer method, or signing algorithm', () => {
+		for (const field of [
+			'authorization_servers',
+			'scopes_supported',
+			'bearer_methods_supported',
+			'resource_signing_alg_values_supported',
+		]) {
+			expect(meta).not.toHaveProperty(field);
+		}
 	});
 });
 
 describe('/.well-known/mcp/server-card.json', () => {
 	type ServerCard = {
 		serverInfo: { name: string; version: string };
-		transports: Array<{ type: string; install?: { command: string } }>;
+		transports: Array<{
+			type: string;
+			install?: { command: string };
+			env?: Record<string, { required?: boolean; secret?: boolean }>;
+		}>;
 		tools: Array<{ name: string; category: string }>;
 		capabilities: { prompts: boolean; logging: boolean };
 	};
@@ -107,6 +117,17 @@ describe('/.well-known/mcp/server-card.json', () => {
 	it('advertises the capabilities the MCP server declares: prompts, and no logging', () => {
 		expect(card.capabilities.prompts).toBe(true);
 		expect(card.capabilities.logging).toBe(false);
+	});
+
+	// The MCP server authenticates with a token the user pastes into
+	// GSD_AUTH_TOKEN, not an OAuth flow, so the card carries no OAuth block.
+	it('claims no OAuth authentication the MCP server does not use', () => {
+		expect(card).not.toHaveProperty('authentication');
+	});
+
+	it('declares the pasted auth token as a required secret', () => {
+		const env = card.transports.find((t) => t.type === 'stdio')?.env;
+		expect(env?.GSD_AUTH_TOKEN).toMatchObject({ required: true, secret: true });
 	});
 });
 
