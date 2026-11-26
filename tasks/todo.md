@@ -31,8 +31,8 @@ Separately, `deploy-cloudfront-infra` run 45756492871 (`deploy=policy`) redeploy
 
 ## Resuming From Here
 
-- **Done:** PR #799 open with every local gate green.
-- **Next:** CI on #799, then the owner's merge. After the next production deploy and the infra approval, confirm `ard.json` and `ai-catalog.json` return `application/json` with `access-control-allow-origin: *`, and that `/` carries `rel="ard"`. Then rerun the isitagentready.com scan.
+- **Done:** merged in #799 as `310e0048` on 2026-11-25, with CI green (14 checks).
+- **Next:** the owner approves infra run 45758475207 (the edge function), which queues behind 45756492871 (the CSP). After that and the next production deploy, confirm `ard.json` and `ai-catalog.json` return `application/json` with `access-control-allow-origin: *`, and that `/` carries `rel="ard"`. Then rerun the isitagentready.com scan.
 - **Blocked:** run 45756492871 waits on the owner's environment approval. Merging this PR starts another infra run (the response-headers function is on its path filter) that waits at the same gate.
 - **Assumptions:** `specVersion` "0.9" follows the AI Catalog README; the scanner only needs a non-empty string. Both manifest paths serve `application/json`, which the scanner requires.
 
