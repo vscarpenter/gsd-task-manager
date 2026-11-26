@@ -2026,3 +2026,239 @@ font, date, and smart-view strip. The owner chose to fix before tagging v15.0.0,
 Each flake gets its own PR: `sync-auth-token.spec.ts` in WebKit, `review-remediation.spec.ts:48`, and the WebKit `test.fixme` in `focus-not-obscured.spec.ts`. Each PR shows red evidence before the fix and a stress run after it. A flake whose root cause is in a third-party library gets an issue instead of a guess.
 
 **Out of scope.** Shortening the focus walks that #762 gave 60 seconds; the rule going forward is no new timeout raises. The global `~/.claude/CLAUDE.md` quiz line, which lives outside this repo.
+
+# Spec: Move the MCP server to SDK v2 and protocol 2026-07-28 (2026-11-26)
+
+**Date:** 2026-11-26 · **Status:** Draft, awaiting approval · **Tier:** Non-trivial
+
+The change swaps the SDK under a published npm package, raises its Node floor, changes the protocol it speaks, and adds a confirmation step to the permanent-delete path, which is in the comprehension-quiz scope (`packages/mcp-server/src/tools/handlers/write-handlers.ts`, `packages/mcp-server/src/write-ops/**`). ADR 0024 records D1, D2, D4, and D5. Paths are relative to `packages/mcp-server/` unless they start at the repo root.
+
+## Evidence
+
+Checked on 2026-11-26 against the SDK packages' source and docs, Claude Code's MCP docs, and the 2026-07-28 release post. The spec site, modelcontextprotocol.io, was blocked from the cloud session.
+
+- `@modelcontextprotocol/sdk` 1.32.2 is the newest v1 release, and its `LATEST_PROTOCOL_VERSION` is `'2025-11-25'`. v1 ships on the same days as v2, so it's maintained, but new spec work lands only in v2.
+- `@modelcontextprotocol/server` 2.4.0 implements 2026-07-28, needs Node `>=20`, and depends only on `@modelcontextprotocol/core` and `zod ^4.2.0`; the repo pins zod 4.6.7.
+- A `Server` connected straight to `StdioServerTransport` serves only the 2025 protocol, even on v2. `serveStdio(factory)` picks the protocol per connection, and its default `legacy: 'serve'` serves a 2025 `initialize` as today.
+- `SkillsExtension.attach()` takes an `McpServer` and registers a `skill://` resource template plus `skills/list` and `skills/get`. `McpServer` installs its own `tools/*` and `prompts/*` handlers in its constructor only when those capabilities are passed there; `Server.registerCapabilities()` declares them without that side effect.
+- On 2026-07-28 requests `elicitInput()` throws. Handlers return `inputRequired(...)`, and the SDK's legacy shim, on by default, serves that same return to 2025 connections as real `elicitation/create` requests. `ServerOptions.requestState.verify` runs before the handler on every round, shim rounds included.
+- Claude Code needs 2026-07-28 for MCP skills and offers form and URL elicitation to stdio servers on both protocols (v2.1.287+). It doesn't load skills from servers in `claude_desktop_config.json`.
+- Installed alone, the v1 SDK pulls 94 packages (about 20 MB) and v2 pulls 2 (about 8 MB), not counting zod. Both pass `npm audit`.
+
+## Goal
+
+Move `gsd-mcp-server` onto the v2 SDK so one codebase serves MCP 2026-07-28 to current clients and 2025-11-25 to existing ones, and use the new protocol to ship GSD's workflow guidance as on-demand skills and to have a person confirm every permanent delete.
+
+## Decisions
+
+- **D1. Server shape.** Through PR 5 the factory builds a low-level `Server` that keeps today's handlers in method-string form, so advertised schemas stay byte-identical. PR 6 switches the factory to an `McpServer` (required by `attach()`), declares `tools` and `prompts` with `mcp.server.registerCapabilities()`, and keeps GSD's handlers on `mcp.server`. If the PR 3 spike finds that this shape can't return `inputRequired(...)` from `tools/call` or conflicts with `attach()`, the fallback is `registerTool` with `fromJsonSchema(<existing JSON Schema>)`, which is contract drift and needs re-approval.
+- **D2. Transport.** `serveStdio(() => createGsdServer(config), { legacy: 'serve' })` from `@modelcontextprotocol/server/stdio` replaces `server.connect(new StdioServerTransport())`.
+- **D3. Node floor.** `engines.node` becomes `>=22`, the version CI tests, instead of the SDK minimum `>=20`, which reached end of life on 2026-04-30 and isn't tested. See open question 1.
+- **D4. Delete confirmation.** `delete_task`, and `bulk_update_tasks` with `type: 'delete'`, ask a person through form elicitation before any write when `dryRun` is `false` and the client declares form elicitation. A client that doesn't declare it keeps today's behavior. See open question 2.
+- **D5. Delete only what was confirmed.** The confirmation round mints a signed `requestState` holding each task's `updatedAt` at preview time, and the retried call deletes only tasks whose stamp still matches.
+- **D6. Skills.** Four static skills ship in the package and load once at startup. The six prompts stay as they are for clients without skills.
+- **D7. Release.** No version change here. A separate `chore(release)` PR ships gsd-mcp-server 2.0.0, as CLAUDE.md requires.
+
+## Inputs / outputs
+
+No task schema changes. Tool inputs keep the Zod schemas in `src/tools/handlers/input-schemas.ts` and the JSON Schemas in `src/tools/schemas/*.ts`. Task outputs keep the `Task` shape and PocketBase mapping in `src/types.ts`, which `src/__tests__/pinned-copies/` pins against a fixture the web app's suite also reads. Nothing in the repo's `lib/schema.ts` changes.
+
+**Manifest (`package.json`)**
+- `dependencies`: remove `@modelcontextprotocol/sdk`; add `@modelcontextprotocol/server` at exactly `2.4.0`.
+- `devDependencies`: add `@modelcontextprotocol/client` at exactly `2.4.0`, for the protocol tests.
+- `engines.node`: `>=22`.
+- `files`: add `skills/**`.
+
+**Server identity** (`initialize` and `server/discover` results)
+- `serverInfo`: `name: 'gsd-task-manager'`, `version` (from `package.json`), `title: 'GSD Task Manager'`, `description: 'Eisenhower-matrix tasks from your GSD account'`, `websiteUrl: 'https://gsd.vinny.dev'`.
+- `instructions`: at most 1,500 characters (Claude Code cuts at 4,096). Draft text:
+
+  > GSD Task Manager is the user's Eisenhower-matrix task list. Use these tools when the user asks about tasks, priorities, deadlines, or productivity. A task's quadrant comes from two booleans, urgent and important. Search before creating so you don't add duplicates. Tags are lowercase without a leading #. Saved items are left out of task lists, searches, and stats. get_top_three reports picks the user made in the app; only the user chooses them. Deletes are permanent and skip the 30-day Trash: preview with dryRun first, and expect the client to ask the user to confirm. Bulk changes cover up to 50 tasks, or 10 deletes. A conflict means the task changed elsewhere; read it again before retrying.
+
+- `capabilities`: `tools`, `prompts`, and, from PR 6, `resources` plus `extensions['io.modelcontextprotocol/skills']`.
+- `cacheHints`, applied on 2026-07-28 only: `tools/list`, `prompts/list`, and `server/discover` at `{ ttlMs: 600000, cacheScope: 'public' }`.
+
+**Tool and prompt metadata.** Names, descriptions, `inputSchema`, and prompt messages don't change. Each tool gains a sentence-case `title` and these `annotations`, with `openWorldHint: false` on all 20:
+
+| Tools | `readOnlyHint` | `destructiveHint` |
+| :- | :- | :- |
+| The 7 read tools, the 5 analytics tools, `validate_config`, `get_help` | `true` | not set |
+| `get_cache_stats` (its `reset` changes counters) | `false` | `false` |
+| `create_task` | `false` | `false` |
+| `update_task`, `complete_task`, `delete_task`, `bulk_update_tasks` | `false` | `true` |
+
+Each prompt gains a `title`: Daily standup, Weekly review, Focus mode, Upcoming deadlines, Productivity report, Tag analysis.
+
+**Delete confirmation** (D4, D5)
+- One embedded request, key `confirm-delete`, built with `inputRequired.elicit({ message, requestedSchema })`.
+- `requestedSchema`: `{ type: 'object', properties: { confirm: { type: 'boolean', title: 'Delete permanently' } }, required: ['confirm'] }`.
+- `message`: each task title (cut to 80 characters; at most 10 tasks), the number of other tasks that depend on them, and that the delete skips Trash and can't be undone.
+- `requestState` payload: `{ v: 1, tool, stamps: Record<taskId, updatedAt> }`. It's minted with `createRequestStateCodec({ key, ttlSeconds: 600, bind })`, where `key` is 32 random bytes made once per process and `bind` covers the method and tool name. The codec's `verify` goes in `ServerOptions.requestState`.
+- What the model gets back:
+  - Confirmed, stamps match: today's delete result text.
+  - Declined, cancelled, or `confirm: false`: `isError: false`, text starting `Not deleted:` that says the user declined.
+  - A stamp changed: a single delete returns `Not deleted:` naming the task; a bulk delete lists that task as a conflict and deletes the rest.
+  - Confirmed, but no `requestState` came back: `Not deleted:` saying the confirmation couldn't be checked.
+  - Tampered or expired `requestState`: the SDK refuses the round with `Invalid or expired requestState` before the handler runs.
+
+**Skills** (`skills/<name>/SKILL.md`, frontmatter `name` equal to the folder name plus a one-line `description`)
+
+| Skill | Use it when | Built from |
+| :- | :- | :- |
+| `triage` | the user captures or sorts tasks | quadrant rules, tag and URL conventions, due dates and reminders, dependency rules (tool descriptions, `get_help`) |
+| `daily-plan` | the user plans the day or asks what to do now | the `daily-standup` and `focus-mode` prompts, `get_top_three` rules |
+| `weekly-review` | the user reviews a week or month | the `weekly-review`, `productivity-report`, `tag-analysis`, and `upcoming-deadlines` prompts |
+| `safe-cleanup` | the user deletes or bulk-edits tasks | dryRun first, bulk limits, permanence, confirmation, conflicts, dependency cleanup |
+
+## Constraints
+
+- **Wire compatibility.** A 2025 client sees v1.5.0's tools, prompts, schemas, and results, plus only additive metadata: titles, annotations, instructions, and skill resources.
+- **No data-path change.** Nothing changes in the web app, IndexedDB and Dexie, the sync engine, PocketBase collections and hooks, or `lib/schema.ts`. Writes still go through `src/pocketbase-client.ts`, keep `ConflictError` and the snapshot preflight, and keep the refused-token check (`confirmUsersPrincipal`) before every account-scoped read.
+- **Privacy.** No telemetry and no new network hosts. `requestState` carries only task ids and timestamps, HMAC-signed, never titles or content. Skills and instructions hold no user data.
+- **Security.** Only the client's elicitation UI can confirm. No tool schema gains a confirmation argument, so the model can't confirm for the user. Forms never ask for secrets.
+- **Startup.** Serving still needs no PocketBase call, and the setup artifact is still removed before the principal gate. Skills load once from the package folder; a skill problem logs to stderr and never blocks tools.
+- **Size.** `bun run quality:shape` enforces at most 400 lines per file and 40 per function, plus complexity and depth, on `src/**`, with no baseline growth. New logic lives in small modules: `src/server/instructions.ts`, `src/server/skills.ts`, `src/tools/handlers/delete-confirmation.ts`.
+- **Coverage.** The package thresholds hold (80/75/80/80 overall; `src/write-ops/**` at 98/95/100), and every changed file reaches 80%.
+- **Bundle.** The web app's bundle doesn't change; only the root `bun.lock` moves. The MCP install's SDK-plus-zod share drops from 95 packages to 3.
+- **Deprecated APIs.** Don't use `elicitInput()`, which throws on 2026-07-28 requests, or sampling, roots, and logging (SEP-2577). Logging stays on stderr.
+- **Process.** One concern per PR and at most 15 files, not counting lockfiles and `tasks/`. Versions stay pinned exactly, and the pin assertion in the repo's `tests/data/security-hardening-scripts.test.ts` moves with them. The codemod runs at a pinned version, and its diff is reviewed like any other.
+
+## Edge cases
+
+1. **Client without form elicitation**, such as Claude Desktop if it doesn't declare it: `dryRun: false` deletes immediately, as in v1.5.0.
+2. **Client declares elicitation but nobody can answer** (`claude -p`, an Agent SDK app without a handler): the client declines or cancels, so nothing is deleted. The README says so.
+3. **User declines, cancels, or leaves `confirm` unticked**: nothing is written, and the call doesn't ask again.
+4. **The task changes on another device while the dialog is open**: the retried call sees a newer `updatedAt` and keeps that task (D5). The existing preflight against each round's own snapshot still runs.
+5. **The task is deleted elsewhere while the dialog is open**: a single delete returns `Task not found`; a bulk delete reports it missing, as today.
+6. **Dependents and circular dependencies**: deleting a blocker still cleans references (`cleanDependents`, `removeDeletedReferences`), and the message states how many tasks depend on the deleted ones. A delete adds no edges, so cycle checks on create and update don't change.
+7. **The confirmation comes back after 10 minutes, or its `requestState` was altered**: the SDK's verify hook refuses the round before the handler runs, so nothing is deleted. The legacy shim's own round timeout is also 10 minutes.
+8. **Offline, or PocketBase unreachable**: the preview read fails before any confirmation is requested. A write that fails after confirmation reports today's sanitized errors and partial results.
+9. **Refused or revoked token**: the sign-in error comes before any confirmation.
+10. **Empty or invalid input**: an unknown id, no matching bulk ids, or more than 10 bulk deletes fail before any confirmation, with today's messages.
+11. **`dryRun` omitted or `true`**: preview only, no confirmation.
+12. **Protocol per connection**: a 2025 `initialize` pins a legacy instance and a 2026-07-28 opening gets a modern one. Two clients spawn two processes, each with its own codec key, and every round of a stdio flow returns to the process that minted its state.
+13. **Package upgrade**, the only migration here: Dexie and PocketBase don't change. A user on Node below 22 gets an engine error at install and keeps 1.5.0 until they upgrade; the CHANGELOG and README call it out.
+14. **Clients without the skills extension** ignore it. `resources/list` now lists skill files, which Claude Code can offer as `@` suggestions; GSD has no other resources, so nothing else uses `skill://`.
+15. **Skills folder missing or invalid in an install**: a warning goes to stderr, and tools and prompts are still served.
+
+## Out of scope
+
+- The Tasks extension (`io.modelcontextprotocol/tasks`). GSD has no long-running work, a stdio task ends with its process, and servers from `claude_desktop_config.json` get no tasks. See open question 3.
+- MCP Apps (an inline matrix view) and File Uploads, which is experimental. Each needs its own spec.
+- Serving over Streamable HTTP, MCP OAuth, and Enterprise Managed Auth.
+- `outputSchema` and `structuredContent` for tool results, and icons.
+- Moving tools to `registerTool` or Zod-derived schemas, except through the D1 fallback with re-approval.
+- Per-account or generated skills (`SkillSource`), and editing or removing the six prompts.
+- Confirmation for writes other than deletes, and refusing deletes from clients without elicitation.
+- Claude-specific `_meta` flags (`anthropic/requiresUserInteraction`, `anthropic/alwaysLoad`).
+- Any change to the web app, PocketBase, sync, or `lib/schema.ts`. The version bump and CHANGELOG entry belong to the release PR.
+
+## Acceptance criteria
+
+**Migration and protocol**
+- [ ] AC1. `package.json` pins `@modelcontextprotocol/server` and `@modelcontextprotocol/client` at `2.4.0`, has no `@modelcontextprotocol/sdk`, and sets `engines.node` to `>=22`; the README states the same floor.
+- [ ] AC2. A client that negotiates 2025-11-25 lists tools and prompts equal to the v1.5.0 snapshot once `title` and `annotations` are removed.
+- [ ] AC3. A client that negotiates 2026-07-28 lists the same tools and prompts as in AC2.
+- [ ] AC4. The existing dispatcher cases (success, validation error, unknown tool, sanitized PocketBase write error) return the same client-visible results on both protocols.
+- [ ] AC5. `startMcpServer` serves through `serveStdio` with `legacy: 'serve'`, makes no network call before serving, and removes the setup artifact before the principal gate.
+- [ ] AC6. The entry point (`src/index.ts`), spawned over stdio with an offline config, answers `tools/list` for a 2025-11-25 client and for a 2026-07-28 client.
+
+**Metadata**
+- [ ] AC7. `serverInfo` carries the title, description, and `websiteUrl` above. `instructions` is at most 1,500 characters and covers quadrants, duplicate search, tag format, Saved items, top-three ownership, delete permanence, bulk limits, and conflicts.
+- [ ] AC8. Every tool has a non-empty `title` and `annotations` matching the table; every prompt has its `title`, with name, description, and message unchanged.
+- [ ] AC9. On 2026-07-28, `tools/list`, `prompts/list`, and `server/discover` carry `ttlMs: 600000` and `cacheScope: 'public'`; 2025 responses carry neither.
+
+**Delete confirmation**
+- [ ] AC10. With form elicitation declared, `delete_task` and bulk delete with `dryRun: false` request confirmation before any PocketBase write, on both protocols, and the message names the titles, the dependent count, and that the delete can't be undone.
+- [ ] AC11. Confirming with unchanged stamps deletes, cleans dependency references, and returns today's result text.
+- [ ] AC12. Declining, cancelling, or `confirm: false` writes nothing and returns `isError: false` text starting `Not deleted:`, without asking again.
+- [ ] AC13. A task whose `updatedAt` changed after confirmation isn't deleted: a single delete returns `Not deleted:` naming it, and a bulk delete lists it as a conflict while deleting the others.
+- [ ] AC14. A tampered or expired `requestState` is refused before the handler runs, and a confirmed retry without one returns `Not deleted:`; neither deletes anything.
+- [ ] AC15. Without declared elicitation, `dryRun: false` deletes behave as in v1.5.0 on both protocols.
+- [ ] AC16. With `dryRun` omitted or `true`, no confirmation is requested.
+- [ ] AC17. Neither `delete_task` nor `bulk_update_tasks` gains an input property.
+
+**Skills**
+- [ ] AC18. The server declares `io.modelcontextprotocol/skills`, and `skills/list` returns exactly `triage`, `daily-plan`, `weekly-review`, and `safe-cleanup` at `skill://<name>/SKILL.md`, each with frontmatter `name` equal to its folder and a non-empty `description`.
+- [ ] AC19. Each skill file reads back through `resources/read` matching its published digest, stays within 100 KB per file and 400 KB per skill (Claude Code's scan limits), and holds no binaries or `dist/` folder.
+- [ ] AC20. Every tool name a skill writes in backticks is a registered tool.
+- [ ] AC21. `files` ships `skills/**` (checked with `npm pack --dry-run`), and the loader finds the folder from the module's location, not `process.cwd()`.
+- [ ] AC22. A missing or invalid skills folder logs a warning to stderr, writes nothing to stdout, and leaves tools and prompts served.
+
+## Test stubs
+
+Protocol tests share one helper that connects a v2 `Client` over `InMemoryTransport.createLinkedPair()` for 2025-11-25 and over `createMcpHandler(...).fetch` with `versionNegotiation: { mode: 'auto' }` for 2026-07-28, as the v2 testing guide does. PocketBase stays mocked as in today's tests.
+
+```ts
+// tests/data/security-hardening-scripts.test.ts (repo root) and src/__tests__/server/manifest.test.ts
+it('should_pin_v2_server_and_client_and_drop_v1_sdk', () => {});                         // AC1
+it('should_state_the_same_node_floor_in_readme_and_engines', () => {});                   // AC1
+
+// src/__tests__/server/wire-contract.test.ts (snapshot captured from v1.5.0 in PR 1)
+it('should_list_v1_5_tools_and_prompts_when_client_negotiates_2025_11_25', () => {});     // AC2
+it('should_list_v1_5_tools_and_prompts_when_client_negotiates_2026_07_28', () => {});     // AC3
+it('should_return_identical_tool_results_on_both_protocols', () => {});                   // AC4
+
+// src/__tests__/server/startup.test.ts
+it('should_serve_through_serve_stdio_with_legacy_serve', () => {});                       // AC5
+it('should_reach_no_network_before_serving', () => {});                                   // AC5
+it('should_remove_setup_artifact_before_principal_gate', () => {});                       // AC5
+
+// src/__tests__/server/stdio-entry.test.ts
+it('should_answer_tools_list_over_stdio_for_a_2025_11_25_client', () => {});              // AC6
+it('should_answer_tools_list_over_stdio_for_a_2026_07_28_client', () => {});              // AC6
+
+// src/__tests__/server/metadata.test.ts
+it('should_advertise_title_description_and_website_url', () => {});                       // AC7
+it('should_keep_instructions_within_1500_chars_and_cover_required_rules', () => {});      // AC7
+it('should_annotate_every_tool_per_the_spec_table', () => {});                            // AC8
+it('should_title_every_prompt_without_changing_its_text', () => {});                      // AC8
+it('should_send_public_cache_hints_only_on_2026_07_28', () => {});                        // AC9
+
+// src/__tests__/tools/delete-confirmation.test.ts
+it('should_request_confirmation_before_any_write_when_client_supports_form_elicitation', () => {}); // AC10
+it('should_name_titles_dependents_and_permanence_in_the_confirmation', () => {});        // AC10
+it('should_delete_and_clean_dependencies_when_user_confirms_unchanged_task', () => {});  // AC11
+it('should_not_delete_when_user_declines', () => {});                                    // AC12
+it('should_not_delete_when_user_cancels', () => {});                                     // AC12
+it('should_not_delete_when_confirm_is_false', () => {});                                 // AC12
+it('should_not_delete_task_changed_after_confirmation', () => {});                       // AC13
+it('should_report_changed_task_as_conflict_and_delete_the_rest_in_bulk', () => {});      // AC13
+it('should_refuse_tampered_request_state_before_the_handler_runs', () => {});            // AC14
+it('should_refuse_expired_request_state_before_the_handler_runs', () => {});             // AC14
+it('should_not_delete_when_a_confirmed_retry_has_no_request_state', () => {});           // AC14
+it('should_delete_without_confirmation_when_client_lacks_elicitation', () => {});        // AC15
+it('should_preview_without_confirmation_when_dry_run_is_omitted', () => {});             // AC16
+it('should_keep_delete_tool_input_schemas_unchanged', () => {});                         // AC17
+
+// src/__tests__/server/skills.test.ts
+it('should_list_exactly_four_skills_with_matching_frontmatter', () => {});               // AC18
+it('should_serve_skill_files_matching_published_digests', () => {});                     // AC19
+it('should_keep_skills_within_claude_code_scan_limits', () => {});                       // AC19
+it('should_reference_only_registered_tools_in_skills', () => {});                        // AC20
+it('should_ship_skill_files_in_the_npm_package', () => {});                              // AC21
+it('should_resolve_skills_folder_from_module_location', () => {});                       // AC21
+it('should_serve_tools_when_skills_folder_is_missing', () => {});                        // AC22
+```
+
+## Delivery plan
+
+Each PR passes `bun run test`, `bun typecheck`, `bun run typecheck:tests`, `bun lint`, `bun run quality:shape`, `bun run knip`, and the package's `typecheck:tests` and `test:coverage`.
+
+| PR | Title | Covers |
+| :- | :- | :- |
+| 1 | `test(mcp): pin the v1.5.0 tools and prompts wire contract` | The snapshot fixture and AC2 test, run on v1 so later PRs compare against real v1 output |
+| 2 | `refactor(mcp): move to the v2 SDK on the 2025 protocol` | Manifest, codemod rewrites (method-string handlers, imports), Node floor, pin test, README and `.claude/rules/mcp-server.md`; AC1, AC2 |
+| 3 | `feat(mcp): serve protocol 2026-07-28 over stdio` | `serveStdio`, the protocol test helper, ADR 0024, and the D1 spike notes in `tasks/implementation-notes.md`; AC3 to AC6 |
+| 4 | `feat(mcp): describe the server and its tools to clients` | AC7 to AC9 |
+| 5 | `feat(mcp): ask a person before a permanent delete` | AC10 to AC17; the comprehension quiz applies |
+| 6 | `feat(mcp): ship GSD workflows as MCP skills` | The `McpServer` switch (D1), the four skills, and a README section on where skills load; AC18 to AC22 |
+| 7 | `chore(release): MCP v2.0.0` | Version and CHANGELOG through `/release` |
+
+**Manual check before PRs 3, 5, and 6 merge.** In Claude Code, `/mcp` shows a Protocol row of 2026-07-28 for GSD, a `dryRun: false` delete opens the confirmation dialog, and from PR 6 `/<server>:triage` appears. In Claude Desktop, tools list, and a delete follows the fallback (edge case 1) or opens the dialog, whichever the client supports.
+
+## Open questions for the approval
+
+1. **Node floor.** `>=22`, which CI tests, or `>=20`, the SDK minimum, which reached end of life on 2026-04-30?
+2. **Clients without elicitation.** Keep today's delete flow for them (proposed), or refuse `dryRun: false` deletes unless a person confirms?
+3. **Scope.** Confirm that Tasks, MCP Apps, and File Uploads stay out of this spec.
