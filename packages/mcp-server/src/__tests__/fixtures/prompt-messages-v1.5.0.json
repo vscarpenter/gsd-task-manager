@@ -1,0 +1,56 @@
+{
+  "daily-standup": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Give me a daily standup report:\n\n1. Show tasks due today\n2. Show overdue tasks\n3. Show tasks I completed today\n4. Give me a quick productivity summary\n\nMake it concise and actionable."
+      }
+    }
+  ],
+  "weekly-review": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Give me a weekly productivity review:\n\n1. Tasks completed this week vs last week\n2. Current streak status\n3. Quadrant distribution analysis\n4. Top tags and their completion rates\n5. Key insights and recommendations\n\nFormat as a professional status report."
+      }
+    }
+  ],
+  "focus-mode": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Help me focus right now:\n\n1. List all urgent AND important tasks (Q1: Do First quadrant)\n2. Prioritize by due date (overdue first, then soonest)\n3. Highlight any blocking dependencies\n4. Suggest which task to start with\n\nKeep it brief - I need to get to work!"
+      }
+    }
+  ],
+  "upcoming-deadlines": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Show me all upcoming deadlines:\n\n1. Overdue tasks (most urgent)\n2. Tasks due today\n3. Tasks due this week\n\nFor each group, show task titles and how overdue/soon they are. Flag any that have dependencies."
+      }
+    }
+  ],
+  "productivity-report": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Generate a comprehensive productivity report:\n\n1. Overall task statistics (active, completed, total)\n2. Completion metrics (today, this week, this month)\n3. Streak analysis (current and longest)\n4. Quadrant performance breakdown\n5. Tag-based insights\n6. Upcoming deadlines summary\n7. Key recommendations for improvement\n\nFormat as an executive summary with key takeaways."
+      }
+    }
+  ],
+  "tag-analysis": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Analyze my tasks by tags:\n\n1. List all tags with task counts\n2. Show completion rates for each tag\n3. Identify high-performing and low-performing tags\n4. Suggest which projects/areas need attention\n5. Highlight any patterns (e.g., work tags vs personal tags)\n\nHelp me understand where my time is going."
+      }
+    }
+  ]
+}

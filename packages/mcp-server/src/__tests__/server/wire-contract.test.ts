@@ -17,9 +17,10 @@ vi.mock('../../tools/handlers/write-handlers.js', async (importOriginal) => ({
 /**
  * Pins what gsd-mcp-server v1.5.0 (@modelcontextprotocol/sdk 1.32.2) sends for
  * tools/list and prompts/list on a 2025-11-25 connection. The move to SDK v2
- * must send the same lists (tasks/spec.md, "Move the MCP server to SDK v2",
- * AC2). The fixture is captured output, not a design: change it only in a PR
- * that changes the contract on purpose and says so.
+ * must send the same lists, plus only the titles and annotations it adds on
+ * purpose (tasks/spec.md, "Move the MCP server to SDK v2", AC2 and AC8). The
+ * fixture is captured output, not a design: change it only in a PR that
+ * changes the contract on purpose and says so.
  *
  * The client side speaks raw JSON-RPC, so no SDK client's parsing sits between
  * the server's output and the comparison, and the JSON round trip matches what
@@ -31,7 +32,23 @@ const FIXTURE = new URL('../fixtures/wire-contract-v1.5.0.json', import.meta.url
 const UNUSED_CONFIG = { pocketBaseUrl: 'https://pocketbase.invalid', authToken: 'unused' };
 
 type JsonObject = Record<string, unknown>;
-type WireContract = { protocolVersion: unknown; tools: unknown; prompts: unknown };
+type Lists = { tools: JsonObject[]; prompts: JsonObject[] };
+type WireContract = Lists & { protocolVersion: unknown };
+
+// Added after v1.5.0 on purpose; metadata.test.ts checks them.
+const ADDED_TOOL_KEYS: readonly string[] = ['title', 'annotations'];
+const ADDED_PROMPT_KEYS: readonly string[] = ['title'];
+
+function omitKeys(entry: JsonObject, keys: readonly string[]): JsonObject {
+  return Object.fromEntries(Object.entries(entry).filter(([key]) => !keys.includes(key)));
+}
+
+function withoutAddedMetadata({ tools, prompts }: Lists): Lists {
+  return {
+    tools: tools.map((tool) => omitKeys(tool, ADDED_TOOL_KEYS)),
+    prompts: prompts.map((prompt) => omitKeys(prompt, ADDED_PROMPT_KEYS)),
+  };
+}
 
 interface RawClient {
   request(method: string, params: JsonObject): Promise<JsonObject>;
@@ -85,7 +102,7 @@ async function captureWireContract(protocolVersion: string): Promise<WireContrac
     await client.notify('notifications/initialized');
     const { tools } = await client.request('tools/list', {});
     const { prompts } = await client.request('prompts/list', {});
-    return { protocolVersion: initialized.protocolVersion, tools, prompts };
+    return { protocolVersion: initialized.protocolVersion, tools: tools as JsonObject[], prompts: prompts as JsonObject[] };
   } finally {
     await client.close();
   }
@@ -130,7 +147,7 @@ describe('MCP wire contract', () => {
 
     const actual = await captureWireContract('2025-11-25');
 
-    expect(actual).toEqual(pinned);
+    expect({ protocolVersion: actual.protocolVersion, ...withoutAddedMetadata(actual) }).toEqual(pinned);
   });
 
   it('should_list_v1_5_tools_and_prompts_when_client_negotiates_2026_07_28', async () => {
@@ -140,7 +157,8 @@ describe('MCP wire contract', () => {
       const { tools } = await client.listTools();
       const { prompts } = await client.listPrompts();
 
-      expect(roundTrip({ protocolVersion: client.getNegotiatedProtocolVersion(), tools, prompts })).toEqual({
+      const listed = withoutAddedMetadata(roundTrip({ tools, prompts }));
+      expect({ protocolVersion: client.getNegotiatedProtocolVersion(), ...listed }).toEqual({
         protocolVersion: '2026-07-28',
         tools: pinned.tools,
         prompts: pinned.prompts,

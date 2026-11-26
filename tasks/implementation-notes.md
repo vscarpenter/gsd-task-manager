@@ -15,3 +15,7 @@ Tactical deviations from the approved spec in `tasks/spec.md`, logged per `codin
   - An `McpServer` that declares `tools` and `prompts` through `mcp.server.registerCapabilities()` keeps GSD's own handlers, and `SkillsExtension.attach()` adds `skill://` resources and the `io.modelcontextprotocol/skills` extension beside them. (PR 6)
   - A 2026-07-28 client lists tools and prompts equal to the v1.5.0 fixture. (AC3)
 - **AC4 compares result payloads.** On 2026-07-28 a tool result also carries `_meta['io.modelcontextprotocol/serverInfo']`, protocol metadata the SDK adds, so the cross-protocol parity test compares `content` and `isError`, which is what the dispatcher produces.
+
+## PR 4 (`feat/mcp-describe-server`)
+
+- **Instructions drop one clause of the draft.** The spec's draft ends its delete sentence with "and expect the client to ask the user to confirm." No client asks before PR 5, and under D4 a client without form elicitation never asks, so a model that trusts that line could skip asking the user itself. PR 4 ships "Deletes are permanent and skip the 30-day Trash: preview with dryRun first." PR 5 should add wording that holds for both kinds of client. Every other sentence was checked against the code on 2026-11-26: `BULK_MAX_TASKS` and `BULK_MAX_DELETES`, `normalizeTag`, the Saved-item filters in `listTasks` and `getTaskStats`, the `get_top_three` description, and `ConflictError`.

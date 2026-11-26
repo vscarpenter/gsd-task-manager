@@ -1,7 +1,10 @@
 import type { Tool } from '@modelcontextprotocol/server';
+import { READ_ONLY } from './annotations.js';
 
 export const getSyncStatusTool: Tool = {
   name: 'get_sync_status',
+  title: 'Get sync status',
+  annotations: READ_ONLY,
   description:
     'Check PocketBase sync backend health. Returns healthy (boolean), taskCount, authenticated, and the redacted pocketBaseUrl. lastSyncAt is always null: PocketBase is live, so there is no last-sync timestamp. Use validate_config for a full diagnostic and get_task_stats for task counts by status.',
   inputSchema: {
@@ -13,6 +16,8 @@ export const getSyncStatusTool: Tool = {
 
 export const getTaskStatsTool: Tool = {
   name: 'get_task_stats',
+  title: 'Get task stats',
+  annotations: READ_ONLY,
   description:
     'Get task counts: totalTasks, activeTasks (not completed), completedTasks, plus lastUpdated, oldestTask, and newestTask timestamps. Counts cover every task in the account regardless of quadrant; Saved items are left out. Use list_tasks when you need the tasks themselves rather than counts.',
   inputSchema: {
@@ -24,6 +29,8 @@ export const getTaskStatsTool: Tool = {
 
 export const listTasksTool: Tool = {
   name: 'list_tasks',
+  title: 'List tasks',
+  annotations: READ_ONLY,
   description:
     'List tasks with optional filters. Returns full task objects (title, description, quadrant, urgent/important, tags, subtasks, dependencies, dueDate, completed, timestamps) sorted by most recently updated first. Saved items (Move to Saved in the apps) are excluded. Without filters it returns every other task, completed ones included; pass completed=false for the active list. Multiple filters combine with AND; the tags filter matches a task that has any of the given tags. Results come from a short-lived cache that is invalidated on every write.',
   inputSchema: {
@@ -57,6 +64,8 @@ export const listTasksTool: Tool = {
 
 export const getTaskTool: Tool = {
   name: 'get_task',
+  title: 'Get task',
+  annotations: READ_ONLY,
   description:
     'Get a single task by its ID. Returns the full task object. Fails with "Task not found" when no task has that ID, and also for a Saved item, because Saved items are excluded; use search_tasks or list_tasks to find an ID first.',
   inputSchema: {
@@ -73,6 +82,8 @@ export const getTaskTool: Tool = {
 
 export const searchTasksTool: Tool = {
   name: 'search_tasks',
+  title: 'Search tasks',
+  annotations: READ_ONLY,
   description:
     'Search tasks by a case-insensitive substring match against titles, descriptions, tags, and subtask titles. Returns full task objects for every match, completed tasks included and Saved items excluded, most recently updated first; there is no relevance ranking. Use list_tasks with filters when you need a quadrant, tag, or completion filter rather than free text.',
   inputSchema: {
@@ -89,6 +100,8 @@ export const searchTasksTool: Tool = {
 
 export const getTokenStatusTool: Tool = {
   name: 'get_token_status',
+  title: 'Get token status',
+  annotations: READ_ONLY,
   description:
     'Check authentication token status including expiration date, days remaining, and warnings. Use this to proactively check if re-authentication is needed. Returns status (healthy/warning/critical/expired/invalid; invalid means no token or not a PocketBase JWT), expiration details, and re-authentication instructions if needed.',
   inputSchema: {
@@ -100,6 +113,8 @@ export const getTokenStatusTool: Tool = {
 
 export const getTopThreeTool: Tool = {
   name: 'get_top_three',
+  title: 'Get top three',
+  annotations: READ_ONLY,
   description:
     "Read-only. Report the user's top three for today: picks (up to three tasks the user chose for today, in rank order), needsTidy (true when two picks share a rank or there are more than three), and suggestions (the first three tasks GSD would offer: overdue Do First, then Schedule or Eliminate tasks due within two days, then Do First tasks with a due date, then the rest of Do First). Each task is a full task object. Today is the local date in timeZone, an optional IANA name that defaults to this machine's zone. An agent cannot pick for the user: there is no write tool, and the choice is the user's own. Picks only appear once the user has made them in an app.",
   inputSchema: {

@@ -1,3 +1,19 @@
+# MCP server on SDK v2 and protocol 2026-07-28 (2026-11-26)
+
+Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK v2 and protocol 2026-07-28". Deviations: `tasks/implementation-notes.md`.
+
+- [x] Spec (#801), PR 1 wire contract (#802), PR 2 v2 SDK on the 2025 protocol (#803), PR 3 serve 2026-07-28 over stdio (#804), all merged.
+- [x] PR 4 on `feat/mcp-describe-server`: three red/green cycles, each red approved (AC7 server identity and instructions, AC8 tool and prompt titles and annotations, AC9 public cache hints), plus the approved test refactor.
+- [x] PR 4 gates (root suite 5,342 tests, MCP suite 561, both typechecks, lint, shape, knip, coverage), SonarJS check (no finding on a changed line), commit `8584075`, draft PR #805.
+- [ ] PR 5 delete confirmation (comprehension quiz applies), PR 6 skills and the `McpServer` switch, PR 7 `chore(release)` 2.0.0.
+
+## Resuming From Here
+
+- **Done:** PR 4 is open as draft #805, with every local gate green.
+- **Next:** CI on #805, then the owner's review and merge. After that, PR 5 starts from a fresh branch off main.
+- **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts:47` needs the SonarCloud UI; this cloud session can't save a credential for `sonarcloud.io`.
+- **Carry into PR 5:** word the delete sentence in `src/server/instructions.ts` so it holds for clients with and without form elicitation (implementation notes, PR 4).
+
 # Correct the OAuth discovery claims (2026-11-25)
 
 Branch `fix/oauth-discovery-claims`, off main and separate from the ARD work in #799. Standard tier: three static discovery files and their docs, with no code or infra change.
