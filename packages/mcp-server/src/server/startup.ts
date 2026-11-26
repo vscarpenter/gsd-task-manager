@@ -16,12 +16,12 @@
  * account-scoped call.
  */
 
-import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { removeSetupArtifact } from '../cli/setup-artifact.js';
 import { SuperuserPrincipalError } from '../errors.js';
 import { assertNonSuperuserPrincipal } from '../pocketbase-client.js';
 import { loadConfig } from './config.js';
-import { createServer, registerHandlers } from './setup.js';
+import { createGsdServer } from './setup.js';
 import type { GsdConfig } from '../types.js';
 import { createMcpLogger } from '../utils/logger.js';
 
@@ -57,10 +57,10 @@ export function prepareStartup(): GsdConfig {
 export async function startMcpServer(): Promise<void> {
   const config = prepareStartup();
 
-  const server = createServer();
-  registerHandlers(server, config);
-
-  await server.connect(new StdioServerTransport());
+  // serveStdio reads the connection's opening message: a 2025-era initialize
+  // gets a 2025-11-25 server, anything else gets 2026-07-28. A Server wired
+  // straight to StdioServerTransport would speak only the 2025 protocol.
+  serveStdio(() => createGsdServer(config), { legacy: 'serve' });
   logger.info('GSD MCP Server running on stdio');
 }
 

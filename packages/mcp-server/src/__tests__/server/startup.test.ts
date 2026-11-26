@@ -4,16 +4,14 @@ const {
   loadConfigMock,
   removeSetupArtifactMock,
   assertNonSuperuserPrincipalMock,
-  createServerMock,
-  registerHandlersMock,
-  connectMock,
+  createGsdServerMock,
+  serveStdioMock,
 } = vi.hoisted(() => ({
   loadConfigMock: vi.fn(),
   removeSetupArtifactMock: vi.fn(),
   assertNonSuperuserPrincipalMock: vi.fn(),
-  createServerMock: vi.fn(),
-  registerHandlersMock: vi.fn(),
-  connectMock: vi.fn(),
+  createGsdServerMock: vi.fn(),
+  serveStdioMock: vi.fn(),
 }));
 
 vi.mock('../../server/config.js', () => ({ loadConfig: loadConfigMock }));
@@ -21,15 +19,8 @@ vi.mock('../../cli/setup-artifact.js', () => ({ removeSetupArtifact: removeSetup
 vi.mock('../../pocketbase-client.js', () => ({
   assertNonSuperuserPrincipal: assertNonSuperuserPrincipalMock,
 }));
-vi.mock('../../server/setup.js', () => ({
-  createServer: createServerMock,
-  registerHandlers: registerHandlersMock,
-}));
-vi.mock('@modelcontextprotocol/server/stdio', () => ({
-  StdioServerTransport: vi.fn(function StdioServerTransportMock() {
-    return {};
-  }),
-}));
+vi.mock('../../server/setup.js', () => ({ createGsdServer: createGsdServerMock }));
+vi.mock('@modelcontextprotocol/server/stdio', () => ({ serveStdio: serveStdioMock }));
 
 import { SuperuserPrincipalError } from '../../errors.js';
 import { prepareStartup, reportStartupFailure, startMcpServer } from '../../server/startup.js';
@@ -82,16 +73,26 @@ describe('startMcpServer', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     loadConfigMock.mockReturnValue(config);
-    createServerMock.mockReturnValue({ connect: connectMock });
   });
 
-  it('registers handlers and connects without reaching PocketBase', async () => {
+  it('should_serve_through_serve_stdio_with_legacy_serve', async () => {
+    const gsdServer = { name: 'gsd-task-manager' };
+    createGsdServerMock.mockReturnValue(gsdServer);
+
+    await startMcpServer();
+
+    expect(serveStdioMock).toHaveBeenCalledWith(expect.any(Function), { legacy: 'serve' });
+    const factory = serveStdioMock.mock.calls[0]?.[0] as () => unknown;
+    expect(factory()).toBe(gsdServer);
+    expect(createGsdServerMock).toHaveBeenCalledWith(config);
+  });
+
+  it('should_reach_no_network_before_serving', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     await startMcpServer();
 
-    expect(registerHandlersMock).toHaveBeenCalledWith({ connect: connectMock }, config);
-    expect(connectMock).toHaveBeenCalledTimes(1);
+    expect(serveStdioMock).toHaveBeenCalledTimes(1);
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });

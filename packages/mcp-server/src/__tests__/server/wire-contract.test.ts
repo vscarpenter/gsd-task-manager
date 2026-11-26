@@ -1,7 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { InMemoryTransport, type JSONRPCMessage } from '@modelcontextprotocol/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createServer, registerHandlers } from '../../server/setup.js';
+import { handleToolCall } from '../../tools/handlers/index.js';
+import { OFFLINE_CONFIG, PROTOCOLS, connectClient, type Protocol } from '../helpers/protocol-clients.js';
+
+// AC4's write-error case: the delete handler fails with a PocketBase 422, as in
+// dispatcher-write-safety.test.ts. Every other handler stays real.
+vi.mock('../../tools/handlers/write-handlers.js', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  handleDeleteTask: vi.fn(async () => {
+    throw Object.assign(new Error('PocketBase rejected the record: {"title":"invalid"}'), { status: 422 });
+  }),
+}));
 
 /**
  * Pins what gsd-mcp-server v1.5.0 (@modelcontextprotocol/sdk 1.32.2) sends for
@@ -80,6 +91,39 @@ async function captureWireContract(protocolVersion: string): Promise<WireContrac
   }
 }
 
+const roundTrip = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+// The dispatcher's four kinds of result: success, validation error, unknown
+// tool, and a sanitized PocketBase write error.
+const PARITY_CASES = [
+  { name: 'get_help', args: {} },
+  { name: 'get_task', args: {} },
+  { name: 'no_such_tool', args: {} },
+  { name: 'delete_task', args: { id: 'task-1', dryRun: false } },
+] as const;
+
+type ToolPayload = { content: unknown; isError: boolean };
+
+// A 2026-07-28 result also carries _meta naming the server; that is protocol
+// metadata, not dispatcher output, so parity compares the payload only.
+function payloadOf(result: unknown): ToolPayload {
+  const { content, isError } = result as { content?: unknown; isError?: boolean };
+  return roundTrip({ content, isError: isError ?? false });
+}
+
+async function callEachCase(protocol: Protocol): Promise<ToolPayload[]> {
+  const { client, close } = await connectClient(protocol);
+  try {
+    const payloads: ToolPayload[] = [];
+    for (const { name, args } of PARITY_CASES) {
+      payloads.push(payloadOf(await client.callTool({ name, arguments: { ...args } })));
+    }
+    return payloads;
+  } finally {
+    await close();
+  }
+}
+
 describe('MCP wire contract', () => {
   it('should_list_v1_5_tools_and_prompts_when_client_negotiates_2025_11_25', async () => {
     const pinned: WireContract = JSON.parse(readFileSync(FIXTURE, 'utf8'));
@@ -87,5 +131,32 @@ describe('MCP wire contract', () => {
     const actual = await captureWireContract('2025-11-25');
 
     expect(actual).toEqual(pinned);
+  });
+
+  it('should_list_v1_5_tools_and_prompts_when_client_negotiates_2026_07_28', async () => {
+    const pinned: WireContract = JSON.parse(readFileSync(FIXTURE, 'utf8'));
+    const { client, close } = await connectClient('2026-07-28');
+    try {
+      const { tools } = await client.listTools();
+      const { prompts } = await client.listPrompts();
+
+      expect(roundTrip({ protocolVersion: client.getNegotiatedProtocolVersion(), tools, prompts })).toEqual({
+        protocolVersion: '2026-07-28',
+        tools: pinned.tools,
+        prompts: pinned.prompts,
+      });
+    } finally {
+      await close();
+    }
+  });
+
+  it('should_return_identical_tool_results_on_both_protocols', async () => {
+    const dispatcher = await Promise.all(
+      PARITY_CASES.map(async ({ name, args }) => payloadOf(await handleToolCall(name, { ...args }, OFFLINE_CONFIG)))
+    );
+
+    const [legacy, modern] = await Promise.all(PROTOCOLS.map(callEachCase));
+
+    expect({ legacy, modern }).toEqual({ legacy: dispatcher, modern: dispatcher });
   });
 });
