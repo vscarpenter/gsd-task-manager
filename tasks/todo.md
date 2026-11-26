@@ -7,12 +7,13 @@ The discovery files named `api.vinny.io` as an OAuth authorization server, but i
 - [x] Red: tests that the protected-resource file, the API catalog, and the server card make none of those claims.
 - [x] Green: trim the protected-resource file to its true fields, and drop the catalog link and the server card's `authentication` block.
 - [x] ADR 0010 and `public/index.md` updated.
-- [ ] Gates, then commit, push, and open the PR.
+- [x] Gates: full suite with coverage (5,332), both typechecks, lint, shape, knip, build.
+- [x] Commit `a5d9718c`, pushed, PR #800.
 
 ## Resuming From Here
 
-- **Done:** red and green on the discovery suite.
-- **Next:** gates, then the PR. Whichever of #799 and this PR merges second needs a rebase: both edit ADR 0010, `public/index.md`, the discovery test file, and this file.
+- **Done:** PR #800 open with every local gate green.
+- **Next:** CI on #800, then the owner's merge. Whichever of #799 and this PR merges second needs a rebase: both edit ADR 0010, `public/index.md`, the discovery test file, and this file.
 - **Blocked:** nothing on this branch. No infra deploy is needed, because the edge function is unchanged.
 - **Assumptions:** trimming beats deleting the protected-resource file. Deleting would also change the edge function's `Link` header, which means another gated infra deploy and overlap with #799.
 
