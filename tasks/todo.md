@@ -45,7 +45,7 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
 
 ## Resuming From Here
 
-- **Done:** the seven-PR plan is complete. gsd-mcp-server 2.0.0 is on npm. The ledger is distilled into `tasks/lessons.md` (2026-11-27 entry).
+- **Done:** the seven-PR plan is complete. gsd-mcp-server 2.0.0 is on npm. The ledger is distilled into `tasks/lessons.md` (2026-11-27 entry). App v15.2.0 shipped on 2026-11-27: #810 merged as `d346f9d1`, tag `v15.2.0` on that commit, deploy run 45971762975 green, GitHub release created. Production serves `CACHE_VERSION` 15.2.0, the About page and `/index.md` pin `gsd-mcp-server@2.0.0`, and the discovery card reads 2.0.0 with `"resources": true`.
 - **Next:** nothing in this plan. `main` CI on `52a4fc2b` had one Chromium e2e failure at `Install chromium` (a 403 from the runner's `packages.microsoft.com` apt source); one rerun passed (CI attempt 2), so every workflow on `52a4fc2b` is green. The README tree still lists `api/` as a legacy client and `analytics.ts` as a re-export, both removed in #791 (small doc follow-up).
 - **Blocked:** nothing. SonarCloud passed #808 and #809 with 0 new issues.
 - **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
