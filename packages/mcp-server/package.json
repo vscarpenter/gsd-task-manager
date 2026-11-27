@@ -23,6 +23,7 @@
     "!dist/**/*.test.*",
     "!dist/**/*.spec.*",
     "!dist/__tests__/**",
+    "skills/**",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"

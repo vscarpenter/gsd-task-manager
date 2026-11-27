@@ -9,7 +9,7 @@ paths:
 
 - **Location**: `packages/mcp-server/` — standalone npm package in the Bun workspace.
 - **Runtime**: Node.js 22+ with TypeScript, stdio transport (JSON-RPC 2.0), on the TypeScript SDK v2 (`@modelcontextprotocol/server`).
-- **Protocol**: `serveStdio` in `src/server/startup.ts` serves MCP 2026-07-28 and, to a client that opens with a 2025 `initialize`, 2025-11-25, from one factory (`createGsdServer` in `src/server/setup.ts`). Never connect a server straight to `StdioServerTransport`: it speaks only the 2025 protocol. See ADR 0024.
+- **Protocol**: `serveStdio` in `src/server/startup.ts` serves MCP 2026-07-28 and, to a client that opens with a 2025 `initialize`, 2025-11-25, from one factory (`createGsdServer` in `src/server/setup.ts`). Never connect a server straight to `StdioServerTransport`: it speaks only the 2025 protocol. The factory builds an `McpServer` and declares `tools` and `prompts` with `mcp.server.registerCapabilities()`; passing them to the constructor makes `McpServer` install its own `tools/*` and `prompts/*` handlers, which GSD doesn't use. See ADR 0024.
 - **Build**: `npm run build` in `packages/mcp-server/` (uses tsc).
 
 ## Tool Layout
@@ -33,6 +33,7 @@ paths:
 - Validate circular dependencies before adding task relationships.
 - TTL cache for read tools; dry-run mode for all writes.
 - Every permanent delete goes through `src/tools/handlers/delete-confirmation.ts`. With form elicitation and `dryRun: false`, it asks first and passes the signed `expectedStamps` to the write path, which keeps any task whose `updatedAt` moved since. A new delete path must go through it too. `src/__tests__/tools/delete-confirmation.test.ts` drives it on both protocols against the in-memory store in `src/__tests__/helpers/task-store.ts`.
+- Skills live in `skills/<name>/SKILL.md` at the package root and load once at startup through `src/server/skills.ts`; a skills problem logs a warning and never blocks the tools. `src/__tests__/server/skills.test.ts` pins the listing, digests, Claude Code's scan limits, tool references, the npm tarball, and the fallbacks. Adding or renaming a skill updates its `SKILL_NAMES` and `REQUIRED_RULES`.
 - Test both protocol revisions through `connectClient()` in `src/__tests__/helpers/protocol-clients.ts`. `src/__tests__/server/wire-contract.test.ts` pins the v1.5.0 tool and prompt lists, less the `title` and `annotations` fields added since, so a deliberate change to them updates its fixture in the same PR. `src/__tests__/server/metadata.test.ts` checks those fields, the server instructions, and the cache hints.
 - Field changes that touch the synced schema follow the `pb-collection` skill. It sets `disable-model-invocation: true`, so ask the user to run `/pb-collection`.
 

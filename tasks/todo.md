@@ -26,14 +26,27 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
 - [x] PR 4 on `feat/mcp-describe-server`: three red/green cycles, each red approved (AC7 server identity and instructions, AC8 tool and prompt titles and annotations, AC9 public cache hints), plus the approved test refactor.
 - [x] PR 4 gates (root suite 5,342 tests, MCP suite 561, both typechecks, lint, shape, knip, coverage), SonarJS check (no finding on a changed line), merged as #805 (`f59395f`).
 - [x] PR 5 on `feat/mcp-confirm-deletes`: three red/green cycles, each red approved (ask before a delete and write nothing without a yes; delete only what was confirmed, with signed stamps; the instructions' delete sentence, option A), plus the pb-sync-reviewer's empty-preview fix. Gates: root suite 5,342, MCP suite 593, both typechecks, lint, shape, knip, coverage. SonarJS: one new finding, the deprecated 2025 capability accessor.
-- [ ] PR 5: CI, the comprehension quiz, and the manual Claude Code check (a `dryRun: false` delete opens the dialog) before merge.
-- [ ] PR 6 skills and the `McpServer` switch, PR 7 `chore(release)` 2.0.0.
+- [x] PR 5 merged as #806 (`b37c478`).
+- [ ] PR 6 on `feat/mcp-skills`, off main at `c04e0736`. Nine cycles, each red approved before its green; a guard test with no green proves its red by a reverted mutation:
+  - [x] Cycle 1, AC18: the server declares the skills extension and lists exactly `daily-plan`, `safe-cleanup`, `triage`, and `weekly-review`. Green: the factory builds an `McpServer` (D1), `src/server/skills.ts` loads `skills/` once at startup, and four `SKILL.md` files carry frontmatter. MCP suite 617, root suite 5,342, all gates clean.
+  - [x] Cycle 2: each skill body teaches its workflow rules; `safe-cleanup` matches the delete sentences in `src/server/instructions.ts`. MCP suite 618, root suite 5,342, all gates clean.
+  - [x] Cycle 3, AC19: every skill file reads back through `resources/read` matching its published digest. Guard; red shown by detaching the catalog. MCP suite 620, root suite 5,342, all gates clean.
+  - [x] Cycle 4, AC19: skills stay within Claude Code's scan limits, with no binaries or `dist/`. Guard; red shown on a scratch copy with a 410 KB binary in `triage/dist/`.
+  - [x] Cycle 5, AC20: every backticked tool name in a skill is registered. Guard; red shown with an invented `archive_task` in a scratch copy.
+  - [x] Cycle 6, AC21: `npm pack --dry-run` lists the four `SKILL.md` files. Green: `files` gains `skills/**`. MCP suite 623, root suite 5,342, all gates clean.
+  - [x] Cycle 7, AC21: the loader finds `skills/` from the module's location, not `process.cwd()`. Guard; red shown with a cwd-relative root, which threw ENOENT.
+  - [x] Cycle 8, AC22: a missing folder warns on stderr and tools still serve. Green: `loadGsdSkills` logs and returns undefined. MCP suite 625, root suite 5,342, all gates clean.
+  - [x] Cycle 9, AC22: an invalid skill warns through the server's logger and the rest still load. Green: `onWarning` goes to the logger; refactor: the catch logs `String(error)`. MCP suite 626, root suite 5,342, all gates clean.
+  - [x] README section on where skills load, `src/server/README.md`, `.claude/rules/mcp-server.md`. 14 files under the PR-shape count.
+  - [ ] Gates, SonarJS probe, push, draft PR, CI, and the owner's manual Claude Code check (`/<server>:triage` appears).
+- [ ] PR 7 `chore(release)` 2.0.0.
 
 ## Resuming From Here
 
-- **Done:** PR 5 is committed and pushed, with every local gate green.
-- **Next:** the owner answers the comprehension quiz and runs the manual dialog check, then merges. PR 6 starts from a fresh branch off main.
-- **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI; this cloud session can't save a credential for `sonarcloud.io`.
+- **Done:** PR 6 cycles 1 to 9 and the docs are committed on `feat/mcp-skills`.
+- **Next:** the SonarJS probe on the changed files, then push and a draft PR.
+- **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The SonarJS probe recipe from the PR 5 session isn't on this machine, so PR 6 runs `eslint-plugin-sonarjs` from a scratch install instead.
+- **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
 
 # Correct the OAuth discovery claims (2026-11-25)
 
@@ -49,9 +62,10 @@ The discovery files named `api.vinny.io` as an OAuth authorization server, but i
 
 ## Resuming From Here
 
-- **Done:** PR #800 open with every local gate green.
-- **Next:** CI on #800, then the owner's merge. Whichever of #799 and this PR merges second needs a rebase: both edit ADR 0010, `public/index.md`, the discovery test file, and this file.
-- **Blocked:** nothing on this branch. No infra deploy is needed, because the edge function is unchanged.
+- **Done:** merged in #800 as `028dd9cc` on 2026-11-25, after a rebase onto #799 and green CI (14 checks).
+- **Deployed:** verified live on 2026-11-26. `oauth-protected-resource`, `api-catalog`, and `server-card.json` match the repo byte for byte. The local branch is deleted.
+- **Next:** nothing for this fix.
+- **Blocked:** nothing. No infra deploy is needed, because the edge function is unchanged.
 - **Assumptions:** trimming beats deleting the protected-resource file. Deleting would also change the edge function's `Link` header, which means another gated infra deploy and overlap with #799.
 
 # ARD agent-discovery manifest (2026-11-25)
@@ -64,13 +78,14 @@ Branch `feat/ard-manifest`. Standard tier: static discovery files plus one edge-
 - [x] Gates: test with coverage (5,340), both typechecks, lint, shape, knip, check-models, build, bundle budget.
 - [x] Commit `8ce338f5`, pushed, PR #799.
 
-Separately, `deploy-cloudfront-infra` run 45756492871 (`deploy=policy`) redeploys the CSP without the Sentry host. The #566 run timed out after 30 days at the `cloudfront-infra` approval gate, so production still carries the old policy.
+Separately, `deploy-cloudfront-infra` run 45756492871 (`deploy=policy`) redeployed the CSP without the Sentry host. It succeeded on 2026-11-26 at 05:15 UTC, and the live `connect-src` no longer lists `*.ingest.us.sentry.io`. The #566 run had timed out after 30 days at the `cloudfront-infra` approval gate.
 
 ## Resuming From Here
 
-- **Done:** merged in #799 as `310e0048` on 2026-11-25, with CI green (14 checks).
-- **Next:** the owner approves infra run 45758475207 (the edge function), which queues behind 45756492871 (the CSP). After that and the next production deploy, confirm `ard.json` and `ai-catalog.json` return `application/json` with `access-control-allow-origin: *`, and that `/` carries `rel="ard"`. Then rerun the isitagentready.com scan.
-- **Blocked:** run 45756492871 waits on the owner's environment approval. Merging this PR starts another infra run (the response-headers function is on its path filter) that waits at the same gate.
+- **Done:** merged in #799 as `310e0048` on 2026-11-25, with CI green (14 checks). Both infra runs succeeded and were verified live on 2026-11-26: the CSP drops the Sentry host (45756492871), and the edge function sends `rel="ard"` on `/` and `access-control-allow-origin: *` on `/.well-known/` (45758475207).
+- **Deployed:** verified live on 2026-11-26. `ard.json` and `ai-catalog.json` match the repo byte for byte and return `application/json` with `access-control-allow-origin: *`. The homepage `Link` header carries `rel="ard"`. The local branch is deleted.
+- **Next:** the owner reruns the isitagentready.com scan. DNS-AID, OAuth discovery, auth.md, Poppy, and Search for Agents were reviewed and declined, so those checks stay red by choice.
+- **Blocked:** nothing.
 - **Assumptions:** `specVersion` "0.9" follows the AI Catalog README; the scanner only needs a non-empty string. Both manifest paths serve `application/json`, which the scanner requires.
 
 # Dependency update (2026-11-25)
