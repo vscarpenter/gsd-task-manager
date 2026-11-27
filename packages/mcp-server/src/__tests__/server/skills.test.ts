@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SkillsClient } from '@modelcontextprotocol/client/ext/skills';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadGsdSkills } from '../../server/skills.js';
 import { PROTOCOLS, connectClient, type ConnectedClient } from '../helpers/protocol-clients.js';
 
@@ -13,6 +13,17 @@ import { PROTOCOLS, connectClient, type ConnectedClient } from '../helpers/proto
  * GSD's workflow guidance, served as MCP skills beside the tools and prompts
  * (tasks/spec.md, "Move the MCP server to SDK v2", D6 and AC18 to AC22).
  */
+
+// Lets one test point the SDK's real loader at a folder that doesn't exist, as
+// an install without skills/ would. Every other test loads the real folder.
+const loaderRedirect = vi.hoisted(() => ({ root: undefined as string | undefined }));
+
+vi.mock('@modelcontextprotocol/server/ext/skills/node', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@modelcontextprotocol/server/ext/skills/node')>();
+  const loadSkills: typeof actual.loadSkills = (root, options) =>
+    actual.loadSkills(loaderRedirect.root ?? root, options);
+  return { ...actual, loadSkills };
+});
 const SKILLS_EXTENSION = 'io.modelcontextprotocol/skills';
 
 // The spec's Skills table, in the URI order the catalog lists them.
@@ -216,6 +227,33 @@ describe('skill files', () => {
 });
 
 describe('skills loader', () => {
+  afterEach(() => {
+    loaderRedirect.root = undefined;
+    vi.restoreAllMocks();
+  });
+
+  it('should_serve_tools_when_skills_folder_is_missing', async () => {
+    loaderRedirect.root = join(PACKAGE_ROOT, 'no-such-skills-folder');
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    // stdout carries JSON-RPC frames; one stray byte there corrupts the transport.
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const connected = await connectClient('2026-07-28');
+    try {
+      const { tools } = await connected.client.listTools();
+      const { prompts } = await connected.client.listPrompts();
+
+      expect({
+        tools: tools.length,
+        prompts: prompts.length,
+        warned: stderr.mock.calls.some(([chunk]) => /"level":"WARN".*skill/i.test(String(chunk))),
+        wroteStdout: stdout.mock.calls.length > 0,
+      }).toEqual({ tools: 20, prompts: 6, warned: true, wroteStdout: false });
+    } finally {
+      await connected.close();
+    }
+  });
+
   it('should_resolve_skills_folder_from_module_location', async () => {
     // Claude Desktop starts the server from / or the home folder, never the package.
     const launchDir = mkdtempSync(join(tmpdir(), 'gsd-skills-cwd-'));
@@ -224,7 +262,7 @@ describe('skills loader', () => {
     try {
       const catalog = await loadGsdSkills();
 
-      expect(catalog.entries.map(({ uri }) => uri)).toEqual(SKILL_NAMES.map((name) => `skill://${name}/SKILL.md`));
+      expect(catalog?.entries.map(({ uri }) => uri)).toEqual(SKILL_NAMES.map((name) => `skill://${name}/SKILL.md`));
     } finally {
       process.chdir(packageDir);
       rmSync(launchDir, { recursive: true, force: true });

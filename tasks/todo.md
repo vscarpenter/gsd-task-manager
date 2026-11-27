@@ -27,7 +27,7 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
 - [x] PR 4 gates (root suite 5,342 tests, MCP suite 561, both typechecks, lint, shape, knip, coverage), SonarJS check (no finding on a changed line), merged as #805 (`f59395f`).
 - [x] PR 5 on `feat/mcp-confirm-deletes`: three red/green cycles, each red approved (ask before a delete and write nothing without a yes; delete only what was confirmed, with signed stamps; the instructions' delete sentence, option A), plus the pb-sync-reviewer's empty-preview fix. Gates: root suite 5,342, MCP suite 593, both typechecks, lint, shape, knip, coverage. SonarJS: one new finding, the deprecated 2025 capability accessor.
 - [x] PR 5 merged as #806 (`b37c478`).
-- [ ] PR 6 on `feat/mcp-skills`, off main at `c04e0736`. Eight cycles, each red approved before its green; a guard test with no green proves its red by a reverted mutation:
+- [ ] PR 6 on `feat/mcp-skills`, off main at `c04e0736`. Nine cycles, each red approved before its green; a guard test with no green proves its red by a reverted mutation:
   - [x] Cycle 1, AC18: the server declares the skills extension and lists exactly `daily-plan`, `safe-cleanup`, `triage`, and `weekly-review`. Green: the factory builds an `McpServer` (D1), `src/server/skills.ts` loads `skills/` once at startup, and four `SKILL.md` files carry frontmatter. MCP suite 617, root suite 5,342, all gates clean.
   - [x] Cycle 2: each skill body teaches its workflow rules; `safe-cleanup` matches the delete sentences in `src/server/instructions.ts`. MCP suite 618, root suite 5,342, all gates clean.
   - [x] Cycle 3, AC19: every skill file reads back through `resources/read` matching its published digest. Guard; red shown by detaching the catalog. MCP suite 620, root suite 5,342, all gates clean.
@@ -35,15 +35,16 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
   - [x] Cycle 5, AC20: every backticked tool name in a skill is registered. Guard; red shown with an invented `archive_task` in a scratch copy.
   - [x] Cycle 6, AC21: `npm pack --dry-run` lists the four `SKILL.md` files. Green: `files` gains `skills/**`. MCP suite 623, root suite 5,342, all gates clean.
   - [x] Cycle 7, AC21: the loader finds `skills/` from the module's location, not `process.cwd()`. Guard; red shown with a cwd-relative root, which threw ENOENT.
-  - [ ] Cycle 8, AC22: a missing or invalid folder warns on stderr and tools still serve.
+  - [x] Cycle 8, AC22: a missing folder warns on stderr and tools still serve. Green: `loadGsdSkills` logs and returns undefined. MCP suite 625, root suite 5,342, all gates clean.
+  - [ ] Cycle 9, AC22: an invalid skill warns through the server's logger and the rest still load.
   - [ ] README section on where skills load, `src/server/README.md`, `.claude/rules/mcp-server.md`.
   - [ ] Gates, SonarJS probe, push, draft PR, CI, and the owner's manual Claude Code check (`/<server>:triage` appears).
 - [ ] PR 7 `chore(release)` 2.0.0.
 
 ## Resuming From Here
 
-- **Done:** PR 6 cycles 1 to 7 are committed on `feat/mcp-skills`.
-- **Next:** the owner approves cycle 8's red test (AC22).
+- **Done:** PR 6 cycles 1 to 8 are committed on `feat/mcp-skills`.
+- **Next:** the owner approves cycle 9's red test (AC22, invalid skill).
 - **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The SonarJS probe recipe from the PR 5 session isn't on this machine, so PR 6 runs `eslint-plugin-sonarjs` from a scratch install instead.
 - **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
 
