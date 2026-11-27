@@ -1,4 +1,5 @@
 import { isUtf8 } from 'node:buffer';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,6 +78,25 @@ function shippedSkillFiles(): { entries: string[]; files: SkillFile[] } {
     .filter((path) => statSync(join(SKILLS_ROOT, path)).isFile())
     .map((path) => ({ path, skill: path.split(sep)[0], bytes: readFileSync(join(SKILLS_ROOT, path)) }));
   return { entries, files };
+}
+
+const PACKAGE_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
+
+interface PackResult {
+  files: Array<{ path: string }>;
+}
+
+// What `npm publish` would upload. npm 10, which ships with Node 22, prints an
+// array of results; newer releases key them by package name.
+function packedPaths(): string[] {
+  const output = execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+    cwd: PACKAGE_ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const parsed: PackResult[] | Record<string, PackResult> = JSON.parse(output);
+  const [result] = Array.isArray(parsed) ? parsed : Object.values(parsed);
+  return result.files.map(({ path }) => path);
 }
 
 function skillBody(name: string): string {
@@ -182,5 +202,13 @@ describe('skill files', () => {
     } finally {
       await connected.close();
     }
+  });
+
+  it('should_ship_skill_files_in_the_npm_package', () => {
+    const onDisk = shippedSkillFiles().files.map(({ path }) => `skills/${path.split(sep).join('/')}`);
+
+    const packed = packedPaths().filter((path) => path.startsWith('skills/'));
+
+    expect(packed.sort()).toEqual(onDisk.sort());
   });
 });

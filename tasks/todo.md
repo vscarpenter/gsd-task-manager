@@ -33,7 +33,7 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
   - [x] Cycle 3, AC19: every skill file reads back through `resources/read` matching its published digest. Guard; red shown by detaching the catalog. MCP suite 620, root suite 5,342, all gates clean.
   - [x] Cycle 4, AC19: skills stay within Claude Code's scan limits, with no binaries or `dist/`. Guard; red shown on a scratch copy with a 410 KB binary in `triage/dist/`.
   - [x] Cycle 5, AC20: every backticked tool name in a skill is registered. Guard; red shown with an invented `archive_task` in a scratch copy.
-  - [ ] Cycle 6, AC21: `npm pack --dry-run` lists the four `SKILL.md` files.
+  - [x] Cycle 6, AC21: `npm pack --dry-run` lists the four `SKILL.md` files. Green: `files` gains `skills/**`. MCP suite 623, root suite 5,342, all gates clean.
   - [ ] Cycle 7, AC21: the loader finds `skills/` from the module's location, not `process.cwd()`.
   - [ ] Cycle 8, AC22: a missing or invalid folder warns on stderr and tools still serve.
   - [ ] README section on where skills load, `src/server/README.md`, `.claude/rules/mcp-server.md`.
@@ -42,8 +42,8 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
 
 ## Resuming From Here
 
-- **Done:** PR 6 cycles 1 to 5 are committed on `feat/mcp-skills`.
-- **Next:** the owner approves cycle 6's red test (AC21, npm pack).
+- **Done:** PR 6 cycles 1 to 6 are committed on `feat/mcp-skills`.
+- **Next:** the owner approves cycle 7's red test (AC21, module location).
 - **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The SonarJS probe recipe from the PR 5 session isn't on this machine, so PR 6 runs `eslint-plugin-sonarjs` from a scratch install instead.
 - **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
 
