@@ -3,7 +3,7 @@
   "schemaVersion": "0.1.0",
   "serverInfo": {
     "name": "gsd-mcp-server",
-    "version": "1.5.0",
+    "version": "2.0.0",
     "title": "GSD Task Manager MCP Server",
     "description": "Read, create, update, and analyze tasks in GSD Task Manager from any MCP-aware assistant.",
     "vendor": "Vinny Carpenter",
@@ -40,7 +40,7 @@
   ],
   "capabilities": {
     "tools": { "listChanged": false },
-    "resources": false,
+    "resources": true,
     "prompts": true,
     "logging": false
   },

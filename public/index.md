@@ -47,7 +47,7 @@ For Claude Desktop and other MCP-aware assistants, install an exact reviewed
 release and run its setup wizard:
 
 ```bash
-npm install --global gsd-mcp-server@1.5.0
+npm install --global gsd-mcp-server@2.0.0
 gsd-mcp-server --setup
 ```
 
