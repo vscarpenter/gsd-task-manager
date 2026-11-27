@@ -1,4 +1,5 @@
-import { Server } from '@modelcontextprotocol/server';
+import { McpServer } from '@modelcontextprotocol/server';
+import type { SkillsExtension } from '@modelcontextprotocol/server/ext/skills';
 import { allTools } from '../tools/schemas/index.js';
 import { allPrompts, getPromptMessage } from '../tools/prompts.js';
 import { handleToolCall } from '../tools/handlers/index.js';
@@ -11,8 +12,9 @@ import { SERVER_INSTRUCTIONS } from './instructions.js';
 // cache may keep them for ten minutes. The SDK sends these on 2026-07-28 only.
 const PUBLIC_CACHE_HINT = { ttlMs: 600_000, cacheScope: 'public' } as const;
 
-export function createServer(): Server {
-  return new Server(
+// An McpServer, because SkillsExtension.attach() needs one (ADR 0024).
+export function createServer(): McpServer {
+  const mcp = new McpServer(
     {
       name: 'gsd-task-manager',
       version: VERSION,
@@ -21,10 +23,6 @@ export function createServer(): Server {
       websiteUrl: 'https://gsd.vinny.dev',
     },
     {
-      capabilities: {
-        tools: {},
-        prompts: {},
-      },
       instructions: SERVER_INSTRUCTIONS,
       requestState: DELETE_CONFIRMATION_STATE,
       cacheHints: {
@@ -34,9 +32,15 @@ export function createServer(): Server {
       },
     }
   );
+  // Declared on the low-level server, not in the constructor, so McpServer
+  // installs no tools or prompts handlers of its own and GSD's below keep the
+  // v1.5.0 schemas.
+  mcp.server.registerCapabilities({ tools: {}, prompts: {} });
+  return mcp;
 }
 
-export function registerHandlers(server: Server, config: GsdConfig): void {
+export function registerHandlers(mcp: McpServer, config: GsdConfig): void {
+  const { server } = mcp;
   server.setRequestHandler('tools/list', async () => {
     return { tools: allTools };
   });
@@ -62,9 +66,10 @@ export function registerHandlers(server: Server, config: GsdConfig): void {
   });
 }
 
-/** The server each connection gets: GSD's capabilities with every handler registered. */
-export function createGsdServer(config: GsdConfig): Server {
-  const server = createServer();
-  registerHandlers(server, config);
-  return server;
+/** The server each connection gets: GSD's capabilities, every handler, and the skills when they loaded. */
+export function createGsdServer(config: GsdConfig, skills?: SkillsExtension): McpServer {
+  const mcp = createServer();
+  registerHandlers(mcp, config);
+  skills?.attach(mcp);
+  return mcp;
 }

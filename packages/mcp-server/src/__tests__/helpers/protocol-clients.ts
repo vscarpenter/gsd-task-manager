@@ -7,6 +7,7 @@ import {
 } from '@modelcontextprotocol/client';
 import { InMemoryTransport, createMcpHandler } from '@modelcontextprotocol/server';
 import { createGsdServer } from '../../server/setup.js';
+import { loadGsdSkills } from '../../server/skills.js';
 import type { GsdConfig } from '../../types.js';
 
 /**
@@ -53,15 +54,17 @@ export async function connectClient(
   );
   const { onElicit } = options;
   if (onElicit) client.setRequestHandler('elicitation/create', (request) => onElicit(request.params));
+  // As in startMcpServer: one catalog, loaded before any server is built.
+  const skills = await loadGsdSkills();
 
   if (protocol === '2025-11-25') {
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    await createGsdServer(config).connect(serverSide);
+    await createGsdServer(config, skills).connect(serverSide);
     await client.connect(clientSide);
     return { client, close: () => client.close() };
   }
 
-  const handler = createMcpHandler(() => createGsdServer(config));
+  const handler = createMcpHandler(() => createGsdServer(config, skills));
   await client.connect(
     new StreamableHTTPClientTransport(new URL('http://gsd.test/mcp'), {
       fetch: (url, init) => handler.fetch(new Request(url, rewriteBody(init, options.rewriteRequest))),

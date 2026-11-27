@@ -22,6 +22,7 @@ import { SuperuserPrincipalError } from '../errors.js';
 import { assertNonSuperuserPrincipal } from '../pocketbase-client.js';
 import { loadConfig } from './config.js';
 import { createGsdServer } from './setup.js';
+import { loadGsdSkills } from './skills.js';
 import type { GsdConfig } from '../types.js';
 import { createMcpLogger } from '../utils/logger.js';
 
@@ -56,11 +57,13 @@ export function prepareStartup(): GsdConfig {
 
 export async function startMcpServer(): Promise<void> {
   const config = prepareStartup();
+  // Loaded once here, because a server must have its skills attached before it connects.
+  const skills = await loadGsdSkills();
 
   // serveStdio reads the connection's opening message: a 2025-era initialize
   // gets a 2025-11-25 server, anything else gets 2026-07-28. A Server wired
   // straight to StdioServerTransport would speak only the 2025 protocol.
-  serveStdio(() => createGsdServer(config), { legacy: 'serve' });
+  serveStdio(() => createGsdServer(config, skills), { legacy: 'serve' });
   logger.info('GSD MCP Server running on stdio');
 }
 

@@ -5,12 +5,14 @@ const {
   removeSetupArtifactMock,
   assertNonSuperuserPrincipalMock,
   createGsdServerMock,
+  loadGsdSkillsMock,
   serveStdioMock,
 } = vi.hoisted(() => ({
   loadConfigMock: vi.fn(),
   removeSetupArtifactMock: vi.fn(),
   assertNonSuperuserPrincipalMock: vi.fn(),
   createGsdServerMock: vi.fn(),
+  loadGsdSkillsMock: vi.fn(),
   serveStdioMock: vi.fn(),
 }));
 
@@ -20,6 +22,7 @@ vi.mock('../../pocketbase-client.js', () => ({
   assertNonSuperuserPrincipal: assertNonSuperuserPrincipalMock,
 }));
 vi.mock('../../server/setup.js', () => ({ createGsdServer: createGsdServerMock }));
+vi.mock('../../server/skills.js', () => ({ loadGsdSkills: loadGsdSkillsMock }));
 vi.mock('@modelcontextprotocol/server/stdio', () => ({ serveStdio: serveStdioMock }));
 
 import { SuperuserPrincipalError } from '../../errors.js';
@@ -77,14 +80,16 @@ describe('startMcpServer', () => {
 
   it('should_serve_through_serve_stdio_with_legacy_serve', async () => {
     const gsdServer = { name: 'gsd-task-manager' };
+    const skills = { id: 'io.modelcontextprotocol/skills' };
     createGsdServerMock.mockReturnValue(gsdServer);
+    loadGsdSkillsMock.mockResolvedValue(skills);
 
     await startMcpServer();
 
     expect(serveStdioMock).toHaveBeenCalledWith(expect.any(Function), { legacy: 'serve' });
     const factory = serveStdioMock.mock.calls[0]?.[0] as () => unknown;
     expect(factory()).toBe(gsdServer);
-    expect(createGsdServerMock).toHaveBeenCalledWith(config);
+    expect(createGsdServerMock).toHaveBeenCalledWith(config, skills);
   });
 
   it('should_reach_no_network_before_serving', async () => {
