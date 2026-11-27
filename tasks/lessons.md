@@ -681,3 +681,8 @@ Adding a wire column is not enough. A client that pulled a record before the col
 
 - **A guard on command text needs tests for each spelling.** Matching `git commit` missed `git -c ... commit`. Test blocked and allowed cases against real repositories, and read the branch where the command runs, which `-C` can move.
 - **Decode shell quoting by its rules.** Deleting quote characters broke paths that contain them and let commits onto main. Fuzz a decoder against Bash itself.
+
+## 2026-11-26: MCP dispatcher routing
+
+- **Coverage can't show which tools a test dispatches.** A registry entry that passes its handler by reference, such as `createToolRunner('complete_task', handleCompleteTask)`, runs when `index.ts` loads. It reads as covered even if no test ever calls that tool, so only the arrow-wrapped entries showed as gaps. Check which tests call each tool before calling it covered.
+- **`tsc` accepts a tool wired to a compatible handler.** `complete_task` wired to `handleDeleteTask` compiled and passed every other test, because its args fit the `{ id, dryRun? }` parameter. `dispatcher-routing.test.ts` now pins each tool to its handler.

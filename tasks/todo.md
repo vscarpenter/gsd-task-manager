@@ -1,3 +1,23 @@
+# Pin the MCP dispatcher's tool-to-handler routing (2026-11-26)
+
+Branch `claude/affectionate-hypatia-wlmc1x`, off main at `f59395f`. Standard tier: one new test file and no production change.
+
+`src/tools/handlers/index.ts` sat at 60.86% statements and 40% functions, because no unit test dispatched most tools through `handleToolCall`.
+
+- [x] `src/__tests__/tools/dispatcher-routing.test.ts`: one table-driven test over 19 tools, every one but `delete_task`. Each must reach only its own mocked handler, with the validated args.
+- [x] Red check: three temporary changes to `index.ts` each passed `tsc` and failed only the rows meant to catch them. They wired `complete_task` to `handleDeleteTask` and `get_sync_status` to `handleGetTaskStats`, and made the runner skip validation. `index.ts` is back to its committed state.
+- [x] The test also passes on #806's branch, where the dispatcher appends a delete confirmation after the validated args. It compares only the leading arguments each row lists, so either PR can merge first.
+- [x] Gates: MCP `test:coverage` (580 tests, with `index.ts` at 100% of statements, functions, and lines), MCP `typecheck:tests`, both root typechecks, lint, shape, and knip.
+- [x] Root `bun run test`: 388 files and 5,342 tests pass. The first run lost `tests/docker-migrations.test.ts`, which needs the `sqlite3` CLI that this cloud environment lacks. The rerun after `apt-get install -y sqlite3` was clean.
+- [x] One `test(mcp)` commit on this branch, pushed, with a draft PR.
+
+## Resuming From Here
+
+- **Done:** the test, its red check, every local gate, and the draft PR.
+- **Next:** CI on the draft PR, then the owner's review.
+- **Blocked:** nothing.
+- **Assumptions:** the table includes `create_task`, `update_task`, `complete_task`, and `bulk_update_tasks`, so the test mocks `write-handlers.js` too. The request said the write tools were covered elsewhere, but on main `delete_task` is the only one a unit test dispatches. `delete-confirmation.test.ts` exists only on #806's branch, and it dispatches only deletes.
+
 # MCP server on SDK v2 and protocol 2026-07-28 (2026-11-26)
 
 Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK v2 and protocol 2026-07-28". Deviations: `tasks/implementation-notes.md`.
