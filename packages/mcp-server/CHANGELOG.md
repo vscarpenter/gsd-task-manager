@@ -5,7 +5,35 @@ All notable changes to the GSD MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - 2026-11-27
+
+### Changed
+- The server needs Node 22 or later, up from Node 18. That's the breaking
+  change behind 2.0.0. The server moved to the TypeScript MCP SDK v2
+  (`@modelcontextprotocol/server` 2.4.0), which needs at least Node 20, and
+  CI tests on Node 22 (#803).
+- Installing the package pulls in 2 SDK packages instead of 94 (#803).
+- The server speaks MCP 2026-07-28. A client that opens with a 2025
+  `initialize` gets 2025-11-25 from the same process, with the same tools and
+  prompts (#804).
+- Filtered and unfiltered task reads share one cached snapshot per backend and
+  token for 30 seconds. Several list calls in that window make one PocketBase
+  request (#791).
+
+### Added
+- Four MCP skills: `triage`, `daily-plan`, `weekly-review`, and
+  `safe-cleanup`. Claude Code loads them on 2026-07-28 connections and shows
+  each one as `/<server>:<skill>`. Clients without the skills extension ignore
+  them (#808).
+- A permanent delete asks a person first in a client that supports MCP form
+  elicitation, such as Claude Code. The dialog names the tasks, counts their
+  dependents, and says the delete skips the 30-day Trash. Only tasks unchanged
+  since the confirmation are deleted, and declining replies `Not deleted:`.
+  Clients without form elicitation delete as before (#806).
+- The server describes itself to clients: a title, description, website, and
+  instructions on both protocols. Every tool gains a title and behavior
+  annotations, and every prompt gains a title. On 2026-07-28, the tool and
+  prompt lists carry a ten-minute cache hint (#805).
 
 ### Fixed
 - `bulk_update_tasks` rejects an unknown key inside `operation`. A misspelled
