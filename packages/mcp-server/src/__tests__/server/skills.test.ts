@@ -165,4 +165,22 @@ describe('skill files', () => {
       distFolders: entries.filter((path) => path.split(sep).includes('dist')),
     }).toEqual({ oversizedFiles: [], oversizedSkills: [], binaries: [], distFolders: [] });
   });
+
+  it('should_reference_only_registered_tools_in_skills', async () => {
+    const connected = await connectClient('2026-07-28');
+    try {
+      const registered = new Set((await connected.client.listTools()).tools.map(({ name }) => name));
+      // Tool names are snake_case, unlike the camelCase fields and kebab-case values skills also quote.
+      const referenced = shippedSkillFiles().files.flatMap(({ skill, bytes }) =>
+        [...bytes.toString('utf8').matchAll(/`([a-z]+(?:_[a-z]+)+)`/g)].map(([, name]) => ({ skill, name }))
+      );
+
+      expect({
+        unregistered: [...new Set(referenced.filter(({ name }) => !registered.has(name)).map(({ name }) => name))],
+        skillsNamingNoTool: SKILL_NAMES.filter((name) => !referenced.some(({ skill }) => skill === name)),
+      }).toEqual({ unregistered: [], skillsNamingNoTool: [] });
+    } finally {
+      await connected.close();
+    }
+  });
 });
