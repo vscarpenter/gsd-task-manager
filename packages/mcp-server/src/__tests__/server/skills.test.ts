@@ -1,4 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { isUtf8 } from 'node:buffer';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SkillsClient } from '@modelcontextprotocol/client/ext/skills';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PROTOCOLS, connectClient, type ConnectedClient } from '../helpers/protocol-clients.js';
@@ -54,6 +57,27 @@ const REQUIRED_RULES: Record<string, Record<string, RegExp[]>> = {
 // No client is sure to ask before a delete (D4), as metadata.test.ts also checks
 // of the server instructions.
 const PROMISES_A_CLIENT_DIALOG = /expect the client|client will ask|always ask/i;
+
+// Claude Code's skill scan limits (AC19).
+const MAX_FILE_BYTES = 100 * 1024;
+const MAX_SKILL_BYTES = 400 * 1024;
+
+const SKILLS_ROOT = fileURLToPath(new URL('../../../skills/', import.meta.url));
+
+interface SkillFile {
+  path: string;
+  skill: string;
+  bytes: Buffer;
+}
+
+// Every file under skills/, as npm ships it and the catalog publishes it.
+function shippedSkillFiles(): { entries: string[]; files: SkillFile[] } {
+  const entries = readdirSync(SKILLS_ROOT, { recursive: true, encoding: 'utf8' });
+  const files = entries
+    .filter((path) => statSync(join(SKILLS_ROOT, path)).isFile())
+    .map((path) => ({ path, skill: path.split(sep)[0], bytes: readFileSync(join(SKILLS_ROOT, path)) }));
+  return { entries, files };
+}
 
 function skillBody(name: string): string {
   const file = readFileSync(new URL(`../../../skills/${name}/SKILL.md`, import.meta.url), 'utf8');
@@ -125,5 +149,20 @@ describe('skill guidance', () => {
       uncovered: Object.fromEntries(SKILL_NAMES.map((name) => [name, []])),
       promisingClientDialog: [],
     });
+  });
+});
+
+describe('skill files', () => {
+  it('should_keep_skills_within_claude_code_scan_limits', () => {
+    const { entries, files } = shippedSkillFiles();
+    const skillBytes = new Map<string, number>();
+    for (const { skill, bytes } of files) skillBytes.set(skill, (skillBytes.get(skill) ?? 0) + bytes.length);
+
+    expect({
+      oversizedFiles: files.filter(({ bytes }) => bytes.length > MAX_FILE_BYTES).map(({ path }) => path),
+      oversizedSkills: [...skillBytes].filter(([, total]) => total > MAX_SKILL_BYTES).map(([skill]) => skill),
+      binaries: files.filter(({ bytes }) => bytes.includes(0) || !isUtf8(bytes)).map(({ path }) => path),
+      distFolders: entries.filter((path) => path.split(sep).includes('dist')),
+    }).toEqual({ oversizedFiles: [], oversizedSkills: [], binaries: [], distFolders: [] });
   });
 });

@@ -31,7 +31,7 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
   - [x] Cycle 1, AC18: the server declares the skills extension and lists exactly `daily-plan`, `safe-cleanup`, `triage`, and `weekly-review`. Green: the factory builds an `McpServer` (D1), `src/server/skills.ts` loads `skills/` once at startup, and four `SKILL.md` files carry frontmatter. MCP suite 617, root suite 5,342, all gates clean.
   - [x] Cycle 2: each skill body teaches its workflow rules; `safe-cleanup` matches the delete sentences in `src/server/instructions.ts`. MCP suite 618, root suite 5,342, all gates clean.
   - [x] Cycle 3, AC19: every skill file reads back through `resources/read` matching its published digest. Guard; red shown by detaching the catalog. MCP suite 620, root suite 5,342, all gates clean.
-  - [ ] Cycle 4, AC19: skills stay within Claude Code's scan limits, with no binaries or `dist/`.
+  - [x] Cycle 4, AC19: skills stay within Claude Code's scan limits, with no binaries or `dist/`. Guard; red shown on a scratch copy with a 410 KB binary in `triage/dist/`.
   - [ ] Cycle 5, AC20: every backticked tool name in a skill is registered.
   - [ ] Cycle 6, AC21: `files` ships `skills/**`; the loader ignores `process.cwd()`.
   - [ ] Cycle 7, AC22: a missing or invalid folder warns on stderr and tools still serve.
@@ -41,8 +41,8 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
 
 ## Resuming From Here
 
-- **Done:** PR 6 cycles 1 to 3 are committed on `feat/mcp-skills`.
-- **Next:** the owner approves cycle 4's red test (AC19 scan limits).
+- **Done:** PR 6 cycles 1 to 4 are committed on `feat/mcp-skills`.
+- **Next:** the owner approves cycle 5's red test (AC20).
 - **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The SonarJS probe recipe from the PR 5 session isn't on this machine, so PR 6 runs `eslint-plugin-sonarjs` from a scratch install instead.
 - **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
 
