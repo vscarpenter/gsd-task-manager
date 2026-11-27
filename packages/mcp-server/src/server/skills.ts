@@ -24,7 +24,7 @@ export async function loadGsdSkills(): Promise<SkillCatalog | undefined> {
   } catch (error) {
     logger.warn('Skills not loaded; tools and prompts are still served', {
       root: SKILLS_ROOT,
-      error: error instanceof Error ? error.message : String(error),
+      error: String(error),
     });
     return undefined;
   }
