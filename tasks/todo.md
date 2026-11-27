@@ -41,13 +41,13 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
   - [x] Gates and SonarJS probe: one hit, the S1874 `getClientCapabilities()` line PR 5 accepted, unchanged here. Recipe saved to memory (`sonarjs-s1874-probe-recipe`).
   - [x] Pushed; draft PR #808 open.
   - [x] CI green on #808 (14 checks, SonarCloud 0 new issues), Claude and Codex reviews clean, owner's manual check, merged as `38f18f3e`.
-- [ ] PR 7 `chore(release): MCP v2.0.0` on `chore/release-mcp-2.0.0`: version pins, CHANGELOG, and the server card's `resources` capability (red test first). Then the owner merges, `mcp-v2.0.0` is tagged on the merge commit after main is green, and the owner approves the `mcp-release` run.
+- [x] PR 7 `chore(release): MCP v2.0.0`, merged as #809 (`52a4fc2b`): version pins, CHANGELOG, and the server card's `resources` capability (red approved first). Tag `mcp-v2.0.0` on `52a4fc2b`; publish run 45955316999 green after the owner approved `mcp-release`. npm `latest` is 2.0.0 (07:04Z 2026-11-27) with SLSA provenance, the four skills, and `engines.node >=22`.
 
 ## Resuming From Here
 
-- **Done:** PR 6 merged as #808 (`38f18f3e`).
-- **Next:** PR 7: the card's `resources` red test awaits approval, then gates, push, and the release PR. Tag `mcp-v2.0.0` only after the owner merges and confirms; the push starts the npm publish.
-- **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The local probe now has a saved recipe.
+- **Done:** the seven-PR plan is complete. gsd-mcp-server 2.0.0 is on npm. The ledger is distilled into `tasks/lessons.md` (2026-11-27 entry).
+- **Next:** nothing in this plan. `main` CI on `52a4fc2b` had one Chromium e2e failure at `Install chromium` (a 403 from the runner's `packages.microsoft.com` apt source); one rerun passed (CI attempt 2), so every workflow on `52a4fc2b` is green. The README tree still lists `api/` as a legacy client and `analytics.ts` as a re-export, both removed in #791 (small doc follow-up).
+- **Blocked:** nothing. SonarCloud passed #808 and #809 with 0 new issues.
 - **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
 
 # Correct the OAuth discovery claims (2026-11-25)
