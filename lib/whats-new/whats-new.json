@@ -483,6 +483,25 @@
     },
     {
       "platform": "android",
+      "version": "0.12.0",
+      "date": "2026-11-25",
+      "notable": true,
+      "headline": "Pick today's top three and clear the backlog with a weekly sweep.",
+      "new": [
+        "Pin up to three tasks above the matrix to keep today's priorities in view.",
+        "Start Weekly sweep from Settings to review overdue and stale tasks one at a time. You can also turn on a weekly reminder."
+      ],
+      "improved": [
+        "Set how early to get a reminder for each task, or use your default.",
+        "Trash shows when selection mode is active and announces it to screen readers."
+      ],
+      "fixed": [
+        "Undoing a move to Trash cancels its pending synced delete. Replacing tasks from a backup clears pending changes for the tasks it removes.",
+        "Sync checks a task's version before applying an edit or delete so it can preserve newer changes from another device."
+      ]
+    },
+    {
+      "platform": "android",
       "version": "0.11.0",
       "date": "2026-11-06",
       "notable": true,
