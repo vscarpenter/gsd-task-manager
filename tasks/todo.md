@@ -29,7 +29,7 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
 - [x] PR 5 merged as #806 (`b37c478`).
 - [ ] PR 6 on `feat/mcp-skills`, off main at `c04e0736`. Six red/green cycles, each red approved before its green:
   - [x] Cycle 1, AC18: the server declares the skills extension and lists exactly `daily-plan`, `safe-cleanup`, `triage`, and `weekly-review`. Green: the factory builds an `McpServer` (D1), `src/server/skills.ts` loads `skills/` once at startup, and four `SKILL.md` files carry frontmatter. MCP suite 617, root suite 5,342, all gates clean.
-  - [ ] Cycle 2: each skill body teaches its workflow rules; `safe-cleanup` matches the delete sentences in `src/server/instructions.ts`.
+  - [x] Cycle 2: each skill body teaches its workflow rules; `safe-cleanup` matches the delete sentences in `src/server/instructions.ts`. MCP suite 618, root suite 5,342, all gates clean.
   - [ ] Cycle 3, AC19: files read back matching their digests and stay within Claude Code's scan limits.
   - [ ] Cycle 4, AC20: every backticked tool name in a skill is registered.
   - [ ] Cycle 5, AC21: `files` ships `skills/**`; the loader ignores `process.cwd()`.
@@ -40,8 +40,8 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
 
 ## Resuming From Here
 
-- **Done:** PR 6 cycle 1 is committed on `feat/mcp-skills`.
-- **Next:** the owner approves cycle 2's red test.
+- **Done:** PR 6 cycles 1 and 2 are committed on `feat/mcp-skills`.
+- **Next:** the owner approves cycle 3's red test (AC19).
 - **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The SonarJS probe recipe from the PR 5 session isn't on this machine, so PR 6 runs `eslint-plugin-sonarjs` from a scratch install instead.
 - **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
 
