@@ -1,10 +1,12 @@
 import { isUtf8 } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SkillsClient } from '@modelcontextprotocol/client/ext/skills';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { loadGsdSkills } from '../../server/skills.js';
 import { PROTOCOLS, connectClient, type ConnectedClient } from '../helpers/protocol-clients.js';
 
 /**
@@ -210,5 +212,22 @@ describe('skill files', () => {
     const packed = packedPaths().filter((path) => path.startsWith('skills/'));
 
     expect(packed.sort()).toEqual(onDisk.sort());
+  });
+});
+
+describe('skills loader', () => {
+  it('should_resolve_skills_folder_from_module_location', async () => {
+    // Claude Desktop starts the server from / or the home folder, never the package.
+    const launchDir = mkdtempSync(join(tmpdir(), 'gsd-skills-cwd-'));
+    const packageDir = process.cwd();
+    process.chdir(launchDir);
+    try {
+      const catalog = await loadGsdSkills();
+
+      expect(catalog.entries.map(({ uri }) => uri)).toEqual(SKILL_NAMES.map((name) => `skill://${name}/SKILL.md`));
+    } finally {
+      process.chdir(packageDir);
+      rmSync(launchDir, { recursive: true, force: true });
+    }
   });
 });
