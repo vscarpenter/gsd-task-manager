@@ -40,7 +40,7 @@
   ],
   "capabilities": {
     "tools": { "listChanged": false },
-    "resources": false,
+    "resources": true,
     "prompts": true,
     "logging": false
   },

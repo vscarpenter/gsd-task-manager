@@ -85,7 +85,7 @@ describe('/.well-known/mcp/server-card.json', () => {
 			env?: Record<string, { required?: boolean; secret?: boolean }>;
 		}>;
 		tools: Array<{ name: string; category: string }>;
-		capabilities: { prompts: boolean; logging: boolean };
+		capabilities: { prompts: boolean; resources: boolean; logging: boolean };
 	};
 	const card = readJson<ServerCard>('.well-known/mcp/server-card.json');
 	const schemaDir = resolve(__dirname, '../../packages/mcp-server/src/tools/schemas');
@@ -117,6 +117,12 @@ describe('/.well-known/mcp/server-card.json', () => {
 	it('advertises the capabilities the MCP server declares: prompts, and no logging', () => {
 		expect(card.capabilities.prompts).toBe(true);
 		expect(card.capabilities.logging).toBe(false);
+	});
+
+	// The server serves each skill in its skills/ folder as a skill:// resource.
+	it('advertises resources while the MCP server ships skills', () => {
+		const shipsSkills = existsSync(resolve(__dirname, '../../packages/mcp-server/skills'));
+		expect(card.capabilities.resources).toBe(shipsSkills);
 	});
 
 	// The MCP server authenticates with a token the user pastes into
