@@ -38,14 +38,16 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
   - [x] Cycle 8, AC22: a missing folder warns on stderr and tools still serve. Green: `loadGsdSkills` logs and returns undefined. MCP suite 625, root suite 5,342, all gates clean.
   - [x] Cycle 9, AC22: an invalid skill warns through the server's logger and the rest still load. Green: `onWarning` goes to the logger; refactor: the catch logs `String(error)`. MCP suite 626, root suite 5,342, all gates clean.
   - [x] README section on where skills load, `src/server/README.md`, `.claude/rules/mcp-server.md`. 14 files under the PR-shape count.
-  - [ ] Gates, SonarJS probe, push, draft PR, CI, and the owner's manual Claude Code check (`/<server>:triage` appears).
-- [ ] PR 7 `chore(release)` 2.0.0.
+  - [x] Gates and SonarJS probe: one hit, the S1874 `getClientCapabilities()` line PR 5 accepted, unchanged here. Recipe saved to memory (`sonarjs-s1874-probe-recipe`).
+  - [x] Pushed; draft PR #808 open.
+  - [x] CI green on #808 (14 checks, SonarCloud 0 new issues), Claude and Codex reviews clean, owner's manual check, merged as `38f18f3e`.
+- [ ] PR 7 `chore(release): MCP v2.0.0` on `chore/release-mcp-2.0.0`: version pins, CHANGELOG, and the server card's `resources` capability (red test first). Then the owner merges, `mcp-v2.0.0` is tagged on the merge commit after main is green, and the owner approves the `mcp-release` run.
 
 ## Resuming From Here
 
-- **Done:** PR 6 cycles 1 to 9 and the docs are committed on `feat/mcp-skills`.
-- **Next:** the SonarJS probe on the changed files, then push and a draft PR.
-- **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The SonarJS probe recipe from the PR 5 session isn't on this machine, so PR 6 runs `eslint-plugin-sonarjs` from a scratch install instead.
+- **Done:** PR 6 merged as #808 (`38f18f3e`).
+- **Next:** PR 7: the card's `resources` red test awaits approval, then gates, push, and the release PR. Tag `mcp-v2.0.0` only after the owner merges and confirms; the push starts the npm publish.
+- **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The local probe now has a saved recipe.
 - **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
 
 # Correct the OAuth discovery claims (2026-11-25)
