@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory loads and validates the PocketBase configuration from environment variables. It creates the MCP `Server`, registers its request handlers, and runs the stdio startup sequence. It reports startup failures on stderr.
+This directory loads and validates the PocketBase configuration from environment variables. It creates the `McpServer`, registers its request handlers, loads the package's skills, and runs the stdio startup sequence. It reports startup failures on stderr.
 
 ## Interface
 
@@ -16,17 +16,22 @@ Configuration (`config.ts`):
 
 Server setup (`setup.ts`):
 
-- `createServer()`: returns an MCP `Server` named `gsd-task-manager` with `tools` and `prompts` capabilities.
-- `registerHandlers(server, config)`: registers four request handlers.
-- `ListToolsRequestSchema` handler: returns `{ tools: allTools }`.
-- `ListPromptsRequestSchema` handler: returns `{ prompts: allPrompts }`.
-- `GetPromptRequestSchema` handler: returns the message from `getPromptMessage(name)`.
-- `CallToolRequestSchema` handler: returns `handleToolCall(name, args || {}, config)`.
+- `createServer()`: returns an `McpServer` named `gsd-task-manager`. It declares `tools` and `prompts` on `mcp.server`, so `McpServer` installs no tool or prompt handlers of its own.
+- `registerHandlers(mcp, config)`: registers four request handlers on `mcp.server`.
+- `tools/list` handler: returns `{ tools: allTools }`.
+- `prompts/list` handler: returns `{ prompts: allPrompts }`.
+- `prompts/get` handler: returns the message from `getPromptMessage(name)`.
+- `tools/call` handler: returns `handleToolCall(name, args || {}, config, confirmation)`.
+- `createGsdServer(config, skills?)`: runs `createServer` and `registerHandlers`, then attaches the skills catalog when one loaded.
+
+Skills (`skills.ts`):
+
+- `loadGsdSkills()`: loads the package's `skills/` folder, found from the module's location. It returns `undefined` when the catalog can't load.
 
 Startup (`startup.ts`):
 
 - `prepareStartup()`: runs `loadConfig`, then `removeSetupArtifact`, then `assertNonSuperuserPrincipal`, and returns the config.
-- `startMcpServer()`: runs `prepareStartup`, `createServer`, and `registerHandlers`, then connects a `StdioServerTransport`.
+- `startMcpServer()`: runs `prepareStartup` and `loadGsdSkills`, then serves `createGsdServer` through `serveStdio`.
 - `reportStartupFailure(error)`: logs the error and writes recovery help to stderr.
 
 ## Invariants
@@ -39,14 +44,16 @@ Startup (`startup.ts`):
 - `config.ts:isSafePocketBaseUrl`: the hostname must match a loopback name exactly. A URL with a username, password, query, or fragment is rejected.
 - `config.ts:configSchema`: `authToken` needs at least 1 character. A superuser token fails with `PocketBase superuser tokens are not accepted`.
 - `config.ts:isSuperuserAuthToken`: its comment says superuser tokens are rejected before they are attached to a request.
+- `skills.ts:loadGsdSkills`: a missing folder or an invalid skill logs a warning to stderr and never stops the tools. An invalid skill is skipped, and the others still load.
 
 ## Side Effects
 
 - `config.ts:loadConfig`: reads `process.env.GSD_POCKETBASE_URL` and `process.env.GSD_AUTH_TOKEN`. It logs to stderr on error.
 - `startup.ts:prepareStartup`: deletes `~/.gsd-mcp-setup.json` through `removeSetupArtifact`.
-- `startup.ts:startMcpServer`: connects a `StdioServerTransport`, which uses stdin and stdout for JSON-RPC. It logs a startup line to stderr.
+- `startup.ts:startMcpServer`: serves through `serveStdio`, which uses stdin and stdout for JSON-RPC. It logs a startup line to stderr.
 - `startup.ts:reportStartupFailure`: writes to stderr through the logger and `process.stderr.write`.
-- `setup.ts:registerHandlers`: mutates the `Server` instance with `setRequestHandler`.
+- `setup.ts:registerHandlers`: mutates `mcp.server` with `setRequestHandler`.
+- `skills.ts:loadGsdSkills`: reads the `skills/` folder once at startup.
 
 ## Verification
 

@@ -214,6 +214,23 @@ The MCP server includes 6 pre-configured conversation starters that appear in Cl
 
 **How to use:** Click the "Use Prompt" button in Claude Desktop, or just ask directly!
 
+### Skills (2.0.0)
+
+The server also ships four MCP skills. Each is a short guide the client loads only when a task calls for it, written for the model rather than for you.
+
+| Skill | Use it when |
+| :- | :- |
+| `triage` | you capture tasks or ask where one belongs |
+| `daily-plan` | you plan the day or ask what to work on now |
+| `weekly-review` | you review a week or a month |
+| `safe-cleanup` | you delete tasks or change many at once |
+
+Claude Code loads MCP skills on connections that speak MCP 2026-07-28, which this server does. Add the server to Claude Code itself with `claude mcp add`, because Claude Code doesn't load skills from servers configured in `claude_desktop_config.json`. Each skill then appears as `/<server>:<skill>`, where `<server>` is the name you gave the server, so `/gsd:triage` for a server named `gsd`.
+
+A client without the skills extension ignores it and still gets the 20 tools and the six prompts. A client that lists resources sees each skill as a `skill://<name>/SKILL.md` file, and Claude Code may offer those as `@` suggestions.
+
+The skills ship in the package's `skills/` folder and load once when the server starts. If the folder is missing, the server logs a warning to stderr and serves the tools without skills. A malformed skill is skipped with a warning, and the others still load.
+
 ### Natural Language Queries
 
 Once configured, you can ask Claude questions like:
@@ -888,6 +905,7 @@ build before it publishes.
 
 ```
 packages/mcp-server/
+├── skills/                # MCP skills, one folder each: triage, daily-plan, weekly-review, safe-cleanup
 ├── src/
 │   ├── index.ts           # CLI entry: parses options, starts the server
 │   ├── server/            # Server setup, tool registration, config, startup
@@ -993,6 +1011,7 @@ This section states the package's contract for developers and AI assistants who 
 - Write tools (`src/tools/schemas/write-tools.ts:writeTools`): `create_task`, `update_task`, `complete_task`, `delete_task`, `bulk_update_tasks`.
 - System tools (`src/tools/schemas/system-tools.ts:systemTools`): `validate_config`, `get_help`, `get_cache_stats`.
 - Prompts (`src/tools/prompts.ts:allPrompts`): `daily-standup`, `weekly-review`, `focus-mode`, `upcoming-deadlines`, `productivity-report`, `tag-analysis`.
+- Skills (`skills/`, loaded by `src/server/skills.ts:loadGsdSkills`): `daily-plan`, `safe-cleanup`, `triage`, `weekly-review`.
 - Module exports: `package.json` `exports` maps `.` to `dist/index.js` and `./types` to `dist/types.js`.
 - `src/index.ts` exports no symbols. It runs `main()` when loaded.
 - Runtime dependencies (`package.json`): `@modelcontextprotocol/server` 2.4.0, `pocketbase` 0.29.0, `zod` 4.6.7.
@@ -1016,6 +1035,7 @@ This section states the package's contract for developers and AI assistants who 
 - `src/write-ops/**` needs 98% statements, 95% branches, 100% functions, and 98% lines (`vitest.config.ts` `coverage.thresholds`).
 - The package needs Node 22 or later (`package.json` `engines`).
 - The server speaks MCP 2026-07-28, and 2025-11-25 to a client that opens with a 2025 `initialize` (`src/server/startup.ts:startMcpServer`, `serveStdio`).
+- A skills problem logs a warning to stderr and never stops the tools (`src/server/skills.ts:loadGsdSkills`).
 
 ### Side Effects
 
@@ -1025,6 +1045,7 @@ This section states the package's contract for developers and AI assistants who 
 - Disk: the setup wizard writes `~/.gsd-mcp-setup.json` with mode `0o600` (`src/cli/setup-wizard.ts:writeConfigurationFile`). The file holds the plaintext token.
 - Disk: server startup deletes `~/.gsd-mcp-setup.json` if it exists (`src/server/startup.ts:prepareStartup`).
 - Disk: the version module reads `package.json` at load (`src/version.ts:readVersion`).
+- Disk: server startup reads the package's `skills/` folder once (`src/server/skills.ts:loadGsdSkills`).
 - Process state: a task cache singleton and a PocketBase client singleton live for the life of the process (`src/cache.ts:cacheInstance`, `src/pocketbase-client.ts:pbInstance`).
 - Streams: server mode uses stdin and stdout for JSON-RPC and stderr for logs. Setup, validate, and help modes print to stdout. A setup failure and a fatal error print to stderr (`src/cli/setup-wizard.ts:runSetupWizard`, `src/index.ts`).
 - Exit codes: `src/index.ts:main` exits with 0 after help, setup, or validate, and with 1 on a startup failure.
