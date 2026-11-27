@@ -4,6 +4,21 @@
   "releases": [
     {
       "platform": "web",
+      "version": "15.2.0",
+      "date": "2026-11-27",
+      "notable": false,
+      "headline": null,
+      "new": [
+        "The GSD MCP server 2.0.0 adds four workflows to Claude Code as skills: triage, daily planning, weekly review, and safe cleanup.",
+        "In Claude Code and other clients that can ask, the MCP server checks with you before it permanently deletes a task."
+      ],
+      "improved": [
+        "The About page installs MCP server 2.0.0, which needs Node 22 or later."
+      ],
+      "fixed": []
+    },
+    {
+      "platform": "web",
       "version": "15.1.0",
       "date": "2026-11-24",
       "notable": true,

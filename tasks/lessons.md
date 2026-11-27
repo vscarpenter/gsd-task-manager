@@ -686,3 +686,16 @@ Adding a wire column is not enough. A client that pulled a record before the col
 
 - **Coverage can't show which tools a test dispatches.** A registry entry that passes its handler by reference, such as `createToolRunner('complete_task', handleCompleteTask)`, runs when `index.ts` loads. It reads as covered even if no test ever calls that tool, so only the arrow-wrapped entries showed as gaps. Check which tests call each tool before calling it covered.
 - **`tsc` accepts a tool wired to a compatible handler.** `complete_task` wired to `handleDeleteTask` compiled and passed every other test, because its args fit the `{ id, dryRun? }` parameter. `dispatcher-routing.test.ts` now pins each tool to its handler.
+
+## 2026-11-27: MCP server on SDK v2 (#801 to #809)
+
+- **Dropping a dependency can orphan root `overrides`.** Swapping the v1 SDK out removed its Express and Hono stack, and `dependency-pins.test.ts` fails on any override whose target isn't installed. Remove those overrides and their assertions in `security-hardening-scripts.test.ts` in the same PR, and count them toward the 15-file limit.
+- **Model-facing text must hold for every client.** The drafted instructions said "expect the client to ask the user to confirm." A client without form elicitation never asks, so a model that trusted the line could skip asking the user. Write instructions and skills that stay true when a client lacks a capability.
+- **On 2026-07-28, each request declares its own capabilities.** A retry can carry a decline and drop form elicitation in the same request. Read the answer before choosing a no-elicitation fallback, or a decline turns into a delete.
+- **A `requestState` codec's `bind` sees the request context, not its params.** Check fields like the tool name in the handler.
+- **Tamper a signed payload, not a signature's last character.** A 32-byte MAC encodes to 43 base64url characters, so flipping the last one between `A` and `B` can change only padding bits and still verify. That made a tamper test flaky.
+- **A guard test whose behavior already exists proves its red by mutation.** Break the code on a scratch copy or a temporary edit, show the failure, then revert. A test that has never failed is unproven.
+- **Redirect a real dependency instead of adding a test-only parameter.** A pass-through `vi.mock` that hands the SDK's `loadSkills` a different root kept the missing-folder red honest. A root argument that `loadGsdSkills()` didn't accept yet would have been ignored, and the red would have failed for the wrong reason.
+- **Vitest captures `console.warn`.** A spy on `process.stderr.write` doesn't see it. The SDK's default skill warning was a bare `console.warn`; `onWarning` routes it to the server's JSON logger.
+- **`npm pack --dry-run --json` changed shape.** npm 10, which ships with Node 22 on CI, prints an array. npm 12 prints an object keyed by package name. A test that parses it handles both.
+- **A new server capability updates the discovery card.** #808 added `resources` for skills, and `/.well-known/mcp/server-card.json` kept `"resources": false` because its test never checked that key. The card test now ties `resources` to the package's `skills/` folder.
