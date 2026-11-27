@@ -36,15 +36,15 @@ Non-trivial tier, seven PRs. Spec: `tasks/spec.md`, "Move the MCP server to SDK 
   - [x] Cycle 6, AC21: `npm pack --dry-run` lists the four `SKILL.md` files. Green: `files` gains `skills/**`. MCP suite 623, root suite 5,342, all gates clean.
   - [x] Cycle 7, AC21: the loader finds `skills/` from the module's location, not `process.cwd()`. Guard; red shown with a cwd-relative root, which threw ENOENT.
   - [x] Cycle 8, AC22: a missing folder warns on stderr and tools still serve. Green: `loadGsdSkills` logs and returns undefined. MCP suite 625, root suite 5,342, all gates clean.
-  - [ ] Cycle 9, AC22: an invalid skill warns through the server's logger and the rest still load.
+  - [x] Cycle 9, AC22: an invalid skill warns through the server's logger and the rest still load. Green: `onWarning` goes to the logger; refactor: the catch logs `String(error)`. MCP suite 626, root suite 5,342, all gates clean.
   - [ ] README section on where skills load, `src/server/README.md`, `.claude/rules/mcp-server.md`.
   - [ ] Gates, SonarJS probe, push, draft PR, CI, and the owner's manual Claude Code check (`/<server>:triage` appears).
 - [ ] PR 7 `chore(release)` 2.0.0.
 
 ## Resuming From Here
 
-- **Done:** PR 6 cycles 1 to 8 are committed on `feat/mcp-skills`.
-- **Next:** the owner approves cycle 9's red test (AC22, invalid skill).
+- **Done:** PR 6 cycles 1 to 9 are committed on `feat/mcp-skills`.
+- **Next:** the owner docs: README section on where skills load, `src/server/README.md`, and `.claude/rules/mcp-server.md`; then the SonarJS probe, push, and a draft PR.
 - **Blocked:** accepting SonarCloud's S1874 issue on `setup.ts` needs the SonarCloud UI. The SonarJS probe recipe from the PR 5 session isn't on this machine, so PR 6 runs `eslint-plugin-sonarjs` from a scratch install instead.
 - **Assumptions:** skill bodies start as one line in cycle 1; cycle 2's test drives the guidance.
 

@@ -1,6 +1,6 @@
 import { isUtf8 } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -251,6 +251,36 @@ describe('skills loader', () => {
       }).toEqual({ tools: 20, prompts: 6, warned: true, wroteStdout: false });
     } finally {
       await connected.close();
+    }
+  });
+
+  it('should_warn_through_the_server_logger_and_load_the_rest_when_a_skill_is_invalid', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'gsd-skills-invalid-'));
+    for (const [name, frontmatter] of [
+      ['kept', 'name: kept\ndescription: A skill that loads.'],
+      ['broken', 'name: broken'],
+    ]) {
+      mkdirSync(join(root, name));
+      writeFileSync(join(root, name, 'SKILL.md'), `---\n${frontmatter}\n---\n\nBody.\n`);
+    }
+    loaderRedirect.root = root;
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const connected = await connectClient('2026-07-28');
+    try {
+      const { tools } = await connected.client.listTools();
+      const { skills } = await new SkillsClient(connected.client).list();
+
+      expect({
+        tools: tools.length,
+        listed: skills.map(({ uri }) => uri),
+        warned: stderr.mock.calls.some(([chunk]) => /"level":"WARN","module":"SKILLS".*broken/.test(String(chunk))),
+        wroteStdout: stdout.mock.calls.length > 0,
+      }).toEqual({ tools: 20, listed: ['skill://kept/SKILL.md'], warned: true, wroteStdout: false });
+    } finally {
+      await connected.close();
+      rmSync(root, { recursive: true, force: true });
     }
   });
 

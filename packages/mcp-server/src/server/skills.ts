@@ -17,7 +17,10 @@ const SKILLS_ROOT = fileURLToPath(new URL('../../skills/', import.meta.url));
 /** The catalog, or undefined when it can't load, so the server starts without skills. */
 export async function loadGsdSkills(): Promise<SkillCatalog | undefined> {
   try {
-    return await loadSkills(SKILLS_ROOT);
+    // The SDK skips an invalid skill and keeps the rest; its default report is a bare console.warn line.
+    return await loadSkills(SKILLS_ROOT, {
+      onWarning: (warning) => logger.warn('Skill skipped', { path: warning.path, problem: warning.message }),
+    });
   } catch (error) {
     logger.warn('Skills not loaded; tools and prompts are still served', {
       root: SKILLS_ROOT,
