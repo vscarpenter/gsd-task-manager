@@ -88,6 +88,26 @@ describe.each(PROTOCOLS)('skills on %s', (protocol) => {
       listed: SKILL_NAMES.map((name) => ({ uri: `skill://${name}/SKILL.md`, name, hasDescription: true })),
     });
   });
+
+  it('should_serve_skill_files_matching_published_digests', async () => {
+    const skillsClient = new SkillsClient(connected.client);
+    const { skills } = await skillsClient.list();
+
+    // A "dynamic" skill publishes no file list, so it adds nothing here and fails the match below.
+    const files = skills.flatMap((skill) =>
+      skill.resources === 'dynamic' ? [] : skill.resources.map(({ uri }) => ({ skill, uri }))
+    );
+    // read() fetches each file through resources/read and throws unless its
+    // size, SHA-256 digest, and frontmatter match the listing.
+    const readBack = await Promise.all(
+      files.map(async ({ skill, uri }) => {
+        const file = await skillsClient.read(skill, uri);
+        return { uri: file.uri, verified: file.verified };
+      })
+    );
+
+    expect(readBack).toEqual(SKILL_NAMES.map((name) => ({ uri: `skill://${name}/SKILL.md`, verified: true })));
+  });
 });
 
 describe('skill guidance', () => {
