@@ -1,6 +1,6 @@
 import type { GsdConfig, Task } from '../types.js';
 import { pbTaskToTask } from '../types.js';
-import type { CreateTaskInput, UpdateTaskInput } from './types.js';
+import type { CreateTaskInput, DeletionPreview, UpdateTaskInput } from './types.js';
 import { listTasksFresh } from '../tools/list-tasks.js';
 import {
   generateTaskId,
@@ -333,6 +333,8 @@ export interface DeleteTaskResult {
   partial: boolean;
   errors: string[];
   conflicts: string[];
+  /** A dry run only: what the delete would remove. */
+  deletion?: DeletionPreview;
 }
 
 function summarizeCleanup(outcomes: CleanupOutcome[]) {
@@ -365,6 +367,35 @@ async function deletePrimaryTask(
   getTaskCache().invalidate();
 }
 
+function previewDeletion(task: Task, affectedTasks: Task[]): DeleteTaskResult {
+  return {
+    taskId: task.id,
+    taskTitle: task.title,
+    dryRun: true,
+    affectedTasks: affectedTasks.map((t) => t.title),
+    dependenciesCleaned: affectedTasks.length,
+    partial: false,
+    errors: [],
+    conflicts: [],
+    deletion: {
+      titles: [task.title],
+      dependentCount: affectedTasks.length,
+      stamps: { [task.id]: task.updatedAt },
+    },
+  };
+}
+
+/**
+ * The version of `task` a person confirmed deleting. deletePrimaryTask's
+ * preflight compares the record with it, so a task edited after the
+ * confirmation is kept, and one the confirmation never covered is not deleted.
+ */
+function asConfirmed(task: Task, expectedStamps?: Record<string, string>): Task {
+  if (!expectedStamps) return task;
+  if (!Object.hasOwn(expectedStamps, task.id)) throw new ConflictError(task.id, 'unconfirmed', task.updatedAt);
+  return { ...task, updatedAt: expectedStamps[task.id] };
+}
+
 /**
  * Delete a task and strip its id from any other task's dependencies array.
  *
@@ -376,7 +407,7 @@ async function deletePrimaryTask(
 export async function deleteTask(
   config: GsdConfig,
   taskId: string,
-  options?: { dryRun?: boolean }
+  options?: { dryRun?: boolean; expectedStamps?: Record<string, string> }
 ): Promise<DeleteTaskResult> {
   const tasks = await listTasksFresh(config);
   const task = tasks.find((t) => t.id === taskId);
@@ -387,31 +418,19 @@ export async function deleteTask(
 
   const affectedTasks = getAffectedByDeletion(taskId, tasks);
   const affectedTitles = affectedTasks.map((t) => t.title);
-  const isDryRun = options?.dryRun !== false;
+  if (options?.dryRun !== false) return previewDeletion(task, affectedTasks);
 
-  if (isDryRun) {
-    return {
-      taskId,
-      taskTitle: task.title,
-      dryRun: true,
-      affectedTasks: affectedTitles,
-      dependenciesCleaned: affectedTasks.length,
-      partial: false,
-      errors: [],
-      conflicts: [],
-    };
-  }
-
+  const confirmed = asConfirmed(task, options.expectedStamps);
   const limiter = new WriteRateLimiter();
   if (affectedTasks.length === 0) {
-    await deletePrimaryTask(config, task, limiter);
+    await deletePrimaryTask(config, confirmed, limiter);
     return { taskId, taskTitle: task.title, dryRun: false, affectedTasks: [],
       dependenciesCleaned: 0, partial: false, errors: [], conflicts: [] };
   }
 
   const { deviceId } = await getAuthInfo(config);
   const pending = await snapshotDependents(config, affectedTasks);
-  await deletePrimaryTask(config, task, limiter);
+  await deletePrimaryTask(config, confirmed, limiter);
   const outcomes = await cleanDependents(config, new Set([taskId]), pending, deviceId, limiter)
     .finally(() => getTaskCache().invalidate());
   const summary = summarizeCleanup(outcomes);

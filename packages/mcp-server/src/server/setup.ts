@@ -2,6 +2,7 @@ import { Server } from '@modelcontextprotocol/server';
 import { allTools } from '../tools/schemas/index.js';
 import { allPrompts, getPromptMessage } from '../tools/prompts.js';
 import { handleToolCall } from '../tools/handlers/index.js';
+import { DELETE_CONFIRMATION_STATE, deleteConfirmationFor } from '../tools/handlers/delete-confirmation.js';
 import { VERSION } from '../version.js';
 import type { GsdConfig } from '../tools.js';
 import { SERVER_INSTRUCTIONS } from './instructions.js';
@@ -25,6 +26,7 @@ export function createServer(): Server {
         prompts: {},
       },
       instructions: SERVER_INSTRUCTIONS,
+      requestState: DELETE_CONFIRMATION_STATE,
       cacheHints: {
         'tools/list': PUBLIC_CACHE_HINT,
         'prompts/list': PUBLIC_CACHE_HINT,
@@ -51,9 +53,12 @@ export function registerHandlers(server: Server, config: GsdConfig): void {
     };
   });
 
-  server.setRequestHandler('tools/call', async (request) => {
+  server.setRequestHandler('tools/call', async (request, ctx) => {
     const { name, arguments: args } = request.params;
-    return handleToolCall(name, args || {}, config);
+    // A 2025 connection declared its capabilities at initialize, and the SDK
+    // documents this accessor as their source there.
+    const confirmation = deleteConfirmationFor(ctx, () => server.getClientCapabilities());
+    return handleToolCall(name, args || {}, config, confirmation);
   });
 }
 

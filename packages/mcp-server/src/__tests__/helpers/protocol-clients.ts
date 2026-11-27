@@ -1,4 +1,10 @@
-import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
+import {
+  Client,
+  StreamableHTTPClientTransport,
+  type ClientCapabilities,
+  type ElicitRequestParams,
+  type ElicitResult,
+} from '@modelcontextprotocol/client';
 import { InMemoryTransport, createMcpHandler } from '@modelcontextprotocol/server';
 import { createGsdServer } from '../../server/setup.js';
 import type { GsdConfig } from '../../types.js';
@@ -21,9 +27,32 @@ export interface ConnectedClient {
   close(): Promise<void>;
 }
 
-export async function connectClient(protocol: Protocol, config = OFFLINE_CONFIG): Promise<ConnectedClient> {
+export interface ClientOptions {
+  /** What the client declares, for example `{ elicitation: { form: {} } }`. */
+  capabilities?: ClientCapabilities;
+  /** Answers each elicitation the server asks for, on either protocol. */
+  onElicit?: (params: ElicitRequestParams) => Promise<ElicitResult>;
+  /** 2026-07-28 only: rewrites each JSON-RPC request on its way to the server. */
+  rewriteRequest?: (message: Record<string, unknown>) => Record<string, unknown>;
+}
+
+function rewriteBody(init: RequestInit | undefined, rewrite: ClientOptions['rewriteRequest']): RequestInit | undefined {
+  if (!rewrite || typeof init?.body !== 'string') return init;
+  return { ...init, body: JSON.stringify(rewrite(JSON.parse(init.body))) };
+}
+
+export async function connectClient(
+  protocol: Protocol,
+  config = OFFLINE_CONFIG,
+  options: ClientOptions = {}
+): Promise<ConnectedClient> {
   const mode = protocol === '2025-11-25' ? 'legacy' : 'auto';
-  const client = new Client({ name: 'gsd-protocol-test', version: '1.0.0' }, { versionNegotiation: { mode } });
+  const client = new Client(
+    { name: 'gsd-protocol-test', version: '1.0.0' },
+    { versionNegotiation: { mode }, ...(options.capabilities && { capabilities: options.capabilities }) }
+  );
+  const { onElicit } = options;
+  if (onElicit) client.setRequestHandler('elicitation/create', (request) => onElicit(request.params));
 
   if (protocol === '2025-11-25') {
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
@@ -35,7 +64,7 @@ export async function connectClient(protocol: Protocol, config = OFFLINE_CONFIG)
   const handler = createMcpHandler(() => createGsdServer(config));
   await client.connect(
     new StreamableHTTPClientTransport(new URL('http://gsd.test/mcp'), {
-      fetch: (url, init) => handler.fetch(new Request(url, init)),
+      fetch: (url, init) => handler.fetch(new Request(url, rewriteBody(init, options.rewriteRequest))),
     })
   );
   return {

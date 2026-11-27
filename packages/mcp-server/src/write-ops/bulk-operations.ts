@@ -8,7 +8,7 @@
 
 import type { GsdConfig, Task } from '../types.js';
 import { pbTaskToTask } from '../types.js';
-import type { BulkOperation } from './types.js';
+import type { BulkOperation, DeletionPreview } from './types.js';
 import { listTasksFresh } from '../tools/list-tasks.js';
 import { getTaskCache } from '../cache.js';
 import { SCHEMA_LIMITS } from '../constants.js';
@@ -89,6 +89,8 @@ export interface BulkUpdateResult {
    */
   conflicts: string[];
   dryRun: boolean;
+  /** A delete's dry run only: what the delete would remove. */
+  deletion?: DeletionPreview;
 }
 
 interface BulkTaskInput {
@@ -263,6 +265,18 @@ function assertBulkOperationAllowed(tasks: Task[], operation: BulkOperation): vo
   }
 }
 
+function describeDeletion(tasks: Task[], allTasks: Task[]): DeletionPreview {
+  const ids = new Set(tasks.map((task) => task.id));
+  const dependents = allTasks.filter((task) =>
+    !ids.has(task.id) && task.dependencies.some((id) => ids.has(id))
+  );
+  return {
+    titles: tasks.map((task) => task.title),
+    dependentCount: dependents.length,
+    stamps: Object.fromEntries(tasks.map((task) => [task.id, task.updatedAt])),
+  };
+}
+
 async function previewBulkUpdate(
   config: GsdConfig,
   taskIds: string[],
@@ -279,6 +293,7 @@ async function previewBulkUpdate(
     errors: [],
     conflicts: [],
     dryRun: true,
+    ...(deleting && { deletion: describeDeletion(tasks, allTasks) }),
   };
 }
 
@@ -339,10 +354,38 @@ async function removeDeletedReferences(
   return cleanup.flatMap(describeCleanupIssue);
 }
 
+function logBulkWrite(
+  requestedCount: number,
+  processedCount: number,
+  startedAt: number,
+  summary: ReturnType<typeof summarizeOutcomes>
+): void {
+  logger.info('Bulk write completed', {
+    requestedCount,
+    processedCount,
+    concurrency: BULK_WRITE_CONCURRENCY,
+    durationMs: Date.now() - startedAt,
+    errorCount: summary.errors.length,
+    conflictCount: summary.conflicts.length,
+    rateLimitCount: summary.rateLimitCount,
+  });
+}
+
+/**
+ * A confirmed delete keeps a task whose updatedAt has moved since the person
+ * saw it, or that the confirmation never covered.
+ */
+function movedSinceConfirmation(input: BulkTaskInput, expectedStamps?: Record<string, string>): boolean {
+  if (!expectedStamps) return false;
+  const { id, updatedAt } = input.task;
+  return !Object.hasOwn(expectedStamps, id) || expectedStamps[id] !== updatedAt;
+}
+
 async function executeBulkWrite(
   config: GsdConfig,
   taskIds: string[],
-  operation: BulkOperation
+  operation: BulkOperation,
+  expectedStamps?: Record<string, string>
 ): Promise<BulkUpdateResult> {
   // Deletes read the task list before any write, as deleteTask does. A failed
   // read then aborts the batch before it removes anything.
@@ -357,22 +400,16 @@ async function executeBulkWrite(
   const startedAt = Date.now();
   const writeLimiter = new WriteRateLimiter();
   const outcomes = await mapWithConcurrency(inputs, BULK_WRITE_CONCURRENCY, (input) =>
-    processBulkTask(config, input, operation, ownerId, deviceId, writeLimiter)
+    movedSinceConfirmation(input, expectedStamps)
+      ? Promise.resolve<BulkTaskOutcome>({ kind: 'conflict', taskId: input.task.id })
+      : processBulkTask(config, input, operation, ownerId, deviceId, writeLimiter)
   );
   const summary = summarizeOutcomes(outcomes);
   summary.errors.push(...await removeDeletedReferences(config, tasks, outcomes, deviceId, writeLimiter));
   summary.rateLimitCount += writeLimiter.getRateLimitCount();
   appendMissingTaskErrors(taskIds, snapshot, summary.errors);
   getTaskCache().invalidate();
-  logger.info('Bulk write completed', {
-    requestedCount: taskIds.length,
-    processedCount: inputs.length,
-    concurrency: BULK_WRITE_CONCURRENCY,
-    durationMs: Date.now() - startedAt,
-    errorCount: summary.errors.length,
-    conflictCount: summary.conflicts.length,
-    rateLimitCount: summary.rateLimitCount,
-  });
+  logBulkWrite(taskIds.length, inputs.length, startedAt, summary);
   return {
     updated: summary.updated,
     deleted: summary.deleted,
@@ -386,7 +423,7 @@ export async function bulkUpdateTasks(
   config: GsdConfig,
   requestedIds: string[],
   operation: BulkOperation,
-  options?: { dryRun?: boolean }
+  options?: { dryRun?: boolean; expectedStamps?: Record<string, string> }
 ): Promise<BulkUpdateResult> {
   // Destructive deletes default to dryRun=true. Callers must pass
   // `dryRun: false` explicitly to actually delete.
@@ -399,5 +436,5 @@ export async function bulkUpdateTasks(
   validateBulkRequest(taskIds, operation);
   if (taskIds.length === 0) return emptyBulkResult(isDryRun);
   if (isDryRun) return previewBulkUpdate(config, taskIds, operation);
-  return executeBulkWrite(config, taskIds, operation);
+  return executeBulkWrite(config, taskIds, operation, options?.expectedStamps);
 }

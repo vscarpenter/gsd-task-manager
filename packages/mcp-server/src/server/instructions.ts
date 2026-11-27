@@ -13,7 +13,8 @@ export const SERVER_INSTRUCTIONS = [
   'Tags are lowercase without a leading #.',
   'Saved items are left out of task lists, searches, and stats.',
   'get_top_three reports picks the user made in the app; only the user chooses them.',
-  'Deletes are permanent and skip the 30-day Trash: preview with dryRun first.',
+  'Deletes are permanent and skip the 30-day Trash: preview with dryRun first, and delete only what the user asked to delete.',
+  'Some clients also ask the user to confirm; a reply starting "Not deleted:" means they declined or the task changed, so don\'t retry on your own.',
   'Bulk changes cover up to 50 tasks, or 10 deletes.',
   'A conflict means the task changed elsewhere; read it again before retrying.',
 ].join(' ');
